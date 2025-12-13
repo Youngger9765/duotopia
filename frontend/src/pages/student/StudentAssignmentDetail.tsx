@@ -35,6 +35,7 @@ export default function StudentAssignmentDetail() {
 
   const [assignment, setAssignment] = useState<StudentAssignment | null>(null);
   const [loading, setLoading] = useState(true);
+  const [practiceMode, setPracticeMode] = useState<string | null>(null);
 
   useEffect(() => {
     if (id && token) {
@@ -106,6 +107,11 @@ export default function StudentAssignmentDetail() {
         if (activitiesResponse.ok) {
           const data = await activitiesResponse.json();
           console.log("Activities API response:", data);
+
+          // 設置 practice_mode（例句重組模式）
+          if (data.practice_mode) {
+            setPracticeMode(data.practice_mode);
+          }
 
           // Get activities from the response (may be wrapped in an object)
           const activities = data.activities || data;
@@ -523,40 +529,42 @@ export default function StudentAssignmentDetail() {
               </div>
             )}
 
-            {/* 活動進度 */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  {t("studentAssignmentDetail.progress.title")}
-                </h3>
-                <span className="text-sm font-medium text-gray-600">
-                  {t("studentAssignmentDetail.progress.completed", {
-                    completed: assignment.completed_count || 0,
-                    total: assignment.content_count || 0,
-                  })}
-                </span>
+            {/* 活動進度 - 例句重組模式不顯示 */}
+            {practiceMode !== "rearrangement" && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    {t("studentAssignmentDetail.progress.title")}
+                  </h3>
+                  <span className="text-sm font-medium text-gray-600">
+                    {t("studentAssignmentDetail.progress.completed", {
+                      completed: assignment.completed_count || 0,
+                      total: assignment.content_count || 0,
+                    })}
+                  </span>
+                </div>
+                <Progress
+                  value={assignment.progress_percentage || 0}
+                  className="h-2"
+                />
+                <div className="space-y-2">
+                  {assignment.content_progress &&
+                  assignment.content_progress.length > 0 ? (
+                    assignment.content_progress
+                      .sort((a, b) => a.order_index - b.order_index)
+                      .map(renderContentProgress)
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">
+                      <BookOpen className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                      <p className="text-sm">
+                        {t("studentAssignmentDetail.progress.empty")}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-              <Progress
-                value={assignment.progress_percentage || 0}
-                className="h-2"
-              />
-              <div className="space-y-2">
-                {assignment.content_progress &&
-                assignment.content_progress.length > 0 ? (
-                  assignment.content_progress
-                    .sort((a, b) => a.order_index - b.order_index)
-                    .map(renderContentProgress)
-                ) : (
-                  <div className="text-center py-4 text-gray-500">
-                    <BookOpen className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm">
-                      {t("studentAssignmentDetail.progress.empty")}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
 
             {/* Quick Start Button */}
             {canStart && (

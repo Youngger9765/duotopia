@@ -80,6 +80,9 @@ interface ActivityResponse {
   assignment_id: number;
   title: string;
   status?: string;
+  practice_mode?: string | null;
+  score_category?: string | null;
+  show_answer?: boolean; // 例句重組：答題結束後是否顯示正確答案
   total_activities: number;
   activities: Activity[];
 }
@@ -94,6 +97,8 @@ export default function StudentActivityPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [assignmentTitle, setAssignmentTitle] = useState("");
   const [assignmentStatus, setAssignmentStatus] = useState<string>("");
+  const [practiceMode, setPracticeMode] = useState<string | null>(null);
+  const [showAnswer, setShowAnswer] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
 
   // Set error logging context for audio error tracking
@@ -141,6 +146,8 @@ export default function StudentActivityPage() {
       setActivities(data.activities);
       setAssignmentTitle(data.title);
       setAssignmentStatus(data.status || "");
+      setPracticeMode(data.practice_mode || null);
+      setShowAnswer(data.show_answer || false);
     } catch (error) {
       console.error("Failed to load activities:", error);
       toast.error(t("studentActivityPage.errors.loadFailed"));
@@ -218,7 +225,9 @@ export default function StudentActivityPage() {
       assignmentTitle={assignmentTitle}
       assignmentId={parseInt(assignmentId!)}
       assignmentStatus={assignmentStatus}
-      onBack={() => navigate("/student/assignments")}
+      practiceMode={practiceMode}
+      showAnswer={showAnswer}
+      onBack={() => navigate(`/student/assignment/${assignmentId}/detail`)}
       onSubmit={handleSubmit}
     />
   );

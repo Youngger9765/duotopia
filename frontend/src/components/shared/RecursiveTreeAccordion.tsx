@@ -64,6 +64,10 @@ export interface TreeNodeConfig {
 
   // Custom empty message
   emptyMessage?: string;
+
+  // Filter function for children (return true to include, false to exclude)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  filterChildren?: (child: any) => boolean;
 }
 
 interface RecursiveTreeNodeProps {
@@ -111,7 +115,12 @@ function RecursiveTreeNode({
   const itemDescription = config.descriptionKey
     ? data[config.descriptionKey]
     : null;
-  const children = config.childrenKey ? data[config.childrenKey] : null;
+  // Get children and apply filter if defined in childConfig
+  const rawChildren = config.childrenKey ? data[config.childrenKey] : null;
+  const children =
+    rawChildren && config.childConfig?.filterChildren
+      ? rawChildren.filter(config.childConfig.filterChildren)
+      : rawChildren;
 
   const accordionValue = `${level}-${itemId}`;
 

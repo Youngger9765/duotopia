@@ -1,7 +1,8 @@
 """驗證 seed data 是否成功建立"""
-from database import SessionLocal
+from database import get_session_local
 from models import Teacher, Student, Classroom, Program, Content, ContentType
 
+SessionLocal = get_session_local()
 db = SessionLocal()
 
 teachers = db.query(Teacher).count()
@@ -9,7 +10,7 @@ students = db.query(Student).count()
 classrooms = db.query(Classroom).count()
 programs = db.query(Program).count()
 sentence_contents = (
-    db.query(Content).filter(Content.type == ContentType.SENTENCE_MAKING).count()
+    db.query(Content).filter(Content.type == ContentType.VOCABULARY_SET).count()
 )
 
 print(f"✅ 教師數量: {teachers}")

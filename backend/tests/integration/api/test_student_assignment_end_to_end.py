@@ -169,7 +169,7 @@ def test_data(setup_database):
         id=1,
         lesson_id=lesson.id,
         title="測試內容",
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
         order_index=1,
         is_active=True,
         is_assignment_copy=False,  # 模板

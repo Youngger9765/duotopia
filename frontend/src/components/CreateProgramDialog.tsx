@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -72,6 +72,7 @@ export default function CreateProgramDialog({
   const [activeTab, setActiveTab] = useState("template");
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const isCreatingRef = useRef(false); // 🔒 同步追蹤處理狀態，防止雙擊
 
   // 公版模板
   const [templates, setTemplates] = useState<Program[]>([]);
@@ -175,6 +176,7 @@ export default function CreateProgramDialog({
     setSearchTerm("");
     setActiveTab("template");
     setExpandedClassrooms(new Set());
+    isCreatingRef.current = false; // 🔒 重置處理狀態
   };
 
   // 將課程按班級分組
@@ -232,6 +234,10 @@ export default function CreateProgramDialog({
   const handleCreateFromTemplate = async () => {
     if (selectedTemplates.length === 0) return;
 
+    // 🔒 防止雙擊：同步檢查是否正在處理中
+    if (isCreatingRef.current) return;
+    isCreatingRef.current = true;
+
     // 檢查是否有重複課程
     const duplicateTemplates = selectedTemplates.filter((t) => t.is_duplicate);
     if (duplicateTemplates.length > 0) {
@@ -242,6 +248,7 @@ export default function CreateProgramDialog({
         }),
       );
       if (!confirmed) {
+        isCreatingRef.current = false;
         return;
       }
     }
@@ -273,11 +280,16 @@ export default function CreateProgramDialog({
       toast.error(t("dialogs.createProgramDialog.errors.createFailed"));
     } finally {
       setCreating(false);
+      isCreatingRef.current = false;
     }
   };
 
   const handleCopyFromClassroom = async () => {
     if (selectedPrograms.length === 0) return;
+
+    // 🔒 防止雙擊：同步檢查是否正在處理中
+    if (isCreatingRef.current) return;
+    isCreatingRef.current = true;
 
     // 檢查是否有重複課程
     const duplicatePrograms = selectedPrograms.filter((p) => p.is_duplicate);
@@ -289,6 +301,7 @@ export default function CreateProgramDialog({
         }),
       );
       if (!confirmed) {
+        isCreatingRef.current = false;
         return;
       }
     }
@@ -318,11 +331,16 @@ export default function CreateProgramDialog({
       toast.error(t("dialogs.createProgramDialog.errors.copyFailed"));
     } finally {
       setCreating(false);
+      isCreatingRef.current = false;
     }
   };
 
   const handleCreateCustom = async () => {
     if (!customForm.name) return;
+
+    // 🔒 防止雙擊：同步檢查是否正在處理中
+    if (isCreatingRef.current) return;
+    isCreatingRef.current = true;
 
     setCreating(true);
     try {
@@ -343,6 +361,7 @@ export default function CreateProgramDialog({
       toast.error(t("dialogs.createProgramDialog.errors.createFailed"));
     } finally {
       setCreating(false);
+      isCreatingRef.current = false;
     }
   };
 

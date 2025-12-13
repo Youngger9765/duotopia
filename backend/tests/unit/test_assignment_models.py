@@ -107,7 +107,7 @@ def sample_content(db_session, sample_lesson):
     """Create a sample content"""
     content = Content(
         lesson_id=sample_lesson.id,
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
         title="Test Content",
         items=[
             {"text": "Hello", "translation": "你好"},
@@ -215,7 +215,7 @@ class TestAssignmentContentModel:
         for i in range(3):
             content = Content(
                 lesson_id=sample_lesson.id,
-                type=ContentType.READING_ASSESSMENT,
+                type=ContentType.EXAMPLE_SENTENCES,
                 title=f"Content {i+1}",
                 items=[],
             )

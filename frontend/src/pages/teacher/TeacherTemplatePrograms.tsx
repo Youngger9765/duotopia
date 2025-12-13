@@ -7,6 +7,9 @@ import { ProgramDialog } from "@/components/ProgramDialog";
 import { LessonDialog } from "@/components/LessonDialog";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
+import SentenceMakingPanel from "@/components/SentenceMakingPanel";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { Program, Lesson, Content } from "@/types";
@@ -45,6 +48,16 @@ export default function TeacherTemplateProgramsNew() {
   const [editorLessonId, setEditorLessonId] = useState<number | null>(null);
   const [editorContentId, setEditorContentId] = useState<number | null>(null);
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
+
+  // Sentence Making Editor state
+  const [showSentenceMakingEditor, setShowSentenceMakingEditor] =
+    useState(false);
+  const [sentenceMakingLessonId, setSentenceMakingLessonId] = useState<
+    number | null
+  >(null);
+  const [sentenceMakingContentId, setSentenceMakingContentId] = useState<
+    number | null
+  >(null);
 
   useEffect(() => {
     fetchTemplatePrograms();
@@ -197,11 +210,26 @@ export default function TeacherTemplateProgramsNew() {
       lesson_id?: number;
     },
   ) => {
-    if (content.type === "reading_assessment") {
+    // 統一轉成小寫比對
+    const contentType = content.type?.toLowerCase();
+
+    // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
+    if (
+      contentType === "reading_assessment" ||
+      contentType === "example_sentences"
+    ) {
       setSelectedContent(content);
       setEditorLessonId(content.lesson_id || null);
       setEditorContentId(content.id);
       setShowReadingEditor(true);
+    } else if (
+      contentType === "sentence_making" ||
+      contentType === "vocabulary_set"
+    ) {
+      // 編輯句子模組/單字集內容
+      setSentenceMakingLessonId(content.lesson_id || null);
+      setSentenceMakingContentId(content.id);
+      setShowSentenceMakingEditor(true);
     }
   };
 
@@ -661,6 +689,116 @@ export default function TeacherTemplateProgramsNew() {
             </>
           )}
 
+        {/* Sentence Making Editor (新增模式 - 彈窗) */}
+        {showSentenceMakingEditor &&
+          sentenceMakingLessonId &&
+          !sentenceMakingContentId && (
+            <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+              <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-bold">句子模組設定</h2>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setShowSentenceMakingEditor(false);
+                      setSentenceMakingLessonId(null);
+                      setSentenceMakingContentId(null);
+                    }}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <SentenceMakingPanel
+                    content={undefined}
+                    editingContent={{
+                      id: sentenceMakingContentId || undefined,
+                    }}
+                    lessonId={sentenceMakingLessonId}
+                    onUpdateContent={(updatedContent) => {
+                      console.log("Content updated:", updatedContent);
+                    }}
+                    onSave={async () => {
+                      setShowSentenceMakingEditor(false);
+                      setSentenceMakingLessonId(null);
+                      setSentenceMakingContentId(null);
+                      await fetchTemplatePrograms();
+                      toast.success("內容已成功儲存");
+                    }}
+                    onCancel={() => {
+                      setShowSentenceMakingEditor(false);
+                      setSentenceMakingLessonId(null);
+                      setSentenceMakingContentId(null);
+                    }}
+                    isCreating={!sentenceMakingContentId}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+        {/* Sentence Making Editor (編輯模式 - 側邊欄) */}
+        {showSentenceMakingEditor &&
+          sentenceMakingLessonId &&
+          sentenceMakingContentId && (
+            <>
+              {/* Backdrop */}
+              <div
+                className="fixed inset-0 bg-black bg-opacity-20 z-40 transition-opacity"
+                onClick={() => {
+                  setShowSentenceMakingEditor(false);
+                  setSentenceMakingLessonId(null);
+                  setSentenceMakingContentId(null);
+                }}
+              />
+
+              {/* Panel */}
+              <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
+                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    編輯句子模組內容
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowSentenceMakingEditor(false);
+                      setSentenceMakingLessonId(null);
+                      setSentenceMakingContentId(null);
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    aria-label="關閉"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+
+                <div className="p-6">
+                  <SentenceMakingPanel
+                    content={{ id: sentenceMakingContentId }}
+                    editingContent={{ id: sentenceMakingContentId }}
+                    lessonId={sentenceMakingLessonId}
+                    onUpdateContent={(updatedContent) => {
+                      console.log("Content updated:", updatedContent);
+                    }}
+                    onSave={async () => {
+                      setShowSentenceMakingEditor(false);
+                      setSentenceMakingLessonId(null);
+                      setSentenceMakingContentId(null);
+                      await fetchTemplatePrograms();
+                      toast.success("內容已成功儲存");
+                    }}
+                    onCancel={() => {
+                      setShowSentenceMakingEditor(false);
+                      setSentenceMakingLessonId(null);
+                      setSentenceMakingContentId(null);
+                    }}
+                    isCreating={false}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
         {/* Dialogs */}
         <ProgramDialog
           program={selectedProgram}
@@ -700,12 +838,27 @@ export default function TeacherTemplateProgramsNew() {
               setContentLessonInfo(null);
 
               // Handle different content types
-              if (selection.type === "reading_assessment") {
+              // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
+              if (
+                selection.type === "reading_assessment" ||
+                selection.type === "example_sentences" ||
+                selection.type === "EXAMPLE_SENTENCES"
+              ) {
                 // Open modal for new content
                 setEditorLessonId(selection.lessonId);
                 setEditorContentId(null); // null = new content
                 setSelectedContent(null); // No existing content
                 setShowReadingEditor(true);
+              } else if (
+                selection.type === "SENTENCE_MAKING" ||
+                selection.type === "sentence_making" ||
+                selection.type === "vocabulary_set" ||
+                selection.type === "VOCABULARY_SET"
+              ) {
+                // For sentence_making/vocabulary_set, use popup for new content creation
+                setSentenceMakingLessonId(selection.lessonId);
+                setSentenceMakingContentId(null); // null for new content
+                setShowSentenceMakingEditor(true);
               } else {
                 toast.info(
                   `${t("teacherTemplatePrograms.messages.featureInDevelopment", { type: selection.type })}`,

@@ -63,6 +63,7 @@ interface AssignmentDetail extends Assignment {
   content_id: number;
   assigned_date?: string; // Alternative field name
   students?: number[]; // Alternative field name
+  practice_mode?: "reading" | "rearrangement"; // 🆕 例句重組/朗讀模式
   content?: {
     title: string;
     type: string;
@@ -119,7 +120,7 @@ interface ContentDetail {
     audio_url?: string;
     definition: string;
     english_definition?: string;
-    selectedLanguage?: "chinese" | "english";
+    selectedLanguage?: "chinese" | "japanese" | "korean";
     has_student_progress?: boolean;
   }>;
   type?: string;
@@ -1053,33 +1054,35 @@ export default function TeacherAssignmentDetailPage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-row gap-2 sm:gap-3">
-            {/* 批改作業按鈕 */}
-            <Button
-              onClick={() =>
-                navigate(
-                  `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
-                )
-              }
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              {t("assignmentDetail.buttons.gradeAssignment")}
-            </Button>
-            {/* AI批改按鈕 */}
-            <Button
-              onClick={() => setShowBatchGradingModal(true)}
-              disabled={stats.total === 0}
-              className={cn(
-                "flex-1 bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
-                "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500",
-              )}
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              {t("assignmentDetail.buttons.batchGrade")}
-            </Button>
-          </div>
+          {/* Action Buttons - 🆕 rearrangement 模式隱藏所有批改按鈕 */}
+          {assignment?.practice_mode !== "rearrangement" && (
+            <div className="flex flex-row gap-2 sm:gap-3">
+              {/* 批改作業按鈕 */}
+              <Button
+                onClick={() =>
+                  navigate(
+                    `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
+                  )
+                }
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                {t("assignmentDetail.buttons.gradeAssignment")}
+              </Button>
+              {/* AI批改按鈕 */}
+              <Button
+                onClick={() => setShowBatchGradingModal(true)}
+                disabled={stats.total === 0}
+                className={cn(
+                  "flex-1 bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
+                  "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500",
+                )}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {t("assignmentDetail.buttons.batchGrade")}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Assignment Info Card */}
@@ -1484,68 +1487,73 @@ export default function TeacherAssignmentDetailPage() {
                   </div>
                 </div>
 
-                {/* Arrow */}
-                <div className="flex-shrink-0 flex items-center pt-6">
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-
-                {/* 已提交 */}
-                <div className="flex flex-col items-center flex-1">
-                  <div
-                    className={`w-16 h-16 rounded-full ${stats.submitted > 0 ? "bg-orange-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
-                  >
-                    <div
-                      className={`text-xl font-bold ${stats.submitted > 0 ? "text-orange-600" : "text-gray-300"}`}
-                    >
-                      {stats.submitted}
+                {/* 🆕 rearrangement 模式：隱藏 已提交/待訂正/已訂正 步驟 */}
+                {assignment?.practice_mode !== "rearrangement" && (
+                  <>
+                    {/* Arrow */}
+                    <div className="flex-shrink-0 flex items-center pt-6">
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
                     </div>
-                  </div>
-                  <div className="text-xs text-gray-600 mt-2 font-medium">
-                    {t("assignmentDetail.labels.submitted")}
-                  </div>
-                </div>
 
-                {/* Arrow */}
-                <div className="flex-shrink-0 flex items-center pt-6">
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-
-                {/* 待訂正 */}
-                <div className="flex flex-col items-center flex-1">
-                  <div
-                    className={`w-16 h-16 rounded-full ${stats.returned > 0 ? "bg-red-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
-                  >
-                    <div
-                      className={`text-xl font-bold ${stats.returned > 0 ? "text-red-600" : "text-gray-300"}`}
-                    >
-                      {stats.returned}
+                    {/* 已提交 */}
+                    <div className="flex flex-col items-center flex-1">
+                      <div
+                        className={`w-16 h-16 rounded-full ${stats.submitted > 0 ? "bg-orange-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                      >
+                        <div
+                          className={`text-xl font-bold ${stats.submitted > 0 ? "text-orange-600" : "text-gray-300"}`}
+                        >
+                          {stats.submitted}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-2 font-medium">
+                        {t("assignmentDetail.labels.submitted")}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-xs text-gray-600 mt-2 font-medium">
-                    {t("assignmentDetail.labels.returned")}
-                  </div>
-                </div>
 
-                {/* Arrow */}
-                <div className="flex-shrink-0 flex items-center pt-6">
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-
-                {/* 已訂正 */}
-                <div className="flex flex-col items-center flex-1">
-                  <div
-                    className={`w-16 h-16 rounded-full ${stats.resubmitted > 0 ? "bg-purple-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
-                  >
-                    <div
-                      className={`text-xl font-bold ${stats.resubmitted > 0 ? "text-purple-600" : "text-gray-300"}`}
-                    >
-                      {stats.resubmitted}
+                    {/* Arrow */}
+                    <div className="flex-shrink-0 flex items-center pt-6">
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
                     </div>
-                  </div>
-                  <div className="text-xs text-gray-600 mt-2 font-medium">
-                    {t("assignmentDetail.labels.resubmitted")}
-                  </div>
-                </div>
+
+                    {/* 待訂正 */}
+                    <div className="flex flex-col items-center flex-1">
+                      <div
+                        className={`w-16 h-16 rounded-full ${stats.returned > 0 ? "bg-red-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                      >
+                        <div
+                          className={`text-xl font-bold ${stats.returned > 0 ? "text-red-600" : "text-gray-300"}`}
+                        >
+                          {stats.returned}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-2 font-medium">
+                        {t("assignmentDetail.labels.returned")}
+                      </div>
+                    </div>
+
+                    {/* Arrow */}
+                    <div className="flex-shrink-0 flex items-center pt-6">
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
+                    </div>
+
+                    {/* 已訂正 */}
+                    <div className="flex flex-col items-center flex-1">
+                      <div
+                        className={`w-16 h-16 rounded-full ${stats.resubmitted > 0 ? "bg-purple-100" : "bg-gray-50"} border-4 border-white shadow-sm flex items-center justify-center relative z-10`}
+                      >
+                        <div
+                          className={`text-xl font-bold ${stats.resubmitted > 0 ? "text-purple-600" : "text-gray-300"}`}
+                        >
+                          {stats.resubmitted}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-2 font-medium">
+                        {t("assignmentDetail.labels.resubmitted")}
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Arrow */}
                 <div className="flex-shrink-0 flex items-center pt-6">
@@ -1616,7 +1624,7 @@ export default function TeacherAssignmentDetailPage() {
                 />
               </div>
 
-              {/* Status Filter */}
+              {/* Status Filter - 🆕 rearrangement 模式只顯示 4 種狀態 */}
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -1634,15 +1642,20 @@ export default function TeacherAssignmentDetailPage() {
                 <option value="IN_PROGRESS">
                   {t("assignmentDetail.labels.inProgress")}
                 </option>
-                <option value="SUBMITTED">
-                  {t("assignmentDetail.labels.submitted")}
-                </option>
-                <option value="RETURNED">
-                  {t("assignmentDetail.labels.returned")}
-                </option>
-                <option value="RESUBMITTED">
-                  {t("assignmentDetail.labels.resubmitted")}
-                </option>
+                {/* 🆕 rearrangement 模式隱藏 已提交/待訂正/已訂正 */}
+                {assignment?.practice_mode !== "rearrangement" && (
+                  <>
+                    <option value="SUBMITTED">
+                      {t("assignmentDetail.labels.submitted")}
+                    </option>
+                    <option value="RETURNED">
+                      {t("assignmentDetail.labels.returned")}
+                    </option>
+                    <option value="RESUBMITTED">
+                      {t("assignmentDetail.labels.resubmitted")}
+                    </option>
+                  </>
+                )}
                 <option value="GRADED">
                   {t("assignmentDetail.labels.graded")}
                 </option>
@@ -1666,6 +1679,24 @@ export default function TeacherAssignmentDetailPage() {
                       color:
                         "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400",
                     };
+
+                  // 🆕 rearrangement 模式：SUBMITTED/RETURNED/RESUBMITTED 都顯示為「已完成」
+                  const isRearrangement =
+                    assignment?.practice_mode === "rearrangement";
+                  if (
+                    isRearrangement &&
+                    (currentStatus === "SUBMITTED" ||
+                      currentStatus === "RETURNED" ||
+                      currentStatus === "RESUBMITTED" ||
+                      currentStatus === "GRADED")
+                  ) {
+                    return {
+                      label: t("assignmentDetail.labels.graded"),
+                      color:
+                        "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300",
+                    };
+                  }
+
                   switch (currentStatus) {
                     case "NOT_STARTED":
                       return {
@@ -1752,22 +1783,38 @@ export default function TeacherAssignmentDetailPage() {
                       <div className="flex-shrink-0">
                         {isAssigned ? (
                           <>
-                            {(upperStatus === "SUBMITTED" ||
-                              upperStatus === "RESUBMITTED" ||
-                              upperStatus === "GRADED" ||
-                              upperStatus === "RETURNED") && (
-                              <Button
-                                variant="outline"
-                                className="text-orange-600 border-orange-600 hover:bg-orange-50 h-12 min-h-12 px-3 text-sm dark:border-orange-500 dark:text-orange-400 dark:hover:bg-orange-900/20"
-                                onClick={() =>
-                                  navigate(
-                                    `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
-                                  )
-                                }
-                              >
-                                {t("assignmentDetail.buttons.grade")}
-                              </Button>
-                            )}
+                            {/* 🆕 rearrangement 模式：GRADED 狀態顯示查看結果，其他狀態不顯示批改按鈕 */}
+                            {assignment?.practice_mode === "rearrangement"
+                              ? upperStatus === "GRADED" && (
+                                  <Button
+                                    variant="outline"
+                                    className="text-green-600 border-green-600 hover:bg-green-50 h-12 min-h-12 px-3 text-sm dark:border-green-500 dark:text-green-400 dark:hover:bg-green-900/20"
+                                    onClick={() =>
+                                      navigate(
+                                        `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading?studentId=${progress.student_id}`,
+                                      )
+                                    }
+                                  >
+                                    {t("assignmentDetail.buttons.viewResult") ||
+                                      "查看結果"}
+                                  </Button>
+                                )
+                              : (upperStatus === "SUBMITTED" ||
+                                  upperStatus === "RESUBMITTED" ||
+                                  upperStatus === "GRADED" ||
+                                  upperStatus === "RETURNED") && (
+                                  <Button
+                                    variant="outline"
+                                    className="text-orange-600 border-orange-600 hover:bg-orange-50 h-12 min-h-12 px-3 text-sm dark:border-orange-500 dark:text-orange-400 dark:hover:bg-orange-900/20"
+                                    onClick={() =>
+                                      navigate(
+                                        `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
+                                      )
+                                    }
+                                  >
+                                    {t("assignmentDetail.buttons.grade")}
+                                  </Button>
+                                )}
                             {(upperStatus === "NOT_STARTED" ||
                               upperStatus === "IN_PROGRESS") && (
                               <Button
@@ -1825,15 +1872,20 @@ export default function TeacherAssignmentDetailPage() {
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
                     {t("assignmentDetail.labels.inProgress")}
                   </th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    {t("assignmentDetail.labels.submitted")}
-                  </th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    {t("assignmentDetail.labels.returned")}
-                  </th>
-                  <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
-                    {t("assignmentDetail.labels.resubmitted")}
-                  </th>
+                  {/* 🆕 rearrangement 模式隱藏 已提交/待訂正/已訂正 欄位 */}
+                  {assignment?.practice_mode !== "rearrangement" && (
+                    <>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                        {t("assignmentDetail.labels.submitted")}
+                      </th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                        {t("assignmentDetail.labels.returned")}
+                      </th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
+                        {t("assignmentDetail.labels.resubmitted")}
+                      </th>
+                    </>
+                  )}
                   <th className="px-2 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-200 w-20">
                     {t("assignmentDetail.labels.graded")}
                   </th>
@@ -2064,15 +2116,20 @@ export default function TeacherAssignmentDetailPage() {
                         <td className="px-2 py-3 text-center w-20">
                           {getStatusIndicator("IN_PROGRESS")}
                         </td>
-                        <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator("SUBMITTED")}
-                        </td>
-                        <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator("RETURNED")}
-                        </td>
-                        <td className="px-2 py-3 text-center w-20">
-                          {getStatusIndicator("RESUBMITTED")}
-                        </td>
+                        {/* 🆕 rearrangement 模式隱藏 已提交/待訂正/已訂正 欄位 */}
+                        {assignment?.practice_mode !== "rearrangement" && (
+                          <>
+                            <td className="px-2 py-3 text-center w-20">
+                              {getStatusIndicator("SUBMITTED")}
+                            </td>
+                            <td className="px-2 py-3 text-center w-20">
+                              {getStatusIndicator("RETURNED")}
+                            </td>
+                            <td className="px-2 py-3 text-center w-20">
+                              {getStatusIndicator("RESUBMITTED")}
+                            </td>
+                          </>
+                        )}
                         <td className="px-2 py-3 text-center w-20">
                           {getStatusIndicator("GRADED")}
                         </td>
@@ -2099,6 +2156,54 @@ export default function TeacherAssignmentDetailPage() {
                                   // 使用大寫的狀態值進行比較
                                   const upperStatus =
                                     progress.status?.toUpperCase();
+
+                                  // 🆕 rearrangement 模式：只有 GRADED 狀態顯示「查看結果」
+                                  if (
+                                    assignment?.practice_mode ===
+                                    "rearrangement"
+                                  ) {
+                                    if (upperStatus === "GRADED") {
+                                      return (
+                                        <Button
+                                          variant="outline"
+                                          className="text-green-600 border-green-600 hover:bg-green-50 transition-colors h-12 min-h-12 dark:border-green-500 dark:text-green-400 dark:hover:bg-green-900/20"
+                                          onClick={() => {
+                                            navigate(
+                                              `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading?studentId=${progress.student_id}`,
+                                            );
+                                          }}
+                                        >
+                                          {t(
+                                            "assignmentDetail.buttons.viewResult",
+                                          ) || "查看結果"}
+                                        </Button>
+                                      );
+                                    }
+                                    // rearrangement 模式：未開始或進行中可取消指派
+                                    if (
+                                      upperStatus === "NOT_STARTED" ||
+                                      upperStatus === "IN_PROGRESS"
+                                    ) {
+                                      return (
+                                        <Button
+                                          variant="outline"
+                                          className="text-red-600 border-red-600 hover:bg-red-50 transition-colors h-12 min-h-12 dark:border-red-500 dark:text-red-400 dark:hover:bg-red-900/20"
+                                          onClick={() =>
+                                            handleUnassignStudent(
+                                              progress.student_id,
+                                              progress.student_name,
+                                              progress.status,
+                                            )
+                                          }
+                                        >
+                                          {t(
+                                            "assignmentDetail.buttons.unassign",
+                                          )}
+                                        </Button>
+                                      );
+                                    }
+                                    return null;
+                                  }
 
                                   // 如果是已提交、已批改、待訂正或重新提交，顯示批改按鈕
                                   if (

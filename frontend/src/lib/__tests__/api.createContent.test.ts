@@ -34,7 +34,7 @@ describe("apiClient.createContent", () => {
   it("should create content with correct API call", async () => {
     const mockResponse = {
       id: 1,
-      type: "reading_assessment",
+      type: "EXAMPLE_SENTENCES",
       title: "朗讀錄音練習",
       lesson_id: 1,
     };
@@ -45,7 +45,7 @@ describe("apiClient.createContent", () => {
     });
 
     const result = await apiClient.createContent(1, {
-      type: "reading_assessment",
+      type: "EXAMPLE_SENTENCES",
       title: "朗讀錄音練習",
       items: [],
     });
@@ -60,7 +60,7 @@ describe("apiClient.createContent", () => {
         Authorization: "Bearer test-token",
       }),
       body: JSON.stringify({
-        type: "reading_assessment",
+        type: "EXAMPLE_SENTENCES",
         title: "朗讀錄音練習",
         items: [],
       }),

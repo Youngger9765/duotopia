@@ -118,7 +118,7 @@ class TestDataFactory:
         content = Content(
             lesson_id=lesson.id,
             title=title,
-            type="READING_ASSESSMENT",
+            type="EXAMPLE_SENTENCES",
         )
         db.add(content)
         db.commit()

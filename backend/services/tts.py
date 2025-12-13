@@ -33,9 +33,20 @@ class TTSService:
             # 不立即拋出錯誤，允許延遲檢查（用於開發環境）
             pass
 
-        # GCS 設定
+        # 儲存設定：GCS 或本地檔案系統
+        self.use_gcs = os.getenv("USE_GCS_STORAGE", "false").lower() == "true"
         self.bucket_name = os.getenv("GCS_BUCKET_NAME", "duotopia-audio")
         self.storage_client = None
+
+        # Backend URL（用於生成完整的音檔 URL）
+        self.backend_url = os.getenv("BACKEND_URL", "").rstrip("/")
+
+        # 本地儲存目錄（當不使用 GCS 時）
+        self.local_audio_dir = os.path.join(
+            os.path.dirname(__file__), "..", "static", "tts"
+        )
+        if not self.use_gcs:
+            os.makedirs(self.local_audio_dir, exist_ok=True)
 
     def _get_storage_client(self):
         """延遲初始化 GCS client（使用與 audio_upload.py 相同的認證邏輯）"""
@@ -171,15 +182,27 @@ class TTSService:
 
                 # 檢查結果
                 if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-                    # 上傳到 GCS
-                    client = self._get_storage_client()
-                    bucket = client.bucket(self.bucket_name)
-                    blob = bucket.blob(f"tts/{filename}")
+                    if self.use_gcs:
+                        # 上傳到 GCS
+                        client = self._get_storage_client()
+                        bucket = client.bucket(self.bucket_name)
+                        blob = bucket.blob(f"tts/{filename}")
+                        blob.upload_from_filename(tmp_file_path)
 
-                    blob.upload_from_filename(tmp_file_path)
+                        # 返回公開 URL (bucket 已設定為 public，無需 make_public())
+                        return f"https://storage.googleapis.com/{self.bucket_name}/tts/{filename}"
+                    else:
+                        # 本地儲存
+                        import shutil
 
-                    # 返回公開 URL (bucket 已設定為 public，無需 make_public())
-                    return f"https://storage.googleapis.com/{self.bucket_name}/tts/{filename}"
+                        local_path = os.path.join(self.local_audio_dir, filename)
+                        shutil.copy(tmp_file_path, local_path)
+
+                        # 返回本地 URL
+                        if self.backend_url:
+                            return f"{self.backend_url}/static/tts/{filename}"
+                        else:
+                            return f"/static/tts/{filename}"
                 else:
                     cancellation_details = speechsdk.CancellationDetails(result)
                     error_msg = f"Azure TTS failed: {result.reason}"

@@ -99,7 +99,7 @@ def test_data(setup_database):
     # 創建兩個內容（用於作業）
     for i in range(1, 3):
         content = Content(
-            id=i, lesson_id=1, title=f"內容{i}", type="READING_ASSESSMENT", is_active=True
+            id=i, lesson_id=1, title=f"內容{i}", type="EXAMPLE_SENTENCES", is_active=True
         )
         db.add(content)
 
@@ -364,7 +364,7 @@ if __name__ == "__main__":
     # 創建內容
     for i in range(1, 3):
         content = Content(
-            id=i, lesson_id=1, title=f"內容{i}", type="READING_ASSESSMENT", is_active=True
+            id=i, lesson_id=1, title=f"內容{i}", type="EXAMPLE_SENTENCES", is_active=True
         )
         db.add(content)
 
@@ -400,7 +400,7 @@ if __name__ == "__main__":
         db.add(cs)
     for i in range(1, 3):
         content = Content(
-            id=i, lesson_id=1, title=f"內容{i}", type="READING_ASSESSMENT", is_active=True
+            id=i, lesson_id=1, title=f"內容{i}", type="EXAMPLE_SENTENCES", is_active=True
         )
         db.add(content)
     db.commit()

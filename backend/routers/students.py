@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import text
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any  # noqa: F401
 from datetime import datetime, timedelta, timezone  # noqa: F401
@@ -14,10 +15,14 @@ from models import (
     StudentAssignment,
     Content,
     ContentItem,
+    ContentType,
     StudentItemProgress,
     AssignmentStatus,
     AssignmentContent,
     StudentContentProgress,
+    PracticeSession,
+    PracticeAnswer,
+    Assignment,
 )
 from auth import (
     create_access_token,
@@ -25,10 +30,31 @@ from auth import (
     get_current_user,
     get_password_hash,
     validate_password_strength,
+    get_current_student,
+    get_current_student_or_teacher,
 )
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/students", tags=["students"])
+
+
+# =============================================================================
+# Content Type Compatibility Helpers
+# =============================================================================
+# 處理新舊 ContentType 的相容性，API 回傳時統一使用新類型：
+# - READING_ASSESSMENT (legacy) → EXAMPLE_SENTENCES (new) - 例句集
+# - SENTENCE_MAKING (legacy) → VOCABULARY_SET (new) - 單字集
+
+
+def normalize_content_type_for_response(content_type: str) -> str:
+    """將舊的 ContentType 值轉換為新值（用於 API 回傳）"""
+    mapping = {
+        "READING_ASSESSMENT": "EXAMPLE_SENTENCES",
+        "reading_assessment": "EXAMPLE_SENTENCES",
+        "SENTENCE_MAKING": "VOCABULARY_SET",
+        "sentence_making": "VOCABULARY_SET",
+    }
+    return mapping.get(content_type, content_type)
 
 
 def get_score_with_fallback(
@@ -325,8 +351,21 @@ async def get_assignment_activities(
 
     # 獲取作業對應的 Assignment（如果有 assignment_id）
     activities = []
+    assignment_practice_mode = None
+    assignment_score_category = None
+    assignment_show_answer = False
 
     if student_assignment.assignment_id:
+        # 獲取 Assignment 的 practice_mode 設定
+        assignment = (
+            db.query(Assignment)
+            .filter(Assignment.id == student_assignment.assignment_id)
+            .first()
+        )
+        if assignment:
+            assignment_practice_mode = assignment.practice_mode
+            assignment_score_category = assignment.score_category
+            assignment_show_answer = assignment.show_answer or False
         # 直接查詢這個學生作業的所有進度記錄（這才是正確的數據源）
         progress_records = (
             db.query(StudentContentProgress)
@@ -440,11 +479,15 @@ async def get_assignment_activities(
                     "id": progress.id,
                     "content_id": content.id,
                     "order": len(activities) + 1,
-                    "type": (
-                        content.type.value if content.type else "reading_assessment"
+                    "type": normalize_content_type_for_response(
+                        content.type.value if content.type else "EXAMPLE_SENTENCES"
                     ),
                     "title": content.title,
-                    "duration": 60,  # Default duration
+                    "duration": (
+                        assignment.time_limit_per_question
+                        if assignment and assignment.time_limit_per_question
+                        else 30
+                    ),
                     "points": (
                         100 // len(progress_records)
                         if len(progress_records) > 0
@@ -596,6 +639,24 @@ async def get_assignment_activities(
                 activity_data["content"] = ""
                 activity_data["target_text"] = ""
 
+                # 🔧 修復：為 EXAMPLE_SENTENCES 類型添加 example_audio_url（取第一個 item 的 audio_url）
+                # 檢查 content type（處理新舊類型）
+                is_example_sentences = (
+                    content.type
+                    in [
+                        ContentType.EXAMPLE_SENTENCES,
+                        ContentType.READING_ASSESSMENT,
+                    ]
+                    if content.type
+                    else False
+                )
+                if is_example_sentences and content_items and len(content_items) > 0:
+                    first_item = content_items[0]
+                    activity_data["example_audio_url"] = first_item.audio_url
+                    # 同時設置 content 和 target_text（ReadingAssessmentTemplate 需要）
+                    activity_data["content"] = first_item.translation or ""
+                    activity_data["target_text"] = first_item.text or ""
+
                 # 現在統一使用 StudentItemProgress 的資料，不再從 response_data 讀取
                 # recordings 和 AI 評分都應該從 items 的 recording_url 和 ai_assessment 取得
                 # 保留這些空陣列只是為了向後相容，未來應該移除
@@ -642,6 +703,9 @@ async def get_assignment_activities(
         "assignment_id": assignment_id,
         "title": student_assignment.title,
         "status": student_assignment.status.value,  # 返回作業狀態
+        "practice_mode": assignment_practice_mode,  # 例句重組/朗讀模式
+        "score_category": assignment_score_category,  # 計分類別
+        "show_answer": assignment_show_answer,  # 答題結束後是否顯示正確答案
         "total_activities": len(activities),
         "activities": activities,
     }
@@ -732,20 +796,27 @@ async def save_activity_progress(
 
 
 def calculate_assignment_score(
-    student_assignment_id: int, db: Session
+    student_assignment_id: int, db: Session, practice_mode: Optional[str] = None
 ) -> Optional[float]:
     """
-    Calculate assignment total score from StudentItemProgress AI scores
+    Calculate assignment total score from StudentItemProgress scores
 
-    Logic (per Issue #53):
-    1. For each item: item_score = (accuracy + fluency + pronunciation) / available_count
-    2. For assignment: total_score = sum(all_item_scores) / total_items
-    3. If item has no AI scores: count as 0
-    4. If no items exist: return None
+    Logic:
+    - For reading mode (Issue #53):
+      1. For each item: item_score = (accuracy + fluency + pronunciation) / available_count
+      2. For assignment: total_score = sum(all_item_scores) / total_items
+      3. If item has no AI scores: count as 0
+      4. If no items exist: return None
+
+    - For rearrangement mode:
+      1. For each item: use expected_score field
+      2. For assignment: total_score = sum(all_expected_scores) / total_items
+      3. Round to 1 decimal place
 
     Args:
         student_assignment_id: StudentAssignment ID
         db: Database session
+        practice_mode: Optional practice mode ("reading" or "rearrangement")
 
     Returns:
         Calculated score (0-100) or None if cannot calculate
@@ -763,12 +834,20 @@ def calculate_assignment_score(
     # Calculate each item's score
     item_scores = []
     for item in items:
-        # Use the overall_score property which handles partial scores
-        if item.overall_score is not None:
-            item_scores.append(float(item.overall_score))
+        # 🆕 rearrangement 模式使用 expected_score
+        if practice_mode == "rearrangement":
+            # Use expected_score for rearrangement mode
+            if item.expected_score is not None:
+                item_scores.append(float(item.expected_score))
+            else:
+                item_scores.append(0.0)
         else:
-            # No AI scores, count as 0 (per Issue #53 requirement)
-            item_scores.append(0.0)
+            # Use the overall_score property which handles partial scores (for reading mode)
+            if item.overall_score is not None:
+                item_scores.append(float(item.overall_score))
+            else:
+                # No AI scores, count as 0 (per Issue #53 requirement)
+                item_scores.append(0.0)
 
     # Calculate average of all item scores
     total_score = sum(item_scores) / len(item_scores)
@@ -776,6 +855,9 @@ def calculate_assignment_score(
     # Clamp score to valid range [0, 100]
     total_score = max(0.0, min(100.0, total_score))
 
+    # 🆕 rearrangement 模式取到小數第一位
+    if practice_mode == "rearrangement":
+        return round(total_score, 1)
     return round(total_score, 2)
 
 
@@ -813,6 +895,19 @@ async def submit_assignment(
             status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
         )
 
+    # 取得父作業以檢查 practice_mode
+    assignment = (
+        db.query(Assignment)
+        .filter(Assignment.id == student_assignment.assignment_id)
+        .first()
+    )
+
+    # 🆕 rearrangement 模式自動完成：跳過 SUBMITTED → RETURNED → RESUBMITTED 階段，直接到 GRADED
+    is_rearrangement = assignment and assignment.practice_mode == "rearrangement"
+    final_status = (
+        AssignmentStatus.GRADED if is_rearrangement else AssignmentStatus.SUBMITTED
+    )
+
     # 更新所有進度為已完成
     progress_records = (
         db.query(StudentContentProgress)
@@ -822,31 +917,54 @@ async def submit_assignment(
 
     for progress in progress_records:
         if progress.status == AssignmentStatus.IN_PROGRESS:
-            progress.status = AssignmentStatus.SUBMITTED
+            progress.status = final_status
             progress.completed_at = datetime.now()
 
     # 🔥 Fix Issue #58: 判斷是否為訂正後提交
     # 如果當前狀態是 RETURNED (待訂正)，提交後應該是 RESUBMITTED (已訂正)
     # 否則就是第一次提交，狀態為 SUBMITTED (已提交)
+    # 🆕 Fix Issue #107: rearrangement 模式使用 final_status (GRADED) 而非 SUBMITTED
     if student_assignment.status == AssignmentStatus.RETURNED:
         student_assignment.status = AssignmentStatus.RESUBMITTED
         student_assignment.resubmitted_at = datetime.now(timezone.utc)
     else:
-        student_assignment.status = AssignmentStatus.SUBMITTED
+        student_assignment.status = (
+            final_status  # 🔥 Fix: 使用 final_status 而非寫死 SUBMITTED
+        )
         student_assignment.submitted_at = datetime.now(timezone.utc)
 
+    # 🆕 rearrangement 模式：同時設定 graded_at
+    if is_rearrangement:
+        student_assignment.graded_at = datetime.now()
+
     # 🆕 Auto-calculate score from StudentItemProgress AI scores (Issue #53)
-    calculated_score = calculate_assignment_score(student_assignment.id, db)
+    # 🆕 傳入 practice_mode 讓函數知道使用哪種計分方式
+    calculated_score = calculate_assignment_score(
+        student_assignment.id, db, assignment.practice_mode if assignment else None
+    )
     if calculated_score is not None:
         student_assignment.score = calculated_score
 
     db.commit()
 
-    return {
-        "message": "Assignment submitted successfully",
-        "submitted_at": student_assignment.submitted_at.isoformat(),
-        "score": student_assignment.score,  # Include calculated score in response
-    }
+    # 根據模式回傳不同訊息
+    if is_rearrangement:
+        return {
+            "message": "Assignment completed successfully",
+            "status": "GRADED",
+            "submitted_at": student_assignment.submitted_at.isoformat(),
+            "graded_at": student_assignment.graded_at.isoformat()
+            if student_assignment.graded_at
+            else None,
+            "score": student_assignment.score,
+        }
+    else:
+        return {
+            "message": "Assignment submitted successfully",
+            "status": "SUBMITTED",
+            "submitted_at": student_assignment.submitted_at.isoformat(),
+            "score": student_assignment.score,
+        }
 
 
 # ========== Email 驗證相關 API ==========
@@ -1797,4 +1915,780 @@ async def unbind_email(
         "student_id": student_id,
         "old_email": old_email,
         "removed_by": "teacher" if is_teacher else "student",
+    }
+
+
+# ============ 造句練習 Sentence Making Endpoints ============
+
+
+class PracticeWord(BaseModel):
+    """練習單字資料"""
+
+    content_item_id: int
+    text: str
+    translation: str
+    example_sentence: str
+    example_sentence_translation: str
+    audio_url: Optional[str] = None
+    memory_strength: float
+    priority_score: float
+
+
+class PracticeWordsResponse(BaseModel):
+    """練習單字回應"""
+
+    session_id: int
+    answer_mode: str
+    words: List[PracticeWord]
+
+
+class SubmitAnswerRequest(BaseModel):
+    """提交答案請求"""
+
+    content_item_id: int
+    is_correct: bool
+    time_spent_seconds: int
+    answer_data: Dict[str, Any]  # {"selected_words": [...], "attempts": 3}
+
+
+class SubmitAnswerResponse(BaseModel):
+    """提交答案回應"""
+
+    success: bool
+    new_memory_strength: float
+    next_review_at: Optional[datetime]
+
+
+class MasteryStatusResponse(BaseModel):
+    """達標狀態回應"""
+
+    current_mastery: float
+    target_mastery: float
+    achieved: bool
+    words_mastered: int
+    total_words: int
+
+
+@router.get(
+    "/assignments/{student_assignment_id}/practice-words",
+    response_model=PracticeWordsResponse,
+)
+async def get_practice_words(
+    student_assignment_id: int,
+    user=Depends(get_current_student_or_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    獲取練習題目（10個單字）
+    - 根據艾賓浩斯記憶曲線智能選擇單字
+    - 優先選擇即將遺忘或從未練習的單字
+    - 支援老師預覽模式
+
+    參數：student_assignment_id（不是 assignment_id）
+    """
+
+    # 檢查是學生還是老師（user 現在總是 dict）
+    is_teacher = user.get("user_type") == "teacher"
+
+    if is_teacher:
+        # === 老師預覽模式 ===
+        # 老師預覽時，student_assignment_id 其實是 assignment_id（從預覽 URL 來的）
+        # 1. 驗證 assignment 存在
+        assignment = (
+            db.query(Assignment).filter(Assignment.id == student_assignment_id).first()
+        )
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+
+        # 2. 獲取 assignment 的 content_items（不使用記憶曲線，直接返回所有單字）
+        result = db.execute(
+            text(
+                """
+                SELECT DISTINCT
+                    ci.id as content_item_id,
+                    ci.text,
+                    ci.translation,
+                    ci.example_sentence,
+                    ci.example_sentence_translation,
+                    ci.audio_url
+                FROM assignment_contents ac
+                JOIN contents c ON c.id = ac.content_id
+                JOIN content_items ci ON ci.content_id = c.id
+                WHERE ac.assignment_id = :assignment_id
+                AND c.type = 'VOCABULARY_SET'
+                LIMIT 10
+            """
+            ),
+            {"assignment_id": student_assignment_id},
+        )
+
+        words = []
+        for row in result:
+            words.append(
+                PracticeWord(
+                    content_item_id=row[0],
+                    text=row[1] or "",
+                    translation=row[2] or "",
+                    example_sentence=row[3] or "",
+                    example_sentence_translation=row[4] or "",
+                    audio_url=row[5] or "",
+                    memory_strength=0.0,  # 老師預覽不需要記憶強度
+                    priority_score=0.0,
+                )
+            )
+
+        return PracticeWordsResponse(
+            session_id=-1,  # -1 表示老師預覽模式，不創建真實 session
+            answer_mode=assignment.answer_mode,
+            words=words,
+        )
+
+    else:
+        # === 學生模式 ===
+        student_id = user["student_id"]  # user 是 dict
+
+        # 1. 取得學生作業實例（使用 student_assignment_id）
+        student_assignment = (
+            db.query(StudentAssignment)
+            .join(Assignment)
+            .filter(
+                StudentAssignment.id == student_assignment_id,
+                StudentAssignment.student_id == student_id,
+            )
+            .first()
+        )
+
+        if not student_assignment:
+            raise HTTPException(status_code=404, detail="Student assignment not found")
+
+        # 2. 創建新的練習 session
+        assignment = student_assignment.assignment
+
+        # 確保 practice_mode 是正確的字串值 ('listening' 或 'writing')
+        answer_mode_value = assignment.answer_mode
+        if answer_mode_value is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Assignment answer_mode is None. Please set answer_mode when creating assignment.",
+            )
+
+        if isinstance(answer_mode_value, str):
+            # 如果是字串，確保是小寫
+            practice_mode_str = answer_mode_value.lower()
+        else:
+            # 如果是 enum，取其值（.value）
+            try:
+                practice_mode_str = answer_mode_value.value
+            except AttributeError:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Invalid answer_mode type: {type(answer_mode_value)}",
+                )
+
+        practice_session = PracticeSession(
+            student_id=student_id,
+            student_assignment_id=student_assignment.id,
+            practice_mode=practice_mode_str,  # 直接使用字串值
+        )
+        db.add(practice_session)
+        db.commit()
+        db.refresh(practice_session)
+
+        # 3. 使用 SQL function 選擇 10 個單字
+        result = db.execute(
+            text(
+                """
+                SELECT * FROM get_words_for_practice(
+                    :student_assignment_id,
+                    :limit_count
+                )
+            """
+            ),
+            {"student_assignment_id": student_assignment.id, "limit_count": 10},
+        )
+
+        words = []
+        for row in result:
+            words.append(
+                PracticeWord(
+                    content_item_id=row[0],
+                    text=row[1],
+                    translation=row[2],
+                    example_sentence=row[3],
+                    example_sentence_translation=row[4],
+                    audio_url=row[5],
+                    memory_strength=float(row[6]),
+                    priority_score=float(row[7]),
+                )
+            )
+
+        return PracticeWordsResponse(
+            session_id=practice_session.id,
+            answer_mode=assignment.answer_mode,
+            words=words,
+        )
+
+
+@router.post(
+    "/practice-sessions/{session_id}/submit-answer", response_model=SubmitAnswerResponse
+)
+async def submit_answer(
+    session_id: int,
+    request: SubmitAnswerRequest,
+    user=Depends(get_current_student_or_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    提交單字答案
+    - 記錄答題結果
+    - 更新記憶強度（使用 SM-2 演算法）
+    - 計算下次複習時間
+    - 支援老師預覽模式（session_id = -1 時不記錄）
+    """
+
+    # 檢查是否為老師預覽模式
+    is_teacher = user.get("user_type") == "teacher"
+
+    if is_teacher:
+        # === 老師預覽模式 ===
+        # session_id = -1 表示預覽，不實際記錄資料
+        if session_id == -1:
+            # 直接返回成功，不更新資料庫
+            return SubmitAnswerResponse(
+                success=True,
+                new_memory_strength=0.5,  # 假設值
+                next_review_at=None,
+            )
+        else:
+            # 老師不應該提交真實 session 的答案
+            raise HTTPException(
+                status_code=403,
+                detail="Teachers cannot submit answers for student sessions",
+            )
+
+    # === 學生模式 ===
+    student_id = user["student_id"]
+
+    # 1. 驗證 session 屬於當前學生
+    session = (
+        db.query(PracticeSession)
+        .filter(
+            PracticeSession.id == session_id,
+            PracticeSession.student_id == student_id,
+        )
+        .first()
+    )
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Practice session not found")
+
+    # 2. 記錄答案
+    practice_answer = PracticeAnswer(
+        practice_session_id=session_id,
+        content_item_id=request.content_item_id,
+        is_correct=request.is_correct,
+        time_spent_seconds=request.time_spent_seconds,
+        answer_data=request.answer_data,
+    )
+    db.add(practice_answer)
+
+    # 3. 更新記憶強度（使用 PostgreSQL function）
+    result = db.execute(
+        text(
+            """
+            SELECT * FROM update_memory_strength(
+                :student_assignment_id,
+                :content_item_id,
+                :is_correct
+            )
+        """
+        ),
+        {
+            "student_assignment_id": session.student_assignment_id,
+            "content_item_id": request.content_item_id,
+            "is_correct": request.is_correct,
+        },
+    )
+
+    row = result.fetchone()
+    if not row:
+        raise HTTPException(status_code=500, detail="Failed to update memory strength")
+
+    # 4. 更新 session 統計
+    session.words_practiced += 1
+    if request.is_correct:
+        session.correct_count += 1
+    session.total_time_seconds += request.time_spent_seconds
+
+    db.commit()
+
+    return SubmitAnswerResponse(
+        success=True,
+        new_memory_strength=float(row[0]),
+        next_review_at=row[1],
+    )
+
+
+@router.get(
+    "/assignments/{student_assignment_id}/mastery-status",
+    response_model=MasteryStatusResponse,
+)
+async def get_mastery_status(
+    student_assignment_id: int,
+    user=Depends(get_current_student_or_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    檢查作業完成度
+    - 計算整體熟悉度
+    - 判斷是否達成目標（90%）
+    - 返回已掌握的單字數
+    - 支援老師預覽模式
+
+    參數：student_assignment_id（學生模式）或 assignment_id（老師預覽模式）
+    """
+
+    # 檢查是否為老師預覽模式
+    is_teacher = user.get("user_type") == "teacher"
+
+    if is_teacher:
+        # === 老師預覽模式 ===
+        # 老師預覽時，student_assignment_id 其實是 assignment_id
+        # 返回假的達標狀態（因為沒有真實學生資料）
+        return MasteryStatusResponse(
+            current_mastery=0.0,
+            target_mastery=90.0,
+            achieved=False,
+            words_mastered=0,
+            total_words=10,  # 假設值
+        )
+
+    # === 學生模式 ===
+    student_id = user["student_id"]
+
+    # 1. 取得學生作業實例（使用 student_assignment_id）
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == student_assignment_id,
+            StudentAssignment.student_id == student_id,
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(status_code=404, detail="Student assignment not found")
+
+    # 2. 使用 SQL function 計算達標狀態
+    result = db.execute(
+        text(
+            """
+            SELECT * FROM calculate_assignment_mastery(
+                :student_assignment_id
+            )
+        """
+        ),
+        {"student_assignment_id": student_assignment.id},
+    )
+
+    row = result.fetchone()
+    if not row:
+        raise HTTPException(status_code=500, detail="Failed to calculate mastery")
+
+    return MasteryStatusResponse(
+        current_mastery=float(row[0]),
+        target_mastery=float(row[1]),
+        achieved=row[2],
+        words_mastered=row[3],
+        total_words=row[4],
+    )
+
+
+# ============ 例句重組（Rearrangement）API ============
+
+
+class RearrangementQuestionResponse(BaseModel):
+    """例句重組題目回應"""
+
+    content_item_id: int
+    shuffled_words: List[str]  # 打亂後的單字列表
+    word_count: int
+    max_errors: int
+    time_limit: int  # 時間限制（秒）
+    play_audio: bool  # 是否播放音檔
+    audio_url: Optional[str] = None
+    translation: Optional[str] = None
+    original_text: Optional[str] = None  # 正確答案（用於顯示答案功能）
+
+
+class RearrangementAnswerRequest(BaseModel):
+    """例句重組答題請求"""
+
+    content_item_id: int
+    selected_word: str  # 學生選擇的單字
+    current_position: int  # 目前已正確選擇的位置（0-based）
+
+
+class RearrangementAnswerResponse(BaseModel):
+    """例句重組答題回應"""
+
+    is_correct: bool
+    correct_word: Optional[str] = None  # 如果錯誤，顯示正確答案
+    error_count: int
+    max_errors: int
+    expected_score: float
+    correct_word_count: int
+    total_word_count: int
+    challenge_failed: bool  # 達到錯誤上限
+    completed: bool  # 是否完成此題
+
+
+class RearrangementRetryRequest(BaseModel):
+    """重新挑戰請求"""
+
+    content_item_id: int
+
+
+class RearrangementCompleteRequest(BaseModel):
+    """完成題目請求"""
+
+    content_item_id: int
+    timeout: bool = False  # 是否因超時完成
+    expected_score: Optional[float] = None  # 最終分數
+    error_count: Optional[int] = None  # 錯誤次數
+
+
+@router.get("/assignments/{assignment_id}/rearrangement-questions")
+async def get_rearrangement_questions(
+    assignment_id: int,
+    current_student: Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
+):
+    """取得例句重組題目列表"""
+    import random
+
+    # 驗證學生作業存在（assignment_id 實際上是 StudentAssignment.id）
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == current_student.id,
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(status_code=404, detail="Student assignment not found")
+
+    # 取得作業設定
+    assignment = (
+        db.query(Assignment)
+        .filter(Assignment.id == student_assignment.assignment_id)
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 確認是例句重組模式
+    if assignment.practice_mode != "rearrangement":
+        raise HTTPException(
+            status_code=400, detail="This assignment is not in rearrangement mode"
+        )
+
+    # 取得所有內容項目
+    content_items = (
+        db.query(ContentItem)
+        .join(Content)
+        .join(AssignmentContent)
+        .filter(AssignmentContent.assignment_id == assignment.id)
+        .order_by(ContentItem.order_index)
+        .all()
+    )
+
+    # 如果需要打亂順序
+    if assignment.shuffle_questions:
+        random.shuffle(content_items)
+
+    questions = []
+    for item in content_items:
+        # 打亂單字順序
+        words = item.text.strip().split()
+        shuffled_words = words.copy()
+        random.shuffle(shuffled_words)
+
+        questions.append(
+            RearrangementQuestionResponse(
+                content_item_id=item.id,
+                shuffled_words=shuffled_words,
+                word_count=item.word_count or len(words),
+                max_errors=item.max_errors or (3 if len(words) <= 10 else 5),
+                time_limit=assignment.time_limit_per_question or 40,
+                play_audio=assignment.play_audio or False,
+                audio_url=item.audio_url,
+                translation=item.translation,
+                original_text=item.text.strip(),  # 正確答案
+            )
+        )
+
+    return {
+        "student_assignment_id": assignment_id,
+        "practice_mode": "rearrangement",
+        "score_category": assignment.score_category,
+        "questions": questions,
+        "total_questions": len(questions),
+    }
+
+
+@router.post("/assignments/{assignment_id}/rearrangement-answer")
+async def submit_rearrangement_answer(
+    assignment_id: int,
+    request: RearrangementAnswerRequest,
+    current_student: Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
+):
+    """提交例句重組答案"""
+    import math
+
+    # 驗證學生作業存在（assignment_id 實際上是 StudentAssignment.id）
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == current_student.id,
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(status_code=404, detail="Student assignment not found")
+
+    # 取得內容項目
+    content_item = (
+        db.query(ContentItem).filter(ContentItem.id == request.content_item_id).first()
+    )
+
+    if not content_item:
+        raise HTTPException(status_code=404, detail="Content item not found")
+
+    # 取得或建立進度記錄
+    progress = (
+        db.query(StudentItemProgress)
+        .filter(
+            StudentItemProgress.student_assignment_id == assignment_id,
+            StudentItemProgress.content_item_id == request.content_item_id,
+        )
+        .first()
+    )
+
+    if not progress:
+        progress = StudentItemProgress(
+            student_assignment_id=assignment_id,
+            content_item_id=request.content_item_id,
+            status="IN_PROGRESS",
+            error_count=0,
+            correct_word_count=0,
+            expected_score=100.0,
+            rearrangement_data={"selections": []},
+        )
+        db.add(progress)
+        db.flush()
+
+    # 解析正確答案
+    correct_words = content_item.text.strip().split()
+    word_count = len(correct_words)
+    max_errors = content_item.max_errors or (3 if word_count <= 10 else 5)
+    points_per_word = math.floor(100 / word_count)
+
+    # 檢查答案是否正確
+    current_position = request.current_position
+    if current_position >= word_count:
+        raise HTTPException(status_code=400, detail="Invalid position")
+
+    correct_word = correct_words[current_position]
+    is_correct = request.selected_word.strip() == correct_word.strip()
+
+    # 更新進度
+    if is_correct:
+        progress.correct_word_count = current_position + 1
+    else:
+        progress.error_count = (progress.error_count or 0) + 1
+
+    # 修正：每次回答後都計算 expected_score（與老師預覽端一致）
+    # 這樣即使 progress 記錄已存在，分數也會正確計算
+    progress.expected_score = max(
+        0, 100 - ((progress.error_count or 0) * points_per_word)
+    )
+
+    # 記錄選擇歷史
+    selections = (
+        progress.rearrangement_data.get("selections", [])
+        if progress.rearrangement_data
+        else []
+    )
+    selections.append(
+        {
+            "position": current_position,
+            "selected": request.selected_word,
+            "correct": correct_word,
+            "is_correct": is_correct,
+            "timestamp": datetime.now().isoformat(),
+        }
+    )
+    progress.rearrangement_data = {"selections": selections}
+
+    # 檢查是否達到錯誤上限
+    challenge_failed = progress.error_count >= max_errors
+
+    # 檢查是否完成
+    completed = progress.correct_word_count >= word_count
+
+    if completed:
+        progress.status = "COMPLETED"
+        # 確保保底分（完成作答最低分）
+        assignment = (
+            db.query(Assignment)
+            .filter(Assignment.id == student_assignment.assignment_id)
+            .first()
+        )
+        if assignment:
+            # 取得總題數
+            total_items = (
+                db.query(ContentItem)
+                .join(Content)
+                .join(AssignmentContent)
+                .filter(AssignmentContent.assignment_id == assignment.id)
+                .count()
+            )
+            min_score = math.floor(100 / total_items) if total_items > 0 else 1
+            progress.expected_score = max(
+                float(progress.expected_score or 0), min_score
+            )
+
+    db.commit()
+
+    return RearrangementAnswerResponse(
+        is_correct=is_correct,
+        correct_word=correct_word if not is_correct else None,
+        error_count=progress.error_count or 0,
+        max_errors=max_errors,
+        expected_score=float(progress.expected_score or 0),
+        correct_word_count=progress.correct_word_count or 0,
+        total_word_count=word_count,
+        challenge_failed=challenge_failed,
+        completed=completed,
+    )
+
+
+@router.post("/assignments/{student_assignment_id}/rearrangement-retry")
+async def retry_rearrangement(
+    student_assignment_id: int,
+    request: RearrangementRetryRequest,
+    current_student: Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
+):
+    """重新挑戰題目（重置分數）"""
+    # 驗證學生作業存在
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == student_assignment_id,
+            StudentAssignment.student_id == current_student.id,
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(status_code=404, detail="Student assignment not found")
+
+    # 取得進度記錄
+    progress = (
+        db.query(StudentItemProgress)
+        .filter(
+            StudentItemProgress.student_assignment_id == student_assignment_id,
+            StudentItemProgress.content_item_id == request.content_item_id,
+        )
+        .first()
+    )
+
+    if not progress:
+        raise HTTPException(status_code=404, detail="Progress not found")
+
+    # 重置進度
+    progress.error_count = 0
+    progress.correct_word_count = 0
+    progress.expected_score = 100.0
+    progress.retry_count = (progress.retry_count or 0) + 1
+    progress.status = "IN_PROGRESS"
+    progress.rearrangement_data = {"selections": [], "retries": progress.retry_count}
+
+    db.commit()
+
+    return {
+        "success": True,
+        "retry_count": progress.retry_count,
+        "message": "Progress reset. You can start again.",
+    }
+
+
+@router.post("/assignments/{student_assignment_id}/rearrangement-complete")
+async def complete_rearrangement(
+    student_assignment_id: int,
+    request: RearrangementCompleteRequest,
+    current_student: Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
+):
+    """完成題目（時間到期或主動完成）"""
+    # 驗證學生作業存在
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == student_assignment_id,
+            StudentAssignment.student_id == current_student.id,
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(status_code=404, detail="Student assignment not found")
+
+    # 取得進度記錄
+    progress = (
+        db.query(StudentItemProgress)
+        .filter(
+            StudentItemProgress.student_assignment_id == student_assignment_id,
+            StudentItemProgress.content_item_id == request.content_item_id,
+        )
+        .first()
+    )
+
+    if not progress:
+        # 防禦性：建立新記錄（正常情況下應該已存在）
+        progress = StudentItemProgress(
+            student_assignment_id=student_assignment_id,
+            content_item_id=request.content_item_id,
+            status="COMPLETED",
+            timeout_ended=request.timeout,
+            expected_score=request.expected_score or 0,
+            error_count=request.error_count or 0,
+        )
+        db.add(progress)
+    else:
+        # 標記完成狀態
+        progress.status = "COMPLETED"
+        progress.timeout_ended = request.timeout
+
+        # 更新分數（如果前端有提供）
+        if request.expected_score is not None:
+            progress.expected_score = request.expected_score
+        if request.error_count is not None:
+            progress.error_count = request.error_count
+
+    db.commit()
+
+    return {
+        "success": True,
+        "final_score": float(progress.expected_score or 0),
+        "timeout": request.timeout,
+        "completed_at": datetime.now().isoformat(),
     }

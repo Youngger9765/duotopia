@@ -410,6 +410,25 @@ class CreateAssignmentRequest(BaseModel):
     due_date: Optional[datetime] = None
     start_date: Optional[datetime] = None  # 開始日期
 
+    # Legacy: 舊版造句練習答題模式（保留向後相容）
+    answer_mode: str = "writing"  # @deprecated: 請使用 practice_mode 和 play_audio
+
+    # ===== 新增：例句集作答模式設定 =====
+    # 作答模式：'reading' (例句朗讀) / 'rearrangement' (例句重組)
+    practice_mode: str = "reading"
+
+    # 每題時間限制（秒）：10/20/30/40
+    time_limit_per_question: int = 40
+
+    # 是否打亂題目順序
+    shuffle_questions: bool = False
+
+    # 是否播放音檔（例句重組專用）
+    play_audio: bool = False
+
+    # 答題結束後是否顯示正確答案（例句重組專用）
+    show_answer: bool = False
+
 
 class UpdateAssignmentRequest(BaseModel):
     """更新作業請求（部分更新）"""
@@ -596,6 +615,30 @@ async def create_assignment(
             status_code=404, detail="Classroom not found or you don't have permission"
         )
 
+    # 根據 practice_mode 和 play_audio 計算 score_category
+    def determine_score_category(practice_mode: str, play_audio: bool) -> str:
+        if practice_mode == "reading":
+            return "speaking"
+        elif practice_mode == "rearrangement":
+            return "listening" if play_audio else "writing"
+        return "speaking"  # 預設
+
+    score_category = determine_score_category(request.practice_mode, request.play_audio)
+
+    # 根據 practice_mode 計算 legacy answer_mode（數據庫約束只允許 'listening' 或 'writing'）
+    def determine_answer_mode(practice_mode: str, play_audio: bool) -> str:
+        """
+        Legacy answer_mode 欄位：僅供向後相容
+        - reading 模式 -> 'writing'（雖然是口說，但舊系統無此選項）
+        - rearrangement 模式 + play_audio -> 'listening'
+        - rearrangement 模式 + no audio -> 'writing'
+        """
+        if practice_mode == "rearrangement" and play_audio:
+            return "listening"
+        return "writing"
+
+    answer_mode = determine_answer_mode(request.practice_mode, request.play_audio)
+
     # 驗證所有 Content 存在（只查詢模板內容，不包含作業副本）
     # 🔥 使用 eager loading 避免 N+1 查詢問題
     contents = (
@@ -621,6 +664,14 @@ async def create_assignment(
             classroom_id=request.classroom_id,
             teacher_id=current_user.id,
             due_date=request.due_date,
+            answer_mode=answer_mode,  # Legacy: 根據 practice_mode 自動計算
+            # ===== 例句集作答模式設定 =====
+            practice_mode=request.practice_mode,
+            time_limit_per_question=request.time_limit_per_question,
+            shuffle_questions=request.shuffle_questions,
+            play_audio=request.play_audio,
+            show_answer=request.show_answer,
+            score_category=score_category,
             is_active=True,
         )
         db.add(assignment)
@@ -862,6 +913,21 @@ async def get_assignments(
     )
     content_count_map = {row.assignment_id: row.count for row in content_counts}
 
+    # 🆕 Batch-load first content type for each assignment (avoid N+1)
+    first_contents = (
+        db.query(
+            AssignmentContent.assignment_id,
+            Content.type,
+        )
+        .join(Content, AssignmentContent.content_id == Content.id)
+        .filter(
+            AssignmentContent.assignment_id.in_(assignment_ids),
+            AssignmentContent.order_index == 0,  # 取第一個內容
+        )
+        .all()
+    )
+    content_type_map = {row.assignment_id: row.type for row in first_contents}
+
     # 🔥 Batch-load all student assignments (avoid N+1)
     all_student_assignments = (
         db.query(StudentAssignment)
@@ -922,6 +988,9 @@ async def get_assignments(
                 ),
                 "completion_rate": completion_rate,
                 "status_distribution": status_counts,
+                # 🆕 新增欄位：內容類型和練習模式
+                "content_type": content_type_map.get(assignment.id),
+                "practice_mode": assignment.practice_mode,
             }
         )
 
@@ -1585,6 +1654,8 @@ async def get_assignment_detail(
         "contents": contents,
         "student_ids": student_ids,  # 已指派的學生 IDs
         "students_progress": students_progress,
+        # 🆕 新增欄位：練習模式
+        "practice_mode": assignment.practice_mode,
     }
 
 
@@ -2322,7 +2393,7 @@ async def get_student_submission(
                     "content_id": content.id,
                     "content_title": content.title,
                     "content_type": (
-                        content.type.value if content.type else "READING_ASSESSMENT"
+                        content.type.value if content.type else "EXAMPLE_SENTENCES"
                     ),
                     "submissions": [],
                 }
@@ -2343,6 +2414,12 @@ async def get_student_submission(
                         "question_audio_url": item.audio_url
                         if hasattr(item, "audio_url")
                         else "",  # 題目參考音檔
+                        "example_sentence": item.example_sentence
+                        if hasattr(item, "example_sentence")
+                        else "",
+                        "example_sentence_translation": item.example_sentence_translation
+                        if hasattr(item, "example_sentence_translation")
+                        else "",
                         "student_answer": "",  # 預設空字串
                         "student_audio_url": "",  # 學生錄音檔案
                         "transcript": "",  # 語音辨識結果
