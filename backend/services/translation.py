@@ -1,5 +1,8 @@
 """
 Translation service using OpenAI API
+
+Note: OpenAI SDK (>=1.0) uses httpx.Client internally with built-in connection pooling.
+No additional connection pool configuration needed for this service.
 """
 
 import os
@@ -16,7 +19,12 @@ class TranslationService:
         self.model = "gpt-3.5-turbo"
 
     def _ensure_client(self):
-        """Lazy initialization of OpenAI client"""
+        """
+        Lazy initialization of OpenAI client
+
+        Note: OpenAI client uses httpx.Client with connection pooling by default.
+        The client automatically reuses connections for better performance.
+        """
         if self.client is None:
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
