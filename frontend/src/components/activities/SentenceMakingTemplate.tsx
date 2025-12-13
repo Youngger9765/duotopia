@@ -183,6 +183,13 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   const { token: studentToken } = useStudentAuthStore();
   const token = authToken || studentToken;
 
+  // 🎯 Auto-stop recording when time limit is reached (Issue #108)
+  useEffect(() => {
+    if (isRecording && recordingTime >= timeLimit) {
+      onStopRecording?.();
+    }
+  }, [isRecording, recordingTime, timeLimit, onStopRecording]);
+
   // Update assessmentResults when initialAssessmentResults changes
   useEffect(() => {
     if (
