@@ -5,17 +5,13 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   GraduationCap,
   Users,
-  Sparkles,
-  Brain,
   Mic,
+  Brain,
   Trophy,
   BarChart3,
   Shield,
   Zap,
-  CheckCircle,
   ArrowRight,
-  Play,
-  Star,
 } from "lucide-react";
 
 export default function Home() {
@@ -23,111 +19,168 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Language Switcher - Fixed in top right */}
-      <div className="fixed top-4 right-4 z-50">
+      {/* 第一區段: Header - 白色背景 */}
+      <header className="bg-white py-4 px-6 flex items-center justify-between shadow-sm">
+        <img
+          src="https://storage.googleapis.com/duotopia-social-media-videos/website/logo/logo_row_nobg.png"
+          alt={t("home.header.logo")}
+          className="h-10"
+        />
         <LanguageSwitcher />
-      </div>
+      </header>
 
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-black opacity-10"></div>
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+      {/* 第二區段: Hero - 漸層背景 */}
+      <section className="bg-gradient-to-b from-[#204dc0] to-[#101f6b] text-white py-20">
+        <div className="container mx-auto px-4">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* 左側文案 */}
+            <div>
+              <p className="text-yellow-400 mb-2 text-lg font-medium">
+                {t("home.hero.tagline")}
+              </p>
+              <h1 className="text-5xl lg:text-6xl font-bold mb-4">
+                {t("home.hero.brand")}
+              </h1>
+              <h2 className="text-2xl lg:text-3xl mb-6 text-blue-100">
+                {t("home.hero.subtitle")}
+              </h2>
+              <p className="text-lg mb-4 leading-relaxed">
+                {t("home.hero.description")}
+              </p>
+              <ul className="mb-8 space-y-2 text-blue-50">
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>{t("home.hero.benefit1")}</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>{t("home.hero.benefit2")}</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>{t("home.hero.benefit3")}</span>
+                </li>
+              </ul>
 
-        <div className="relative container mx-auto px-4 py-24 lg:py-32">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div>
-                <div className="flex items-center space-x-2 mb-6">
-                  <Sparkles className="h-6 w-6 text-yellow-400" />
-                  <span className="text-yellow-400 font-semibold">
-                    {t("home.hero.badge")}
-                  </span>
+              {/* 免費體驗按鈕 */}
+              <Link to="/teacher/register">
+                <Button
+                  size="lg"
+                  className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-6 text-lg font-semibold shadow-xl"
+                >
+                  <img
+                    src="https://storage.googleapis.com/duotopia-social-media-videos/website/assigment_icon.png"
+                    alt=""
+                    className="w-6 h-6 mr-2"
+                  />
+                  {t("home.hero.freeTrialBtn")}
+                </Button>
+              </Link>
+
+              {/* 教師頭像 + 統計 */}
+              <div className="mt-8 flex items-center gap-4">
+                <div className="flex -space-x-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <img
+                      key={i}
+                      src={`https://storage.googleapis.com/duotopia-social-media-videos/website/teacherprofile_0${i}.png`}
+                      alt={`Teacher ${i}`}
+                      className="w-10 h-10 rounded-full border-2 border-white"
+                    />
+                  ))}
                 </div>
-                <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-                  {t("home.hero.title")}
-                  <span className="block text-3xl lg:text-4xl mt-2 text-blue-200">
-                    {t("home.hero.subtitle")}
-                  </span>
-                </h1>
-                <p className="text-xl mb-8 text-blue-100 leading-relaxed">
-                  {t("home.hero.description")}
+                <div>
+                  <p className="font-semibold">
+                    {t("home.hero.trustedTeachers")}
+                  </p>
+                  <p className="text-blue-200 text-sm">
+                    {t("home.hero.studentsImproved")}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 右側影片 */}
+            <div className="flex justify-center lg:justify-end">
+              <iframe
+                width="315"
+                height="560"
+                src="https://www.youtube.com/embed/neansyCiT6Q"
+                title="Duotopia Demo"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="rounded-xl shadow-2xl"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 第三區段: 快速登入 - #fafcfc 背景 */}
+      <section className="py-16 bg-[#fafcfc]">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Teacher Login */}
+              <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+                <div className="flex items-center mb-4">
+                  <GraduationCap className="w-10 h-10 text-blue-600 mr-3" />
+                  <h4 className="text-xl font-semibold">
+                    {t("home.loginOptions.teacher.title")}
+                  </h4>
+                </div>
+                <p className="text-gray-600 mb-4">
+                  {t("home.loginOptions.teacher.description")}
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Link to="/teacher/register">
-                    <Button
-                      size="lg"
-                      className="bg-white text-blue-700 hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-xl"
-                    >
-                      <GraduationCap className="mr-2 h-5 w-5" />
-                      {t("home.hero.freeTrial")}
+                <div className="space-y-2">
+                  <Link to="/teacher/login" className="block">
+                    <Button className="w-full">
+                      {t("home.loginOptions.teacher.login")}
                     </Button>
                   </Link>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-2 border-white/80 text-white bg-white/10 backdrop-blur-sm hover:bg-white hover:text-blue-700 px-8 py-6 text-lg font-semibold transition-all"
-                  >
-                    <Play className="mr-2 h-5 w-5" />
-                    {t("home.hero.watchVideo")}
+                  <Link to="/teacher/register" className="block">
+                    <Button variant="outline" className="w-full">
+                      {t("home.loginOptions.teacher.register")}
+                    </Button>
+                  </Link>
+                </div>
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-xs text-blue-700 font-medium">
+                    {t("home.loginOptions.teacher.demoLabel")}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    {t("home.loginOptions.teacher.demoCredentials")}
+                  </p>
+                </div>
+              </div>
+
+              {/* Student Login */}
+              <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+                <div className="flex items-center mb-4">
+                  <Users className="w-10 h-10 text-green-600 mr-3" />
+                  <h4 className="text-xl font-semibold">
+                    {t("home.loginOptions.student.title")}
+                  </h4>
+                </div>
+                <p className="text-gray-600 mb-4">
+                  {t("home.loginOptions.student.description")}
+                </p>
+                <Link to="/student/login" className="block">
+                  <Button className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">
+                    {t("home.loginOptions.student.login")}
                   </Button>
-                </div>
-                <div className="mt-8 flex items-center space-x-6">
-                  <div className="flex -space-x-2">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div
-                        key={i}
-                        className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-full border-2 border-white"
-                      ></div>
-                    ))}
-                  </div>
-                  <div className="text-sm">
-                    <div className="font-semibold">
-                      {t("home.hero.trustedBy").replace("{{count}}", "1,000")}
-                    </div>
-                    <div className="text-blue-200">
-                      {t("home.hero.studentsUsing").replace(
-                        "{{count}}",
-                        "10,000",
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="hidden lg:block">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-3xl transform rotate-3"></div>
-                  <img
-                    src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600"
-                    alt="Students learning"
-                    className="relative rounded-3xl shadow-2xl"
-                  />
-                  <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-xl p-4 flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                      <CheckCircle className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-900">
-                        {t("home.features.aiSpeech.title")}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {t("home.features.aiSpeech.title")}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="absolute -top-6 -right-6 bg-white rounded-xl shadow-xl p-4 flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Brain className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-900">
-                        {t("home.features.multiIntelligence.title")}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {t("home.features.multiIntelligence.title")}
-                      </div>
-                    </div>
-                  </div>
+                </Link>
+                <p className="text-sm text-gray-500 mt-3 text-center">
+                  {t("home.loginOptions.student.note")}
+                </p>
+                <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                  <p className="text-xs text-green-700 font-medium">
+                    {t("home.loginOptions.student.demoLabel")}
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    {t("home.loginOptions.student.demoPassword")}
+                  </p>
                 </div>
               </div>
             </div>
@@ -135,43 +188,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Trust Badges */}
-      <section className="bg-gray-50 py-12 border-b">
-        <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 items-center">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900">98%</div>
-                <div className="text-sm text-gray-600 mt-1">
-                  {t("home.stats.satisfaction")}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900">
-                  {t("home.stats.improvementValue")}
-                </div>
-                <div className="text-sm text-gray-600 mt-1">
-                  {t("home.stats.improvementTime")}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900">50%</div>
-                <div className="text-sm text-gray-600 mt-1">
-                  {t("home.stats.speakingImprovement")}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900">24/7</div>
-                <div className="text-sm text-gray-600 mt-1">
-                  {t("home.stats.availability")}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
+      {/* 第四區段: 為什麼選擇 Duotopia (保留原樣) */}
       <section className="py-20 lg:py-28">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
@@ -309,253 +326,57 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How it Works */}
-      <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                {t("home.howItWorks.title")}
-              </h2>
-              <p className="text-xl text-gray-600">
-                {t("home.howItWorks.subtitle")}
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <span className="text-3xl font-bold text-blue-600">1</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-3">
-                  {t("home.howItWorks.step1.title")}
-                </h3>
-                <p className="text-gray-600">
-                  {t("home.howItWorks.step1.description")}
-                </p>
-              </div>
-
-              <div className="text-center">
-                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <span className="text-3xl font-bold text-blue-600">2</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-3">
-                  {t("home.howItWorks.step2.title")}
-                </h3>
-                <p className="text-gray-600">
-                  {t("home.howItWorks.step2.description")}
-                </p>
-              </div>
-
-              <div className="text-center">
-                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <span className="text-3xl font-bold text-blue-600">3</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-3">
-                  {t("home.howItWorks.step3.title")}
-                </h3>
-                <p className="text-gray-600">
-                  {t("home.howItWorks.step3.description")}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                {t("home.testimonials.title")}
-              </h2>
-              <p className="text-xl text-gray-600">
-                {t("home.testimonials.subtitle")}
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <div className="flex items-center mb-4">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Star
-                      key={i}
-                      className="h-5 w-5 fill-yellow-400 text-yellow-400"
-                    />
-                  ))}
-                </div>
-                <p className="text-gray-700 mb-6">
-                  {t("home.testimonials.teacher1.quote")}
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-full mr-4"></div>
-                  <div>
-                    <div className="font-semibold">
-                      {t("home.testimonials.teacher1.name")}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {t("home.testimonials.teacher1.role")}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <div className="flex items-center mb-4">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Star
-                      key={i}
-                      className="h-5 w-5 fill-yellow-400 text-yellow-400"
-                    />
-                  ))}
-                </div>
-                <p className="text-gray-700 mb-6">
-                  {t("home.testimonials.teacher2.quote")}
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-400 rounded-full mr-4"></div>
-                  <div>
-                    <div className="font-semibold">
-                      {t("home.testimonials.teacher2.name")}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {t("home.testimonials.teacher2.role")}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <div className="flex items-center mb-4">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Star
-                      key={i}
-                      className="h-5 w-5 fill-yellow-400 text-yellow-400"
-                    />
-                  ))}
-                </div>
-                <p className="text-gray-700 mb-6">
-                  {t("home.testimonials.parent1.quote")}
-                </p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full mr-4"></div>
-                  <div>
-                    <div className="font-semibold">
-                      {t("home.testimonials.parent1.name")}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {t("home.testimonials.parent1.role")}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+      {/* 第五區段: CTA - 漸層背景 */}
+      <section className="bg-gradient-to-b from-[#204dc0] to-[#101f6b] text-white py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-4xl font-bold mb-6">{t("home.cta.title")}</h2>
-            <p className="text-xl mb-8 text-blue-100">
-              {t("home.cta.subtitle").replace("{{count}}", "1,000")}
+            <h2 className="text-3xl lg:text-4xl font-bold mb-4">
+              {t("home.cta2.title")}
+            </h2>
+            <p className="text-xl mb-10 text-blue-100">
+              ✨ {t("home.cta2.subtitle")}
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/teacher/register">
-                <Button
-                  size="lg"
-                  className="bg-white text-blue-700 hover:bg-gray-100 px-8 py-6 text-lg font-semibold"
-                >
-                  {t("home.cta.startFreeTrial")}
-                </Button>
-              </Link>
-              <Link to="/student/login">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-2 border-white/80 text-white bg-white/10 backdrop-blur-sm hover:bg-white hover:text-blue-700 px-8 py-6 text-lg font-semibold transition-all"
-                >
-                  {t("home.cta.studentLogin")}
-                </Button>
-              </Link>
-            </div>
-            <p className="mt-8 text-sm text-blue-200">
-              {t("home.cta.benefits")}
-            </p>
-          </div>
-        </div>
-      </section>
 
-      {/* Login Options */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h3 className="text-2xl font-bold text-center mb-8 text-gray-900">
-              {t("home.loginOptions.title")}
-            </h3>
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Teacher Login */}
-              <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-center mb-4">
-                  <GraduationCap className="w-10 h-10 text-blue-600 mr-3" />
-                  <h4 className="text-xl font-semibold">
-                    {t("home.loginOptions.teacher.title")}
-                  </h4>
-                </div>
-                <p className="text-gray-600 mb-4">
-                  {t("home.loginOptions.teacher.description")}
-                </p>
-                <div className="space-y-2">
-                  <Link to="/teacher/login" className="block">
-                    <Button className="w-full">
-                      {t("home.loginOptions.teacher.login")}
-                    </Button>
-                  </Link>
-                  <Link to="/teacher/register" className="block">
-                    <Button variant="outline" className="w-full">
-                      {t("home.loginOptions.teacher.register")}
-                    </Button>
-                  </Link>
-                </div>
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-xs text-blue-700 font-medium">
-                    {t("home.loginOptions.teacher.demoLabel")}
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1">
-                    {t("home.loginOptions.teacher.demoCredentials")}
-                  </p>
-                </div>
-              </div>
-
-              {/* Student Login */}
-              <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-center mb-4">
-                  <Users className="w-10 h-10 text-green-600 mr-3" />
-                  <h4 className="text-xl font-semibold">
-                    {t("home.loginOptions.student.title")}
-                  </h4>
-                </div>
-                <p className="text-gray-600 mb-4">
-                  {t("home.loginOptions.student.description")}
-                </p>
-                <Link to="/student/login" className="block">
-                  <Button className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">
-                    {t("home.loginOptions.student.login")}
+            {/* 按鈕 + 教師頭像：大螢幕水平排列，小螢幕垂直排列 */}
+            <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12">
+              {/* 左側：按鈕 + 無須信用卡 */}
+              <div className="flex flex-col items-center lg:items-end">
+                <Link to="/teacher/register">
+                  <Button
+                    size="lg"
+                    className="bg-white text-gray-900 hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-xl"
+                  >
+                    <img
+                      src="https://storage.googleapis.com/duotopia-social-media-videos/website/assigment_icon.png"
+                      alt=""
+                      className="w-6 h-6 mr-2"
+                    />
+                    {t("home.cta2.button")}
                   </Button>
                 </Link>
-                <p className="text-sm text-gray-500 mt-3 text-center">
-                  {t("home.loginOptions.student.note")}
+                <p className="mt-3 text-sm text-blue-200">
+                  {t("home.cta2.noCreditCard")}
                 </p>
-                <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                  <p className="text-xs text-green-700 font-medium">
-                    {t("home.loginOptions.student.demoLabel")}
+              </div>
+
+              {/* 右側：教師頭像 + 統計 */}
+              <div className="flex items-center gap-4">
+                <div className="flex -space-x-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <img
+                      key={i}
+                      src={`https://storage.googleapis.com/duotopia-social-media-videos/website/teacherprofile_0${i}.png`}
+                      alt={`Teacher ${i}`}
+                      className="w-12 h-12 rounded-full border-2 border-white"
+                    />
+                  ))}
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-yellow-400">
+                    {t("home.hero.trustedTeachers")}
                   </p>
-                  <p className="text-xs text-green-600 mt-1">
-                    {t("home.loginOptions.student.demoPassword")}
+                  <p className="text-blue-200 text-sm">
+                    {t("home.hero.studentsImproved")}
                   </p>
                 </div>
               </div>
@@ -564,14 +385,78 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* 第六區段: 三步驟 */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl lg:text-4xl font-bold text-center mb-12 text-gray-900">
+              {t("home.steps.title")}
+            </h2>
+
+            {/* 三個步驟圖示：小螢幕垂直排列，大螢幕水平排列 */}
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-8 sm:gap-12 lg:gap-16 mb-12">
+              {/* 步驟 1 */}
+              <div className="text-center">
+                <img
+                  src="https://storage.googleapis.com/duotopia-social-media-videos/website/sbs_icon01.png"
+                  alt="Step 1"
+                  className="w-20 h-20 mx-auto mb-4"
+                />
+                <p className="text-xl font-semibold text-gray-900">
+                  {t("home.steps.step1")}
+                </p>
+              </div>
+
+              {/* 步驟 2 */}
+              <div className="text-center">
+                <img
+                  src="https://storage.googleapis.com/duotopia-social-media-videos/website/sbs_icon02.png"
+                  alt="Step 2"
+                  className="w-20 h-20 mx-auto mb-4"
+                />
+                <p className="text-xl font-semibold text-gray-900">
+                  {t("home.steps.step2")}
+                </p>
+              </div>
+
+              {/* 步驟 3 */}
+              <div className="text-center">
+                <img
+                  src="https://storage.googleapis.com/duotopia-social-media-videos/website/sbs_icon03.png"
+                  alt="Step 3"
+                  className="w-20 h-20 mx-auto mb-4"
+                />
+                <p className="text-xl font-semibold text-gray-900">
+                  {t("home.steps.step3")}
+                </p>
+              </div>
+            </div>
+
+            {/* 下方展示圖：小螢幕垂直排列，大螢幕水平排列 */}
+            <div className="flex flex-col lg:flex-row justify-center gap-8 items-center">
+              <img
+                src="https://storage.googleapis.com/duotopia-social-media-videos/website/sbs_image01.png"
+                alt="Demo 1"
+                className="w-full max-w-sm lg:max-w-md rounded-xl shadow-lg"
+              />
+              <img
+                src="https://storage.googleapis.com/duotopia-social-media-videos/website/sbs_image02.png"
+                alt="Demo 2"
+                className="w-full max-w-sm lg:max-w-md rounded-xl shadow-lg"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 第七區段: Footer (保留原樣) */}
       <footer className="bg-gray-900 text-gray-300 py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="grid md:grid-cols-4 gap-8">
               <div>
                 <h3 className="text-white text-lg font-bold mb-4">
-                  {t("home.hero.title")}
+                  {t("home.hero.brand")}
                 </h3>
                 <p className="text-sm mb-4">{t("home.footer.description")}</p>
                 <div className="text-sm">

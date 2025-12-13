@@ -137,12 +137,20 @@
     "hero": {
       "badge": "AI-Powered English Learning Revolution",
       "title": "Duotopia",
-      "subtitle": "Multiple Intelligence English Learning Platform",
-      "description": "Through AI speech recognition and instant feedback, create personalized English speaking learning experiences for students aged 6-15. Let every child speak English with confidence!",
+      "subtitle": "AI-Powered Gamified English Learning Platform for Listening, Speaking, Reading, and Writing",
+      "description": "Duotopia creates personalized gamified learning experiences for students, teachers, and parents aged 6-18, helping every student speak English with confidence!",
       "freeTrial": "Free Trial",
       "watchVideo": "Watch Demo Video",
       "trustedBy": "Trusted by {{count}}+ teachers",
-      "studentsUsing": "{{count}}+ students using"
+      "studentsUsing": "{{count}}+ students using",
+      "tagline": "AI-Powered English Learning & Smart Assignment Grading",
+      "brand": "Duotopia",
+      "benefit1": "Helps ESL teachers save time through AI-powered lesson planning and automated grading;",
+      "benefit2": "Students practice effectively through gamified resources and activities, improving learning outcomes;",
+      "benefit3": "Teachers and parents build trust through data-driven insights and efficient communication.",
+      "trustedTeachers": "Trusted by 1,000+ ESL Teachers",
+      "studentsImproved": "Improved 10,000,000+ Students' Speaking Skills",
+      "freeTrialBtn": "Start Free Trial"
     },
     "stats": {
       "satisfaction": "Student Satisfaction",
@@ -255,6 +263,21 @@
       "privacy": "Privacy Policy",
       "terms": "Terms of Service",
       "copyright": "© 2025 Duotopia. All rights reserved."
+    },
+    "header": {
+      "logo": "Duotopia"
+    },
+    "cta2": {
+      "title": "Ready to Reclaim Your Teaching Time?",
+      "subtitle": "Start the English learning revolution with DUOTOPIA's immersive learning experience",
+      "button": "Experience 1-Second Assignment Grading",
+      "noCreditCard": "No credit card required"
+    },
+    "steps": {
+      "title": "Quick 3-Step Start",
+      "step1": "Create Class in 1 Second",
+      "step2": "Import Students in 2 Seconds",
+      "step3": "Paste Materials in 3 Seconds"
     }
   },
   "pricing": {
