@@ -3434,6 +3434,7 @@ async def preview_rearrangement_questions(
     - 供老師預覽示範用
     - 不需要 StudentAssignment，直接從 Assignment 讀取
     """
+
     class RearrangementQuestionResponse(BaseModel):
         content_item_id: int
         shuffled_words: List[str]

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from models import Teacher, Student
-from database import get_db, get_session_local, SessionLocal
+from database import get_session_local, SessionLocal
 import os
 from dotenv import load_dotenv
 
