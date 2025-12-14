@@ -3,6 +3,7 @@ Translation service 單元測試 - 目標覆蓋率 80%
 """
 import os
 import sys
+import asyncio
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -501,7 +502,8 @@ class TestTranslationService:
         assert stats["cache_misses"] == 5
         assert stats["total_calls"] == 15
         assert stats["hit_rate_percent"] == 66.67
-        assert stats["cache_maxsize"] == 10000
+        assert stats["cache_maxsize"] == 5000
+        assert stats["cache_ttl_seconds"] == 3600
 
     def test_get_cache_stats_no_calls(self, service):
         """測試初始 cache 统计（无调用）"""
@@ -516,18 +518,19 @@ class TestTranslationService:
         """測試清空 cache"""
         service._cache_hits = 10
         service._cache_misses = 5
+        service._cache.set(("key", "zh-TW", "model", 0.3), "value")
 
         service.clear_cache()
 
         assert service._cache_hits == 0
         assert service._cache_misses == 0
-        cache_info = service._translate_cached.cache_info()
-        assert cache_info.currsize == 0
+        stats = service.get_cache_stats()
+        assert stats["cache_size"] == 0
 
     @pytest.mark.asyncio
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
     async def test_cache_size_limit(self, service, mock_openai_response):
-        """測試 cache 大小限制（maxsize=10000）"""
+        """測試 cache 大小限制（maxsize=5000）"""
         service.client = Mock()
         service.client.chat.completions.create = Mock(return_value=mock_openai_response)
 
@@ -538,3 +541,33 @@ class TestTranslationService:
         stats = service.get_cache_stats()
         assert stats["cache_size"] == 100
         assert stats["cache_size"] <= stats["cache_maxsize"]
+
+    @pytest.mark.asyncio
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    async def test_cache_ttl_expiry(self, mock_openai_response):
+        """測試 cache TTL 到期後不應命中"""
+        # Use short TTL for test
+        service = TranslationService(cache_ttl_seconds=0)
+        service.client = Mock()
+
+        # First response
+        first_resp = Mock()
+        first_resp.choices = [Mock()]
+        first_resp.choices[0].message.content = "翻譯1"
+        # Second response after expiry
+        second_resp = Mock()
+        second_resp.choices = [Mock()]
+        second_resp.choices[0].message.content = "翻譯2"
+
+        service.client.chat.completions.create = Mock(
+            side_effect=[first_resp, second_resp]
+        )
+
+        result1 = await service.translate_text("Hello", "zh-TW")
+        await asyncio.sleep(0.01)
+        result2 = await service.translate_text("Hello", "zh-TW")
+
+        assert result1 == "翻譯1"
+        assert result2 == "翻譯2"  # cache expired, so second call hits API
+        assert service.client.chat.completions.create.call_count == 2
+        assert service._cache_hits == 0

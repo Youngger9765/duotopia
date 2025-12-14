@@ -3,9 +3,12 @@ Translation service using OpenAI API
 """
 
 import os
+import asyncio
 import logging
+import threading
+import time
+from collections import OrderedDict
 from typing import List, Dict, Optional  # noqa: F401
-from functools import lru_cache
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -13,14 +16,71 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# Cache controls: fixed size and TTL to avoid unbounded memory in Cloud Run
+TRANSLATION_CACHE_MAXSIZE = 5000
+TRANSLATION_CACHE_TTL_SECONDS = 3600  # 1 hour
+
+
+class _LRUTTLCache:
+    """Simple thread-safe LRU cache with TTL, to avoid extra dependencies."""
+
+    def __init__(self, maxsize: int, ttl_seconds: int):
+        self.maxsize = maxsize
+        self.ttl_seconds = ttl_seconds
+        self._store: OrderedDict = OrderedDict()
+        self._lock = threading.Lock()
+
+    def _evict_expired(self):
+        now = time.time()
+        expired_keys = [
+            key for key, (_, ts) in self._store.items() if now - ts > self.ttl_seconds
+        ]
+        for key in expired_keys:
+            self._store.pop(key, None)
+
+    def get(self, key):
+        with self._lock:
+            self._evict_expired()
+            if key in self._store:
+                value, ts = self._store.pop(key)
+                # reinsert to mark as recently used
+                self._store[key] = (value, ts)
+                return value
+            return None
+
+    def set(self, key, value):
+        with self._lock:
+            self._evict_expired()
+            if key in self._store:
+                self._store.pop(key)
+            self._store[key] = (value, time.time())
+            if len(self._store) > self.maxsize:
+                self._store.popitem(last=False)
+
+    def clear(self):
+        with self._lock:
+            self._store.clear()
+
+    def size(self) -> int:
+        with self._lock:
+            self._evict_expired()
+            return len(self._store)
+
 
 class TranslationService:
-    def __init__(self):
+    def __init__(
+        self,
+        cache_maxsize: int = TRANSLATION_CACHE_MAXSIZE,
+        cache_ttl_seconds: int = TRANSLATION_CACHE_TTL_SECONDS,
+    ):
         self.client = None
         self.model = "gpt-3.5-turbo"
         # Cache statistics
         self._cache_hits = 0
         self._cache_misses = 0
+        self._cache = _LRUTTLCache(cache_maxsize, cache_ttl_seconds)
+        self._cache_ttl_seconds = cache_ttl_seconds
+        self._cache_maxsize = cache_maxsize
 
     def _ensure_client(self):
         """Lazy initialization of OpenAI client"""
@@ -30,59 +90,46 @@ class TranslationService:
                 raise ValueError("OPENAI_API_KEY not found in environment variables")
             self.client = OpenAI(api_key=api_key)
 
-    @lru_cache(maxsize=10000)
-    def _translate_cached(self, text: str, target_lang: str = "zh-TW") -> str:
+    def _translate_sync(self, text: str, target_lang: str = "zh-TW") -> str:
         """
-        Cached synchronous translation helper
-
-        Args:
-            text: Text to translate
-            target_lang: Target language
-
-        Returns:
-            Translated text
+        Synchronous translation helper (runs in thread when called from async).
         """
         self._ensure_client()
 
-        try:
-            # Build prompt based on target language
-            if target_lang == "zh-TW":
-                prompt = f"請將以下英文翻譯成繁體中文，只回覆翻譯結果，不要加任何說明：\n{text}"
-            elif target_lang == "en":
-                # English definition
-                prompt = (
-                    f"Please provide a simple English definition or explanation "
-                    f"for the following word or phrase. "
-                    f"Keep it concise (1-2 sentences) and suitable for language "
-                    f"learners:\n{text}"
-                )
-            else:
-                prompt = (
-                    f"Please translate the following text to {target_lang}, "
-                    f"only return the translation without any explanation:\n{text}"
-                )
-
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a professional translator. Only provide the "
-                            "translation without any explanation."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.3,  # Lower randomness for consistent translations
-                max_tokens=100,
+        # Build prompt based on target language
+        if target_lang == "zh-TW":
+            prompt = f"請將以下英文翻譯成繁體中文，只回覆翻譯結果，不要加任何說明：\n{text}"
+        elif target_lang == "en":
+            # English definition
+            prompt = (
+                f"Please provide a simple English definition or explanation "
+                f"for the following word or phrase. "
+                f"Keep it concise (1-2 sentences) and suitable for language "
+                f"learners:\n{text}"
+            )
+        else:
+            prompt = (
+                f"Please translate the following text to {target_lang}, "
+                f"only return the translation without any explanation:\n{text}"
             )
 
-            return response.choices[0].message.content.strip()
-        except Exception as e:
-            logger.error(f"Translation error: {e}")
-            # Return original text if translation fails
-            return text
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a professional translator. Only provide the "
+                        "translation without any explanation."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.3,  # Lower randomness for consistent translations
+            max_tokens=100,
+        )
+
+        return response.choices[0].message.content.strip()
 
     async def translate_text(self, text: str, target_lang: str = "zh-TW") -> str:
         """
@@ -95,28 +142,31 @@ class TranslationService:
         Returns:
             翻譯後的文本
         """
-        # Check cache before calling API
-        cache_info = self._translate_cached.cache_info()
-        prev_hits = cache_info.hits
+        cache_key = (text, target_lang, self.model, 0.3)
 
-        # Call cached translation
-        result = self._translate_cached(text, target_lang)
-
-        # Track cache statistics
-        new_cache_info = self._translate_cached.cache_info()
-        if new_cache_info.hits > prev_hits:
+        cached = self._cache.get(cache_key)
+        if cached is not None:
             self._cache_hits += 1
             logger.debug(
                 f"Translation cache HIT for '{text[:30]}...' ({target_lang}). "
                 f"Total hits: {self._cache_hits}, misses: {self._cache_misses}"
             )
-        else:
-            self._cache_misses += 1
-            logger.info(
-                f"Translation cache MISS for '{text[:30]}...' ({target_lang}). "
-                f"Total hits: {self._cache_hits}, misses: {self._cache_misses}"
-            )
+            return cached
 
+        self._cache_misses += 1
+        logger.info(
+            f"Translation cache MISS for '{text[:30]}...' ({target_lang}). "
+            f"Total hits: {self._cache_hits}, misses: {self._cache_misses}"
+        )
+
+        try:
+            # Run synchronous API call in a thread to avoid blocking event loop
+            result = await asyncio.to_thread(self._translate_sync, text, target_lang)
+        except Exception as e:
+            logger.error(f"Translation error: {e}")
+            result = text
+
+        self._cache.set(cache_key, result)
         return result
 
     def get_cache_stats(self) -> Dict[str, any]:
@@ -126,7 +176,6 @@ class TranslationService:
         Returns:
             Dictionary with cache hit/miss rates and other metrics
         """
-        cache_info = self._translate_cached.cache_info()
         total_calls = self._cache_hits + self._cache_misses
         hit_rate = (self._cache_hits / total_calls * 100) if total_calls > 0 else 0
 
@@ -135,13 +184,14 @@ class TranslationService:
             "cache_misses": self._cache_misses,
             "total_calls": total_calls,
             "hit_rate_percent": round(hit_rate, 2),
-            "cache_size": cache_info.currsize,
-            "cache_maxsize": cache_info.maxsize,
+            "cache_size": self._cache.size(),
+            "cache_maxsize": self._cache_maxsize,
+            "cache_ttl_seconds": self._cache_ttl_seconds,
         }
 
     def clear_cache(self):
         """Clear the translation cache"""
-        self._translate_cached.cache_clear()
+        self._cache.clear()
         self._cache_hits = 0
         self._cache_misses = 0
         logger.info("Translation cache cleared")
@@ -159,36 +209,16 @@ class TranslationService:
         Returns:
             翻譯後的文本列表
         """
-        # Strategy: Check for cached items first
-        # If many items are cached, use individual lookups
-        # Otherwise, use batch API call
-        import asyncio
-
-        cached_count = 0
-        for text in texts:
-            cache_key = (text, target_lang)
-            # Check if in cache without calling the function
-            if cache_key in {
-                (text, lang)
-                for text, lang in [
-                    (t, l)
-                    for t, l in zip(
-                        [text],
-                        [target_lang],
-                    )
-                ]
-            }:
-                cached_count += 1
-
-        # If batch is small or has many potential cache hits, use individual calls
-        # This maximizes cache utilization
+        # If batch is small or has duplicates, prefer individual calls to reuse cache
         if len(texts) <= 10 or len(set(texts)) < len(texts):
             logger.info(
                 f"Using individual translation for {len(texts)} items "
                 f"(unique: {len(set(texts))}) to maximize cache hits"
             )
-            tasks = [self.translate_text(text, target_lang) for text in texts]
-            return await asyncio.gather(*tasks)
+            results: List[str] = []
+            for text in texts:
+                results.append(await self.translate_text(text, target_lang))
+            return results
 
         # For large unique batches, use batch API
         self._ensure_client()
@@ -257,24 +287,27 @@ Required: Return format must be ["translation1", "translation2", ...]"""
 
             # 確保返回的翻譯數量與輸入相同
             if len(translations) != len(texts):
-                print(
-                    f"Warning: Expected {len(texts)} translations, got {len(translations)}. "
-                    f"Falling back to individual translation."
+                logger.warning(
+                    "Batch translation count mismatch "
+                    f"(expected {len(texts)}, got {len(translations)}), "
+                    "falling back to individual translation."
                 )
                 # Fallback: 逐句翻譯
-                import asyncio
-
                 tasks = [self.translate_text(text, target_lang) for text in texts]
                 translations = await asyncio.gather(*tasks)
+                return translations
+
+            # Populate cache for future calls
+            for text, translation in zip(texts, translations):
+                cache_key = (text, target_lang, self.model, 0.3)
+                self._cache.set(cache_key, translation)
 
             return translations
         except Exception as e:
-            print(
+            logger.error(
                 f"Batch translation error: {e}. Falling back to individual translation."
             )
             # Fallback: 逐句翻譯
-            import asyncio
-
             tasks = [self.translate_text(text, target_lang) for text in texts]
             translations = await asyncio.gather(*tasks)
             return translations
