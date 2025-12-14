@@ -124,6 +124,7 @@ interface GroupedQuestionsTemplateProps {
     assessmentResult: AssessmentResult | null,
   ) => void; // AI 評估完成回調
   onAnalyzingStateChange?: (isAnalyzing: boolean) => void; // 🔒 分析狀態變化回調
+  timeLimit?: number; // 錄音時間限制（秒）
 }
 
 const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
@@ -149,6 +150,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   onUploadSuccess,
   onAssessmentComplete,
   onAnalyzingStateChange, // 🔒 分析狀態變化回調
+  timeLimit = 30, // 錄音時間限制（秒）
 }: GroupedQuestionsTemplateProps) {
   const { t } = useTranslation();
   const currentQuestion = items[currentQuestionIndex];
@@ -202,6 +204,13 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   // 使用傳入的 token（預覽模式）或從 student store 取得（正常模式）
   const { token: studentToken } = useStudentAuthStore();
   const token = authToken || studentToken;
+
+  // 🎯 Auto-stop recording when time limit is reached (Issue #108)
+  useEffect(() => {
+    if (isRecording && recordingTime >= timeLimit) {
+      onStopRecording?.();
+    }
+  }, [isRecording, recordingTime, timeLimit, onStopRecording]);
 
   // Update assessmentResults when initialAssessmentResults changes
   useEffect(() => {
@@ -811,7 +820,9 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           />
                         </div>
                         <div className="text-xs text-gray-500 mt-0.5">
-                          {formatAudioTime(duration || 0)}
+                          {formatAudioTime(
+                            duration >= timeLimit - 1 ? timeLimit : duration,
+                          )}
                         </div>
                       </div>
 
@@ -975,7 +986,12 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                   {/* 錄音中狀態 */}
                   <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
                   <span className="text-base font-medium text-red-600">
-                    {formatTime(recordingTime)} / 0:45
+                    {formatTime(
+                      recordingTime >= timeLimit - 1
+                        ? timeLimit
+                        : recordingTime,
+                    )}{" "}
+                    / {formatTime(timeLimit)}
                   </span>
                   <Button
                     size="sm"

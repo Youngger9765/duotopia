@@ -75,6 +75,64 @@ class TestAudioUploadService:
         assert "Invalid file type" in exc_info.value.detail
 
     @pytest.mark.asyncio
+    @patch("services.audio_upload.uuid.uuid4")
+    @patch("services.audio_upload.datetime")
+    async def test_upload_audio_video_mp4_safari(
+        self, mock_datetime, mock_uuid, service
+    ):
+        """測試 Safari 的 video/mp4 格式 (Issue #109)"""
+        mock_uuid.return_value = "test-uuid"
+        mock_now = Mock()
+        mock_now.strftime.return_value = "20240101_120000"
+        mock_datetime.now.return_value = mock_now
+
+        mock_client = Mock()
+        mock_bucket = Mock()
+        mock_blob = Mock()
+        service.storage_client = mock_client
+        mock_client.bucket.return_value = mock_bucket
+        mock_bucket.blob.return_value = mock_blob
+
+        mock_file = Mock(spec=UploadFile)
+        mock_file.content_type = "video/mp4"
+        mock_file.filename = "recording.mp4"
+        mock_file.read = AsyncMock(return_value=b"test audio" * 1000)
+
+        result = await service.upload_audio(mock_file, duration_seconds=20)
+
+        assert "mp4" in result
+        mock_blob.upload_from_string.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("services.audio_upload.uuid.uuid4")
+    @patch("services.audio_upload.datetime")
+    async def test_upload_audio_mp4_with_codecs(
+        self, mock_datetime, mock_uuid, service
+    ):
+        """測試帶 codecs 參數的 audio/mp4 格式 (Issue #109)"""
+        mock_uuid.return_value = "test-uuid"
+        mock_now = Mock()
+        mock_now.strftime.return_value = "20240101_120000"
+        mock_datetime.now.return_value = mock_now
+
+        mock_client = Mock()
+        mock_bucket = Mock()
+        mock_blob = Mock()
+        service.storage_client = mock_client
+        mock_client.bucket.return_value = mock_bucket
+        mock_bucket.blob.return_value = mock_blob
+
+        mock_file = Mock(spec=UploadFile)
+        mock_file.content_type = "audio/mp4;codecs=aac"
+        mock_file.filename = "recording.m4a"
+        mock_file.read = AsyncMock(return_value=b"test audio" * 1000)
+
+        result = await service.upload_audio(mock_file, duration_seconds=20)
+
+        assert result is not None
+        mock_blob.upload_from_string.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_upload_audio_file_too_large(self, service):
         """測試檔案過大"""
         mock_file = Mock(spec=UploadFile)
@@ -92,7 +150,8 @@ class TestAudioUploadService:
         """測試音檔過長"""
         mock_file = Mock(spec=UploadFile)
         mock_file.content_type = "audio/webm"
-        mock_file.read = AsyncMock(return_value=b"test")
+        mock_file.filename = "test.webm"
+        mock_file.read = AsyncMock(return_value=b"test audio" * 1000)  # ~10KB
 
         with pytest.raises(HTTPException) as exc_info:
             await service.upload_audio(mock_file, duration_seconds=31)
@@ -146,7 +205,8 @@ class TestAudioUploadService:
 
         mock_file = Mock(spec=UploadFile)
         mock_file.content_type = "audio/webm"
-        mock_file.read = AsyncMock(return_value=b"test")
+        mock_file.filename = "test.webm"
+        mock_file.read = AsyncMock(return_value=b"test audio" * 1000)  # ~10KB
 
         with pytest.raises(HTTPException) as exc_info:
             await service.upload_audio(mock_file)
@@ -174,13 +234,168 @@ class TestAudioUploadService:
 
         mock_file = Mock(spec=UploadFile)
         mock_file.content_type = "audio/webm"
-        mock_file.read = AsyncMock(return_value=b"test")
+        mock_file.filename = "test.webm"
+        mock_file.read = AsyncMock(return_value=b"test audio" * 1000)  # ~10KB
 
         with pytest.raises(HTTPException) as exc_info:
             await service.upload_audio(mock_file)
 
         assert exc_info.value.status_code == 500
         assert "Failed to upload recording" in exc_info.value.detail
+
+
+class TestAudioUploadServiceConcurrency:
+    """測試併發上傳"""
+
+    @pytest.fixture
+    def service(self):
+        """創建測試用 service"""
+        return AudioUploadService()
+
+    def create_mock_file(self, size_kb=100):
+        """創建指定大小的 mock 檔案"""
+        mock_file = Mock(spec=UploadFile)
+        mock_file.content_type = "audio/webm"
+        mock_file.filename = "test.webm"
+        mock_file.read = AsyncMock(return_value=b"x" * (size_kb * 1024))
+        return mock_file
+
+    @pytest.mark.asyncio
+    @patch("services.audio_upload.uuid.uuid4")
+    @patch("services.audio_upload.datetime")
+    async def test_concurrent_upload_10_files(self, mock_datetime, mock_uuid, service):
+        """測試 10 個併發上傳"""
+        # Setup mocks
+        mock_uuid.side_effect = [f"uuid-{i}" for i in range(10)]
+        mock_now = Mock()
+        mock_now.strftime.return_value = "20240101_120000"
+        mock_datetime.now.return_value = mock_now
+
+        # Mock GCS client
+        mock_client = Mock()
+        mock_bucket = Mock()
+        service.storage_client = mock_client
+        mock_client.bucket.return_value = mock_bucket
+
+        # Create mock blobs
+        mock_blobs = []
+        for i in range(10):
+            mock_blob = Mock()
+            mock_blob.upload_from_string = Mock()
+            mock_blobs.append(mock_blob)
+
+        mock_bucket.blob.side_effect = mock_blobs
+
+        # Create 10 mock files (100KB each)
+        files = [self.create_mock_file(100) for _ in range(10)]
+
+        # Upload concurrently
+        import asyncio
+        import time
+
+        start_time = time.time()
+        results = await asyncio.gather(
+            *[service.upload_audio(file, duration_seconds=20) for file in files]
+        )
+        elapsed_time = time.time() - start_time
+
+        # Verify all uploads succeeded
+        assert len(results) == 10
+        for i, result in enumerate(results):
+            assert "https://storage.googleapis.com/duotopia-audio/recordings/" in result
+            assert f"uuid-{i}" in result
+
+        # Verify all blobs were uploaded
+        for mock_blob in mock_blobs:
+            mock_blob.upload_from_string.assert_called_once()
+
+        # Performance check: concurrent uploads should be fast (<2s)
+        assert (
+            elapsed_time < 2.0
+        ), f"Concurrent uploads took {elapsed_time:.2f}s (expected <2s)"
+
+    @pytest.mark.asyncio
+    @patch("services.audio_upload.uuid.uuid4")
+    @patch("services.audio_upload.datetime")
+    async def test_concurrent_upload_large_files(
+        self, mock_datetime, mock_uuid, service
+    ):
+        """測試併發上傳大檔案 (接近 2MB 上限)"""
+        # Setup mocks
+        mock_uuid.side_effect = [f"uuid-large-{i}" for i in range(10)]
+        mock_now = Mock()
+        mock_now.strftime.return_value = "20240101_120000"
+        mock_datetime.now.return_value = mock_now
+
+        # Mock GCS client
+        mock_client = Mock()
+        mock_bucket = Mock()
+        service.storage_client = mock_client
+        mock_client.bucket.return_value = mock_bucket
+
+        # Create mock blobs
+        mock_blobs = []
+        for i in range(10):
+            mock_blob = Mock()
+            mock_blob.upload_from_string = Mock()
+            mock_blobs.append(mock_blob)
+
+        mock_bucket.blob.side_effect = mock_blobs
+
+        # Create 10 large files (1.9MB each)
+        files = [self.create_mock_file(1900) for _ in range(10)]
+
+        # Upload concurrently
+        import asyncio
+
+        results = await asyncio.gather(
+            *[service.upload_audio(file, duration_seconds=25) for file in files]
+        )
+
+        # Verify all uploads succeeded
+        assert len(results) == 10
+
+    @pytest.mark.asyncio
+    @patch("services.audio_upload.uuid.uuid4")
+    @patch("services.audio_upload.datetime")
+    async def test_concurrent_upload_mixed_sizes(
+        self, mock_datetime, mock_uuid, service
+    ):
+        """測試併發上傳混合大小檔案"""
+        # Setup mocks
+        mock_uuid.side_effect = [f"uuid-mixed-{i}" for i in range(10)]
+        mock_now = Mock()
+        mock_now.strftime.return_value = "20240101_120000"
+        mock_datetime.now.return_value = mock_now
+
+        # Mock GCS client
+        mock_client = Mock()
+        mock_bucket = Mock()
+        service.storage_client = mock_client
+        mock_client.bucket.return_value = mock_bucket
+
+        # Create mock blobs
+        mock_blobs = []
+        for i in range(10):
+            mock_blob = Mock()
+            mock_blob.upload_from_string = Mock()
+            mock_blobs.append(mock_blob)
+
+        mock_bucket.blob.side_effect = mock_blobs
+
+        # Create files of different sizes
+        sizes = [10, 50, 100, 200, 500, 800, 1000, 1200, 1500, 1900]
+        files = [self.create_mock_file(size) for size in sizes]
+
+        # Upload concurrently
+        import asyncio
+
+        results = await asyncio.gather(
+            *[service.upload_audio(file, duration_seconds=20) for file in files]
+        )
+
+        # Verify all uploads succeeded
+        assert len(results) == 10
 
 
 class TestAudioUploadServiceSingleton:

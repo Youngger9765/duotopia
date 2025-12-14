@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -98,6 +99,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 📦 GZip 压缩 middleware (Issue #95)
+# 对大于 1KB 的响应进行 gzip 压缩，减少带宽使用
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 # 🔐 全局 Rate Limiting (补充 slowapi)

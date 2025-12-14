@@ -313,6 +313,7 @@ jobs:
         ENV_VARS="$ENV_VARS,GCP_PROJECT_ID=$PROJECT_ID"
         ENV_VARS="$ENV_VARS,REGION=$REGION"
         ENV_VARS="$ENV_VARS,GCS_BUCKET_NAME=duotopia-audio"
+        ENV_VARS="$ENV_VARS,USE_GCS_STORAGE=true"
 
         # TapPay 配置（環境相關）
         ENV_VARS="$ENV_VARS,TAPPAY_SANDBOX_APP_ID=${{ secrets.TAPPAY_SANDBOX_APP_ID }}"

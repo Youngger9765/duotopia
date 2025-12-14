@@ -67,12 +67,13 @@ jobs:
         echo "backend=$DEPLOY_BACKEND" >> $GITHUB_OUTPUT
         echo "frontend=$DEPLOY_FRONTEND" >> $GITHUB_OUTPUT
 
-  trigger-vm-prod:
-    name: 🔄 Trigger VM Production Deployment
-    if: github.ref == 'refs/heads/main'
+  trigger-production-backend:
+    name: 🔄 Trigger Production Backend Deployment (Cloud Run)
+    needs: detect-required-deployments
+    if: github.ref == 'refs/heads/main' && needs.detect-required-deployments.outputs.deploy-backend == 'true'
     runs-on: ubuntu-latest
     steps:
-    - name: Trigger VM Deployment
+    - name: Trigger Backend Workflow
       uses: actions/github-script@v7
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -80,10 +81,29 @@ jobs:
           await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            workflow_id: 'deploy-vm-prod.yml',
+            workflow_id: 'deploy-backend.yml',
             ref: '${{ github.ref }}'
           });
-          console.log('✅ Triggered VM production deployment');
+          console.log('✅ Triggered production backend deployment (Cloud Run)');
+
+  trigger-production-frontend:
+    name: 🔄 Trigger Production Frontend Deployment (Cloud Run)
+    needs: detect-required-deployments
+    if: github.ref == 'refs/heads/main' && needs.detect-required-deployments.outputs.deploy-frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger Frontend Workflow
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'deploy-frontend.yml',
+            ref: '${{ github.ref }}'
+          });
+          console.log('✅ Triggered production frontend deployment (Cloud Run)');
 
   trigger-backend:
     name: 🔄 Trigger Backend Deployment (Cloud Run)
@@ -148,7 +168,7 @@ jobs:
 
   notify-deployment:
     name: 📢 Notify Deployment
-    needs: [trigger-vm-prod, trigger-backend, trigger-frontend]
+    needs: [trigger-production-backend, trigger-production-frontend, trigger-backend, trigger-frontend]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -163,13 +183,17 @@ jobs:
 
         # Check which deployment path was taken
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-          echo "🎯 Deployment Target: VM Production"
-          if [[ "${{ needs.trigger-vm-prod.result }}" == "success" ]]; then
-            echo "✅ VM production deployment triggered"
-          elif [[ "${{ needs.trigger-vm-prod.result }}" == "skipped" ]]; then
-            echo "⏭️ VM production deployment skipped"
-          else
-            echo "❌ VM production deployment failed"
+          echo "🎯 Deployment Target: Cloud Run (Production)"
+          if [[ "${{ needs.trigger-production-backend.result }}" == "success" ]]; then
+            echo "✅ Production backend deployment triggered (Cloud Run)"
+          elif [[ "${{ needs.trigger-production-backend.result }}" == "skipped" ]]; then
+            echo "⏭️ Production backend deployment skipped"
+          fi
+
+          if [[ "${{ needs.trigger-production-frontend.result }}" == "success" ]]; then
+            echo "✅ Production frontend deployment triggered (Cloud Run)"
+          elif [[ "${{ needs.trigger-production-frontend.result }}" == "skipped" ]]; then
+            echo "⏭️ Production frontend deployment skipped"
           fi
         elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
           echo "🎯 Deployment Target: Cloud Run (Staging)"

@@ -2,11 +2,14 @@
 Audio upload service for recording files
 """
 
+import asyncio
 import os
 import uuid
+import json
 from datetime import datetime  # noqa: F401
 from typing import Optional  # noqa: F401
 from fastapi import UploadFile, HTTPException
+from google.cloud import storage
 
 
 class AudioUploadService:
@@ -26,14 +29,13 @@ class AudioUploadService:
             "audio/opus",
             "audio/x-m4a",
             "video/webm",  # 某些瀏覽器會將 webm 音檔標記為 video/webm
+            "video/mp4",  # Safari (macOS/iOS) 可能使用 video/mp4
         ]
         self.environment = os.getenv("ENVIRONMENT", "development")
 
     def _get_storage_client(self):
         """延遲初始化 GCS client（使用與 tts.py 相同的認證邏輯）"""
         if not self.storage_client:
-            from google.cloud import storage
-
             # 檢查必要的環境變數
             if not self.bucket_name:
                 raise ValueError("GCS_BUCKET_NAME environment variable is not set")
@@ -45,8 +47,6 @@ class AudioUploadService:
             if os.path.exists(key_path):
                 # 檢查文件是否為空或無效
                 try:
-                    import json
-
                     if os.path.getsize(key_path) > 0:
                         with open(key_path, "r") as f:
                             json.load(f)  # 驗證 JSON 格式
@@ -112,11 +112,25 @@ class AudioUploadService:
             音檔 URL
         """
         try:
-            # 檢查檔案類型
-            if file.content_type not in self.allowed_formats:
+            # 檢查檔案類型（支援帶 codecs 參數的 MIME type，如 audio/mp4;codecs=aac）
+            content_type = file.content_type or ""
+            # 提取基本 MIME type（去掉 codecs 等參數）
+            base_content_type = content_type.split(";")[0].strip()
+
+            # 檢查完整匹配或基本類型匹配
+            is_allowed = (
+                content_type in self.allowed_formats
+                or base_content_type in self.allowed_formats
+                or any(
+                    content_type.startswith(fmt.split(";")[0])
+                    for fmt in self.allowed_formats
+                )
+            )
+
+            if not is_allowed:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Invalid file type. Allowed: {', '.join(self.allowed_formats)}",
+                    detail=f"Invalid file type '{content_type}'. Allowed: {', '.join(self.allowed_formats)}",
                 )
 
             # 讀取檔案內容
@@ -171,6 +185,7 @@ class AudioUploadService:
                 "audio/webm": "webm",
                 "video/webm": "webm",
                 "audio/mp4": "m4a",
+                "video/mp4": "mp4",  # Safari 可能使用 video/mp4
                 "audio/ogg": "ogg",
                 "audio/opus": "opus",
                 "audio/mpeg": "mp3",
@@ -196,8 +211,10 @@ class AudioUploadService:
                 bucket = client.bucket(self.bucket_name)
                 blob = bucket.blob(f"recordings/{filename}")
 
-                # 上傳檔案並設定正確的 content type
-                blob.upload_from_string(content, content_type=file.content_type)
+                # 上傳檔案並設定正確的 content type (使用 asyncio.to_thread 避免阻塞)
+                await asyncio.to_thread(
+                    blob.upload_from_string, content, content_type=file.content_type
+                )
 
                 # 返回公開 URL (bucket 已設定為 public，無需 make_public())
                 return f"https://storage.googleapis.com/{self.bucket_name}/recordings/{filename}"

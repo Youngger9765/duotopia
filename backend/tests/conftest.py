@@ -6,7 +6,8 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
-
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.compiler import compiles
 from database import Base, get_db
 from main import app
 import models  # noqa: F401 - Import models to register them
@@ -34,6 +35,12 @@ from auth import get_password_hash, create_access_token
 _test_engine = None
 
 
+@compiles(JSONB, "sqlite")
+def _compile_jsonb_sqlite(type_, compiler, **kw):
+    # Allow JSONB columns to compile on SQLite (used in local/unit tests)
+    return "JSON"
+
+
 def get_test_engine():
     """獲取全域測試引擎"""
     global _test_engine
@@ -43,6 +50,7 @@ def get_test_engine():
         _test_engine = create_engine(
             "sqlite:///./test.db", echo=False, connect_args={"check_same_thread": False}
         )
+
         # checkfirst=True: 避免平行測試時重複創建表
         Base.metadata.create_all(_test_engine, checkfirst=True)
     return _test_engine

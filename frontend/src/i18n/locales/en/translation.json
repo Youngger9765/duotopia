@@ -1250,7 +1250,7 @@
         "readingDesc": "Students read sentences aloud, system scores pronunciation",
         "rearrangement": "Sentence Rearrangement",
         "rearrangementDesc": "Students rearrange shuffled words into correct sentences",
-        "timeLimit": "Time Limit",
+        "timeLimit": "Per-question Time Limit",
         "seconds": "seconds",
         "default": "Default",
         "shuffleQuestions": "Shuffle Questions",

@@ -461,13 +461,13 @@ export default function StudentActivityPageContent({
           if (!isPreviewMode) {
             toast.success(t("studentActivityPage.recording.complete"), {
               description: t("studentActivityPage.recording.duration", {
-                duration: validationResult.duration.toFixed(1),
+                duration: Math.round(validationResult.duration),
               }),
             });
           } else {
             toast.success(t("studentActivityPage.recording.completePreview"), {
               description: t("studentActivityPage.recording.duration", {
-                duration: validationResult.duration.toFixed(1),
+                duration: Math.round(validationResult.duration),
               }),
             });
           }
@@ -896,7 +896,7 @@ export default function StudentActivityPageContent({
       }
 
       toast.success(t("studentActivity.toast.uploadSuccess"), {
-        description: `${file.name}（${duration.toFixed(1)} 秒）`,
+        description: `${file.name}（${Math.round(duration)} 秒）`,
       });
 
       console.log("✅ File validated successfully, starting upload to GCS...");
@@ -1597,6 +1597,7 @@ export default function StudentActivityPageContent({
           }
           onFileUpload={handleFileUpload}
           formatTime={formatTime}
+          timeLimit={activity.duration || 30}
           progressIds={
             answer?.progressIds ||
             activity.items
@@ -1882,37 +1883,40 @@ export default function StudentActivityPageContent({
                   </span>
                 </div>
               )}
-              {!isReadOnly && !isPreviewMode && (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  size="sm"
-                  variant="default"
-                  className="px-2 sm:px-3"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      <span className="hidden sm:inline">
-                        {t("studentActivityPage.buttons.submitting")}
-                      </span>
-                      <span className="sm:hidden">
-                        {t("studentActivityPage.buttons.submittingShort")}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-3 w-3 mr-1" />
-                      <span className="hidden sm:inline">
-                        {t("studentActivityPage.buttons.submit")}
-                      </span>
-                      <span className="sm:hidden">
-                        {t("studentActivityPage.buttons.submitShort")}
-                      </span>
-                    </>
-                  )}
-                </Button>
-              )}
+              {/* Issue #110: 例句重組模式不在 header 顯示提交按鈕（避免誤觸） */}
+              {!isReadOnly &&
+                !isPreviewMode &&
+                practiceMode !== "rearrangement" && (
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    size="sm"
+                    variant="default"
+                    className="px-2 sm:px-3"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        <span className="hidden sm:inline">
+                          {t("studentActivityPage.buttons.submitting")}
+                        </span>
+                        <span className="sm:hidden">
+                          {t("studentActivityPage.buttons.submittingShort")}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-3 w-3 mr-1" />
+                        <span className="hidden sm:inline">
+                          {t("studentActivityPage.buttons.submit")}
+                        </span>
+                        <span className="sm:hidden">
+                          {t("studentActivityPage.buttons.submitShort")}
+                        </span>
+                      </>
+                    )}
+                  </Button>
+                )}
             </div>
           </div>
 
@@ -2243,7 +2247,23 @@ export default function StudentActivityPageContent({
                         currentActivity.items.length - 1
                       : true;
 
-                    if (isLastActivity && isLastSubQuestion && !isPreviewMode) {
+                    // Issue #110: 例句重組模式只在所有題目完成時顯示提交按鈕
+                    const allRearrangementCompleted = isRearrangementMode
+                      ? rearrangementQuestions.every((q) => {
+                          const state = rearrangementQuestionStates.get(
+                            q.content_item_id,
+                          );
+                          return state?.completed || state?.challengeFailed;
+                        })
+                      : false;
+
+                    // 非例句重組模式：最後一題顯示提交
+                    // 例句重組模式：所有題目完成後顯示提交
+                    const shouldShowSubmit = isRearrangementMode
+                      ? allRearrangementCompleted && !isPreviewMode
+                      : isLastActivity && isLastSubQuestion && !isPreviewMode;
+
+                    if (shouldShowSubmit) {
                       return (
                         <Button
                           variant="default"

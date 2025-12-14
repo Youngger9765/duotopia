@@ -64,7 +64,9 @@ export default function TeacherLogin() {
       // Check if error is related to email verification
       if (err instanceof ApiError) {
         const errorDetail =
-          typeof err.detail === "string" ? err.detail.toLowerCase() : "";
+          typeof err.detail === "string"
+            ? err.detail.toLowerCase()
+            : err.detail.message?.toLowerCase() || "";
         if (
           errorDetail.includes("verified") ||
           errorDetail.includes("驗證") ||

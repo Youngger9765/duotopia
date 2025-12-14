@@ -1,3 +1,4 @@
+import random
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, selectinload
@@ -3362,7 +3363,11 @@ async def get_assignment_preview(
                 "order": idx + 1,
                 "type": content.type.value if content.type else "reading_assessment",
                 "title": content.title,
-                "duration": content.time_limit_seconds or 60,
+                "duration": (
+                    assignment.time_limit_per_question
+                    if assignment.time_limit_per_question
+                    else 30
+                ),
                 "points": 100 // len(assignment_contents)
                 if len(assignment_contents) > 0
                 else 100,
@@ -3429,9 +3434,6 @@ async def preview_rearrangement_questions(
     - 供老師預覽示範用
     - 不需要 StudentAssignment，直接從 Assignment 讀取
     """
-    import random
-    from pydantic import BaseModel
-    from typing import Optional, List
 
     class RearrangementQuestionResponse(BaseModel):
         content_item_id: int
@@ -3603,8 +3605,6 @@ async def preview_rearrangement_complete(
     - 不存入資料庫
     - 供老師預覽示範用
     """
-    from datetime import datetime
-
     # 取得作業（確認老師有權限）
     assignment = (
         db.query(Assignment)
