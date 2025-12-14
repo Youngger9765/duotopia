@@ -47,60 +47,43 @@ export default function ContentTypeDialog({
   const [loading, setLoading] = useState(false);
 
   const contentTypes: ContentType[] = [
+    // ===== Phase 1 - 啟用 =====
     {
-      type: "reading_assessment",
-      name: t("dialogs.contentTypeDialog.types.reading_assessment.name"),
+      type: "example_sentences",
+      name: t("dialogs.contentTypeDialog.types.example_sentences.name"),
       description: t(
-        "dialogs.contentTypeDialog.types.reading_assessment.description",
+        "dialogs.contentTypeDialog.types.example_sentences.description",
       ),
-      icon: "📖",
+      icon: "📝",
       recommended: true,
       disabled: false,
     },
+    // ===== Phase 2 - 暫時禁用 =====
     {
-      type: "speaking_practice",
-      name: t("dialogs.contentTypeDialog.types.speaking_practice.name"),
+      type: "vocabulary_set",
+      name: t("dialogs.contentTypeDialog.types.vocabulary_set.name"),
       description: t(
-        "dialogs.contentTypeDialog.types.speaking_practice.description",
+        "dialogs.contentTypeDialog.types.vocabulary_set.description",
       ),
-      icon: "🎙️",
-      recommended: true,
+      icon: "📚",
       disabled: true,
     },
     {
-      type: "speaking_scenario",
-      name: t("dialogs.contentTypeDialog.types.speaking_scenario.name"),
+      type: "multiple_choice",
+      name: t("dialogs.contentTypeDialog.types.multiple_choice.name"),
       description: t(
-        "dialogs.contentTypeDialog.types.speaking_scenario.description",
+        "dialogs.contentTypeDialog.types.multiple_choice.description",
+      ),
+      icon: "✅",
+      disabled: true,
+    },
+    {
+      type: "scenario_dialogue",
+      name: t("dialogs.contentTypeDialog.types.scenario_dialogue.name"),
+      description: t(
+        "dialogs.contentTypeDialog.types.scenario_dialogue.description",
       ),
       icon: "💬",
-      disabled: true,
-    },
-    {
-      type: "listening_cloze",
-      name: t("dialogs.contentTypeDialog.types.listening_cloze.name"),
-      description: t(
-        "dialogs.contentTypeDialog.types.listening_cloze.description",
-      ),
-      icon: "🎧",
-      disabled: true,
-    },
-    {
-      type: "sentence_making",
-      name: t("dialogs.contentTypeDialog.types.sentence_making.name"),
-      description: t(
-        "dialogs.contentTypeDialog.types.sentence_making.description",
-      ),
-      icon: "✍️",
-      disabled: true,
-    },
-    {
-      type: "speaking_quiz",
-      name: t("dialogs.contentTypeDialog.types.speaking_quiz.name"),
-      description: t(
-        "dialogs.contentTypeDialog.types.speaking_quiz.description",
-      ),
-      icon: "🎯",
       disabled: true,
     },
   ];

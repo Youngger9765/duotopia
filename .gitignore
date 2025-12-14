@@ -70,6 +70,12 @@ tmp/
 *.png
 /test_*.py  # Only ignore test files in root directory, not in tests/ folders
 
+# Generated TTS audio files (should use GCS in production)
+backend/static/tts/
+
+# Temporary issue planning documents
+ISSUE_*_*.md
+
 # Logs
 *.log
 logs/
@@ -109,6 +115,11 @@ mcp-servers/browser/screenshots/
 *.screenshot.png
 # Note: .claude/mcp.json should be COMMITTED (team collaboration)
 # Only ignore if it contains secrets (it shouldn't!)
+.develop_secrets_backup.txt
+
+# Development environment
+.dev-pids/
+.dev-logs/
 
 # Load Testing Artifacts
 # Ignore all generated test results and artifacts

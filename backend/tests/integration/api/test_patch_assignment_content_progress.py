@@ -103,7 +103,7 @@ def test_data(setup_database):
             id=i,
             lesson_id=1,  # 添加必需的 lesson_id
             title=f"內容{i}",
-            type="READING_ASSESSMENT",
+            type="EXAMPLE_SENTENCES",
             is_active=True,
         )
         db.add(content)

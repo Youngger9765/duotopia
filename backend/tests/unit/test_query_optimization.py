@@ -93,7 +93,7 @@ class TestQueryOptimization:
             content = Content(
                 lesson_id=data["lesson"].id,
                 title=f"Additional Content {i}",
-                type="READING_ASSESSMENT",
+                type="EXAMPLE_SENTENCES",
                 items=[{"text": f"Content {i} text"}],
             )
             db_with_counter.add(content)
@@ -166,7 +166,7 @@ class TestQueryOptimization:
             content = Content(
                 lesson_id=data["lesson"].id,
                 title=f"Additional Content {i}",
-                type="READING_ASSESSMENT",
+                type="EXAMPLE_SENTENCES",
                 items=[{"text": f"Content {i} text"}],
             )
             db_with_counter.add(content)

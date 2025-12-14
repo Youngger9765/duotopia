@@ -116,7 +116,7 @@ def test_data(setup_database):
         id=1,
         lesson_id=1,
         title="公版內容1",
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
         order_index=1,
         is_active=True,
     )
@@ -182,7 +182,7 @@ def test_data(setup_database):
         id=2,
         lesson_id=2,
         title="班級內容1",
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
         order_index=1,
         is_active=True,
     )
@@ -484,7 +484,7 @@ class TestProgramCopyMechanism:
             id=3,
             lesson_id=3,
             title="公版內容2",
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             order_index=1,
             is_active=True,
         )
@@ -588,7 +588,7 @@ class TestProgramCopyMechanism:
             id=4,
             lesson_id=1,
             title="已刪除內容",
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             order_index=2,
             is_active=False,  # 軟刪除
         )

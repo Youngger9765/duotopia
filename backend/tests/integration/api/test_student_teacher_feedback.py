@@ -55,7 +55,7 @@ def test_data(test_session):
     # Create content with items
     content = Content(
         id=1,
-        type=ContentType.READING_ASSESSMENT,
+        type=ContentType.EXAMPLE_SENTENCES,
         title="Reading Test",
         content="Test content",
         is_active=True,

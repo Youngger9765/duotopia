@@ -113,6 +113,11 @@ class AssignmentStatus(str, enum.Enum):
     RESUBMITTED = "RESUBMITTED"  # 重新提交（訂正後待批改）
 
 
+class AnswerMode(str, enum.Enum):
+    LISTENING = "listening"  # 聽力模式作答
+    WRITING = "writing"  # 寫作模式作答
+
+
 class TransactionType(str, enum.Enum):
     TRIAL = "TRIAL"  # 試用期啟動
     RECHARGE = "RECHARGE"  # 充值
@@ -127,13 +132,32 @@ class TransactionStatus(str, enum.Enum):
 
 
 class ContentType(str, enum.Enum):
-    READING_ASSESSMENT = "reading_assessment"  # Phase 1 只有這個
-    # Phase 2 擴展
-    # SPEAKING_PRACTICE = "speaking_practice"
-    # SPEAKING_SCENARIO = "speaking_scenario"
-    # LISTENING_CLOZE = "listening_cloze"
-    # SENTENCE_MAKING = "sentence_making"
-    # SPEAKING_QUIZ = "speaking_quiz"
+    # Phase 1 - 啟用
+    EXAMPLE_SENTENCES = "EXAMPLE_SENTENCES"  # 例句集（原 READING_ASSESSMENT）
+
+    # Phase 2 - 暫時禁用（UI 中不顯示）
+    VOCABULARY_SET = "VOCABULARY_SET"  # 單字集（原 SENTENCE_MAKING）
+    MULTIPLE_CHOICE = "MULTIPLE_CHOICE"  # 單選題庫
+    SCENARIO_DIALOGUE = "SCENARIO_DIALOGUE"  # 情境對話
+
+    # Legacy values - 保留向後相容性（deprecated，新資料不應使用）
+    READING_ASSESSMENT = "READING_ASSESSMENT"  # @deprecated: use EXAMPLE_SENTENCES
+    SENTENCE_MAKING = "SENTENCE_MAKING"  # @deprecated: use VOCABULARY_SET
+
+
+class PracticeMode(str, enum.Enum):
+    """作答模式（例句集專用）"""
+
+    READING = "reading"  # 例句朗讀 -> 口說分類
+    REARRANGEMENT = "rearrangement"  # 例句重組 -> 聽力/寫作分類
+
+
+class ScoreCategory(str, enum.Enum):
+    """分數記錄分類"""
+
+    SPEAKING = "speaking"  # 口說
+    LISTENING = "listening"  # 聽力
+    WRITING = "writing"  # 寫作
 
 
 # ============ 使用者系統 ============
@@ -669,7 +693,7 @@ class Content(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False)
-    type = Column(Enum(ContentType), default=ContentType.READING_ASSESSMENT)
+    type = Column(Enum(ContentType), default=ContentType.EXAMPLE_SENTENCES)
     title = Column(String(200), nullable=False)
     order_index = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)  # 軟刪除標記
@@ -727,8 +751,34 @@ class Assignment(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    # 指派設定
-    # 移除 assign_to_all，改為透過 StudentAssignment 記錄實際指派的學生
+    # Legacy: 造句練習答題模式（只對舊 SENTENCE_MAKING 類型有效）
+    # @deprecated: 請使用 practice_mode 和 play_audio 替代
+    # Note: 保持 nullable=True 以兼容現有數據庫 schema
+    answer_mode = Column(
+        String(20),
+        default="writing",
+        server_default="writing",
+        nullable=True,
+    )
+
+    # ===== 新增：例句集作答模式設定 =====
+    # 作答模式：'reading' (例句朗讀) / 'rearrangement' (例句重組)
+    practice_mode = Column(String(20), default="reading")
+
+    # 每題時間限制（秒）：10/20/30/40
+    time_limit_per_question = Column(Integer, default=40)
+
+    # 是否打亂題目順序
+    shuffle_questions = Column(Boolean, default=False)
+
+    # 是否播放音檔（例句重組專用）
+    play_audio = Column(Boolean, default=False)
+
+    # 答題結束後是否顯示正確答案（例句重組專用）
+    show_answer = Column(Boolean, default=False)
+
+    # 分數記錄分類：'speaking' / 'listening' / 'writing'
+    score_category = Column(String(20), default=None)
 
     # 軟刪除標記
     is_active = Column(Boolean, default=True)
@@ -907,6 +957,23 @@ class ContentItem(Base):
     text = Column(Text, nullable=False)
     translation = Column(Text)
     audio_url = Column(Text)  # Example audio file
+
+    # Example sentence fields (Phase 1)
+    example_sentence = Column(Text, nullable=True)  # Example sentence in English
+    example_sentence_translation = Column(
+        Text, nullable=True
+    )  # Chinese translation of example
+    example_sentence_definition = Column(
+        Text, nullable=True
+    )  # English definition of example
+
+    # ===== 新增：例句重組相關欄位 =====
+    # 單字數量（建立時自動計算）
+    word_count = Column(Integer, nullable=True)
+
+    # 允許錯誤次數（根據 word_count 自動計算：2-10 字 → 3 次，11-25 字 → 5 次）
+    max_errors = Column(Integer, nullable=True)
+
     item_metadata = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
@@ -975,6 +1042,25 @@ class StudentItemProgress(Base):
         String(20), default="NOT_STARTED"
     )  # NOT_STARTED, IN_PROGRESS, COMPLETED, SUBMITTED
     attempts = Column(Integer, default=0)
+
+    # ===== 新增：例句重組相關欄位 =====
+    # 錯誤次數
+    error_count = Column(Integer, default=0)
+
+    # 已正確選擇的單字數量
+    correct_word_count = Column(Integer, default=0)
+
+    # 重新挑戰次數
+    retry_count = Column(Integer, default=0)
+
+    # 預期分數（作答過程中持續更新）
+    expected_score = Column(DECIMAL(5, 2), default=0)
+
+    # 是否因時間到期結束
+    timeout_ended = Column(Boolean, default=False)
+
+    # 例句重組作答記錄（JSON 格式）
+    rearrangement_data = Column(JSONB, default=None)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
@@ -1196,4 +1282,187 @@ class InvoiceStatusHistory(Base):
         return (
             f"<InvoiceStatusHistory({self.transaction_id}, "
             f"{self.from_status}->{self.to_status}, {self.action_type})>"
+        )
+
+
+# ============ 造句練習記憶曲線系統 ============
+class UserWordProgress(Base):
+    """學生單字記憶進度 - 追蹤艾賓浩斯記憶曲線"""
+
+    __tablename__ = "user_word_progress"
+
+    # Note: 移除 index=True，primary key 本身已有 index
+    id = Column(Integer, primary_key=True)
+    student_id = Column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False
+    )
+    student_assignment_id = Column(
+        Integer,
+        ForeignKey("student_assignments.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    content_item_id = Column(
+        Integer, ForeignKey("content_items.id", ondelete="CASCADE"), nullable=False
+    )
+
+    # 艾賓浩斯記憶曲線相關欄位
+    memory_strength = Column(
+        Numeric(5, 4), default=0, server_default="0", nullable=False
+    )  # 記憶強度 (0-1)
+    repetition_count = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )  # 連續答對次數
+    correct_count = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )  # 累計答對次數
+    incorrect_count = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )  # 累計答錯次數
+    last_review_at = Column(DateTime(timezone=True))  # 最後複習時間
+    next_review_at = Column(DateTime(timezone=True))  # 下次建議複習時間
+    easiness_factor = Column(
+        Numeric(3, 2), default=2.5, server_default="2.5", nullable=False
+    )  # SM-2 難易度因子
+    interval_days = Column(
+        Numeric(10, 2), default=1, server_default="1", nullable=False
+    )  # 複習間隔天數
+    total_attempts = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )  # 總嘗試次數
+    accuracy_rate = Column(
+        Numeric(5, 4), default=0, server_default="0", nullable=False
+    )  # 正確率
+
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    student = relationship("Student")
+    student_assignment = relationship("StudentAssignment")
+    content_item = relationship("ContentItem")
+
+    # Constraints
+    __table_args__ = (
+        UniqueConstraint(
+            "student_assignment_id",
+            "content_item_id",
+            name="uq_user_word_progress_assignment_item",
+        ),
+        Index("idx_user_word_progress_student", "student_id", "student_assignment_id"),
+        Index("idx_user_word_progress_memory", "memory_strength"),
+        Index(
+            "idx_user_word_progress_next_review",
+            "student_assignment_id",
+            "next_review_at",
+        ),
+    )
+
+    def __repr__(self):
+        return (
+            f"<UserWordProgress student={self.student_id} "
+            f"item={self.content_item_id} strength={self.memory_strength}>"
+        )
+
+
+class PracticeSession(Base):
+    """練習記錄 - 每次練習 session"""
+
+    __tablename__ = "practice_sessions"
+
+    # Note: 移除 index=True，primary key 本身已有 index
+    id = Column(Integer, primary_key=True)
+    student_id = Column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False
+    )
+    student_assignment_id = Column(
+        Integer,
+        ForeignKey("student_assignments.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    # 練習模式
+    practice_mode = Column(String(20), nullable=False)  # 'listening' or 'writing'
+
+    # 本次練習統計
+    words_practiced = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )  # 本次練習單字數
+    correct_count = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )  # 本次答對題數
+    total_time_seconds = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )  # 總花費時間（秒）
+
+    # 時間戳記
+    started_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    completed_at = Column(DateTime(timezone=True))
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    student = relationship("Student")
+    student_assignment = relationship("StudentAssignment")
+    answers = relationship(
+        "PracticeAnswer", back_populates="session", cascade="all, delete-orphan"
+    )
+
+    # Constraints - 匹配現有資料庫索引
+    __table_args__ = (
+        Index("idx_practice_sessions_student", "student_id", "student_assignment_id"),
+        Index("idx_practice_sessions_started", "started_at"),
+    )
+
+    def __repr__(self):
+        return (
+            f"<PracticeSession id={self.id} student={self.student_id} "
+            f"mode={self.practice_mode}>"
+        )
+
+
+class PracticeAnswer(Base):
+    """答題詳細記錄"""
+
+    __tablename__ = "practice_answers"
+
+    # Note: 移除 index=True，primary key 本身已有 index
+    id = Column(Integer, primary_key=True)
+    practice_session_id = Column(
+        Integer, ForeignKey("practice_sessions.id", ondelete="CASCADE"), nullable=False
+    )
+    content_item_id = Column(Integer, ForeignKey("content_items.id"), nullable=False)
+
+    # 答題結果
+    is_correct = Column(Boolean, nullable=False)
+    time_spent_seconds = Column(Integer, default=0, server_default="0", nullable=False)
+
+    # 學生答案（JSONB 格式儲存，兼容現有數據庫 schema）
+    answer_data = Column(JSONB)  # {"selected_words": [...], "attempts": 3}
+
+    # 時間戳記
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    session = relationship("PracticeSession", back_populates="answers")
+    content_item = relationship("ContentItem")
+
+    # Constraints - 匹配現有資料庫索引
+    __table_args__ = (
+        Index("idx_practice_answers_session", "practice_session_id"),
+        Index("idx_practice_answers_item", "content_item_id"),
+    )
+
+    def __repr__(self):
+        return (
+            f"<PracticeAnswer session={self.practice_session_id} "
+            f"item={self.content_item_id} correct={self.is_correct}>"
         )

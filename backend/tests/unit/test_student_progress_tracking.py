@@ -12,11 +12,11 @@ from typing import Dict, List
 
 # Mock schemas and enums for testing
 class ActivityType(Enum):
-    READING_ASSESSMENT = "reading_assessment"
+    EXAMPLE_SENTENCES = "EXAMPLE_SENTENCES"
     SPEAKING_PRACTICE = "speaking_practice"
     SPEAKING_SCENARIO = "speaking_scenario"
     LISTENING_CLOZE = "listening_cloze"
-    SENTENCE_MAKING = "sentence_making"
+    VOCABULARY_SET = "VOCABULARY_SET"
     SPEAKING_QUIZ = "speaking_quiz"
 
 
@@ -71,7 +71,7 @@ class TestStudentProgressCalculation:
         # 總共 5 個活動，完成 3 個
         completed_activities = [
             MockActivityResult(
-                ActivityType.READING_ASSESSMENT, Decimal("85"), datetime.now()
+                ActivityType.EXAMPLE_SENTENCES, Decimal("85"), datetime.now()
             ),
             MockActivityResult(
                 ActivityType.SPEAKING_PRACTICE, Decimal("78"), datetime.now()
@@ -93,7 +93,7 @@ class TestStudentProgressCalculation:
     def test_assignment_score_calculation(self):
         """測試作業總分計算（平均分）"""
         completed_activities = [
-            MockActivityResult(ActivityType.READING_ASSESSMENT, Decimal("85")),
+            MockActivityResult(ActivityType.EXAMPLE_SENTENCES, Decimal("85")),
             MockActivityResult(ActivityType.SPEAKING_PRACTICE, Decimal("78")),
             MockActivityResult(ActivityType.LISTENING_CLOZE, Decimal("92")),
         ]
@@ -112,7 +112,7 @@ class TestStudentProgressCalculation:
                 Decimal("0.4"),
             ),  # 口說測驗權重高
             (
-                MockActivityResult(ActivityType.READING_ASSESSMENT, Decimal("80")),
+                MockActivityResult(ActivityType.EXAMPLE_SENTENCES, Decimal("80")),
                 Decimal("0.3"),
             ),  # 朗讀評測中等
             (
@@ -130,7 +130,7 @@ class TestStudentProgressCalculation:
     def test_time_tracking_calculation(self):
         """測試學習時間統計"""
         activities = [
-            MockActivityResult(ActivityType.READING_ASSESSMENT),
+            MockActivityResult(ActivityType.EXAMPLE_SENTENCES),
             MockActivityResult(ActivityType.SPEAKING_PRACTICE),
             MockActivityResult(ActivityType.LISTENING_CLOZE),
         ]
@@ -314,7 +314,7 @@ class TestActivitySpecificProgress:
 
     def test_reading_assessment_progress(self):
         """測試朗讀評測進度"""
-        reading_result = MockActivityResult(ActivityType.READING_ASSESSMENT)
+        reading_result = MockActivityResult(ActivityType.EXAMPLE_SENTENCES)
 
         # 模擬朗讀評測結果
         ai_feedback = {
@@ -440,7 +440,7 @@ class TestProgressReporting:
         """測試週進度報告"""
         # 模擬一週內的活動
         weekly_activities = [
-            MockActivityResult(ActivityType.READING_ASSESSMENT, Decimal("85")),
+            MockActivityResult(ActivityType.EXAMPLE_SENTENCES, Decimal("85")),
             MockActivityResult(ActivityType.SPEAKING_PRACTICE, Decimal("78")),
             MockActivityResult(ActivityType.LISTENING_CLOZE, Decimal("92")),
             MockActivityResult(ActivityType.SPEAKING_QUIZ, Decimal("88")),
@@ -452,8 +452,7 @@ class TestProgressReporting:
         assert weekly_report["total_activities"] == 4
         assert weekly_report["average_score"] == Decimal("85.8")  # (85+78+92+88)/4
         assert (
-            weekly_report["most_practiced_type"]
-            == ActivityType.READING_ASSESSMENT.value
+            weekly_report["most_practiced_type"] == ActivityType.EXAMPLE_SENTENCES.value
         )  # 第一個活動類型（按字母排序）
 
     def test_monthly_progress_summary(self):
@@ -465,7 +464,7 @@ class TestProgressReporting:
             "average_score": Decimal("83.5"),
             "total_learning_minutes": 420,  # 7 小時
             "activity_breakdown": {
-                ActivityType.READING_ASSESSMENT: 12,
+                ActivityType.EXAMPLE_SENTENCES: 12,
                 ActivityType.SPEAKING_PRACTICE: 15,
                 ActivityType.LISTENING_CLOZE: 8,
                 ActivityType.SPEAKING_QUIZ: 5,

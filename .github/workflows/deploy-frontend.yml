@@ -11,6 +11,8 @@ on:
     branches:
       - main
       - staging
+      - develop
+      # Note: main branch uses VM deployment (deploy-vm-prod.yml)
     paths:
       # 前端相關檔案
       - 'frontend/**'
@@ -105,6 +107,11 @@ jobs:
           echo "FRONTEND_SERVICE=${{ secrets.PRODUCTION_FRONTEND_SERVICE }}" >> $GITHUB_OUTPUT
           echo "BACKEND_SERVICE=${{ secrets.PRODUCTION_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
           echo "🚀 Deploying to PRODUCTION (Cloud Run)"
+        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+          echo "ENV_NAME=develop" >> $GITHUB_OUTPUT
+          echo "FRONTEND_SERVICE=${{ secrets.DEVELOP_FRONTEND_SERVICE }}" >> $GITHUB_OUTPUT
+          echo "BACKEND_SERVICE=${{ secrets.DEVELOP_BACKEND_SERVICE }}" >> $GITHUB_OUTPUT
+          echo "🔧 Deploying to DEVELOP"
         else
           echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
           echo "FRONTEND_SERVICE=${{ secrets.STAGING_FRONTEND_SERVICE }}" >> $GITHUB_OUTPUT
@@ -137,7 +144,11 @@ jobs:
 
         if [ -z "$BACKEND_URL" ]; then
           echo "⚠️ Backend service not found, using fallback URL"
-          BACKEND_URL="${{ secrets.STAGING_BACKEND_URL }}"
+          if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            BACKEND_URL="${{ secrets.DEVELOP_BACKEND_URL }}"
+          else
+            BACKEND_URL="${{ secrets.STAGING_BACKEND_URL }}"
+          fi
         fi
 
         echo "BACKEND_URL=$BACKEND_URL" >> $GITHUB_OUTPUT
@@ -188,6 +199,13 @@ jobs:
           CPU="1000m"      # 1 CPU
           CONCURRENCY=80   # 高併發
           MAX_INSTANCES=6  # 支援更高流量
+        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+          # 💰 Develop: 最小化成本
+          MIN_INSTANCES=0  # Scale-to-Zero 最大化節省成本
+          MEMORY="256Mi"
+          CPU="500m"       # 0.5 CPU
+          CONCURRENCY=1    # CPU < 1 時必須設為 1
+          MAX_INSTANCES=1  # Develop 流量低，降為 1 節省成本
         else
           # 💰 Staging: 最小化成本
           MIN_INSTANCES=0  # Scale-to-Zero 最大化節省成本
