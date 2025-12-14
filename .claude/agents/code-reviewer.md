@@ -54,6 +54,75 @@ You are a senior code reviewer specializing in security, performance, and best p
 - [ ] Lazy loading implemented
 - [ ] Memory leaks prevented
 
+## 🔍 性能分析工具使用指南
+
+Code Reviewer 应该建议使用以下免费工具来验证性能优化效果：
+
+### Cloud Trace（分布式追踪）
+**何时使用**：
+- 优化 API 响应时间
+- 减少外部 API 调用（Azure, OpenAI）
+- 实施缓存策略
+
+**如何使用**：
+1. 访问：https://console.cloud.google.com/traces/list?project=duotopia-472708
+2. 筛选时间范围和服务
+3. 查看请求瀑布图，找出瓶颈
+
+**示例建议**：
+```
+📊 建议使用 Cloud Trace 验证优化效果：
+1. 优化前：记录基准耗时
+2. 优化后：对比改进幅度
+3. 查看：https://console.cloud.google.com/traces/list?project=duotopia-472708
+```
+
+### Cloud Profiler（代码性能分析）
+**何时使用**：
+- 优化 CPU 密集型操作
+- 减少内存使用
+- 找出代码热点
+
+**如何使用**：
+1. 访问：https://console.cloud.google.com/profiler?project=duotopia-472708
+2. 选择服务和时间范围
+3. 查看火焰图（Flame Graph）
+
+### Error Reporting（错误聚合）
+**何时使用**：
+- 修复 bug
+- 改进错误处理
+- 监控外部 API 错误率
+
+**如何使用**：
+1. 访问：https://console.cloud.google.com/errors?project=duotopia-472708
+2. 按错误类型分组
+3. 追踪修复进度
+
+### Cloud Monitoring（告警设置）
+**何时使用**：
+- 设置性能告警（响应时间 > 1s）
+- 监控错误率（> 1%）
+- 追踪资源使用
+
+**如何设置告警**：
+```bash
+gcloud alpha monitoring policies create \
+  --notification-channels=CHANNEL_ID \
+  --display-name="API Response Time Alert" \
+  --condition-display-name="Response time > 1s" \
+  --condition-threshold-value=1.0 \
+  --condition-threshold-duration=60s
+```
+
+## 成本
+
+**所有工具完全免费**（我们的用量远低于免费额度）：
+- Cloud Trace: 免费额度 250 万 spans/月（我们用 ~3.2 万）
+- Error Reporting: 完全免费
+- Cloud Profiler: 完全免费
+- Cloud Monitoring: 免费额度 150 MB/月（我们用 ~7 MB）
+
 ### Phase 4: Code Quality
 - [ ] DRY principle followed
 - [ ] SOLID principles applied

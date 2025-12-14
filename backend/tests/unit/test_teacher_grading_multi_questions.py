@@ -21,7 +21,7 @@ class TestTeacherGradingMultiQuestions:
         content = Content(
             lesson_id=1,  # 必填欄位
             title="Multi Question Test",
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             items=[
                 {"text": "Hello world", "translation": "你好世界"},
                 {"text": "Good morning", "translation": "早安"},
@@ -114,7 +114,7 @@ class TestTeacherGradingMultiQuestions:
         content = Content(
             lesson_id=1,  # 必填欄位
             title="Single Question Test",
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             items="Hello world",
         )
         db_session.add(content)
@@ -170,7 +170,7 @@ class TestTeacherGradingMultiQuestions:
         content = Content(
             lesson_id=1,  # 必填欄位
             title="Partial Recording Test",
-            type=ContentType.READING_ASSESSMENT,
+            type=ContentType.EXAMPLE_SENTENCES,
             items=[
                 {"text": "Question 1"},
                 {"text": "Question 2"},

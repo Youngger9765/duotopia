@@ -4,7 +4,7 @@ import ContentTypeDialog from "../ContentTypeDialog";
 
 const contentTypes = [
   {
-    type: "reading_assessment",
+    type: "EXAMPLE_SENTENCES",
     name: "朗讀錄音",
     description: "學生朗讀課文並錄音",
     icon: "📖",
@@ -32,7 +32,7 @@ const contentTypes = [
     disabled: true,
   },
   {
-    type: "sentence_making",
+    type: "VOCABULARY_SET",
     name: "造句練習",
     description: "使用指定單字或句型造句",
     icon: "✍️",
@@ -100,7 +100,7 @@ describe("ContentTypeDialog", () => {
   it("should highlight card on hover", () => {
     renderComponent();
 
-    const card = screen.getByTestId("content-type-card-reading_assessment");
+    const card = screen.getByTestId("content-type-card-EXAMPLE_SENTENCES");
     fireEvent.mouseEnter(card);
 
     expect(card).toHaveClass("hover:shadow-lg");
@@ -118,12 +118,12 @@ describe("ContentTypeDialog", () => {
 
     // Click enabled content type
     const enabledCard = screen.getByTestId(
-      "content-type-card-reading_assessment",
+      "content-type-card-EXAMPLE_SENTENCES",
     );
     fireEvent.click(enabledCard);
 
     expect(mockOnSelect).toHaveBeenCalledWith({
-      type: "reading_assessment",
+      type: "EXAMPLE_SENTENCES",
       lessonId: 1,
       programName: "Basic English",
       lessonName: "Unit 1: Greetings",
@@ -133,7 +133,7 @@ describe("ContentTypeDialog", () => {
   it("should close dialog after selection", () => {
     renderComponent();
 
-    const card = screen.getByTestId("content-type-card-reading_assessment");
+    const card = screen.getByTestId("content-type-card-EXAMPLE_SENTENCES");
     fireEvent.click(card);
 
     expect(mockOnClose).toHaveBeenCalled();
@@ -166,9 +166,9 @@ describe("ContentTypeDialog", () => {
   it("should show disabled state for unavailable content types", () => {
     renderComponent();
 
-    // Only reading_assessment is enabled
+    // Only EXAMPLE_SENTENCES is enabled
     const readingCard = screen.getByTestId(
-      "content-type-card-reading_assessment",
+      "content-type-card-EXAMPLE_SENTENCES",
     );
     const speakingCard = screen.getByTestId(
       "content-type-card-speaking_practice",
@@ -210,7 +210,7 @@ describe("ContentTypeDialog", () => {
   it("should handle keyboard navigation", () => {
     renderComponent();
 
-    const card = screen.getByTestId("content-type-card-reading_assessment");
+    const card = screen.getByTestId("content-type-card-EXAMPLE_SENTENCES");
     card.focus();
 
     // Test Enter key
@@ -222,7 +222,7 @@ describe("ContentTypeDialog", () => {
     vi.clearAllMocks();
     renderComponent();
 
-    const card2 = screen.getByTestId("content-type-card-reading_assessment");
+    const card2 = screen.getByTestId("content-type-card-EXAMPLE_SENTENCES");
     card2.focus();
 
     // Test Space key
@@ -245,7 +245,7 @@ describe("ContentTypeDialog", () => {
   it("should show loading state while processing selection", () => {
     renderComponent();
 
-    const card = screen.getByTestId("content-type-card-reading_assessment");
+    const card = screen.getByTestId("content-type-card-EXAMPLE_SENTENCES");
     fireEvent.click(card);
 
     // Loading state is set but dialog closes immediately

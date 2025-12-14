@@ -204,6 +204,28 @@ npm run test -- --verbose --detectOpenHandles
 - Integration tests: <1s each
 - E2E tests: <10s each
 
+## 🔬 测试性能分析
+
+### 使用 Cloud Trace 分析测试性能
+
+对于性能测试（如 `tests/load_testing/`），可以结合 Cloud Trace 分析：
+
+1. **运行负载测试**：
+   ```bash
+   cd backend/tests/load_testing
+   python load_test.py
+   ```
+
+2. **查看 Cloud Trace**：
+   https://console.cloud.google.com/traces/list?project=duotopia-472708
+
+3. **分析瓶颈**：
+   - 数据库查询慢？→ 添加索引
+   - 外部 API 慢？→ 实施缓存
+   - CPU 密集？→ 使用 Cloud Profiler 分析
+
+**成本**：免费（250 万 spans/月额度）
+
 ## Smart Test Selection
 
 Based on changed files:

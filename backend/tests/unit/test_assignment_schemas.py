@@ -293,7 +293,7 @@ class TestComplexSchemas:
                 {
                     "id": 1,
                     "title": "Reading Content",
-                    "type": "READING_ASSESSMENT",
+                    "type": "EXAMPLE_SENTENCES",
                     "items": [
                         {"text": "Hello", "translation": "你好"},
                         {"text": "World", "translation": "世界"},
@@ -318,7 +318,7 @@ class TestComplexSchemas:
 
         assert response.id == 1
         assert len(response.contents) == 1
-        assert response.contents[0]["type"] == "READING_ASSESSMENT"
+        assert response.contents[0]["type"] == "EXAMPLE_SENTENCES"
         assert len(response.student_assignments) == 1
         assert response.student_assignments[0]["student"]["name"] == "John Doe"
 

@@ -24,6 +24,9 @@ interface ActivityResponse {
   assignment_id: number;
   title: string;
   status?: string;
+  practice_mode?: string | null;
+  score_category?: string | null;
+  show_answer?: boolean; // 例句重組：答題結束後是否顯示正確答案
   total_activities: number;
   activities: Activity[];
 }
@@ -131,11 +134,18 @@ export default function TeacherAssignmentPreviewPage() {
         activities={activityData.activities}
         assignmentTitle={activityData.title}
         assignmentId={parseInt(assignmentId!)}
+        practiceMode={activityData.practice_mode || null}
+        showAnswer={activityData.show_answer || false}
         isPreviewMode={true}
         authToken={token || undefined}
         onBack={() =>
           navigate(`/teacher/classroom/${classroomId}?tab=assignments`)
         }
+        onSubmit={async () => {
+          // 預覽模式完成時，跳回作業列表
+          toast.success(t("previewPage.messages.previewComplete"));
+          navigate(`/teacher/classroom/${classroomId}?tab=assignments`);
+        }}
       />
     </div>
   );

@@ -237,7 +237,215 @@ git push origin claude/issue-26
 
 当在 GitHub Issue 中使用 @claude bot 时，必须提供明确指示以确保遵循 git-issue-pr-flow 流程。
 
-#### ✅ 正确的指示格式
+---
+
+## 🗄️ Database Migration 鐵則（全局規則）
+
+**背景**：Develop 和 Staging 環境共用同一個資料庫，所有 migration 必須向前相容。
+
+### ⚠️ Additive Migration 原則
+
+**所有 migration 都必須是 Additive（新增型）**，無論是在哪個分支開發：
+
+#### ✅ 允許的 Migration（必須使用 IF NOT EXISTS）
+
+```python
+# ✅ 新增表
+op.execute("""
+    CREATE TABLE IF NOT EXISTS new_table (
+        id SERIAL PRIMARY KEY,
+        ...
+    )
+""")
+
+# ✅ 新增欄位（必須 nullable 或有 DEFAULT）
+op.execute("""
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS new_field VARCHAR(50) DEFAULT 'default_value'
+""")
+
+# ✅ 新增 Index
+op.execute("""
+    CREATE INDEX IF NOT EXISTS idx_name ON table_name (column)
+""")
+
+# ✅ 新增 Function（使用 CREATE OR REPLACE）
+op.execute("""
+    CREATE OR REPLACE FUNCTION function_name(...) RETURNS ... AS $$
+    ...
+    $$ LANGUAGE plpgsql;
+""")
+```
+
+#### ❌ 禁止的 Migration（破壞性變更）
+
+```python
+# ❌ 刪除欄位（會破壞其他環境）
+op.drop_column('users', 'old_field')
+op.execute("ALTER TABLE users DROP COLUMN old_field")
+
+# ❌ 重新命名（舊環境會找不到）
+op.alter_column('users', 'name', new_column_name='full_name')
+op.execute("ALTER TABLE users RENAME COLUMN name TO full_name")
+
+# ❌ 修改欄位型別（可能導致資料損失）
+op.alter_column('users', 'age', type_=sa.String())
+op.execute("ALTER TABLE users ALTER COLUMN age TYPE VARCHAR")
+
+# ❌ 刪除表（會破壞其他環境）
+op.drop_table('old_table')
+op.execute("DROP TABLE old_table")
+
+# ❌ 不使用 IF NOT EXISTS（會在共用 DB 環境失敗）
+op.create_table('new_table', ...)  # ❌ 第二次執行會失敗
+```
+
+### 🔍 為什麼需要 IF NOT EXISTS？
+
+**場景說明**：
+```
+Day 1: feature-sentence merge 到 develop
+  → develop CI/CD 執行 migration v12 (CREATE TABLE user_word_progress)
+  → 資料庫：表已建立 ✅
+
+Week 2: develop merge 到 staging
+  → staging CI/CD 執行 migration v12
+  → 如果沒有 IF NOT EXISTS，會報錯：table already exists ❌
+  → 有 IF NOT EXISTS：跳過建立，繼續執行 ✅
+```
+
+**另一個場景**：
+```
+Day 1: feature-A merge 到 staging
+  → staging 執行 migration v13 (ADD COLUMN)
+  → 資料庫：欄位已加入
+
+Day 2: staging merge 回 develop
+  → develop 執行 migration v13
+  → 如果沒有 IF NOT EXISTS，會報錯：column already exists ❌
+```
+
+### 📋 Migration Checklist（每次創建 migration 必須檢查）
+
+創建 migration 前必須確認：
+- [ ] 使用 `CREATE TABLE IF NOT EXISTS` 而非 `op.create_table()`
+- [ ] 使用 `ADD COLUMN IF NOT EXISTS` 而非 `op.add_column()`
+- [ ] 使用 `CREATE INDEX IF NOT EXISTS` 而非 `op.create_index()`
+- [ ] 新增欄位有 `DEFAULT` 或 `nullable=True`
+- [ ] 沒有 DROP, RENAME, ALTER TYPE 等破壞性操作
+- [ ] Functions 使用 `CREATE OR REPLACE`
+
+### 🔧 Migration 範例
+
+**正確範例**（Phase 1 Sentence Making）：
+```python
+def upgrade() -> None:
+    # ✅ 使用 IF NOT EXISTS
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS user_word_progress (
+            id SERIAL PRIMARY KEY,
+            ...
+        )
+    """)
+
+    # ✅ Index 也用 IF NOT EXISTS
+    op.execute("""
+        CREATE INDEX IF NOT EXISTS idx_name ON table (column)
+    """)
+
+    # ✅ Function 用 CREATE OR REPLACE
+    op.execute("""
+        CREATE OR REPLACE FUNCTION update_memory_strength(...)
+        RETURNS ... AS $$ ... $$ LANGUAGE plpgsql;
+    """)
+```
+
+**錯誤範例**（會導致 staging/develop 衝突）：
+```python
+def upgrade() -> None:
+    # ❌ 沒有 IF NOT EXISTS
+    op.create_table('user_word_progress', ...)
+
+    # ❌ 破壞性變更
+    op.drop_column('users', 'old_field')
+    op.alter_column('users', 'name', new_column_name='full_name')
+```
+
+### 🚨 違反規則的後果
+
+1. **共用資料庫環境失敗**
+   - Staging 執行 migration 失敗（表已存在）
+   - Develop 無法測試功能
+
+2. **資料損失風險**
+   - 破壞性變更可能刪除正在測試的資料
+   - 影響其他團隊成員的工作
+
+3. **部署中斷**
+   - CI/CD pipeline 失敗
+   - 需要手動修復資料庫
+
+### 📚 延伸閱讀
+
+- [DEVELOP_ENVIRONMENT_PLAN.md](./docs/DEVELOP_ENVIRONMENT_PLAN.md) - Develop 環境架構說明
+- [Migration 相容性策略](./docs/DEVELOP_ENVIRONMENT_PLAN.md#3-migration-相容性策略)
+
+---
+
+## 📝 Content Type 命名規範
+
+### 標準命名（必須使用大寫）
+
+| Content Type | 中文名稱 | 說明 |
+|--------------|----------|------|
+| `EXAMPLE_SENTENCES` | 例句集 | 聽音檔重組句子練習 |
+| `VOCABULARY_SET` | 單字集 | 看單字造句練習 |
+| `MULTIPLE_CHOICE` | 選擇題 | 單選題庫（未來） |
+| `SCENARIO_DIALOGUE` | 情境對話 | 情境對話練習（未來） |
+
+### ⚠️ 命名規則
+
+1. **一律使用全大寫**：`EXAMPLE_SENTENCES` ✅，`example_sentences` ❌
+2. **不要使用舊名稱**：
+   - ❌ `READING_ASSESSMENT` → ✅ `EXAMPLE_SENTENCES`
+   - ❌ `SENTENCE_MAKING` → ✅ `VOCABULARY_SET`
+3. **資料庫已統一為新名稱**，程式碼中不應再使用舊名稱建立新資料
+
+### 範例
+
+```python
+# ✅ 正確
+content = Content(type=ContentType.EXAMPLE_SENTENCES, ...)
+
+# ❌ 錯誤 - 不要使用舊名稱
+content = Content(type=ContentType.READING_ASSESSMENT, ...)
+```
+
+```typescript
+// ✅ 正確
+const contentType = "EXAMPLE_SENTENCES";
+
+// ❌ 錯誤 - 不要使用小寫或舊名稱
+const contentType = "reading_assessment";
+```
+
+### 向後相容
+
+後端的 `normalize_content_type()` 函數會自動將舊名稱轉換為新名稱：
+- `READING_ASSESSMENT` → `EXAMPLE_SENTENCES`
+- `SENTENCE_MAKING` → `VOCABULARY_SET`
+
+但**新程式碼**應該直接使用新名稱。
+
+---
+
+## ⚠️ 必須遵守的操作順序 (STOP! READ FIRST!)
+
+### Issue 的内容（给案主看）
+- ✅ 问题描述（业务语言）
+- ✅ 测试环境链接
+- ✅ 案主测试结果和批准
+- ❌ 不要放技术细节
 
 ```
 @claude 请按照以下步骤修复此 Issue：
@@ -352,6 +560,20 @@ git push origin --delete claude/issue-26-20251129-1626
 6. **Check README/CLAUDE.md/package.json first** - Understand project standards
 7. **Learn from every error** - Use error reflection system to prevent recurrence
 8. **指导 @claude bot** - 在 Issue 中使用 @claude 时，明确指定使用固定分支和遵循 PDCA 流程
+9. **Run formatting before commit** - Always run Prettier/Black before pushing to avoid CI failures
+
+### ⚠️ Pre-Commit Checklist (MUST DO before `git push`)
+```bash
+# Frontend - Run Prettier formatting
+cd frontend && npx prettier --write src/
+
+# Backend - Run Black formatting
+cd backend && python3 -m black .
+
+# Verify no formatting issues
+npm run typecheck  # Frontend
+python3 -m flake8 . --max-line-length=120 --ignore=E203,W503 --exclude=alembic,__pycache__,.venv  # Backend
+```
 
 ### Command Shortcuts
 ```bash
