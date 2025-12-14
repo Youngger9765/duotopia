@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from models import Teacher, Student
+from database import get_db, get_session_local, SessionLocal
 import os
 from dotenv import load_dotenv
 
@@ -167,9 +168,6 @@ async def get_current_student(
     注意：這個函數僅允許學生訪問，不允許老師預覽。
     如果需要允許老師預覽，請使用 get_current_student_or_teacher
     """
-    from models import Student
-    from database import get_session_local
-
     # 驗證必須是學生
     user_type = current_user.get("type")
     if user_type != "student":
@@ -219,9 +217,6 @@ async def get_current_student_or_teacher(
             # 老師預覽邏輯
     ```
     """
-    from models import Student, Teacher
-    from database import SessionLocal
-
     user_type = current_user.get("type")
     user_id = current_user.get("sub")
 

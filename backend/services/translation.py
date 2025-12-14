@@ -478,8 +478,6 @@ Only reply with JSON array, no other text."""
                     f"Warning: Expected {len(texts)} results, got {len(results)}. Falling back."
                 )
                 # Fallback: 逐個處理
-                import asyncio
-
                 tasks = [self.translate_with_pos(text, target_lang) for text in texts]
                 results = await asyncio.gather(*tasks)
 
@@ -487,8 +485,6 @@ Only reply with JSON array, no other text."""
         except Exception as e:
             print(f"Batch translate with POS error: {e}. Falling back.")
             # Fallback: 逐個處理
-            import asyncio
-
             tasks = [self.translate_with_pos(text, target_lang) for text in texts]
             results = await asyncio.gather(*tasks)
             return results

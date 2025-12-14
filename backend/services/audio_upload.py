@@ -5,9 +5,11 @@ Audio upload service for recording files
 import asyncio
 import os
 import uuid
+import json
 from datetime import datetime  # noqa: F401
 from typing import Optional  # noqa: F401
 from fastapi import UploadFile, HTTPException
+from google.cloud import storage
 
 
 class AudioUploadService:
@@ -34,8 +36,6 @@ class AudioUploadService:
     def _get_storage_client(self):
         """延遲初始化 GCS client（使用與 tts.py 相同的認證邏輯）"""
         if not self.storage_client:
-            from google.cloud import storage
-
             # 檢查必要的環境變數
             if not self.bucket_name:
                 raise ValueError("GCS_BUCKET_NAME environment variable is not set")
@@ -47,8 +47,6 @@ class AudioUploadService:
             if os.path.exists(key_path):
                 # 檢查文件是否為空或無效
                 try:
-                    import json
-
                     if os.path.getsize(key_path) > 0:
                         with open(key_path, "r") as f:
                             json.load(f)  # 驗證 JSON 格式
