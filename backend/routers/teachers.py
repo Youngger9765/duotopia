@@ -30,6 +30,7 @@ from auth import (
 )
 from typing import List, Optional, Dict, Any  # noqa: F401
 from datetime import date, datetime, timedelta, timezone  # noqa: F401
+import random
 from services.translation import translation_service
 from services.quota_analytics_service import QuotaAnalyticsService
 
