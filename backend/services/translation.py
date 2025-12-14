@@ -244,7 +244,9 @@ Required: Return format must be ["translation1", "translation2", ...]"""
             except Exception:
                 # If not JSON, fall back to separator or raw string
                 if "---" in content:
-                    translations = [seg.strip() for seg in content.split("---") if seg.strip()]
+                    translations = [
+                        seg.strip() for seg in content.split("---") if seg.strip()
+                    ]
                 else:
                     translations = [content.strip()] if content else []
             if isinstance(translations, str):
@@ -254,7 +256,9 @@ Required: Return format must be ["translation1", "translation2", ...]"""
             if len(translations) != len(texts):
                 # Try manual split on separator if present
                 if isinstance(content, str) and "---" in content:
-                    manual = [seg.strip() for seg in content.split("---") if seg.strip()]
+                    manual = [
+                        seg.strip() for seg in content.split("---") if seg.strip()
+                    ]
                     if len(manual) == len(texts):
                         translations = manual
                     else:

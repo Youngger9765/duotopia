@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import text
+from sqlalchemy import text, func, cast, Date
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any  # noqa: F401
 from datetime import datetime, timedelta, timezone  # noqa: F401
@@ -1274,8 +1274,6 @@ async def get_student_stats(
 
     # Calculate practice days (累積練習天數 - 有幾天有練習過)
     # Count distinct dates where student submitted assignments
-    from sqlalchemy import func, cast, Date
-
     practice_days_result = (
         db.query(func.count(func.distinct(cast(StudentAssignment.submitted_at, Date))))
         .filter(
