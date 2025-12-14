@@ -34,6 +34,42 @@ from sqlalchemy.orm import joinedload
 # 設定 logger
 logger = logging.getLogger(__name__)
 
+# 全局 Semaphore - 限制並發 Azure Speech API 呼叫
+# Azure S0 標準層限制：20 TPS（每秒事務數）
+# 保守設定：18 並發（保留 2 個緩衝，避免觸發 429 錯誤）
+# 使用字典儲存每個 event loop 的 semaphore，避免跨 loop 問題
+_azure_speech_semaphores = {}
+
+
+def _get_azure_speech_semaphore():
+    """
+    獲取當前 event loop 的 Azure Speech API Semaphore
+    每個 event loop 維護獨立的 semaphore 實例
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        loop_id = id(loop)
+
+        if loop_id not in _azure_speech_semaphores:
+            _azure_speech_semaphores[loop_id] = asyncio.Semaphore(18)
+
+        return _azure_speech_semaphores[loop_id]
+    except RuntimeError:
+        # No event loop running, create one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop_id = id(loop)
+        _azure_speech_semaphores[loop_id] = asyncio.Semaphore(18)
+        return _azure_speech_semaphores[loop_id]
+
+
+# 自定義異常 - Azure API 429 錯誤
+class AzureRateLimitError(Exception):
+    """Azure API 429 Too Many Requests 錯誤"""
+
+    pass
+
+
 # 🕐 Azure Speech API Timeout 設定（秒）
 AZURE_SPEECH_TIMEOUT = 20  # Azure Speech API timeout in seconds
 
@@ -399,6 +435,16 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
         # 🕐 計算總處理時間（包含失敗的情況）
         total_latency = time.time() - start_time
 
+        # 🔒 檢測 429 錯誤（Azure API 限流）
+        error_msg = str(e).lower()
+        if (
+            "429" in error_msg
+            or "too many requests" in error_msg
+            or "rate limit" in error_msg
+        ):
+            logger.warning(f"⚠️ Azure rate limit hit (429): {e}")
+            raise AzureRateLimitError(f"Azure API rate limit exceeded: {e}")
+
         logger.error(f"Azure Speech API error: {str(e)}")
         logger.error(f"Total processing time before failure: {total_latency:.2f}s")
         logger.debug(f"Error type: {type(e)}")
@@ -540,6 +586,21 @@ async def assess_pronunciation_endpoint(
 
     # 檢查檔案格式
     if audio_file.content_type not in ALLOWED_AUDIO_FORMATS:
+        # 記錄到 BigQuery
+        bigquery_logger = get_bigquery_logger()
+        await bigquery_logger.log_audio_error(
+            {
+                "timestamp": datetime.utcnow().isoformat(),
+                "error_type": "invalid_audio_format",
+                "error_message": f"Unsupported audio format: {audio_file.content_type}",
+                "student_id": current_student.id,
+                "assignment_id": assignment_id,
+                "content_type": audio_file.content_type,
+                "allowed_formats": ", ".join(ALLOWED_AUDIO_FORMATS),
+                "environment": os.getenv("ENVIRONMENT", "unknown"),
+            }
+        )
+
         raise HTTPException(
             status_code=400,
             detail=f"Unsupported audio format. Allowed formats: {', '.join(ALLOWED_AUDIO_FORMATS)}",
@@ -549,6 +610,22 @@ async def assess_pronunciation_endpoint(
     with start_span("Read Audio File"):
         audio_data = await audio_file.read()
         if len(audio_data) > MAX_FILE_SIZE:
+            # 記錄到 BigQuery
+            bigquery_logger = get_bigquery_logger()
+            await bigquery_logger.log_audio_error(
+                {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "error_type": "file_too_large",
+                    "error_message": f"Audio file {len(audio_data)} bytes exceeds limit {MAX_FILE_SIZE} bytes",
+                    "student_id": current_student.id,
+                    "assignment_id": assignment_id,
+                    "audio_size_bytes": len(audio_data),
+                    "content_type": audio_file.content_type,
+                    "max_size_bytes": MAX_FILE_SIZE,
+                    "environment": os.getenv("ENVIRONMENT", "unknown"),
+                }
+            )
+
             raise HTTPException(
                 status_code=413,
                 detail=f"File too large. Maximum size: {MAX_FILE_SIZE / 1024 / 1024}MB",
@@ -648,20 +725,54 @@ async def assess_pronunciation_endpoint(
     # 進行發音評估（Azure Speech SDK）
     # ⚡ 使用自訂語音線程池避免阻塞 event loop
     # 🕐 加入 timeout 保護避免長時間阻塞
+    # 🔒 使用全局 Semaphore 限制並發（18 並發，避免 429 錯誤）
     with start_span(
         "Azure Speech API Call", {"reference_text_length": len(reference_text)}
     ):
         loop = asyncio.get_event_loop()
         speech_pool = get_speech_thread_pool()
 
+        # 🔒 記錄隊列等待時間
+        queue_start = time.time()
+
         try:
-            # 🕐 使用 asyncio.wait_for 加入 timeout（預設 20 秒）
-            assessment_result = await asyncio.wait_for(
-                loop.run_in_executor(
-                    speech_pool, assess_pronunciation, wav_audio_data, reference_text
-                ),
-                timeout=AZURE_SPEECH_TIMEOUT,
-            )
+            # 🔒 全局限流：最多 18 個並發 Azure API 呼叫
+            async with _get_azure_speech_semaphore():
+                queue_wait = time.time() - queue_start
+
+                # ⚠️ 如果隊列等待超過 5 秒，記錄警告並記錄到 BigQuery
+                if queue_wait > 5:
+                    logger.warning(
+                        f"⚠️ Azure rate limit queue wait: {queue_wait:.2f}s "
+                        f"for student {current_student.id}"
+                    )
+
+                    # 記錄到 BigQuery
+                    bigquery_logger = get_bigquery_logger()
+                    await bigquery_logger.log_audio_error(
+                        {
+                            "timestamp": datetime.utcnow().isoformat(),
+                            "error_type": "queue_wait_exceeded",
+                            "error_message": f"Azure API queue wait exceeded 5s threshold: {queue_wait:.2f}s",
+                            "student_id": current_student.id,
+                            "assignment_id": assignment_id,
+                            "queue_wait_time": round(queue_wait, 2),
+                            "audio_size_bytes": len(audio_data),
+                            "reference_text": reference_text,
+                            "environment": os.getenv("ENVIRONMENT", "unknown"),
+                        }
+                    )
+
+                # 🕐 使用 asyncio.wait_for 加入 timeout（預設 20 秒）
+                assessment_result = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        speech_pool,
+                        assess_pronunciation,
+                        wav_audio_data,
+                        reference_text,
+                    ),
+                    timeout=AZURE_SPEECH_TIMEOUT,
+                )
             perf.checkpoint("Azure Speech Assessment Complete")
 
         except asyncio.TimeoutError:
@@ -697,7 +808,80 @@ async def assess_pronunciation_endpoint(
                 },
             )
 
+        except AzureRateLimitError as e:
+            # 🔒 Azure API 429 Rate Limit - 記錄到 BigQuery
+            queue_wait = time.time() - queue_start
+            logger.error(
+                f"❌ Azure API rate limit (429) for student {current_student.id}, "
+                f"queue_wait: {queue_wait:.2f}s"
+            )
+
+            # 📊 記錄到 BigQuery
+            bigquery_logger = get_bigquery_logger()
+            await bigquery_logger.log_audio_error(
+                {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "error_type": "azure_rate_limit_429",
+                    "error_message": str(e),
+                    "student_id": current_student.id,
+                    "assignment_id": assignment_id,
+                    "audio_size_bytes": len(audio_data),
+                    "reference_text": reference_text,
+                    "queue_wait_time": round(queue_wait, 2),
+                    "environment": os.getenv("ENVIRONMENT", "unknown"),
+                }
+            )
+
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "AZURE_RATE_LIMIT",
+                    "message": "語音評估服務繁忙（超過 API 限流），請稍後再試",
+                    "queue_wait_seconds": round(queue_wait, 2),
+                },
+            )
+
         except HTTPException as e:
+            # 🔥 捕捉 400 錯誤（NoMatch 或 audio conversion 失敗）
+            if e.status_code == 400:
+                error_detail = str(e.detail)
+                bigquery_logger = get_bigquery_logger()
+
+                # 判斷錯誤類型
+                if "No speech could be recognized" in error_detail:
+                    # Azure NoMatch
+                    logger.error(f"❌ Azure NoMatch for student {current_student.id}")
+                    await bigquery_logger.log_audio_error(
+                        {
+                            "timestamp": datetime.utcnow().isoformat(),
+                            "error_type": "azure_no_speech_recognized",
+                            "error_message": error_detail,
+                            "student_id": current_student.id,
+                            "assignment_id": assignment_id,
+                            "audio_size_bytes": len(audio_data),
+                            "reference_text": reference_text,
+                            "environment": os.getenv("ENVIRONMENT", "unknown"),
+                        }
+                    )
+
+                elif "Audio format conversion failed" in error_detail:
+                    # Audio conversion failed
+                    logger.error(
+                        f"❌ Audio conversion failed for student {current_student.id}"
+                    )
+                    await bigquery_logger.log_audio_error(
+                        {
+                            "timestamp": datetime.utcnow().isoformat(),
+                            "error_type": "audio_conversion_failed",
+                            "error_message": error_detail,
+                            "student_id": current_student.id,
+                            "assignment_id": assignment_id,
+                            "audio_size_bytes": len(audio_data),
+                            "content_type": audio_file.content_type,
+                            "environment": os.getenv("ENVIRONMENT", "unknown"),
+                        }
+                    )
+
             # 🔥 捕捉 assess_pronunciation 內部的 503 錯誤並記錄到 BigQuery
             if e.status_code == 503:
                 logger.error(

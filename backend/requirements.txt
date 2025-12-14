@@ -37,6 +37,9 @@ google-cloud-logging==3.5.0
 # Audio Processing
 pydub==0.25.1
 
+# Retry and Rate Limiting
+tenacity==8.2.3
+
 # =============================================
 # Development Dependencies
 # =============================================
@@ -59,4 +62,3 @@ flake8==7.0.0
 # Development Tools (optional)
 # ipython==8.18.1
 # ipdb==0.13.13
-google-cloud-bigquery

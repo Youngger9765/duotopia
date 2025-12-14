@@ -73,6 +73,9 @@ tmp/
 # Generated TTS audio files (should use GCS in production)
 backend/static/tts/
 
+# Temporary issue planning documents
+ISSUE_*_*.md
+
 # Logs
 *.log
 logs/

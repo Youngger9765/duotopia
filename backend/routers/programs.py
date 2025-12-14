@@ -452,6 +452,10 @@ async def copy_from_template(
             if hasattr(content, "is_active") and not content.is_active:
                 continue
 
+            # 🔥 跳過作業副本（這些是建立作業時產生的副本，不應該被複製到新課程）
+            if hasattr(content, "is_assignment_copy") and content.is_assignment_copy:
+                continue
+
             # 使用 helper function 進行深度複製
             _deep_copy_content_with_items(content, new_lesson.id, db)
 
@@ -545,6 +549,10 @@ async def copy_from_classroom(
         for content in lesson.contents:
             # 跳過已被軟刪除的內容
             if hasattr(content, "is_active") and not content.is_active:
+                continue
+
+            # 🔥 跳過作業副本（這些是建立作業時產生的副本，不應該被複製到新課程）
+            if hasattr(content, "is_assignment_copy") and content.is_assignment_copy:
                 continue
 
             # 使用 helper function 進行深度複製
