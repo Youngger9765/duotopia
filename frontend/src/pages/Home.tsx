@@ -16,6 +16,7 @@ import {
 
 export default function Home() {
   const { t } = useTranslation();
+  const isProduction = import.meta.env.PROD;
 
   return (
     <div className="min-h-screen bg-white">
@@ -66,7 +67,7 @@ export default function Home() {
               <Link to="/teacher/register">
                 <Button
                   size="lg"
-                  className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-6 text-lg font-semibold shadow-xl"
+                  className="bg-white text-gray-900 hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-xl"
                 >
                   <img
                     src="https://storage.googleapis.com/duotopia-social-media-videos/website/assigment_icon.png"
@@ -145,14 +146,17 @@ export default function Home() {
                     </Button>
                   </Link>
                 </div>
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-xs text-blue-700 font-medium">
-                    {t("home.loginOptions.teacher.demoLabel")}
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1">
-                    {t("home.loginOptions.teacher.demoCredentials")}
-                  </p>
-                </div>
+                {/* Demo credentials - hidden in production */}
+                {!isProduction && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-xs text-blue-700 font-medium">
+                      {t("home.loginOptions.teacher.demoLabel")}
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      {t("home.loginOptions.teacher.demoCredentials")}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Student Login */}
@@ -174,14 +178,17 @@ export default function Home() {
                 <p className="text-sm text-gray-500 mt-3 text-center">
                   {t("home.loginOptions.student.note")}
                 </p>
-                <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                  <p className="text-xs text-green-700 font-medium">
-                    {t("home.loginOptions.student.demoLabel")}
-                  </p>
-                  <p className="text-xs text-green-600 mt-1">
-                    {t("home.loginOptions.student.demoPassword")}
-                  </p>
-                </div>
+                {/* Demo credentials - hidden in production */}
+                {!isProduction && (
+                  <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                    <p className="text-xs text-green-700 font-medium">
+                      {t("home.loginOptions.student.demoLabel")}
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">
+                      {t("home.loginOptions.student.demoPassword")}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
