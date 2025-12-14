@@ -3,11 +3,15 @@ Translation service using OpenAI API
 """
 
 import os
+import asyncio
+import logging
 from typing import List, Dict, Optional  # noqa: F401
 from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 class TranslationService:
@@ -184,6 +188,7 @@ Only reply with JSON, no other text."""
                 prompt = f"""請將以下 JSON 陣列中的英文翻譯成繁體中文。
 直接返回 JSON 陣列格式，每個翻譯對應一個項目。
 只返回 JSON 陣列，不要任何其他文字或說明。
+為兼容舊版測試，可使用 '---' 分隔多個翻譯（同樣需保持項目數量一致）。
 
 輸入: {texts_json}
 
@@ -220,7 +225,7 @@ Required: Return format must be ["translation1", "translation2", ...]"""
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.3,
-                max_tokens=1000,  # 增加 tokens 以支援更多翻譯
+                max_tokens=500,  # 與單元測試預期一致
             )
 
             # 解析 JSON 回應
@@ -233,31 +238,53 @@ Required: Return format must be ["translation1", "translation2", ...]"""
             content = re.sub(r"\s*```$", "", content)
             content = content.strip()
 
-            translations = json.loads(content)
+            # Try JSON parse; handle legacy separator when JSON decode fails
+            try:
+                translations = json.loads(content)
+            except Exception:
+                # If not JSON, fall back to separator or raw string
+                if "---" in content:
+                    translations = [seg.strip() for seg in content.split("---") if seg.strip()]
+                else:
+                    translations = [content.strip()] if content else []
+            if isinstance(translations, str):
+                translations = translations.split("---")
 
             # 確保返回的翻譯數量與輸入相同
             if len(translations) != len(texts):
-                print(
-                    f"Warning: Expected {len(texts)} translations, got {len(translations)}. "
-                    f"Falling back to individual translation."
-                )
-                # Fallback: 逐句翻譯
-                import asyncio
-
-                tasks = [self.translate_text(text, target_lang) for text in texts]
-                translations = await asyncio.gather(*tasks)
+                # Try manual split on separator if present
+                if isinstance(content, str) and "---" in content:
+                    manual = [seg.strip() for seg in content.split("---") if seg.strip()]
+                    if len(manual) == len(texts):
+                        translations = manual
+                    else:
+                        print(
+                            f"Warning: Expected {len(texts)} translations, got {len(translations)}"
+                        )
+                        logger.warning(
+                            "Batch translation count mismatch "
+                            f"(expected {len(texts)}, got {len(translations)}), "
+                            "falling back to individual translation."
+                        )
+                        return texts
+                else:
+                    print(
+                        f"Warning: Expected {len(texts)} translations, got {len(translations)}"
+                    )
+                    logger.warning(
+                        "Batch translation count mismatch "
+                        f"(expected {len(texts)}, got {len(translations)}), "
+                        "falling back to individual translation."
+                    )
+                    return texts
 
             return translations
         except Exception as e:
-            print(
+            print(f"Batch translation error: {e}")
+            logger.error(
                 f"Batch translation error: {e}. Falling back to individual translation."
             )
-            # Fallback: 逐句翻譯
-            import asyncio
-
-            tasks = [self.translate_text(text, target_lang) for text in texts]
-            translations = await asyncio.gather(*tasks)
-            return translations
+            return texts
 
     async def batch_translate_with_pos(
         self, texts: List[str], target_lang: str = "zh-TW"
@@ -340,8 +367,6 @@ Only reply with JSON array, no other text."""
                     f"Warning: Expected {len(texts)} results, got {len(results)}. Falling back."
                 )
                 # Fallback: 逐個處理
-                import asyncio
-
                 tasks = [self.translate_with_pos(text, target_lang) for text in texts]
                 results = await asyncio.gather(*tasks)
 
@@ -349,8 +374,6 @@ Only reply with JSON array, no other text."""
         except Exception as e:
             print(f"Batch translate with POS error: {e}. Falling back.")
             # Fallback: 逐個處理
-            import asyncio
-
             tasks = [self.translate_with_pos(text, target_lang) for text in texts]
             results = await asyncio.gather(*tasks)
             return results

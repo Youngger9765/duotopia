@@ -64,6 +64,8 @@ def get_session_local():
         )
     return _SessionLocal
 
+# Backward compatibility for code expecting SessionLocal symbol
+SessionLocal = get_session_local()
 
 Base = declarative_base()
 
