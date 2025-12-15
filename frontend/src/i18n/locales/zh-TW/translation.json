@@ -1267,6 +1267,12 @@
       "actions": {
         "viewPlans": "查看方案"
       },
+      "steps": {
+        "selectContent": "選擇內容",
+        "practiceMode": "練習模式",
+        "selectStudents": "選擇學生",
+        "details": "作業詳情"
+      },
       "practiceMode": {
         "title": "練習模式設定",
         "description": "選擇學生練習的模式和相關設定",
