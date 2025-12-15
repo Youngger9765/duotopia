@@ -37,20 +37,20 @@ export default function Home() {
 
       {/* 第二區段: Hero - 漸層背景 */}
       <section className="bg-gradient-to-b from-[#204dc0] to-[#101f6b] text-white py-20">
-        <div className="container mx-auto px-4">
-          <div className="grid min-[1440px]:grid-cols-2 gap-12 items-center">
+        <div className="container mx-auto px-16">
+          <div className="grid lg:grid-cols-2 gap-8 xl:gap-10 min-[1440px]:gap-12 items-center max-w-6xl mx-auto">
             {/* 左側文案 */}
             <div>
-              <p className="text-yellow-400 mb-2 text-lg font-medium">
+              <p className="text-yellow-400 mb-2 text-base lg:text-lg font-medium">
                 {t("home.hero.tagline")}
               </p>
-              <h1 className="text-5xl lg:text-6xl font-bold mb-4">
+              <h1 className="text-4xl lg:text-5xl min-[1440px]:text-6xl font-bold mb-4">
                 {t("home.hero.brand")}
               </h1>
-              <h2 className="text-2xl lg:text-3xl mb-6 text-blue-100">
+              <h2 className="text-xl lg:text-2xl min-[1440px]:text-3xl mb-6 text-blue-100">
                 {t("home.hero.subtitle")}
               </h2>
-              <p className="text-lg mb-4 leading-relaxed">
+              <p className="text-base lg:text-lg mb-4 leading-relaxed">
                 {t("home.hero.description")}
               </p>
               <ul className="mb-8 space-y-2 text-blue-50">
@@ -120,15 +120,15 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 右側圖片 + 浮動徽章 (>=1440px 顯示) */}
-            <div className="hidden min-[1440px]:block">
+            {/* 右側圖片 + 浮動徽章 */}
+            <div className="hidden lg:flex lg:justify-end">
               <div className="relative inline-block">
                 {/* 背景藍色區塊 - 跟隨圖片大小 */}
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl transform rotate-3 scale-105"></div>
                 <img
                   src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600"
                   alt="Students learning"
-                  className="relative rounded-2xl shadow-2xl max-w-full h-auto"
+                  className="relative rounded-2xl shadow-2xl max-w-[320px] xl:max-w-[400px] min-[1440px]:max-w-[500px] h-auto"
                 />
                 {/* 左下徽章 - AI 語音辨識 */}
                 <div className="absolute -bottom-4 -left-4 bg-white rounded-xl shadow-xl p-3 flex items-center space-x-3">
