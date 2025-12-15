@@ -137,12 +137,20 @@
     "hero": {
       "badge": "AI 驅動的英語學習革命",
       "title": "Duotopia",
-      "subtitle": "多元智能英語學習平台",
-      "description": "透過 AI 語音辨識與即時回饋，為 6-15 歲學生打造個人化的英語口說學習體驗。讓每個孩子都能自信開口說英語！",
+      "subtitle": "英文聽說讀寫 AI 智能遊戲作業批改平台",
+      "description": "Duotopia 為 6-18 歲親師生打造個人化的智慧遊戲作業平台，讓每位學生都能自信開口說英文！",
       "freeTrial": "免費試用",
       "watchVideo": "觀看介紹影片",
       "trustedBy": "超過 {{count}}+ 教師信賴",
-      "studentsUsing": "{{count}}+ 學生正在使用"
+      "studentsUsing": "{{count}}+ 學生正在使用",
+      "tagline": "AI 英文學習智慧作業批改新選擇",
+      "brand": "Duotopia",
+      "benefit1": "幫助 ESL 老師們通過 AI 備課以及批改作業解放教師時間；",
+      "benefit2": "學生們透過各種遊戲化的資源活動有效練習，提升學習成果；",
+      "benefit3": "親師通過數據分析建立信任與高效正向溝通。",
+      "trustedTeachers": "超過 1,000+ ESL 老師信賴",
+      "studentsImproved": "已提升 10,000,000+ 學生口說能力",
+      "freeTrialBtn": "免費體驗"
     },
     "stats": {
       "satisfaction": "學生滿意度",
@@ -255,6 +263,21 @@
       "privacy": "隱私政策",
       "terms": "使用條款",
       "copyright": "© 2025 Duotopia. All rights reserved."
+    },
+    "header": {
+      "logo": "Duotopia"
+    },
+    "cta2": {
+      "title": "準備好重獲老師的自由時光?",
+      "subtitle": "開始英文學習新革命，用 DUOTOPIA 幫助學生浸潤式學習英語",
+      "button": "開始體驗 1 秒批改作業",
+      "noCreditCard": "無須綁定信用卡"
+    },
+    "steps": {
+      "title": "快速三步驟，簡單開始",
+      "step1": "1 秒建立班級",
+      "step2": "2 秒匯入學生",
+      "step3": "3 秒貼上教材"
     }
   },
   "pricing": {
@@ -1140,6 +1163,7 @@
       "title": "指派新作業",
       "steps": {
         "selectContent": "選擇內容",
+        "practiceMode": "練習模式",
         "selectStudents": "選擇學生",
         "details": "作業詳情"
       },

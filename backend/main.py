@@ -1,11 +1,16 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import Session
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 import uvicorn
 import os
+
+# Import database
+from database import get_db
 
 # Import configuration
 from core.config import settings
@@ -95,6 +100,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 📦 GZip 压缩 middleware (Issue #95)
+# 对大于 1KB 的响应进行 gzip 压缩，减少带宽使用
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 
 # 🔐 全局 Rate Limiting (补充 slowapi)
 # 保守配置：500 请求/分钟 (观察 1 周后调整为 200)
@@ -180,23 +189,25 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
-    """健康檢查端點 - 檢查服務和資料庫狀態"""
+async def health_check(db: Session = Depends(get_db)):
+    """健康檢查端點 - 檢查服務和資料庫狀態
+
+    Performance optimization (Issue #96):
+    - Uses connection pool via dependency injection
+    - Added 2-second timeout to prevent hanging
+    - Eliminates overhead of creating new connections
+    """
     from sqlalchemy import text
-    from database import get_session_local
+    import time
 
     db_status = "unknown"
     db_latency = None
 
     try:
-        # 測試資料庫連線
-        import time
-
+        # 測試資料庫連線（使用連接池 + 超時）
         start = time.time()
-        SessionLocal = get_session_local()
-        db = SessionLocal()
-        db.execute(text("SELECT 1"))
-        db.close()
+        statement = text("SELECT 1").execution_options(timeout=2)
+        db.execute(statement)
         db_latency = round((time.time() - start) * 1000, 2)  # ms
         db_status = "healthy"
     except Exception as e:
