@@ -89,7 +89,7 @@ export default function Home() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-white text-white hover:bg-white/10 px-8 py-6 text-lg font-semibold"
+                  className="border-2 border-white text-white hover:bg-white hover:text-blue-700 px-8 py-5 text-lg font-semibold transition-colors"
                   onClick={() => setIsVideoModalOpen(true)}
                 >
                   <Play className="w-5 h-5 mr-2" />
@@ -122,33 +122,36 @@ export default function Home() {
 
             {/* 右側圖片 + 浮動徽章 */}
             <div className="hidden lg:block">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-3xl transform rotate-3"></div>
+              <div className="relative inline-block">
+                {/* 背景藍色區塊 - 跟隨圖片大小 */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl transform rotate-3 scale-105"></div>
                 <img
                   src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600"
                   alt="Students learning"
-                  className="relative rounded-3xl shadow-2xl"
+                  className="relative rounded-2xl shadow-2xl max-w-full h-auto"
                 />
                 {/* 左下徽章 - AI 語音辨識 */}
-                <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-xl p-4 flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
+                <div className="absolute -bottom-4 -left-4 bg-white rounded-xl shadow-xl p-3 flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-900">
-                      {t("home.features.aiSpeech.title")}
+                    <div className="font-semibold text-gray-900 text-sm">
+                      AI 語音辨識
                     </div>
+                    <div className="text-gray-500 text-xs">AI 語音辨識</div>
                   </div>
                 </div>
                 {/* 右上徽章 - 多元智能學習 */}
-                <div className="absolute -top-6 -right-6 bg-white rounded-xl shadow-xl p-4 flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Brain className="h-6 w-6 text-blue-600" />
+                <div className="absolute -top-4 -right-4 bg-white rounded-xl shadow-xl p-3 flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Brain className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-900">
-                      {t("home.features.multiIntelligence.title")}
+                    <div className="font-semibold text-gray-900 text-sm">
+                      多元智能學習
                     </div>
+                    <div className="text-gray-500 text-xs">多元智能學習</div>
                   </div>
                 </div>
               </div>
