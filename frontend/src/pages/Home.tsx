@@ -38,7 +38,7 @@ export default function Home() {
       {/* 第二區段: Hero - 漸層背景 */}
       <section className="bg-gradient-to-b from-[#204dc0] to-[#101f6b] text-white py-20">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid min-[1440px]:grid-cols-2 gap-12 items-center">
             {/* 左側文案 */}
             <div>
               <p className="text-yellow-400 mb-2 text-lg font-medium">
@@ -89,7 +89,7 @@ export default function Home() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-2 border-white text-white hover:bg-white hover:text-blue-700 px-8 py-5 text-lg font-semibold transition-colors"
+                  className="border-2 border-white text-white hover:bg-white hover:text-blue-700 px-8 py-[22px] text-lg font-semibold transition-colors"
                   onClick={() => setIsVideoModalOpen(true)}
                 >
                   <Play className="w-5 h-5 mr-2" />
@@ -120,8 +120,8 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 右側圖片 + 浮動徽章 */}
-            <div className="hidden lg:block">
+            {/* 右側圖片 + 浮動徽章 (>=1440px 顯示) */}
+            <div className="hidden min-[1440px]:block">
               <div className="relative inline-block">
                 {/* 背景藍色區塊 - 跟隨圖片大小 */}
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl transform rotate-3 scale-105"></div>
