@@ -23,7 +23,7 @@ from pathlib import Path
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy import create_engine, text  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 from database import Base  # noqa: F401, E402
 from models import (  # noqa: E402
@@ -322,8 +322,6 @@ def create_example_sentences_course():
 
 def delete_example_sentences_course():
     """刪除既有的例句集課程資料"""
-    from sqlalchemy import text
-
     db = SessionLocal()
 
     try:
