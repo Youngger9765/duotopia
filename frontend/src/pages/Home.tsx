@@ -37,7 +37,7 @@ export default function Home() {
 
       {/* 第二區段: Hero - 漸層背景 */}
       <section className="bg-gradient-to-b from-[#204dc0] to-[#101f6b] text-white py-20">
-        <div className="container mx-auto px-16">
+        <div className="container mx-auto px-4 sm:px-8 lg:px-16">
           <div className="grid lg:grid-cols-2 gap-8 xl:gap-10 min-[1440px]:gap-12 items-center max-w-6xl mx-auto">
             {/* 左側文案 */}
             <div>
@@ -69,7 +69,7 @@ export default function Home() {
               </ul>
 
               {/* 按鈕區域 */}
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-4 justify-center sm:justify-start">
                 {/* 免費體驗按鈕 */}
                 <Link to="/teacher/register">
                   <Button
@@ -98,7 +98,7 @@ export default function Home() {
               </div>
 
               {/* 教師頭像 + 統計 */}
-              <div className="mt-8 flex items-center gap-4">
+              <div className="mt-8 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-center sm:text-left">
                 <div className="flex -space-x-3">
                   {[1, 2, 3, 4].map((i) => (
                     <img
@@ -110,10 +110,10 @@ export default function Home() {
                   ))}
                 </div>
                 <div>
-                  <p className="font-semibold">
+                  <p className="font-semibold text-sm sm:text-base">
                     {t("home.hero.trustedTeachers")}
                   </p>
-                  <p className="text-blue-200 text-sm">
+                  <p className="text-blue-200 text-xs sm:text-sm">
                     {t("home.hero.studentsImproved")}
                   </p>
                 </div>
