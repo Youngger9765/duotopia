@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
@@ -12,11 +13,15 @@ import {
   Shield,
   Zap,
   ArrowRight,
+  Play,
+  CheckCircle,
+  X,
 } from "lucide-react";
 
 export default function Home() {
   const { t } = useTranslation();
   const isProduction = import.meta.env.PROD;
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-white">
@@ -63,20 +68,34 @@ export default function Home() {
                 </li>
               </ul>
 
-              {/* 免費體驗按鈕 */}
-              <Link to="/teacher/register">
+              {/* 按鈕區域 */}
+              <div className="flex flex-wrap gap-4">
+                {/* 免費體驗按鈕 */}
+                <Link to="/teacher/register">
+                  <Button
+                    size="lg"
+                    className="bg-white text-gray-900 hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-xl"
+                  >
+                    <img
+                      src="https://storage.googleapis.com/duotopia-social-media-videos/website/assigment_icon.png"
+                      alt=""
+                      className="w-6 h-6 mr-2"
+                    />
+                    {t("home.hero.freeTrialBtn")}
+                  </Button>
+                </Link>
+
+                {/* 觀看介紹影片按鈕 */}
                 <Button
                   size="lg"
-                  className="bg-white text-gray-900 hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-xl"
+                  variant="outline"
+                  className="border-white text-white hover:bg-white/10 px-8 py-6 text-lg font-semibold"
+                  onClick={() => setIsVideoModalOpen(true)}
                 >
-                  <img
-                    src="https://storage.googleapis.com/duotopia-social-media-videos/website/assigment_icon.png"
-                    alt=""
-                    className="w-6 h-6 mr-2"
-                  />
-                  {t("home.hero.freeTrialBtn")}
+                  <Play className="w-5 h-5 mr-2" />
+                  {t("home.hero.watchVideo")}
                 </Button>
-              </Link>
+              </div>
 
               {/* 教師頭像 + 統計 */}
               <div className="mt-8 flex items-center gap-4">
@@ -101,18 +120,38 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 右側影片 */}
-            <div className="flex justify-center lg:justify-end">
-              <iframe
-                width="315"
-                height="560"
-                src="https://www.youtube.com/embed/neansyCiT6Q"
-                title="Duotopia Demo"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="rounded-xl shadow-2xl"
-              />
+            {/* 右側圖片 + 浮動徽章 */}
+            <div className="hidden lg:block">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-3xl transform rotate-3"></div>
+                <img
+                  src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600"
+                  alt="Students learning"
+                  className="relative rounded-3xl shadow-2xl"
+                />
+                {/* 左下徽章 - AI 語音辨識 */}
+                <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-xl p-4 flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircle className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-gray-900">
+                      {t("home.features.aiSpeech.title")}
+                    </div>
+                  </div>
+                </div>
+                {/* 右上徽章 - 多元智能學習 */}
+                <div className="absolute -top-6 -right-6 bg-white rounded-xl shadow-xl p-4 flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Brain className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-gray-900">
+                      {t("home.features.multiIntelligence.title")}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -541,6 +580,39 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* 影片彈窗 Modal */}
+      {isVideoModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+          onClick={() => setIsVideoModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-4xl mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 關閉按鈕 */}
+            <button
+              onClick={() => setIsVideoModalOpen(false)}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+              aria-label="Close video"
+            >
+              <X className="w-8 h-8" />
+            </button>
+
+            {/* YouTube 影片嵌入 */}
+            <div className="relative pt-[56.25%] bg-black rounded-lg overflow-hidden">
+              <iframe
+                className="absolute inset-0 w-full h-full"
+                src="https://www.youtube.com/embed/m2jfog0EvXo?list=PLu97PbZuQSs0nK6raEQmCj5Fj_0YxExt2&autoplay=1"
+                title="Duotopia 介紹影片"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
