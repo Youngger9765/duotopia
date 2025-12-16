@@ -54,7 +54,7 @@ export class AzureSpeechService {
       return { token, region };
     } catch (error) {
       console.error("❌ [TOKEN] 获取失败", {
-        error: (error as any).response?.status,
+        error: (error as { response?: { status?: number } }).response?.status,
         message: (error as Error).message,
       });
       throw new Error("无法获取语音分析授权，请刷新页面重试");

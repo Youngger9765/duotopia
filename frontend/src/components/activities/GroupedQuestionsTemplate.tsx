@@ -139,6 +139,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   onFileUpload,
   formatTime = (s) =>
     `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   progressId: _progressId, // Legacy prop (not used with Azure direct calls)
   progressIds = [], // 接收 progress_id 數組
   initialAssessmentResults,
