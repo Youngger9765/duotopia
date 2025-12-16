@@ -44,9 +44,10 @@ import {
   selectSupportedMimeType,
   validateDuration,
 } from "@/utils/audioRecordingStrategy";
-import { retryAudioUpload, retryAIAnalysis } from "@/utils/retryHelper";
+import { retryAudioUpload } from "@/utils/retryHelper";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { useTranslation } from "react-i18next";
+import { useAzurePronunciation } from "@/hooks/useAzurePronunciation";
 
 // Activity type from API
 export interface Activity {
@@ -190,6 +191,9 @@ export default function StudentActivityPageContent({
   showAnswer = false,
 }: StudentActivityPageContentProps) {
   const { t } = useTranslation();
+
+  // 🚀 Azure Speech Service hook for direct API calls (background analysis)
+  const { analyzePronunciation } = useAzurePronunciation();
 
   // State management
   const [activities, setActivities] = useState<Activity[]>(initialActivities);
@@ -1160,46 +1164,31 @@ export default function StudentActivityPageContent({
             throw new Error("No progress_id available for analysis");
           }
 
-          // 🤖 AI 分析
-          const aiFormData = new FormData();
+          // 🚀 使用 Azure Speech Service 直接分析（快速！）
           const audioResponse = await fetch(gcsAudioUrl);
           const audioBlob = await audioResponse.blob();
-          const fileExtension = audioBlob.type.includes("mp4")
-            ? "recording.mp4"
-            : audioBlob.type.includes("webm")
-              ? "recording.webm"
-              : "recording.audio";
-          aiFormData.append("audio_file", audioBlob, fileExtension);
-          aiFormData.append("reference_text", referenceText!);
-          aiFormData.append("progress_id", String(currentProgressId));
-          aiFormData.append("item_index", String(itemIndex));
-          if (assignmentId) {
-            aiFormData.append("assignment_id", String(assignmentId));
+
+          const azureResult = await analyzePronunciation(
+            audioBlob,
+            referenceText!,
+          );
+
+          if (!azureResult) {
+            throw new Error("Azure analysis failed");
           }
 
-          const analysisResult = await retryAIAnalysis(
-            async () => {
-              const analysisResponse = await fetch(
-                `${apiUrl}/api/speech/assess`,
-                {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                  body: aiFormData,
-                },
-              );
-
-              if (!analysisResponse.ok) {
-                throw new Error(`Analysis failed: ${analysisResponse.status}`);
-              }
-
-              return await analysisResponse.json();
-            },
-            (attempt, error) => {
-              console.log(`Background analysis retrying (${attempt}):`, error);
-            },
-          );
+          // Convert Azure result format to our existing format
+          const analysisResult = {
+            pronunciation_score: azureResult.pronunciationScore,
+            accuracy_score: azureResult.accuracyScore,
+            fluency_score: azureResult.fluencyScore,
+            completeness_score: azureResult.completenessScore,
+            words: azureResult.words?.map((w) => ({
+              word: w.word,
+              accuracy_score: w.accuracyScore,
+              error_type: w.errorType,
+            })),
+          };
 
           // 更新 activity 的 ai_scores
           setActivities((prevActivities) => {

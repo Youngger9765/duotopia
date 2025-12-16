@@ -1260,7 +1260,7 @@ async def upload_pronunciation_analysis(
     audio_file: UploadFile = File(...),
     analysis_json: str = Form(...),
     latency_ms: Optional[int] = Form(None),
-    progress_id: int = Form(...),
+    progress_id: Optional[int] = Form(None),  # 👈 改为 Optional（允许前端不传）
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
@@ -1307,21 +1307,23 @@ async def upload_pronunciation_analysis(
                 status_code=400, detail="Invalid JSON format in analysis_json"
             )
 
-        # 2. 获取 progress 记录并验证权限
-        progress = (
-            db.query(StudentItemProgress)
-            .filter(StudentItemProgress.id == progress_id)
-            .first()
-        )
+        # 2. 获取 progress 记录并验证权限（如果提供了 progress_id）
+        progress = None
+        if progress_id:
+            progress = (
+                db.query(StudentItemProgress)
+                .filter(StudentItemProgress.id == progress_id)
+                .first()
+            )
 
-        if not progress:
-            raise HTTPException(status_code=404, detail="Progress not found")
+            if not progress:
+                raise HTTPException(status_code=404, detail="Progress not found")
 
         # 验证权限：学生只能上传自己的作业
         user_type = current_user.get("type")
         user_id = int(current_user.get("sub"))
 
-        if user_type == "student":
+        if progress and user_type == "student":
             # 获取 student_assignment 来验证所属学生
             student_assignment = (
                 db.query(StudentAssignment)
@@ -1333,7 +1335,7 @@ async def upload_pronunciation_analysis(
                 raise HTTPException(
                     status_code=403, detail="You can only upload your own assignments"
                 )
-        elif user_type != "teacher":
+        elif user_type not in ["student", "teacher"]:
             raise HTTPException(status_code=403, detail="Invalid user type")
 
         # 3. 上传音档到 GCS
@@ -1345,12 +1347,12 @@ async def upload_pronunciation_analysis(
             file=audio_file,
             duration_seconds=30,  # Frontend should validate this
             content_id=progress.content_item.content_id
-            if progress.content_item
+            if progress and progress.content_item
             else None,
             item_index=progress.content_item.order_index
-            if progress.content_item
+            if progress and progress.content_item
             else None,
-            assignment_id=progress.student_assignment_id,
+            assignment_id=progress.student_assignment_id if progress else None,
             student_id=user_id if user_type == "student" else None,
         )
 
@@ -1368,40 +1370,45 @@ async def upload_pronunciation_analysis(
             }
         )
 
-        # 5. 更新数据库（使用现有字段）
-        progress.recording_url = audio_url
+        # 5. 更新数据库（如果有 progress 记录）
+        if progress:
+            progress.recording_url = audio_url
 
-        # 提取分数并更新
-        if "pronunciation_score" in analysis:
-            progress.pronunciation_score = analysis["pronunciation_score"]
-        if "accuracy_score" in analysis:
-            progress.accuracy_score = analysis["accuracy_score"]
-        if "fluency_score" in analysis:
-            progress.fluency_score = analysis["fluency_score"]
-        if "completeness_score" in analysis:
-            progress.completeness_score = analysis["completeness_score"]
+            # 提取分数并更新
+            if "pronunciation_score" in analysis:
+                progress.pronunciation_score = analysis["pronunciation_score"]
+            if "accuracy_score" in analysis:
+                progress.accuracy_score = analysis["accuracy_score"]
+            if "fluency_score" in analysis:
+                progress.fluency_score = analysis["fluency_score"]
+            if "completeness_score" in analysis:
+                progress.completeness_score = analysis["completeness_score"]
 
-        # 存储完整分析结果（包含 metadata）
-        progress.ai_feedback = json.dumps(analysis)
-        progress.ai_assessed_at = datetime.now()
+            # 存储完整分析结果（包含 metadata）
+            progress.ai_feedback = json.dumps(analysis)
+            progress.ai_assessed_at = datetime.now()
 
-        # 更新状态
-        if progress.status != "SUBMITTED":
-            progress.status = "SUBMITTED"
-            progress.submitted_at = datetime.now()
+            # 更新状态
+            if progress.status != "SUBMITTED":
+                progress.status = "SUBMITTED"
+                progress.submitted_at = datetime.now()
 
-        # 增加尝试次数
-        progress.attempts = (progress.attempts or 0) + 1
+            # 增加尝试次数
+            progress.attempts = (progress.attempts or 0) + 1
 
-        db.commit()
-        db.refresh(progress)
+            db.commit()
+            db.refresh(progress)
 
         logger.info(
             f"Successfully uploaded analysis: progress_id={progress_id}, "
             f"user_id={user_id}, latency_ms={latency_ms}"
         )
 
-        return {"status": "success", "progress_id": progress.id, "audio_url": audio_url}
+        return {
+            "status": "success",
+            "progress_id": progress.id if progress else None,
+            "audio_url": audio_url,
+        }
 
     except HTTPException:
         raise
