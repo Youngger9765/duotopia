@@ -15,18 +15,34 @@ export class AzureSpeechService {
    * @private
    */
   private async getToken(): Promise<{ token: string; region: string }> {
+    console.log("🔑 [TOKEN] 检查 cache...", {
+      hasCachedToken: !!this.tokenCache,
+      cacheExpired: this.tokenCache
+        ? new Date() >= this.tokenCache.expiresAt
+        : "no cache",
+    });
+
     // 检查 cache 是否有效（提前1分钟过期）
     if (this.tokenCache && new Date() < this.tokenCache.expiresAt) {
+      console.log("✅ [TOKEN] 使用缓存的 token");
       return {
         token: this.tokenCache.token,
         region: this.tokenCache.region,
       };
     }
 
+    console.log("🔑 [TOKEN] 缓存过期或不存在，请求新 token...");
+
     // Cache 过期或不存在，重新获取
     try {
       const response = await axios.post("/api/azure-speech/token");
       const { token, region, expires_in } = response.data;
+
+      console.log("✅ [TOKEN] 新 token 获取成功", {
+        region,
+        expires_in,
+        tokenLength: token.length,
+      });
 
       // Cache token（提前1分钟过期 = 9分钟有效）
       this.tokenCache = {
@@ -37,7 +53,10 @@ export class AzureSpeechService {
 
       return { token, region };
     } catch (error) {
-      console.error("Failed to get Azure Speech token:", error);
+      console.error("❌ [TOKEN] 获取失败", {
+        error: (error as any).response?.status,
+        message: (error as Error).message,
+      });
       throw new Error("无法获取语音分析授权，请刷新页面重试");
     }
   }
@@ -58,13 +77,25 @@ export class AzureSpeechService {
     result: sdk.PronunciationAssessmentResult;
     latencyMs: number;
   }> {
+    console.log("🔵 [AZURE] analyzePronunciation 开始", {
+      audioBlobSize: audioBlob.size,
+      referenceText: referenceText.substring(0, 50) + "...",
+      retryCount,
+    });
+
     const startTime = Date.now();
 
     try {
       // 1. 获取短效 token
+      console.log("🔑 [AZURE] 获取 token...");
       const { token, region } = await this.getToken();
+      console.log("🔑 [AZURE] Token 获取成功", {
+        region,
+        tokenLength: token.length,
+      });
 
       // 2. 配置 Speech SDK
+      console.log("⚙️ [AZURE] 配置 Speech SDK...");
       const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(
         token,
         region,
@@ -89,6 +120,8 @@ export class AzureSpeechService {
       const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
       pronunciationConfig.applyTo(recognizer);
 
+      console.log("🎙️ [AZURE] 开始识别...");
+
       // 6. 执行识别（Promise 包装）
       return new Promise((resolve, reject) => {
         recognizer.recognizeOnceAsync(
@@ -97,6 +130,11 @@ export class AzureSpeechService {
 
             // 识别成功
             if (result.reason === sdk.ResultReason.RecognizedSpeech) {
+              console.log("✅ [AZURE] 识别成功", {
+                latencyMs: `${latencyMs}ms`,
+                reason: result.reason,
+              });
+
               const pronunciationResult =
                 sdk.PronunciationAssessmentResult.fromResult(result);
 
@@ -109,9 +147,10 @@ export class AzureSpeechService {
                 result.errorDetails?.includes("401")) &&
               retryCount === 0
             ) {
-              console.warn(
-                "Token may be expired, retrying with fresh token...",
-              );
+              console.warn("⚠️ [AZURE] Token 可能过期，retry...", {
+                reason: result.reason,
+                errorDetails: result.errorDetails,
+              });
               this.tokenCache = null; // 清除旧 token
               recognizer.close();
 
@@ -120,6 +159,11 @@ export class AzureSpeechService {
             }
             // 其他错误
             else {
+              console.error("❌ [AZURE] 识别失败", {
+                reason: result.reason,
+                errorDetails: result.errorDetails,
+              });
+
               recognizer.close();
               const errorMsg =
                 result.errorDetails || `识别失败: ${result.reason}`;
@@ -127,11 +171,13 @@ export class AzureSpeechService {
             }
           },
           (error) => {
+            console.error("❌ [AZURE] 识别错误", { error });
+
             recognizer.close();
 
             // 401 错误 - 自动 retry
             if (error.includes("401") && retryCount === 0) {
-              console.warn("401 Unauthorized, retrying with fresh token...");
+              console.warn("⚠️ [AZURE] 401 错误，retry...");
               this.tokenCache = null;
               resolve(this.analyzePronunciation(audioBlob, referenceText, 1));
             } else {
@@ -141,7 +187,7 @@ export class AzureSpeechService {
         );
       });
     } catch (error) {
-      console.error("Pronunciation analysis failed:", error);
+      console.error("❌ [AZURE] analyzePronunciation 异常", error);
       throw new Error("语音分析失败，请重试");
     }
   }
