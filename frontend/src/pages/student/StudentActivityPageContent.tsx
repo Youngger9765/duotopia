@@ -553,7 +553,6 @@ export default function StudentActivityPageContent({
           });
         }
 
-        console.log("✅ 錄音完成，儲存為 blob URL（等待用戶點擊分析按鈕）");
         isReRecording.current = false;
 
         // 🎯 Issue #118: 不自動上傳，等待用戶點擊「上傳並分析」按鈕
@@ -797,8 +796,6 @@ export default function StudentActivityPageContent({
         description: `${file.name}（${Math.round(duration)} 秒）`,
       });
 
-      console.log("✅ File validated successfully, starting upload to GCS...");
-
       // 🎯 立即上傳到 GCS (與錄音完成後的上傳邏輯相同)
       if (
         !isPreviewMode &&
@@ -809,7 +806,6 @@ export default function StudentActivityPageContent({
           currentActivity.items[currentSubQuestionIndex]?.id;
 
         if (contentItemId) {
-          console.log("🚀 開始上傳檔案到 GCS...");
           toast.info(t("studentActivityPage.recording.uploading"), {
             duration: 3000,
           });
@@ -855,7 +851,6 @@ export default function StudentActivityPageContent({
             },
           )
             .then((uploadResult) => {
-              console.log("✅ 上傳成功:", uploadResult.audio_url);
               toast.success(t("studentActivityPage.recording.uploadSuccess"));
 
               // 更新為 GCS URL

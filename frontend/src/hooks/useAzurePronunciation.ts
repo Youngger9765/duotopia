@@ -103,16 +103,6 @@ export function useAzurePronunciation() {
       const { result: analysisResult, latencyMs } =
         await azureSpeechService.analyzePronunciation(audioBlob, referenceText);
 
-      // Log full Azure result structure for debugging
-      if (import.meta.env.DEV) {
-        console.log("🔍 Full Azure SDK Result:", analysisResult);
-        console.log("🔍 Azure Result Type:", typeof analysisResult);
-        console.log(
-          "🔍 Azure Result Keys:",
-          Object.keys(analysisResult as object),
-        );
-      }
-
       // Convert Azure result to our format
       const azureResult = analysisResult as unknown as {
         pronunciationScore: number;
@@ -154,26 +144,8 @@ export function useAzurePronunciation() {
       const privPronJson = (analysisResult as unknown as AzureAnalysisResult)
         .privPronJson;
 
-      if (import.meta.env.DEV) {
-        console.log("🔍 privPronJson:", privPronJson);
-        console.log(
-          "🔍 privPronJson Keys:",
-          privPronJson ? Object.keys(privPronJson) : "null",
-        );
-      }
-
       // Azure SDK stores Words directly in privPronJson, not in NBest
       const wordsData = privPronJson?.Words || [];
-
-      if (import.meta.env.DEV) {
-        console.log("🔍 Words Data:", wordsData);
-        console.log("🔍 Words Count:", wordsData.length);
-        if (wordsData[0]) {
-          console.log("🔍 First Word Structure:", wordsData[0]);
-          console.log("🔍 Has Syllables:", "Syllables" in (wordsData[0] || {}));
-          console.log("🔍 Has Phonemes:", "Phonemes" in (wordsData[0] || {}));
-        }
-      }
 
       if (wordsData.length > 0) {
         wordsData.forEach((wordData: AzureWordData, idx: number) => {
@@ -249,22 +221,8 @@ export function useAzurePronunciation() {
         },
       };
 
-      if (import.meta.env.DEV) {
-        console.log("✅ Extracted detailed_words:", detailed_words.length);
-        console.log(
-          "✅ Low score phonemes:",
-          low_score_phonemes.length,
-          low_score_phonemes,
-        );
-      }
-
       setResult(pronunciationResult);
       setIsAnalyzing(false);
-
-      // Log latency in development
-      if (import.meta.env.DEV) {
-        console.log(`✅ Azure Speech analysis completed in ${latencyMs}ms`);
-      }
 
       // Background upload - non-blocking
       azureSpeechService.uploadAnalysisInBackground(

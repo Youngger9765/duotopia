@@ -16,23 +16,13 @@ export class AzureSpeechService {
    * @private
    */
   private async getToken(): Promise<{ token: string; region: string }> {
-    console.log("🔑 [TOKEN] 检查 cache...", {
-      hasCachedToken: !!this.tokenCache,
-      cacheExpired: this.tokenCache
-        ? new Date() >= this.tokenCache.expiresAt
-        : "no cache",
-    });
-
     // 检查 cache 是否有效（提前1分钟过期）
     if (this.tokenCache && new Date() < this.tokenCache.expiresAt) {
-      console.log("✅ [TOKEN] 使用缓存的 token");
       return {
         token: this.tokenCache.token,
         region: this.tokenCache.region,
       };
     }
-
-    console.log("🔑 [TOKEN] 缓存过期或不存在，请求新 token...");
 
     // Cache 过期或不存在，重新获取
     try {
@@ -54,12 +44,6 @@ export class AzureSpeechService {
       );
       const { token, region, expires_in } = response.data;
 
-      console.log("✅ [TOKEN] 新 token 获取成功", {
-        region,
-        expires_in,
-        tokenLength: token.length,
-      });
-
       // Cache token（提前1分钟过期 = 9分钟有效）
       this.tokenCache = {
         token,
@@ -69,7 +53,7 @@ export class AzureSpeechService {
 
       return { token, region };
     } catch (error) {
-      console.error("❌ [TOKEN] 获取失败", {
+      console.error("Failed to get Azure Speech token:", {
         error: (error as { response?: { status?: number } }).response?.status,
         message: (error as Error).message,
       });
@@ -93,25 +77,13 @@ export class AzureSpeechService {
     result: sdk.PronunciationAssessmentResult;
     latencyMs: number;
   }> {
-    console.log("🔵 [AZURE] analyzePronunciation 开始", {
-      audioBlobSize: audioBlob.size,
-      referenceText: referenceText.substring(0, 50) + "...",
-      retryCount,
-    });
-
     const startTime = Date.now();
 
     try {
       // 1. 获取短效 token
-      console.log("🔑 [AZURE] 获取 token...");
       const { token, region } = await this.getToken();
-      console.log("🔑 [AZURE] Token 获取成功", {
-        region,
-        tokenLength: token.length,
-      });
 
       // 2. 配置 Speech SDK
-      console.log("⚙️ [AZURE] 配置 Speech SDK...");
       const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(
         token,
         region,
@@ -127,21 +99,10 @@ export class AzureSpeechService {
       );
 
       // 4. 从 Blob 创建音频配置（使用 push stream 支持所有格式）
-      console.log("🎵 [AZURE] 解码音频 blob...", {
-        blobType: audioBlob.type,
-        blobSize: audioBlob.size,
-      });
-
       // 解码音频为 PCM 数据
       const arrayBuffer = await audioBlob.arrayBuffer();
       const audioContext = new AudioContext({ sampleRate: 16000 });
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-      console.log("🎵 [AZURE] 音频解码完成", {
-        sampleRate: audioBuffer.sampleRate,
-        duration: audioBuffer.duration,
-        channels: audioBuffer.numberOfChannels,
-      });
 
       // 转换为 16-bit PCM mono
       const pcmData = audioBuffer.getChannelData(0); // Get mono channel
@@ -165,8 +126,6 @@ export class AzureSpeechService {
       const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
       pronunciationConfig.applyTo(recognizer);
 
-      console.log("🎙️ [AZURE] 开始识别...");
-
       // 6. 执行识别（Promise 包装）
       return new Promise((resolve, reject) => {
         recognizer.recognizeOnceAsync(
@@ -175,11 +134,6 @@ export class AzureSpeechService {
 
             // 识别成功
             if (result.reason === sdk.ResultReason.RecognizedSpeech) {
-              console.log("✅ [AZURE] 识别成功", {
-                latencyMs: `${latencyMs}ms`,
-                reason: result.reason,
-              });
-
               const pronunciationResult =
                 sdk.PronunciationAssessmentResult.fromResult(result);
 
@@ -192,10 +146,6 @@ export class AzureSpeechService {
                 result.errorDetails?.includes("401")) &&
               retryCount === 0
             ) {
-              console.warn("⚠️ [AZURE] Token 可能过期，retry...", {
-                reason: result.reason,
-                errorDetails: result.errorDetails,
-              });
               this.tokenCache = null; // 清除旧 token
               recognizer.close();
 
@@ -204,7 +154,7 @@ export class AzureSpeechService {
             }
             // 其他错误
             else {
-              console.error("❌ [AZURE] 识别失败", {
+              console.error("Azure Speech recognition failed:", {
                 reason: result.reason,
                 errorDetails: result.errorDetails,
               });
@@ -216,13 +166,12 @@ export class AzureSpeechService {
             }
           },
           (error) => {
-            console.error("❌ [AZURE] 识别错误", { error });
+            console.error("Azure Speech recognition error:", error);
 
             recognizer.close();
 
             // 401 错误 - 自动 retry
             if (error.includes("401") && retryCount === 0) {
-              console.warn("⚠️ [AZURE] 401 错误，retry...");
               this.tokenCache = null;
               resolve(this.analyzePronunciation(audioBlob, referenceText, 1));
             } else {
@@ -232,7 +181,7 @@ export class AzureSpeechService {
         );
       });
     } catch (error) {
-      console.error("❌ [AZURE] analyzePronunciation 异常", error);
+      console.error("Azure Speech analysis failed:", error);
       throw new Error("语音分析失败，请重试");
     }
   }

@@ -274,7 +274,6 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
       !isAssessing &&
       !autoAnalyzedRef.current.has(itemKey)
     ) {
-      console.log("🎯 Auto-triggering analysis after recording completion");
       autoAnalyzedRef.current.add(itemKey);
 
       // Delay slightly to ensure state is stable
@@ -441,13 +440,6 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
     analysisResult: AssessmentResult,
     progressId: number | null,
   ) => {
-    console.log("📤 [UPLOAD] 背景上传开始", {
-      progressId,
-      audioBlobSize: audioBlob.size,
-      audioBlobType: audioBlob.type,
-      hasAnalysisResult: !!analysisResult,
-    });
-
     try {
       const apiUrl = import.meta.env.VITE_API_URL || "";
       const formData = new FormData();
@@ -458,11 +450,6 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         : audioBlob.type.includes("webm")
           ? "recording.webm"
           : "recording.audio";
-
-      console.log("📤 [UPLOAD] 准备 FormData", {
-        uploadFileExtension,
-        apiUrl: `${apiUrl}/api/speech/upload-analysis`,
-      });
 
       formData.append("audio_file", audioBlob, uploadFileExtension);
       formData.append(
@@ -480,9 +467,6 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         formData.append("progress_id", progressId.toString());
       }
 
-      console.log("📤 [UPLOAD] 发送请求...");
-      const uploadStartTime = Date.now();
-
       // 不等待結果，立即返回（背景上傳）
       fetch(`${apiUrl}/api/speech/upload-analysis`, {
         method: "POST",
@@ -492,23 +476,16 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         body: formData,
       })
         .then(async (response) => {
-          const uploadElapsed = Date.now() - uploadStartTime;
-
           if (!response.ok) {
-            console.error("❌ [UPLOAD] 上传失败", {
-              status: response.status,
-              statusText: response.statusText,
-              elapsed: `${uploadElapsed}ms`,
-            });
+            console.error(
+              "Upload failed:",
+              response.status,
+              response.statusText,
+            );
             throw new Error(`Upload failed: ${response.status}`);
           }
 
           const result = await response.json();
-          console.log("✅ [UPLOAD] 背景上传成功", {
-            elapsed: `${uploadElapsed}ms`,
-            progressId: result.progress_id,
-            audioUrl: result.audio_url,
-          });
 
           // 通知父元件上傳成功
           if (onUploadSuccess && result.progress_id && result.audio_url) {
@@ -520,16 +497,11 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
           }
         })
         .catch((error) => {
-          console.error("❌ [UPLOAD] 背景上传失败", {
-            error: error.message,
-            progressId,
-          });
+          console.error("Background upload failed:", error.message);
           // 可選：存到 localStorage 待後續重試
         });
-
-      console.log("📤 [UPLOAD] fetch 已发送，不等待结果（背景上传）");
     } catch (error) {
-      console.error("❌ [UPLOAD] 准备上传时出错", error);
+      console.error("Failed to prepare upload:", error);
     }
   };
 
@@ -538,15 +510,6 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
     const audioUrl = items[currentQuestionIndex]?.recording_url;
     const referenceText = currentQuestion?.text;
     const contentItemId = items[currentQuestionIndex]?.id;
-
-    console.log("🎤 [DEBUG] handleAssessment 开始", {
-      currentQuestionIndex,
-      isPreviewMode,
-      progressIds,
-      audioUrl:
-        typeof audioUrl === "string" ? audioUrl.substring(0, 50) + "..." : null,
-      referenceText: referenceText?.substring(0, 50) + "...",
-    });
 
     if (!audioUrl || !referenceText) {
       toast.error(t("groupedQuestionsTemplate.messages.recordingRequired"));
@@ -574,27 +537,8 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
       const response = await fetch(audioUrl as string);
       const audioBlob = await response.blob();
 
-      console.log("🎤 [DEBUG] 准备分析", {
-        audioUrl:
-          typeof audioUrl === "string"
-            ? audioUrl.substring(0, 50) + "..."
-            : null,
-        audioBlobSize: audioBlob?.size,
-        referenceText: referenceText.substring(0, 50) + "...",
-      });
-
       // 🚀 調用 Azure Speech Service（立即顯示結果）
-      console.log("⚡ [DEBUG] 开始调用 Azure Speech API...");
-      const startTime = Date.now();
-
       const azureResult = await analyzePronunciation(audioBlob, referenceText);
-
-      const elapsedTime = Date.now() - startTime;
-      console.log("✅ [DEBUG] Azure 分析完成", {
-        耗时: `${elapsedTime}ms`,
-        pronunciationScore: azureResult?.pronunciationScore,
-        accuracyScore: azureResult?.accuracyScore,
-      });
 
       if (!azureResult) {
         throw new Error("Azure analysis failed");
@@ -615,11 +559,6 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         analysis_summary: azureResult.analysis_summary, // 🔥 Include analysis summary
       };
 
-      console.log("📊 [DEBUG] 显示结果", {
-        currentProgressId,
-        result,
-      });
-
       // ⚡ 立即顯示結果（用戶無需等待上傳）
       setAssessmentResults((prev) => ({
         ...prev,
@@ -639,30 +578,14 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         typeof audioUrl === "string" &&
         audioUrl.startsWith("blob:")
       ) {
-        console.log("📤 [DEBUG] 开始背景上传", {
-          progressId: currentProgressId,
-          audioBlobSize: audioBlob.size,
-          isPreviewMode,
-        });
-
         uploadAnalysisInBackground(audioBlob, result, currentProgressId);
-      } else {
-        console.log("⏭️ [DEBUG] 跳过上传", {
-          reason: isPreviewMode ? "预览模式" : "非 blob URL",
-          audioUrl:
-            typeof audioUrl === "string"
-              ? audioUrl.substring(0, 50) + "..."
-              : null,
-          isPreviewMode,
-        });
       }
     } catch (error) {
-      console.error("❌ [DEBUG] Assessment error:", error);
+      console.error("Assessment error:", error);
       toast.error(t("groupedQuestionsTemplate.messages.assessmentFailed"));
     } finally {
       setIsAssessing(false);
       onAnalyzingStateChange?.(false); // 🔓 通知父元件分析結束
-      console.log("🏁 [DEBUG] handleAssessment 结束");
     }
   };
 
