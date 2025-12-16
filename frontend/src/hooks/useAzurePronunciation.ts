@@ -3,6 +3,38 @@ import { azureSpeechService } from "@/services/azureSpeechService";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
+// Azure SDK response type definitions
+interface AzurePronunciationAssessment {
+  AccuracyScore?: number;
+  ErrorType?: string;
+}
+
+interface AzurePhoneme {
+  Phoneme: string;
+  PronunciationAssessment?: AzurePronunciationAssessment;
+}
+
+interface AzureSyllable {
+  Syllable: string;
+  PronunciationAssessment?: AzurePronunciationAssessment;
+}
+
+interface AzureWordData {
+  Word: string;
+  PronunciationAssessment?: AzurePronunciationAssessment;
+  Syllables?: AzureSyllable[];
+  Phonemes?: AzurePhoneme[];
+}
+
+interface AzurePrivPronJson {
+  Words?: AzureWordData[];
+}
+
+interface AzureAnalysisResult {
+  privPronJson?: AzurePrivPronJson;
+  [key: string]: unknown;
+}
+
 interface PhonemeDetail {
   index: number;
   phoneme: string;
@@ -119,11 +151,15 @@ export function useAzurePronunciation() {
 
       // Extract detailed words from Azure's privPronJson (which contains NBest data)
       const detailed_words: DetailedWord[] = [];
-      const privPronJson = (analysisResult as any).privPronJson;
+      const privPronJson = (analysisResult as unknown as AzureAnalysisResult)
+        .privPronJson;
 
       if (import.meta.env.DEV) {
         console.log("🔍 privPronJson:", privPronJson);
-        console.log("🔍 privPronJson Keys:", privPronJson ? Object.keys(privPronJson) : "null");
+        console.log(
+          "🔍 privPronJson Keys:",
+          privPronJson ? Object.keys(privPronJson) : "null",
+        );
       }
 
       // Azure SDK stores Words directly in privPronJson, not in NBest
@@ -134,19 +170,13 @@ export function useAzurePronunciation() {
         console.log("🔍 Words Count:", wordsData.length);
         if (wordsData[0]) {
           console.log("🔍 First Word Structure:", wordsData[0]);
-          console.log(
-            "🔍 Has Syllables:",
-            "Syllables" in (wordsData[0] || {}),
-          );
-          console.log(
-            "🔍 Has Phonemes:",
-            "Phonemes" in (wordsData[0] || {}),
-          );
+          console.log("🔍 Has Syllables:", "Syllables" in (wordsData[0] || {}));
+          console.log("🔍 Has Phonemes:", "Phonemes" in (wordsData[0] || {}));
         }
       }
 
       if (wordsData.length > 0) {
-        wordsData.forEach((wordData: any, idx: number) => {
+        wordsData.forEach((wordData: AzureWordData, idx: number) => {
           const word: DetailedWord = {
             index: idx,
             word: wordData.Word,
@@ -159,20 +189,24 @@ export function useAzurePronunciation() {
 
           // Parse syllables
           if (wordData.Syllables) {
-            word.syllables = wordData.Syllables.map((syl: any, sylIdx: number) => ({
-              index: sylIdx,
-              syllable: syl.Syllable,
-              accuracy_score: syl.PronunciationAssessment?.AccuracyScore || 0,
-            }));
+            word.syllables = wordData.Syllables.map(
+              (syl: AzureSyllable, sylIdx: number) => ({
+                index: sylIdx,
+                syllable: syl.Syllable,
+                accuracy_score: syl.PronunciationAssessment?.AccuracyScore || 0,
+              }),
+            );
           }
 
           // Parse phonemes
           if (wordData.Phonemes) {
-            word.phonemes = wordData.Phonemes.map((pho: any, phoIdx: number) => ({
-              index: phoIdx,
-              phoneme: pho.Phoneme,
-              accuracy_score: pho.PronunciationAssessment?.AccuracyScore || 0,
-            }));
+            word.phonemes = wordData.Phonemes.map(
+              (pho: AzurePhoneme, phoIdx: number) => ({
+                index: phoIdx,
+                phoneme: pho.Phoneme,
+                accuracy_score: pho.PronunciationAssessment?.AccuracyScore || 0,
+              }),
+            );
           }
 
           detailed_words.push(word);
