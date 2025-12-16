@@ -204,6 +204,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const uploadButtonRef = useRef<HTMLButtonElement | null>(null);
+  const autoAnalyzedRef = useRef<Set<string>>(new Set()); // Track auto-analyzed items
 
   // 使用傳入的 token（預覽模式）或從 student store 取得（正常模式）
   const { token: studentToken } = useStudentAuthStore();
@@ -256,24 +257,38 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
     }
   }, [initialAssessmentResults]);
 
-  // 手機版：錄音完成後自動滾動到上傳按鈕
+  // 🎯 Auto-analyze when recording is complete (Issue #118)
   useEffect(() => {
-    const hasRecording = items[currentQuestionIndex]?.recording_url;
-    const hasNoAssessment = !assessmentResults[currentQuestionIndex];
-    const isMobile = window.innerWidth < 640; // Tailwind sm breakpoint
+    const currentRecording = items[currentQuestionIndex]?.recording_url;
+    const hasAssessment = assessmentResults[currentQuestionIndex];
+    const itemKey = `${currentQuestionIndex}-${currentRecording}`;
 
-    if (hasRecording && hasNoAssessment && !isAssessing && isMobile) {
-      // 延遲一點時間確保按鈕已渲染
+    // Auto-trigger analysis if:
+    // 1. There's a recording URL
+    // 2. No existing assessment result
+    // 3. Not currently analyzing
+    // 4. Haven't auto-analyzed this recording yet
+    if (
+      currentRecording &&
+      !hasAssessment &&
+      !isAssessing &&
+      !autoAnalyzedRef.current.has(itemKey)
+    ) {
+      console.log("🎯 Auto-triggering analysis after recording completion");
+      autoAnalyzedRef.current.add(itemKey);
+
+      // Delay slightly to ensure state is stable
       setTimeout(() => {
-        if (uploadButtonRef.current) {
-          uploadButtonRef.current.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
-        }
-      }, 300);
+        handleAssessment();
+      }, 100);
     }
-  }, [items, currentQuestionIndex, assessmentResults, isAssessing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    items[currentQuestionIndex]?.recording_url,
+    currentQuestionIndex,
+    assessmentResults,
+    isAssessing,
+  ]);
 
   // 檢查題目是否已完成 - 目前未使用
   // const isQuestionCompleted = (index: number) => {
@@ -597,6 +612,8 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
           accuracy_score: w.accuracyScore,
           error_type: w.errorType,
         })),
+        detailed_words: azureResult.detailed_words, // 🔥 Include detailed syllable/phoneme data
+        analysis_summary: azureResult.analysis_summary, // 🔥 Include analysis summary
       };
 
       console.log("📊 [DEBUG] 显示结果", {
@@ -838,6 +855,12 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           setCurrentTime(0);
                           setDuration(0);
 
+                          // 🎯 Clear auto-analyzed tracking for this item
+                          const currentRecording =
+                            items[currentQuestionIndex]?.recording_url;
+                          const itemKey = `${currentQuestionIndex}-${currentRecording}`;
+                          autoAnalyzedRef.current.delete(itemKey);
+
                           // 🎯 Issue #75: 呼叫後端 DELETE API 清空 DB (僅在非預覽模式)
                           if (
                             !isPreviewMode &&
@@ -1076,12 +1099,9 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         >
           {/* AI 評估結果 */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
-            {/* 🎯 Issue #75: 只為 GCS URL 顯示 Analyze 按鈕 (不為 blob URL 顯示) */}
+            {/* 🎯 Issue #118: 有錄音就顯示 Analyze 按鈕（blob URL 或 GCS URL 都可以） */}
             {items[currentQuestionIndex]?.recording_url &&
-            !assessmentResults[currentQuestionIndex] &&
-            !(items[currentQuestionIndex]?.recording_url as string).startsWith(
-              "blob:",
-            ) ? (
+            !assessmentResults[currentQuestionIndex] ? (
               <div className="flex justify-center mb-4 py-6">
                 <Button
                   ref={uploadButtonRef}
@@ -1157,6 +1177,12 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                 >
                   <button
                     onClick={async () => {
+                      // 🎯 Clear auto-analyzed tracking for this item
+                      const currentRecording =
+                        items[currentQuestionIndex]?.recording_url;
+                      const itemKey = `${currentQuestionIndex}-${currentRecording}`;
+                      autoAnalyzedRef.current.delete(itemKey);
+
                       // 🎯 Issue #75: 呼叫後端 DELETE API 清空 DB (僅在非預覽模式)
                       if (
                         !isPreviewMode &&

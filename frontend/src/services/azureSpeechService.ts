@@ -126,11 +126,40 @@ export class AzureSpeechService {
         true, // enableMiscue
       );
 
-      // 4. 从 Blob 创建音频配置
-      const audioFile = new File([audioBlob], "recording.wav", {
-        type: "audio/wav",
+      // 4. 从 Blob 创建音频配置（使用 push stream 支持所有格式）
+      console.log("🎵 [AZURE] 解码音频 blob...", {
+        blobType: audioBlob.type,
+        blobSize: audioBlob.size,
       });
-      const audioConfig = sdk.AudioConfig.fromWavFileInput(audioFile);
+
+      // 解码音频为 PCM 数据
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const audioContext = new AudioContext({ sampleRate: 16000 });
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      console.log("🎵 [AZURE] 音频解码完成", {
+        sampleRate: audioBuffer.sampleRate,
+        duration: audioBuffer.duration,
+        channels: audioBuffer.numberOfChannels,
+      });
+
+      // 转换为 16-bit PCM mono
+      const pcmData = audioBuffer.getChannelData(0); // Get mono channel
+      const pcm16 = new Int16Array(pcmData.length);
+      for (let i = 0; i < pcmData.length; i++) {
+        // Convert float32 [-1, 1] to int16 [-32768, 32767]
+        pcm16[i] = Math.max(
+          -32768,
+          Math.min(32767, Math.floor(pcmData[i] * 32768)),
+        );
+      }
+
+      // 创建 push stream 并推送数据
+      const pushStream = sdk.AudioInputStream.createPushStream();
+      pushStream.write(pcm16.buffer);
+      pushStream.close();
+
+      const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
 
       // 5. 创建语音识别器
       const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);

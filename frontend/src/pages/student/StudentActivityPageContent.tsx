@@ -553,118 +553,12 @@ export default function StudentActivityPageContent({
           });
         }
 
-        console.log("✅ 錄音完成，開始上傳到 GCS");
+        console.log("✅ 錄音完成，儲存為 blob URL（等待用戶點擊分析按鈕）");
         isReRecording.current = false;
 
-        // 🎯 Issue #75: 立即上傳到 GCS (不觸發自動分析)
-        if (
-          !isPreviewMode &&
-          currentActivity.items &&
-          currentActivity.items.length > 0
-        ) {
-          const contentItemId =
-            currentActivity.items[currentSubQuestionIndex]?.id;
-
-          if (contentItemId) {
-            console.log("🚀 開始上傳錄音到 GCS...");
-            // 🎯 Issue #82: 顯示上傳中提示，讓用戶知道要等待
-            toast.info(t("studentActivityPage.recording.uploading"), {
-              duration: 3000,
-            });
-
-            const formData = new FormData();
-            formData.append("assignment_id", assignmentId!.toString());
-            formData.append("content_item_id", contentItemId.toString());
-            const uploadFileExtension = audioBlob.type.includes("mp4")
-              ? "recording.mp4"
-              : audioBlob.type.includes("webm")
-                ? "recording.webm"
-                : "recording.audio";
-            formData.append("audio_file", audioBlob, uploadFileExtension);
-
-            const apiUrl = import.meta.env.VITE_API_URL || "";
-            const authToken = useStudentAuthStore.getState().token;
-
-            retryAudioUpload(
-              async () => {
-                const uploadResponse = await fetch(
-                  `${apiUrl}/api/students/upload-recording`,
-                  {
-                    method: "POST",
-                    headers: {
-                      Authorization: `Bearer ${authToken}`,
-                    },
-                    body: formData,
-                  },
-                );
-
-                if (!uploadResponse.ok) {
-                  throw new Error(`Upload failed: ${uploadResponse.status}`);
-                }
-
-                return await uploadResponse.json();
-              },
-              (attempt, error) => {
-                console.log(`上傳重試 (${attempt}):`, error);
-              },
-            )
-              .then((uploadResult) => {
-                console.log("✅ 上傳成功:", uploadResult.audio_url);
-                // 🎯 Issue #82: 上傳成功提示，讓用戶知道可以點擊分析按鈕
-                toast.success(t("studentActivityPage.recording.uploadSuccess"));
-
-                // 更新為 GCS URL
-                setActivities((prevActivities) => {
-                  const newActivities = [...prevActivities];
-                  const activityIndex = newActivities.findIndex(
-                    (a) => a.id === currentActivity.id,
-                  );
-                  if (
-                    activityIndex !== -1 &&
-                    newActivities[activityIndex].items
-                  ) {
-                    const newItems = [...newActivities[activityIndex].items!];
-                    if (newItems[currentSubQuestionIndex]) {
-                      newItems[currentSubQuestionIndex] = {
-                        ...newItems[currentSubQuestionIndex],
-                        recording_url: uploadResult.audio_url,
-                      };
-                    }
-                    newActivities[activityIndex] = {
-                      ...newActivities[activityIndex],
-                      items: newItems,
-                    };
-                  }
-                  return newActivities;
-                });
-
-                // 更新 progressIds
-                setAnswers((prev) => {
-                  const newAnswers = new Map(prev);
-                  const answer = newAnswers.get(currentActivity.id);
-                  if (answer) {
-                    if (!answer.progressIds) answer.progressIds = [];
-                    while (
-                      answer.progressIds.length <= currentSubQuestionIndex
-                    ) {
-                      answer.progressIds.push(0);
-                    }
-                    answer.progressIds[currentSubQuestionIndex] =
-                      uploadResult.progress_id;
-                    answer.status = "completed";
-                  }
-                  newAnswers.set(currentActivity.id, answer!);
-                  return newAnswers;
-                });
-              })
-              .catch((error) => {
-                console.error("❌ 上傳失敗:", error);
-                toast.error("上傳錄音失敗", {
-                  description: "請檢查網路連接後重試",
-                });
-              });
-          }
-        }
+        // 🎯 Issue #118: 不自動上傳，等待用戶點擊「上傳並分析」按鈕
+        // recording_url 已在 Line 544 設置為 localAudioUrl (blob URL)
+        // GroupedQuestionsTemplate 會顯示「上傳並分析」按鈕
 
         // 🔧 錄音完成後清理所有錄音狀態
         if (streamRef.current) {

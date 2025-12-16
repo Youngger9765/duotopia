@@ -3,6 +3,27 @@ import { azureSpeechService } from "@/services/azureSpeechService";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
+interface PhonemeDetail {
+  index: number;
+  phoneme: string;
+  accuracy_score: number;
+}
+
+interface SyllableDetail {
+  index: number;
+  syllable: string;
+  accuracy_score: number;
+}
+
+interface DetailedWord {
+  index: number;
+  word: string;
+  accuracy_score: number;
+  error_type?: string;
+  syllables?: SyllableDetail[];
+  phonemes?: PhonemeDetail[];
+}
+
 interface PronunciationResult {
   pronunciationScore: number;
   accuracyScore: number;
@@ -13,6 +34,17 @@ interface PronunciationResult {
     accuracyScore: number;
     errorType: string;
   }>;
+  detailed_words?: DetailedWord[];
+  analysis_summary?: {
+    total_words: number;
+    problematic_words: string[];
+    low_score_phonemes: Array<{
+      phoneme: string;
+      score: number;
+      in_word: string;
+    }>;
+    assessment_time?: string;
+  };
 }
 
 export function useAzurePronunciation() {
@@ -39,6 +71,16 @@ export function useAzurePronunciation() {
       const { result: analysisResult, latencyMs } =
         await azureSpeechService.analyzePronunciation(audioBlob, referenceText);
 
+      // Log full Azure result structure for debugging
+      if (import.meta.env.DEV) {
+        console.log("🔍 Full Azure SDK Result:", analysisResult);
+        console.log("🔍 Azure Result Type:", typeof analysisResult);
+        console.log(
+          "🔍 Azure Result Keys:",
+          Object.keys(analysisResult as object),
+        );
+      }
+
       // Convert Azure result to our format
       const azureResult = analysisResult as unknown as {
         pronunciationScore: number;
@@ -50,7 +92,111 @@ export function useAzurePronunciation() {
           accuracyScore: number;
           errorType: string;
         }>;
+        detailResult?: {
+          NBest?: Array<{
+            Words?: Array<{
+              Word: string;
+              PronunciationAssessment?: {
+                AccuracyScore: number;
+                ErrorType: string;
+              };
+              Syllables?: Array<{
+                Syllable: string;
+                PronunciationAssessment?: {
+                  AccuracyScore: number;
+                };
+              }>;
+              Phonemes?: Array<{
+                Phoneme: string;
+                PronunciationAssessment?: {
+                  AccuracyScore: number;
+                };
+              }>;
+            }>;
+          }>;
+        };
       };
+
+      // Extract detailed words from Azure's privPronJson (which contains NBest data)
+      const detailed_words: DetailedWord[] = [];
+      const privPronJson = (analysisResult as any).privPronJson;
+
+      if (import.meta.env.DEV) {
+        console.log("🔍 privPronJson:", privPronJson);
+        console.log("🔍 privPronJson Keys:", privPronJson ? Object.keys(privPronJson) : "null");
+      }
+
+      // Azure SDK stores Words directly in privPronJson, not in NBest
+      const wordsData = privPronJson?.Words || [];
+
+      if (import.meta.env.DEV) {
+        console.log("🔍 Words Data:", wordsData);
+        console.log("🔍 Words Count:", wordsData.length);
+        if (wordsData[0]) {
+          console.log("🔍 First Word Structure:", wordsData[0]);
+          console.log(
+            "🔍 Has Syllables:",
+            "Syllables" in (wordsData[0] || {}),
+          );
+          console.log(
+            "🔍 Has Phonemes:",
+            "Phonemes" in (wordsData[0] || {}),
+          );
+        }
+      }
+
+      if (wordsData.length > 0) {
+        wordsData.forEach((wordData: any, idx: number) => {
+          const word: DetailedWord = {
+            index: idx,
+            word: wordData.Word,
+            accuracy_score:
+              wordData.PronunciationAssessment?.AccuracyScore || 0,
+            error_type: wordData.PronunciationAssessment?.ErrorType || "None",
+            syllables: [],
+            phonemes: [],
+          };
+
+          // Parse syllables
+          if (wordData.Syllables) {
+            word.syllables = wordData.Syllables.map((syl: any, sylIdx: number) => ({
+              index: sylIdx,
+              syllable: syl.Syllable,
+              accuracy_score: syl.PronunciationAssessment?.AccuracyScore || 0,
+            }));
+          }
+
+          // Parse phonemes
+          if (wordData.Phonemes) {
+            word.phonemes = wordData.Phonemes.map((pho: any, phoIdx: number) => ({
+              index: phoIdx,
+              phoneme: pho.Phoneme,
+              accuracy_score: pho.PronunciationAssessment?.AccuracyScore || 0,
+            }));
+          }
+
+          detailed_words.push(word);
+        });
+      }
+
+      // Collect low score phonemes for analysis summary
+      const low_score_phonemes: Array<{
+        phoneme: string;
+        score: number;
+        in_word: string;
+      }> = [];
+
+      detailed_words.forEach((word) => {
+        word.phonemes?.forEach((phoneme) => {
+          if (phoneme.accuracy_score < 70) {
+            low_score_phonemes.push({
+              phoneme: phoneme.phoneme,
+              score: phoneme.accuracy_score,
+              in_word: word.word,
+            });
+          }
+        });
+      });
 
       const pronunciationResult: PronunciationResult = {
         pronunciationScore: azureResult.pronunciationScore,
@@ -58,7 +204,25 @@ export function useAzurePronunciation() {
         fluencyScore: azureResult.fluencyScore,
         completenessScore: azureResult.completenessScore,
         words: azureResult.words,
+        detailed_words: detailed_words.length > 0 ? detailed_words : undefined,
+        analysis_summary: {
+          total_words: detailed_words.length,
+          problematic_words: detailed_words
+            .filter((w) => w.accuracy_score < 80)
+            .map((w) => w.word),
+          low_score_phonemes,
+          assessment_time: new Date().toISOString(),
+        },
       };
+
+      if (import.meta.env.DEV) {
+        console.log("✅ Extracted detailed_words:", detailed_words.length);
+        console.log(
+          "✅ Low score phonemes:",
+          low_score_phonemes.length,
+          low_score_phonemes,
+        );
+      }
 
       setResult(pronunciationResult);
       setIsAnalyzing(false);
