@@ -1,5 +1,6 @@
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import axios from "axios";
+import { useStudentAuthStore } from "@/stores/studentAuthStore";
 
 interface TokenCache {
   token: string;
@@ -35,7 +36,17 @@ export class AzureSpeechService {
 
     // Cache 过期或不存在，重新获取
     try {
-      const response = await axios.post("/api/azure-speech/token");
+      // 🔑 获取学生 token 用于认证
+      const studentToken = useStudentAuthStore.getState().token;
+      if (!studentToken) {
+        throw new Error("未登入或 token 已过期");
+      }
+
+      const response = await axios.post("/api/azure-speech/token", null, {
+        headers: {
+          Authorization: `Bearer ${studentToken}`,
+        },
+      });
       const { token, region, expires_in } = response.data;
 
       console.log("✅ [TOKEN] 新 token 获取成功", {
@@ -211,9 +222,13 @@ export class AzureSpeechService {
       formData.append("latency_ms", latencyMs.toString());
 
       // 背景上传，不等待结果（catch 捕获错误但不抛出）
+      const studentToken = useStudentAuthStore.getState().token;
       axios
         .post("/api/speech/upload-analysis", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: studentToken ? `Bearer ${studentToken}` : "",
+          },
         })
         .catch((error) => {
           console.error("Background upload failed:", error);
