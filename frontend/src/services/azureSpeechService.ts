@@ -42,11 +42,16 @@ export class AzureSpeechService {
         throw new Error("未登入或 token 已过期");
       }
 
-      const response = await axios.post("/api/azure-speech/token", null, {
-        headers: {
-          Authorization: `Bearer ${studentToken}`,
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      const response = await axios.post(
+        `${apiUrl}/api/azure-speech/token`,
+        null,
+        {
+          headers: {
+            Authorization: `Bearer ${studentToken}`,
+          },
         },
-      });
+      );
       const { token, region, expires_in } = response.data;
 
       console.log("✅ [TOKEN] 新 token 获取成功", {
@@ -223,8 +228,9 @@ export class AzureSpeechService {
 
       // 背景上传，不等待结果（catch 捕获错误但不抛出）
       const studentToken = useStudentAuthStore.getState().token;
+      const apiUrl = import.meta.env.VITE_API_URL || "";
       axios
-        .post("/api/speech/upload-analysis", formData, {
+        .post(`${apiUrl}/api/speech/upload-analysis`, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
             Authorization: studentToken ? `Bearer ${studentToken}` : "",
