@@ -1,6 +1,7 @@
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import axios from "axios";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 
 interface TokenCache {
   token: string;
@@ -26,9 +27,12 @@ export class AzureSpeechService {
 
     // Cache 过期或不存在，重新获取
     try {
-      // 🔑 获取学生 token 用于认证
+      // 🔑 获取 auth token（优先学生，fallback 老师预览）
       const studentToken = useStudentAuthStore.getState().token;
-      if (!studentToken) {
+      const teacherToken = useTeacherAuthStore.getState().token;
+      const authToken = studentToken || teacherToken;
+
+      if (!authToken) {
         throw new Error("未登入或 token 已过期");
       }
 
@@ -38,7 +42,7 @@ export class AzureSpeechService {
         null,
         {
           headers: {
-            Authorization: `Bearer ${studentToken}`,
+            Authorization: `Bearer ${authToken}`,
           },
         },
       );
@@ -199,19 +203,34 @@ export class AzureSpeechService {
     latencyMs: number,
   ): Promise<void> {
     try {
+      // 获取 auth token（优先学生，fallback 老师预览）
+      const studentToken = useStudentAuthStore.getState().token;
+      const teacherToken = useTeacherAuthStore.getState().token;
+
+      // 老师预览模式：跳过上传（预览不需要存档）
+      if (!studentToken && teacherToken) {
+        console.log("Teacher preview mode: skipping background upload");
+        return;
+      }
+
+      const authToken = studentToken || teacherToken;
+      if (!authToken) {
+        console.warn("No auth token available, skipping upload");
+        return;
+      }
+
       const formData = new FormData();
       formData.append("audio_file", audioBlob, "recording.wav");
       formData.append("analysis_json", JSON.stringify(analysisResult));
       formData.append("latency_ms", latencyMs.toString());
 
       // 背景上传，不等待结果（catch 捕获错误但不抛出）
-      const studentToken = useStudentAuthStore.getState().token;
       const apiUrl = import.meta.env.VITE_API_URL || "";
       axios
         .post(`${apiUrl}/api/speech/upload-analysis`, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
-            Authorization: studentToken ? `Bearer ${studentToken}` : "",
+            Authorization: `Bearer ${authToken}`,
           },
         })
         .catch((error) => {

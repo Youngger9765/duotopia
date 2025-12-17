@@ -9,6 +9,24 @@ vi.mock("axios", () => ({
   },
 }));
 
+// Mock student auth store
+vi.mock("@/stores/studentAuthStore", () => ({
+  useStudentAuthStore: {
+    getState: vi.fn(() => ({
+      token: "mock-student-token",
+    })),
+  },
+}));
+
+// Mock teacher auth store
+vi.mock("@/stores/teacherAuthStore", () => ({
+  useTeacherAuthStore: {
+    getState: vi.fn(() => ({
+      token: null, // Default: no teacher token (student mode)
+    })),
+  },
+}));
+
 // Mock Azure Speech SDK
 vi.mock("microsoft-cognitiveservices-speech-sdk", () => ({
   SpeechConfig: {
@@ -63,7 +81,13 @@ describe("AzureSpeechService", () => {
 
       const result = await service["getToken"]();
 
-      expect(axios.post).toHaveBeenCalledWith("/api/azure-speech/token");
+      expect(axios.post).toHaveBeenCalledWith(
+        expect.stringContaining("/api/azure-speech/token"),
+        null,
+        expect.objectContaining({
+          headers: { Authorization: "Bearer mock-student-token" },
+        }),
+      );
       expect(result.token).toBe("test-token-abc123");
       expect(result.region).toBe("eastasia");
     });
@@ -143,10 +167,13 @@ describe("AzureSpeechService", () => {
       );
 
       expect(axios.post).toHaveBeenCalledWith(
-        "/api/speech/upload-analysis",
+        expect.stringContaining("/api/speech/upload-analysis"),
         expect.any(FormData),
         expect.objectContaining({
-          headers: { "Content-Type": "multipart/form-data" },
+          headers: expect.objectContaining({
+            "Content-Type": "multipart/form-data",
+            Authorization: "Bearer mock-student-token",
+          }),
         }),
       );
     });
