@@ -1968,7 +1968,7 @@
     "batchActions": {
       "batchPaste": "批次貼上",
       "batchPasteTooltip": "批次貼上素材，每行一個項目",
-      "batchGenerateTTS": "批次生成TTS",
+      "batchGenerateTTS": "批次生成音檔",
       "batchGenerateTTSTooltip": "使用免費的 Microsoft Edge TTS 生成語音",
       "batchGenerateTranslation": "批次生成翻譯",
       "batchGenerateTranslationTooltip": "批次生成翻譯（根據各行語言設定）"

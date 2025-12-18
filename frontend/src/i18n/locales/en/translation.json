@@ -1960,7 +1960,7 @@
     "batchActions": {
       "batchPaste": "Batch Paste",
       "batchPasteTooltip": "Batch paste content, one item per line",
-      "batchGenerateTTS": "Batch Generate TTS",
+      "batchGenerateTTS": "Batch Generate Text to Speech",
       "batchGenerateTTSTooltip": "Generate speech using free Microsoft Edge TTS",
       "batchGenerateTranslation": "Batch Generate Translation",
       "batchGenerateTranslationTooltip": "Batch generate translations based on language settings"
