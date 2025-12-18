@@ -1945,7 +1945,7 @@ export default function ReadingAssessmentPanel({
             ) : (
               <Volume2 className="h-4 w-4 mr-1" />
             )}
-            {isBatchGeneratingTTS ? "生成中..." : "批次生成TTS"}
+            {isBatchGeneratingTTS ? "生成中..." : "批次生成音檔"}
           </Button>
           <Button
             variant="outline"

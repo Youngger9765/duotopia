@@ -2129,7 +2129,7 @@ export default function SentenceMakingPanel({
             title="使用免費的 Microsoft Edge TTS 生成語音"
           >
             <Volume2 className="h-4 w-4 mr-1" />
-            批次生成TTS
+            批次生成音檔
           </Button>
           <Button
             variant="outline"
