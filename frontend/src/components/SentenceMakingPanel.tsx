@@ -130,6 +130,7 @@ const TTSModal = ({
   itemIndex,
   isCreating = false,
 }: TTSModalProps) => {
+  const { t } = useTranslation();
   const [text, setText] = useState(row.text);
   const [accent, setAccent] = useState(
     row.audioSettings?.accent || "American English",
@@ -211,11 +212,11 @@ const TTSModal = ({
           // 如果自動播放失敗（瀏覽器限制），仍顯示成功訊息
         });
 
-        toast.success("音檔生成成功！點擊播放按鈕試聽");
+        toast.success(t("contentEditor.messages.audioGeneratedSuccess"));
       }
     } catch (err) {
       console.error("TTS generation failed:", err);
-      toast.error("生成失敗，請重試");
+      toast.error(t("contentEditor.messages.generationFailed"));
     } finally {
       setIsGenerating(false);
     }
@@ -263,7 +264,7 @@ const TTSModal = ({
           // 30秒自動停止
           if (newDuration >= 30) {
             handleStopRecording();
-            toast.info("已達到最長錄音時間 30 秒");
+            toast.info(t("contentEditor.messages.maxRecordingTimeReached"));
           }
           return newDuration;
         });
@@ -294,14 +295,14 @@ const TTSModal = ({
 
         // 檢查檔案大小 (2MB 限制)
         if (audioBlob.size > 2 * 1024 * 1024) {
-          toast.error("錄音檔案太大，請縮短錄音時間");
+          toast.error(t("contentEditor.messages.recordingFileTooLarge"));
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
 
         // 確保有錄音資料
         if (audioBlob.size === 0) {
-          toast.error("錄音失敗，請檢查麥克風權限");
+          toast.error(t("contentEditor.messages.recordingFailed"));
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
@@ -313,7 +314,7 @@ const TTSModal = ({
         // 創建本地 URL 供預覽播放
         const localUrl = URL.createObjectURL(audioBlob);
         setRecordedAudio(localUrl);
-        toast.success("錄音完成！可以試聽或重新錄製");
+        toast.success(t("contentEditor.messages.recordingComplete"));
 
         stream.getTracks().forEach((track) => track.stop());
       };
@@ -321,9 +322,9 @@ const TTSModal = ({
       // 使用 timeslice 參數，每100ms收集一次數據
       mediaRecorder.start(100);
       setIsRecording(true);
-      toast.success("開始錄音");
+      toast.success(t("contentEditor.messages.recordingStarted"));
     } catch {
-      toast.error("無法啟動錄音，請檢查麥克風權限");
+      toast.error(t("contentEditor.messages.cannotStartRecording"));
     }
   };
 
@@ -347,7 +348,7 @@ const TTSModal = ({
     // 如果兩種音源都有，需要用戶選擇
     if (audioUrl && recordedAudio) {
       if (!selectedSource) {
-        toast.warning("請選擇要使用的音源（TTS 或錄音）");
+        toast.warning(t("contentEditor.messages.selectAudioSource"));
         return;
       }
 
@@ -383,7 +384,7 @@ const TTSModal = ({
                 Number(itemIndex),
               ),
             (attempt, error) => {
-              toast.warning(`上傳失敗，正在重試... (第 ${attempt}/3 次)`);
+              toast.warning(t("contentEditor.messages.uploadRetrying"));
               console.error(`Upload attempt ${attempt} failed:`, error);
             },
           );
@@ -401,7 +402,7 @@ const TTSModal = ({
           }
         } catch (err) {
           console.error("Upload failed after retries:", err);
-          toast.error("上傳失敗，請檢查網路連線後重試");
+          toast.error(t("contentEditor.messages.uploadFailed"));
         } finally {
           setIsUploading(false);
         }
@@ -414,7 +415,7 @@ const TTSModal = ({
       // 只有一種音源
       const finalAudioUrl = recordedAudio || audioUrl;
       if (!finalAudioUrl) {
-        toast.error("請先生成或錄製音檔");
+        toast.error(t("contentEditor.messages.generateOrRecordFirst"));
         return;
       }
 
@@ -449,7 +450,7 @@ const TTSModal = ({
                 Number(itemIndex),
               ),
             (attempt, error) => {
-              toast.warning(`上傳失敗，正在重試... (第 ${attempt}/3 次)`);
+              toast.warning(t("contentEditor.messages.uploadRetrying"));
               console.error(`Upload attempt ${attempt} failed:`, error);
             },
           );
@@ -467,7 +468,7 @@ const TTSModal = ({
           }
         } catch (err) {
           console.error("Upload failed after retries:", err);
-          toast.error("上傳失敗，請檢查網路連線後重試");
+          toast.error(t("contentEditor.messages.uploadFailed"));
         } finally {
           setIsUploading(false);
         }
@@ -484,7 +485,7 @@ const TTSModal = ({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>音檔設定</DialogTitle>
+          <DialogTitle>{t("contentEditor.modals.audioSettings")}</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -571,7 +572,7 @@ const TTSModal = ({
                 onClick={handleGenerate}
                 disabled={isGenerating}
                 className="flex-1 bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-400 dark:hover:bg-yellow-500 text-black"
-                title="使用免費的 Microsoft Edge TTS 生成語音"
+                title={t("contentEditor.tooltips.ttsMicrosoftEdge")}
               >
                 {isGenerating ? "Generating..." : "Generate"}
               </Button>
@@ -588,7 +589,7 @@ const TTSModal = ({
                         : "border-gray-300 hover:border-green-500 hover:bg-green-50"
                     }
                   `}
-                  title="播放生成的音檔"
+                  title={t("contentEditor.tooltips.playGeneratedAudio")}
                 >
                   <Play
                     className={`h-4 w-4 ${showAudioAnimation ? "text-green-600" : "text-gray-600"}`}
@@ -624,8 +625,8 @@ const TTSModal = ({
                     <Volume2 className="h-4 w-4 text-gray-600" />
                     <span className="text-sm font-medium">
                       {showAudioAnimation
-                        ? "音檔已生成！點擊播放按鈕試聽"
-                        : "TTS 音檔已準備"}
+                        ? t("contentEditor.messages.audioGenerated")
+                        : t("contentEditor.messages.ttsAudioReady")}
                     </span>
                   </div>
                   <Button
@@ -634,7 +635,7 @@ const TTSModal = ({
                     onClick={() => {
                       setAudioUrl("");
                       setSelectedSource(null);
-                      toast.info("已刪除 TTS 音檔");
+                      toast.info(t("contentEditor.messages.ttsAudioDeleted"));
                     }}
                     className="text-red-600 hover:bg-red-50"
                   >
@@ -674,7 +675,7 @@ const TTSModal = ({
                     00:30
                   </div>
                   <div className="text-sm text-gray-500 mt-1">
-                    最長錄音時間 30 秒
+                    {t("contentEditor.messages.maxRecordingTime")}
                   </div>
                 </div>
               )}
@@ -683,7 +684,7 @@ const TTSModal = ({
               {isUploading && (
                 <div className="mb-4 text-center">
                   <div className="text-sm text-blue-600">
-                    正在上傳錄音檔案...
+                    {t("contentEditor.messages.uploadingRecording")}
                   </div>
                 </div>
               )}
@@ -691,7 +692,7 @@ const TTSModal = ({
               {!isRecording && !recordedAudio && !isUploading && (
                 <Button onClick={handleStartRecording} size="lg">
                   <Mic className="h-5 w-5 mr-2" />
-                  開始錄音
+                  {t("contentEditor.buttons.startRecording")}
                 </Button>
               )}
 
@@ -702,7 +703,7 @@ const TTSModal = ({
                   size="lg"
                 >
                   <Square className="h-5 w-5 mr-2" />
-                  停止錄音
+                  {t("contentEditor.buttons.stopRecording")}
                 </Button>
               )}
 
@@ -717,14 +718,18 @@ const TTSModal = ({
                           size="icon"
                           onClick={() => {
                             if (!recordedAudio) {
-                              toast.error("沒有錄音可播放");
+                              toast.error(
+                                t("contentEditor.messages.noRecordingToPlay"),
+                              );
                               return;
                             }
 
                             const audio = new Audio(recordedAudio);
                             audio.play().catch((err) => {
                               console.error("Play failed:", err);
-                              toast.error("無法播放錄音");
+                              toast.error(
+                                t("contentEditor.messages.cannotPlayRecording"),
+                              );
                             });
                           }}
                         >
@@ -733,7 +738,9 @@ const TTSModal = ({
                         <div className="flex items-center gap-2">
                           <Mic className="h-4 w-4 text-red-600" />
                           <span className="text-sm text-gray-700 font-medium">
-                            錄音檔案已準備 ({recordingDuration}秒)
+                            {t("contentEditor.messages.recordingFileReady", {
+                              duration: recordingDuration,
+                            })}
                           </span>
                         </div>
                       </div>
@@ -746,7 +753,9 @@ const TTSModal = ({
                           audioBlobRef.current = null;
                           setRecordingDuration(0);
                           recordingDurationRef.current = 0;
-                          toast.info("已刪除錄音檔案");
+                          toast.info(
+                            t("contentEditor.messages.recordingDeleted"),
+                          );
                         }}
                         className="text-red-600 hover:bg-red-50"
                       >
@@ -757,7 +766,7 @@ const TTSModal = ({
                   <div className="flex gap-2">
                     <Button onClick={handleStartRecording} variant="outline">
                       <RefreshCw className="h-4 w-4 mr-2" />
-                      重新錄製
+                      {t("contentEditor.buttons.rerecord")}
                     </Button>
                   </div>
                 </div>
@@ -770,7 +779,7 @@ const TTSModal = ({
         {audioUrl && recordedAudio && (
           <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm font-medium text-yellow-800 mb-3">
-              🎵 您有兩種音源可選擇，請選擇要使用的音檔：
+              🎵 {t("contentEditor.messages.selectAudioSourceToUse")}
             </p>
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -786,8 +795,12 @@ const TTSModal = ({
                     selectedSource === "tts" ? "text-blue-600" : "text-gray-600"
                   }`}
                 />
-                <div className="text-sm font-medium">TTS 語音</div>
-                <div className="text-xs text-gray-500">AI 生成</div>
+                <div className="text-sm font-medium">
+                  {t("contentEditor.audioSources.tts")}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {t("contentEditor.audioSources.aiGenerated")}
+                </div>
               </button>
 
               <button
@@ -805,8 +818,12 @@ const TTSModal = ({
                       : "text-gray-600"
                   }`}
                 />
-                <div className="text-sm font-medium">錄音檔案</div>
-                <div className="text-xs text-gray-500">教師錄製</div>
+                <div className="text-sm font-medium">
+                  {t("contentEditor.audioSources.recording")}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {t("contentEditor.audioSources.teacherRecorded")}
+                </div>
               </button>
             </div>
           </div>
@@ -865,6 +882,7 @@ function SortableRowInner({
   handleOpenAIGenerateModal,
   rowsLength,
 }: SortableRowInnerProps) {
+  const { t } = useTranslation();
   const {
     attributes,
     listeners,
@@ -899,7 +917,7 @@ function SortableRowInner({
             {...attributes}
             {...listeners}
             className="cursor-grab active:cursor-grabbing touch-none"
-            title="拖曳以重新排序"
+            title={t("contentEditor.tooltips.dragToReorder")}
           >
             <GripVertical className="h-5 w-5 text-gray-400 hover:text-gray-700 transition-colors" />
           </div>
@@ -913,21 +931,23 @@ function SortableRowInner({
             <button
               onClick={() => {
                 if (!row.audioUrl) {
-                  toast.error("沒有音檔可播放");
+                  toast.error(t("contentEditor.messages.noRecordingToPlay"));
                   return;
                 }
                 const audio = new Audio(row.audioUrl);
                 audio.onerror = (e) => {
                   console.error("Audio playback error:", e);
-                  toast.error("音檔播放失敗，請檢查音檔格式");
+                  toast.error(
+                    t("contentEditor.messages.audioGeneratedSuccess"),
+                  );
                 };
                 audio.play().catch((error) => {
                   console.error("Play failed:", error);
-                  toast.error("無法播放音檔");
+                  toast.error(t("contentEditor.messages.cannotPlayRecording"));
                 });
               }}
               className="p-1.5 rounded text-green-600 hover:bg-green-100"
-              title="播放音檔"
+              title={t("contentEditor.tooltips.playAudio")}
             >
               <Play className="h-4 w-4" />
             </button>
@@ -939,7 +959,11 @@ function SortableRowInner({
                 ? "text-blue-600 hover:bg-blue-100"
                 : "text-gray-600 bg-yellow-100 hover:bg-yellow-200"
             }`}
-            title={row.audioUrl ? "重新錄製/生成" : "開啟 TTS/錄音"}
+            title={
+              row.audioUrl
+                ? t("contentEditor.tooltips.rerecordOrGenerate")
+                : t("contentEditor.tooltips.openTTSRecording")
+            }
           >
             <Mic className="h-4 w-4" />
           </button>
@@ -947,7 +971,7 @@ function SortableRowInner({
             <button
               onClick={() => handleRemoveAudio(index)}
               className="p-1.5 rounded text-red-600 hover:bg-red-100"
-              title="移除音檔"
+              title={t("contentEditor.tooltips.removeAudio")}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -956,14 +980,14 @@ function SortableRowInner({
           <button
             onClick={() => handleDuplicateRow(index)}
             className="p-1.5 rounded hover:bg-gray-200"
-            title="複製"
+            title={t("contentEditor.tooltips.duplicate")}
           >
             <Copy className="h-4 w-4 text-gray-600" />
           </button>
           <button
             onClick={() => handleRemoveRow(index)}
             className="p-1.5 rounded hover:bg-gray-200"
-            title="刪除"
+            title={t("contentEditor.tooltips.delete")}
             disabled={rowsLength <= 1}
           >
             <Trash2
@@ -982,7 +1006,7 @@ function SortableRowInner({
             value={row.text}
             onChange={(e) => handleUpdateRow(index, "text", e.target.value)}
             className="w-full px-3 py-2 border rounded-md text-sm"
-            placeholder="輸入英文單字"
+            placeholder={t("sentenceMakingPanel.placeholders.enterEnglishWord")}
             maxLength={50}
           />
         </div>
@@ -1008,7 +1032,14 @@ function SortableRowInner({
               handleUpdateRow(index, field, e.target.value);
             }}
             className="w-full px-3 py-2 pr-24 border rounded-md text-sm"
-            placeholder={`${WORD_TRANSLATION_LANGUAGES.find((l) => l.value === (row.selectedWordLanguage || "chinese"))?.label || "中文"}翻譯(非必填)`}
+            placeholder={t(
+              "sentenceMakingPanel.placeholders.translationOptional",
+              {
+                lang: t(
+                  `contentEditor.translationLanguages.${WORD_TRANSLATION_LANGUAGES.find((l) => l.value === (row.selectedWordLanguage || "chinese"))?.value || "chinese"}`,
+                ),
+              },
+            )}
             maxLength={200}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
@@ -1035,7 +1066,11 @@ function SortableRowInner({
             <button
               onClick={() => handleGenerateSingleDefinition(index)}
               className="p-1 rounded hover:bg-gray-200 text-gray-600"
-              title={`AI 生成${WORD_TRANSLATION_LANGUAGES.find((l) => l.value === (row.selectedWordLanguage || "chinese"))?.label || "中文"}翻譯`}
+              title={t("sentenceMakingPanel.tooltips.generateTranslation", {
+                lang: t(
+                  `contentEditor.translationLanguages.${WORD_TRANSLATION_LANGUAGES.find((l) => l.value === (row.selectedWordLanguage || "chinese"))?.value || "chinese"}`,
+                ),
+              })}
             >
               <Globe className="h-4 w-4" />
             </button>
@@ -1073,13 +1108,15 @@ function SortableRowInner({
             handleUpdateRow(index, "example_sentence", e.target.value)
           }
           className="w-full px-3 py-2 pr-12 border rounded-md text-sm"
-          placeholder="輸入英文例句"
+          placeholder={t(
+            "sentenceMakingPanel.placeholders.enterEnglishSentence",
+          )}
           maxLength={500}
         />
         <button
           onClick={() => handleOpenAIGenerateModal(index)}
           className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-blue-100 text-blue-600 border border-blue-300"
-          title="AI 生成例句"
+          title={t("sentenceMakingPanel.tooltips.generateExampleSentence")}
         >
           <span className="text-xs font-medium">AI</span>
         </button>
@@ -1105,7 +1142,14 @@ function SortableRowInner({
             handleUpdateRow(index, field, e.target.value);
           }}
           className="w-full px-3 py-2 pr-24 border rounded-md text-sm"
-          placeholder={`${SENTENCE_TRANSLATION_LANGUAGES.find((l) => l.value === (row.selectedSentenceLanguage || "chinese"))?.label || "中文"}翻譯(非必須)`}
+          placeholder={t(
+            "sentenceMakingPanel.placeholders.exampleTranslationOptional",
+            {
+              lang: t(
+                `contentEditor.translationLanguages.${SENTENCE_TRANSLATION_LANGUAGES.find((l) => l.value === (row.selectedSentenceLanguage || "chinese"))?.value || "chinese"}`,
+              ),
+            },
+          )}
           maxLength={500}
         />
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
@@ -1133,7 +1177,14 @@ function SortableRowInner({
             <button
               onClick={() => handleGenerateExampleTranslation(index)}
               className="p-1 rounded hover:bg-gray-200 text-gray-600"
-              title={`AI 生成${SENTENCE_TRANSLATION_LANGUAGES.find((l) => l.value === (row.selectedSentenceLanguage || "chinese"))?.label || "中文"}例句翻譯`}
+              title={t(
+                "sentenceMakingPanel.tooltips.generateExampleTranslation",
+                {
+                  lang: t(
+                    `contentEditor.translationLanguages.${SENTENCE_TRANSLATION_LANGUAGES.find((l) => l.value === (row.selectedSentenceLanguage || "chinese"))?.value || "chinese"}`,
+                  ),
+                },
+              )}
             >
               <Globe className="h-4 w-4" />
             </button>
@@ -1299,7 +1350,7 @@ export default function SentenceMakingPanel({
       }
     } catch (error) {
       console.error("Failed to load content:", error);
-      toast.error("載入內容失敗");
+      toast.error(t("contentEditor.messages.loadingContentFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -1342,7 +1393,7 @@ export default function SentenceMakingPanel({
 
   const handleAddRow = () => {
     if (rows.length >= 15) {
-      toast.error("最多只能新增 15 列");
+      toast.error(t("contentEditor.messages.maxRowsReached"));
       return;
     }
     // 找出最大的 ID 數字，然後加 1
@@ -1361,7 +1412,7 @@ export default function SentenceMakingPanel({
 
   const handleDeleteRow = (index: number) => {
     if (rows.length <= 1) {
-      toast.error("至少需要保留 1 列");
+      toast.error(t("contentEditor.messages.minRowsRequired"));
       return;
     }
     const newRows = rows.filter((_, i) => i !== index);
@@ -1370,7 +1421,7 @@ export default function SentenceMakingPanel({
 
   const handleCopyRow = (index: number) => {
     if (rows.length >= 15) {
-      toast.error("最多只能新增 15 列");
+      toast.error(t("contentEditor.messages.maxRowsReached"));
       return;
     }
     const rowToCopy = rows[index];
@@ -1416,16 +1467,16 @@ export default function SentenceMakingPanel({
           items,
         });
 
-        toast.success("已移除音檔");
+        toast.success(t("contentEditor.messages.audioRemoved"));
       } catch (error) {
         console.error("Failed to remove audio:", error);
-        toast.error("移除音檔失敗");
+        toast.error(t("contentEditor.messages.removeAudioFailed"));
         // 恢復原始狀態
         const originalRows = [...rows];
         setRows(originalRows);
       }
     } else {
-      toast.info("已移除音檔");
+      toast.info(t("contentEditor.messages.audioRemoved"));
     }
   };
 
@@ -1529,7 +1580,9 @@ export default function SentenceMakingPanel({
             }
           } catch (error) {
             console.error("Failed to update content:", error);
-            toast.error("更新失敗，但音檔已生成");
+            toast.error(
+              t("contentEditor.messages.updateFailedButAudioGenerated"),
+            );
           }
         } else {
           // 沒有 content ID，音檔將在儲存時上傳
@@ -1554,11 +1607,15 @@ export default function SentenceMakingPanel({
         .map((row) => row.example_sentence || "");
 
       if (textsToGenerate.length === 0) {
-        toast.info("所有項目都已有音檔，或例句為空");
+        toast.info(t("sentenceMakingPanel.messages.allItemsHaveAudioOrEmpty"));
         return;
       }
 
-      toast.info(`正在生成 ${textsToGenerate.length} 個例句音檔...`);
+      toast.info(
+        t("sentenceMakingPanel.messages.generatingExampleAudio", {
+          count: textsToGenerate.length,
+        }),
+      );
 
       // 批次生成 TTS
       const result = await apiClient.batchGenerateTTS(
@@ -1614,7 +1671,9 @@ export default function SentenceMakingPanel({
           }
 
           toast.success(
-            `成功生成 ${textsToGenerate.length} 個音檔！音檔將在儲存內容時一併上傳。`,
+            t("contentEditor.messages.audioGeneratedSuccessfully", {
+              count: textsToGenerate.length,
+            }),
           );
         } else if (editingContent?.id) {
           // 編輯模式：直接呼叫 API 更新
@@ -1635,21 +1694,29 @@ export default function SentenceMakingPanel({
               });
             }
 
-            toast.success(`成功生成並儲存 ${textsToGenerate.length} 個音檔！`);
+            toast.success(
+              t("contentEditor.messages.audioGeneratedAndSaved", {
+                count: textsToGenerate.length,
+              }),
+            );
           } catch (error) {
             console.error("Failed to save TTS:", error);
-            toast.error("儲存失敗，但音檔已生成");
+            toast.error(
+              t("contentEditor.messages.savingFailedButAudioGenerated"),
+            );
           }
         } else {
           // 沒有 content ID，只是本地更新
           toast.success(
-            `成功生成 ${textsToGenerate.length} 個音檔！音檔將在儲存內容時一併上傳。`,
+            t("contentEditor.messages.audioGeneratedSuccessfully", {
+              count: textsToGenerate.length,
+            }),
           );
         }
       }
     } catch (error) {
       console.error("Batch TTS generation failed:", error);
-      toast.error("批次生成失敗，請重試");
+      toast.error(t("contentEditor.messages.batchGenerationFailed"));
     }
   };
 
@@ -1664,7 +1731,7 @@ export default function SentenceMakingPanel({
   ) => {
     const newRows = [...rows];
     if (!newRows[index].text) {
-      toast.error("請先輸入文本");
+      toast.error(t("contentEditor.messages.enterTextFirst"));
       return;
     }
 
@@ -1677,7 +1744,7 @@ export default function SentenceMakingPanel({
     const langConfig = WORD_TRANSLATION_LANGUAGES.find(
       (l) => l.value === targetLang,
     );
-    toast.info(`生成${langConfig?.label || ""}翻譯中...`);
+    toast.info(t("contentEditor.messages.generatingTranslation"));
 
     try {
       if (needAutoDetectPOS) {
@@ -1716,12 +1783,12 @@ export default function SentenceMakingPanel({
       setRows(newRows);
       toast.success(
         needAutoDetectPOS
-          ? "翻譯及詞性辨識完成"
-          : `${langConfig?.label || ""}翻譯生成完成`,
+          ? t("sentenceMakingPanel.messages.translationAndPOSComplete")
+          : t("contentEditor.messages.translationComplete"),
       );
     } catch (error) {
       console.error("Translation error:", error);
-      toast.error("翻譯失敗，請稍後再試");
+      toast.error(t("contentEditor.messages.translationFailed"));
     }
   };
 
@@ -1736,11 +1803,11 @@ export default function SentenceMakingPanel({
     });
 
     if (itemsToTranslate.length === 0) {
-      toast.info("沒有需要翻譯的項目");
+      toast.info(t("contentEditor.messages.noItemsNeedTranslation"));
       return;
     }
 
-    toast.info(`開始批次生成翻譯...`);
+    toast.info(t("contentEditor.messages.startingBatchTranslation"));
     const newRows = [...rows];
 
     try {
@@ -1797,12 +1864,14 @@ export default function SentenceMakingPanel({
       setRows(newRows);
       const posCount = needsPOS.length;
       toast.success(
-        `批次翻譯完成！處理了 ${itemsToTranslate.length} 個項目` +
-          (posCount > 0 ? `，其中 ${posCount} 個自動辨識了詞性` : ""),
+        t("sentenceMakingPanel.messages.batchTranslationSuccess", {
+          total: itemsToTranslate.length,
+          posCount: posCount > 0 ? posCount : 0,
+        }),
       );
     } catch (error) {
       console.error("Batch translation error:", error);
-      toast.error("批次翻譯失敗，請稍後再試");
+      toast.error(t("contentEditor.messages.batchTranslationFailed"));
     }
   };
 
@@ -1818,14 +1887,14 @@ export default function SentenceMakingPanel({
   ) => {
     const newRows = [...rows];
     if (!newRows[index].example_sentence) {
-      toast.error("請先輸入例句");
+      toast.error(t("sentenceMakingPanel.messages.enterExampleFirst"));
       return;
     }
 
     const langConfig = SENTENCE_TRANSLATION_LANGUAGES.find(
       (l) => l.value === targetLang,
     );
-    toast.info(`生成例句${langConfig?.label || ""}翻譯中...`);
+    toast.info(t("sentenceMakingPanel.messages.generatingExampleTranslation"));
 
     try {
       const response = (await apiClient.translateText(
@@ -1845,10 +1914,12 @@ export default function SentenceMakingPanel({
       // 記錄最後選擇的語言
       newRows[index].selectedSentenceLanguage = targetLang;
       setRows(newRows);
-      toast.success(`例句${langConfig?.label || ""}翻譯生成完成`);
+      toast.success(
+        t("sentenceMakingPanel.messages.exampleTranslationComplete"),
+      );
     } catch (error) {
       console.error("Example sentence translation error:", error);
-      toast.error("例句翻譯失敗，請稍後再試");
+      toast.error(t("sentenceMakingPanel.messages.exampleTranslationFailed"));
     }
   };
 
@@ -1878,7 +1949,9 @@ export default function SentenceMakingPanel({
       }
 
       if (targetIndices.length === 0) {
-        toast.info("沒有可生成例句的項目（請先輸入單字）");
+        toast.info(
+          t("sentenceMakingPanel.messages.noItemsForExampleGeneration"),
+        );
         setIsGeneratingAI(false);
         return;
       }
@@ -1905,7 +1978,11 @@ export default function SentenceMakingPanel({
         }
       }
 
-      toast.info(`正在生成 ${wordsToGenerate.length} 個例句...`);
+      toast.info(
+        t("sentenceMakingPanel.messages.generatingExamples", {
+          count: wordsToGenerate.length,
+        }),
+      );
 
       // 呼叫 API 生成例句
       const response = await apiClient.generateSentences({
@@ -1942,11 +2019,15 @@ export default function SentenceMakingPanel({
       });
 
       setRows(newRows);
-      toast.success(`成功生成 ${results.length} 個例句！`);
+      toast.success(
+        t("sentenceMakingPanel.messages.examplesGeneratedSuccess", {
+          count: results.length,
+        }),
+      );
       setAiGenerateModalOpen(false);
     } catch (error) {
       console.error("AI generate sentences error:", error);
-      toast.error("AI 生成例句失敗，請稍後再試");
+      toast.error(t("sentenceMakingPanel.messages.exampleGenerationFailed"));
     } finally {
       setIsGeneratingAI(false);
     }
@@ -1960,11 +2041,13 @@ export default function SentenceMakingPanel({
       .filter((line) => line.length > 0);
 
     if (lines.length === 0) {
-      toast.error("請輸入內容");
+      toast.error(t("contentEditor.messages.enterContent"));
       return;
     }
 
-    toast.info(`正在處理 ${lines.length} 個項目...`);
+    toast.info(
+      t("contentEditor.messages.processingItems", { count: lines.length }),
+    );
 
     // 清除空白 items
     const nonEmptyRows = rows.filter((row) => row.text && row.text.trim());
@@ -2022,7 +2105,7 @@ export default function SentenceMakingPanel({
         }
       } catch (error) {
         console.error("Batch processing error:", error);
-        toast.error("批次處理失敗");
+        toast.error(t("contentEditor.messages.batchProcessingFailed"));
         return;
       }
     }
@@ -2056,7 +2139,10 @@ export default function SentenceMakingPanel({
         // 編輯模式：更新現有內容
         await apiClient.updateContent(existingContentId, saveData);
         toast.success(
-          `已新增 ${lines.length} 個項目並儲存（共 ${updatedRows.length} 個）`,
+          t("contentEditor.messages.itemsAddedAndSaved", {
+            added: lines.length,
+            total: updatedRows.length,
+          }),
         );
       } else if (isCreating && lessonId) {
         // 創建模式：新增內容
@@ -2064,17 +2150,24 @@ export default function SentenceMakingPanel({
           type: "VOCABULARY_SET",
           ...saveData,
         });
-        toast.success(`已新增 ${lines.length} 個項目並創建內容`);
+        toast.success(
+          t("sentenceMakingPanel.messages.itemsAddedAndCreated", {
+            count: lines.length,
+          }),
+        );
         // 🔥 不要呼叫 onSave 避免重新載入，直接顯示結果
       } else {
         // 沒有 contentId 也沒有 lessonId，只更新前端
         toast.success(
-          `已新增 ${lines.length} 個項目（共 ${updatedRows.length} 個）`,
+          t("sentenceMakingPanel.messages.itemsAdded", {
+            added: lines.length,
+            total: updatedRows.length,
+          }),
         );
       }
     } catch (error) {
       console.error("Failed to save batch paste:", error);
-      toast.error("儲存失敗，請稍後再試");
+      toast.error(t("contentEditor.messages.savingFailed"));
       return;
     }
 
@@ -2087,7 +2180,9 @@ export default function SentenceMakingPanel({
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">載入中...</p>
+          <p className="mt-4 text-gray-600">
+            {t("contentEditor.messages.loading")}
+          </p>
         </div>
       </div>
     );
@@ -2100,13 +2195,14 @@ export default function SentenceMakingPanel({
         {/* Title Input - Show in both create and edit mode */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">
-            標題 <span className="text-red-500">*</span>
+            {t("contentEditor.labels.title")}{" "}
+            <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="請輸入內容標題"
+            placeholder={t("contentEditor.placeholders.enterContentTitle")}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -2152,10 +2248,10 @@ export default function SentenceMakingPanel({
             size="sm"
             onClick={() => handleOpenAIGenerateModal(null)}
             className="bg-purple-100 hover:bg-purple-200 border-purple-300"
-            title="批次 AI 生成例句"
+            title={t("sentenceMakingPanel.tooltips.batchAIGenerateExamples")}
           >
             <Globe className="h-4 w-4 mr-1" />
-            批次AI生成例句
+            {t("sentenceMakingPanel.buttons.batchAIGenerateExamples")}
           </Button>
         </div>
       </div>
@@ -2209,7 +2305,7 @@ export default function SentenceMakingPanel({
               disabled={rows.length >= 15}
             >
               <Plus className="h-5 w-5" />
-              新增項目
+              {t("contentEditor.buttons.addItem")}
             </button>
           </div>
         </SortableContext>
@@ -2236,16 +2332,16 @@ export default function SentenceMakingPanel({
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           <DialogHeader className="pb-4 flex-shrink-0">
             <DialogTitle className="text-2xl font-bold text-gray-900">
-              批次貼上素材
+              {t("contentEditor.modals.batchPasteTitle")}
             </DialogTitle>
             <p className="text-sm text-gray-500 mt-2">
-              每行一個項目，支援自動生成 TTS 與翻譯
+              {t("contentEditor.modals.batchPasteSubtitle")}
             </p>
           </DialogHeader>
           <div className="space-y-6 overflow-y-auto flex-1 min-h-0">
             <div>
               <label className="text-base font-semibold text-gray-800 mb-3 block">
-                請貼上內容：
+                {t("contentEditor.labels.pasteContent")}
               </label>
               <textarea
                 value={batchPasteText}
@@ -2256,7 +2352,7 @@ export default function SentenceMakingPanel({
               <div className="text-xs text-gray-500 mt-2">
                 {batchPasteText.split("\n").filter((line) => line.trim())
                   .length || 0}{" "}
-                個項目
+                {t("contentEditor.messages.items")}
               </div>
             </div>
             <div className="flex gap-6 p-4 bg-gray-50 rounded-lg">
@@ -2268,7 +2364,7 @@ export default function SentenceMakingPanel({
                   className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-base font-medium text-gray-700">
-                  自動生成 TTS
+                  {t("contentEditor.checkboxes.autoGenerateTTS")}
                 </span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
@@ -2279,7 +2375,7 @@ export default function SentenceMakingPanel({
                   className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-base font-medium text-gray-700">
-                  自動翻譯
+                  {t("contentEditor.checkboxes.autoTranslate")}
                 </span>
               </label>
             </div>
@@ -2290,7 +2386,7 @@ export default function SentenceMakingPanel({
               onClick={() => setBatchPasteDialogOpen(false)}
               className="px-6 py-2 text-base"
             >
-              取消
+              {t("contentEditor.buttons.cancel")}
             </Button>
             <Button
               onClick={() =>
@@ -2298,7 +2394,7 @@ export default function SentenceMakingPanel({
               }
               className="px-6 py-2 text-base bg-blue-600 hover:bg-blue-700"
             >
-              確認貼上
+              {t("contentEditor.buttons.confirmPaste")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2308,14 +2404,16 @@ export default function SentenceMakingPanel({
       <Dialog open={aiGenerateModalOpen} onOpenChange={setAiGenerateModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">AI 生成例句</DialogTitle>
+            <DialogTitle className="text-xl font-bold">
+              {t("sentenceMakingPanel.modals.aiGenerateExamplesTitle")}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
             {/* 難度等級選擇 */}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">
-                難度等級
+                {t("sentenceMakingPanel.labels.difficultyLevel")}
               </label>
               <div className="flex flex-wrap gap-2">
                 {["A1", "A2", "B1", "B2", "C1", "C2"].map((level) => (
@@ -2337,12 +2435,14 @@ export default function SentenceMakingPanel({
             {/* AI Prompt 輸入 */}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">
-                給 AI 的提示 (選填)
+                {t("sentenceMakingPanel.labels.aiPrompt")}
               </label>
               <textarea
                 value={aiGeneratePrompt}
                 onChange={(e) => setAiGeneratePrompt(e.target.value)}
-                placeholder="例如：請生成與日常生活相關的例句"
+                placeholder={t(
+                  "sentenceMakingPanel.placeholders.aiPromptExample",
+                )}
                 className="w-full px-3 py-2 border rounded-lg text-sm resize-none"
                 rows={3}
               />
@@ -2358,7 +2458,7 @@ export default function SentenceMakingPanel({
                   className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-sm font-medium text-gray-700">
-                  翻譯成
+                  {t("sentenceMakingPanel.labels.translateTo")}
                 </span>
               </label>
               <select
@@ -2369,9 +2469,15 @@ export default function SentenceMakingPanel({
                   !aiGenerateTranslate ? "bg-gray-100 text-gray-400" : ""
                 }`}
               >
-                <option value="中文">中文</option>
-                <option value="日文">日文</option>
-                <option value="韓文">韓文</option>
+                <option value="中文">
+                  {t("contentEditor.translationLanguages.chinese")}
+                </option>
+                <option value="日文">
+                  {t("contentEditor.translationLanguages.japanese")}
+                </option>
+                <option value="韓文">
+                  {t("contentEditor.translationLanguages.korean")}
+                </option>
               </select>
             </div>
 
@@ -2380,28 +2486,33 @@ export default function SentenceMakingPanel({
               {aiGenerateTargetIndex !== null ? (
                 <div>
                   <span className="text-amber-700">
-                    將為「
-                    <strong>{rows[aiGenerateTargetIndex]?.text || ""}</strong>
-                    」重新生成例句
+                    {t("sentenceMakingPanel.messages.willRegenerateFor", {
+                      word: rows[aiGenerateTargetIndex]?.text || "",
+                    })}
                   </span>
                   {rows[aiGenerateTargetIndex]?.example_sentence && (
                     <div className="text-amber-600 text-xs mt-1">
-                      現有例句將被覆蓋
+                      {t(
+                        "sentenceMakingPanel.messages.existingWillBeOverwritten",
+                      )}
                     </div>
                   )}
                 </div>
               ) : (
                 <div>
                   <span className="text-amber-700">
-                    將為{" "}
-                    <strong>
-                      {rows.filter((r) => r.text && r.text.trim()).length}
-                    </strong>{" "}
-                    個單字重新生成例句
+                    {t("sentenceMakingPanel.messages.wordsWillRegenerate", {
+                      count: rows.filter((r) => r.text && r.text.trim()).length,
+                    })}
                   </span>
                   <div className="text-amber-600 text-xs mt-1">
-                    所有現有例句{aiGenerateTranslate ? "及翻譯" : ""}將被覆蓋
-                    {!aiGenerateTranslate && "，翻譯欄位將被清空"}
+                    {t("sentenceMakingPanel.messages.allExistingExamples")}
+                    {aiGenerateTranslate
+                      ? t("sentenceMakingPanel.messages.andTranslations")
+                      : ""}
+                    {t("sentenceMakingPanel.messages.willBeOverwritten")}
+                    {!aiGenerateTranslate &&
+                      `，${t("sentenceMakingPanel.messages.translationFieldsCleared")}`}
                   </div>
                 </div>
               )}
@@ -2413,14 +2524,16 @@ export default function SentenceMakingPanel({
               variant="outline"
               onClick={() => setAiGenerateModalOpen(false)}
             >
-              取消
+              {t("contentEditor.buttons.cancel")}
             </Button>
             <Button
               onClick={handleAIGenerateSentences}
               disabled={isGeneratingAI}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {isGeneratingAI ? "生成中..." : "生成"}
+              {isGeneratingAI
+                ? t("sentenceMakingPanel.buttons.generating")
+                : t("sentenceMakingPanel.buttons.generate")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2439,12 +2552,12 @@ export default function SentenceMakingPanel({
               );
 
               if (validRows.length === 0) {
-                toast.error("請至少新增一個內容項目");
+                toast.error(t("contentEditor.messages.addAtLeastOneItem"));
                 return;
               }
 
               if (!title || title.trim() === "") {
-                toast.error("請輸入標題");
+                toast.error(t("contentEditor.messages.enterTitle"));
                 return;
               }
 
@@ -2476,7 +2589,7 @@ export default function SentenceMakingPanel({
                 // 編輯模式：更新現有內容
                 try {
                   await apiClient.updateContent(existingContentId, saveData);
-                  toast.success("儲存成功");
+                  toast.success(t("contentEditor.messages.savingSuccess"));
                   if (onSave) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     await (onSave as (content?: any) => void | Promise<void>)({
@@ -2487,7 +2600,7 @@ export default function SentenceMakingPanel({
                   }
                 } catch (error) {
                   console.error("Failed to update content:", error);
-                  toast.error("儲存失敗");
+                  toast.error(t("contentEditor.messages.savingFailed"));
                 }
               } else if (isCreating && lessonId) {
                 // 創建模式：新增內容
@@ -2496,7 +2609,9 @@ export default function SentenceMakingPanel({
                     type: "VOCABULARY_SET",
                     ...saveData,
                   });
-                  toast.success("內容已成功創建");
+                  toast.success(
+                    t("contentEditor.messages.contentCreatedSuccess"),
+                  );
                   if (onSave) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     await (onSave as (content?: any) => void | Promise<void>)(
@@ -2505,12 +2620,14 @@ export default function SentenceMakingPanel({
                   }
                 } catch (error) {
                   console.error("Failed to create content:", error);
-                  toast.error("創建內容失敗");
+                  toast.error(
+                    t("contentEditor.messages.creatingContentFailed"),
+                  );
                 }
               }
             }}
           >
-            儲存
+            {t("contentEditor.buttons.save")}
           </Button>
         </div>
       )}
