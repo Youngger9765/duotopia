@@ -6,12 +6,12 @@ API 文件: docs/payment/電子發票Open_API規格_商戶_V1.4.pdf
 """
 
 import os
-import requests
 import logging
 from typing import Dict, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
 from models import TeacherSubscriptionTransaction, InvoiceStatusHistory
+from core.http_client import get_http_session
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,9 @@ class TapPayEInvoiceService:
             self.base_url = "https://prod.tappaysdk.com/tpc/einvoice"
         else:
             self.base_url = "https://sandbox.tappaysdk.com/tpc/einvoice"
+
+        # Use shared HTTP session with connection pooling
+        self.session = get_http_session()
 
         logger.info(f"TapPay E-Invoice Service initialized in {self.environment} mode")
 
@@ -62,10 +65,13 @@ class TapPayEInvoiceService:
         try:
             logger.info(f"TapPay E-Invoice API: {method} {url}")
 
+            # Use connection pool for better performance
             if method == "POST":
-                response = requests.post(url, json=payload, headers=headers, timeout=30)
+                response = self.session.post(
+                    url, json=payload, headers=headers, timeout=30
+                )
             else:
-                response = requests.get(
+                response = self.session.get(
                     url, params=payload, headers=headers, timeout=30
                 )
 
@@ -79,16 +85,10 @@ class TapPayEInvoiceService:
 
             return result
 
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
+            # Handle both requests exceptions and other errors
             logger.error(f"TapPay E-Invoice API error: {str(e)}")
             return {"status": -1, "msg": str(e), "error": "API_REQUEST_FAILED"}
-        except Exception as e:
-            logger.error(f"Unexpected error in E-Invoice service: {str(e)}")
-            return {
-                "status": -1,
-                "msg": "E-Invoice API failed",
-                "error": "INTERNAL_ERROR",
-            }
 
     def issue_invoice(
         self,
