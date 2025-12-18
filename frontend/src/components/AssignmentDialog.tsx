@@ -1602,6 +1602,12 @@ export function AssignmentDialog({
                         setFormData((prev) => ({
                           ...prev,
                           practice_mode: "reading",
+                          // Reset time limit to 30 if currently set to unlimited (0)
+                          // because unlimited is only available for rearrangement mode
+                          time_limit_per_question:
+                            prev.time_limit_per_question === 0
+                              ? 30
+                              : prev.time_limit_per_question,
                         }))
                       }
                       className={`flex-1 p-6 rounded-xl border-2 transition-all ${
@@ -1681,11 +1687,14 @@ export function AssignmentDialog({
                           }
                           className="w-full h-9 px-3 rounded-md border border-gray-200 text-sm"
                         >
-                          <option value={0}>
-                            {t(
-                              "dialogs.assignmentDialog.practiceMode.unlimited",
-                            )}
-                          </option>
+                          {/* Unlimited option only available for rearrangement mode */}
+                          {formData.practice_mode === "rearrangement" && (
+                            <option value={0}>
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.unlimited",
+                              )}
+                            </option>
+                          )}
                           <option value={10}>
                             10{" "}
                             {t("dialogs.assignmentDialog.practiceMode.seconds")}
