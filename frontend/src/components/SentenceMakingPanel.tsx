@@ -2306,7 +2306,7 @@ export default function SentenceMakingPanel({
               批次貼上素材
             </DialogTitle>
             <p className="text-sm text-gray-500 mt-2">
-              每行一個項目，支援自動生成 TTS 與翻譯
+              每行一個項目，支援自動生成音檔與翻譯
             </p>
           </DialogHeader>
           <div className="space-y-6 overflow-y-auto flex-1 min-h-0">
@@ -2335,7 +2335,7 @@ export default function SentenceMakingPanel({
                   className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-base font-medium text-gray-700">
-                  自動生成 TTS
+                  自動生成音檔
                 </span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
@@ -2355,7 +2355,7 @@ export default function SentenceMakingPanel({
             {batchPasteAutoTTS && (
               <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                 <label className="text-sm font-semibold text-gray-800 mb-3 block">
-                  TTS 設定
+                  音檔設定
                 </label>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
