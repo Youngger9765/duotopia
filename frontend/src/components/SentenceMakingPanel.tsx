@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -1164,6 +1165,7 @@ export default function SentenceMakingPanel({
   lessonId,
   isCreating = false,
 }: SentenceMakingPanelProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState("句子模組內容");
   const [rows, setRows] = useState<ContentRow[]>([
     {
@@ -2116,30 +2118,34 @@ export default function SentenceMakingPanel({
             size="sm"
             onClick={() => setBatchPasteDialogOpen(true)}
             className="bg-blue-100 hover:bg-blue-200 border-blue-300"
-            title="批次貼上素材，每行一個項目"
+            title={t("readingAssessmentPanel.batchActions.batchPasteTooltip")}
           >
             <Clipboard className="h-4 w-4 mr-1" />
-            批次貼上
+            {t("readingAssessmentPanel.batchActions.batchPaste")}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={handleBatchGenerateTTS}
             className="bg-yellow-100 hover:bg-yellow-200 border-yellow-300"
-            title="使用免費的 Microsoft Edge TTS 生成語音"
+            title={t(
+              "readingAssessmentPanel.batchActions.batchGenerateTTSTooltip",
+            )}
           >
             <Volume2 className="h-4 w-4 mr-1" />
-            批次生成音檔
+            {t("readingAssessmentPanel.batchActions.batchGenerateTTS")}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => handleBatchGenerateDefinitions()}
             className="bg-green-100 hover:bg-green-200 border-green-300"
-            title="批次生成翻譯（根據各行語言設定）"
+            title={t(
+              "readingAssessmentPanel.batchActions.batchGenerateTranslationTooltip",
+            )}
           >
             <Globe className="h-4 w-4 mr-1" />
-            批次生成翻譯
+            {t("readingAssessmentPanel.batchActions.batchGenerateTranslation")}
           </Button>
           <Button
             variant="outline"

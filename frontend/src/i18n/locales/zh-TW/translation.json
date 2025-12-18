@@ -1971,7 +1971,9 @@
       "batchGenerateTTS": "批次生成音檔",
       "batchGenerateTTSTooltip": "使用免費的 Microsoft Edge TTS 生成語音",
       "batchGenerateTranslation": "批次生成翻譯",
-      "batchGenerateTranslationTooltip": "批次生成翻譯（根據各行語言設定）"
+      "batchGenerateTranslationTooltip": "批次生成翻譯（根據各行語言設定）",
+      "generatingTTS": "生成中...",
+      "generatingTranslation": "翻譯中..."
     },
     "row": {
       "dragToReorder": "拖曳以重新排序",

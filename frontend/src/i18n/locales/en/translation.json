@@ -1963,7 +1963,9 @@
       "batchGenerateTTS": "Batch Generate Text to Speech",
       "batchGenerateTTSTooltip": "Generate speech using free Microsoft Edge TTS",
       "batchGenerateTranslation": "Batch Generate Translation",
-      "batchGenerateTranslationTooltip": "Batch generate translations based on language settings"
+      "batchGenerateTranslationTooltip": "Batch generate translations based on language settings",
+      "generatingTTS": "Generating...",
+      "generatingTranslation": "Translating..."
     },
     "row": {
       "dragToReorder": "Drag to reorder",

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -1042,6 +1043,7 @@ export default function ReadingAssessmentPanel({
   isCreating = false,
   isAssignmentCopy = false,
 }: ReadingAssessmentPanelProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState("");
   const [rows, setRows] = useState<ContentRow[]>([
     {
@@ -1927,10 +1929,10 @@ export default function ReadingAssessmentPanel({
             onClick={() => setBatchPasteDialogOpen(true)}
             disabled={isBatchProcessing}
             className="bg-blue-100 hover:bg-blue-200 border-blue-300 disabled:opacity-50"
-            title="批次貼上素材，每行一個項目"
+            title={t("readingAssessmentPanel.batchActions.batchPasteTooltip")}
           >
             <Clipboard className="h-4 w-4 mr-1" />
-            批次貼上
+            {t("readingAssessmentPanel.batchActions.batchPaste")}
           </Button>
           <Button
             variant="outline"
@@ -1938,14 +1940,18 @@ export default function ReadingAssessmentPanel({
             onClick={handleBatchGenerateTTS}
             disabled={isBatchProcessing}
             className="bg-yellow-100 hover:bg-yellow-200 border-yellow-300 disabled:opacity-50"
-            title="使用免費的 Microsoft Edge TTS 生成語音"
+            title={t(
+              "readingAssessmentPanel.batchActions.batchGenerateTTSTooltip",
+            )}
           >
             {isBatchGeneratingTTS ? (
               <Loader2 className="h-4 w-4 mr-1 animate-spin" />
             ) : (
               <Volume2 className="h-4 w-4 mr-1" />
             )}
-            {isBatchGeneratingTTS ? "生成中..." : "批次生成音檔"}
+            {isBatchGeneratingTTS
+              ? t("readingAssessmentPanel.batchActions.generatingTTS")
+              : t("readingAssessmentPanel.batchActions.batchGenerateTTS")}
           </Button>
           <Button
             variant="outline"
@@ -1953,14 +1959,20 @@ export default function ReadingAssessmentPanel({
             onClick={() => handleBatchGenerateDefinitions()}
             disabled={isBatchProcessing}
             className="bg-green-100 hover:bg-green-200 border-green-300 disabled:opacity-50"
-            title="批次生成翻譯（根據各行語言設定）"
+            title={t(
+              "readingAssessmentPanel.batchActions.batchGenerateTranslationTooltip",
+            )}
           >
             {isBatchGeneratingTranslation ? (
               <Loader2 className="h-4 w-4 mr-1 animate-spin" />
             ) : (
               <Globe className="h-4 w-4 mr-1" />
             )}
-            {isBatchGeneratingTranslation ? "翻譯中..." : "批次生成翻譯"}
+            {isBatchGeneratingTranslation
+              ? t("readingAssessmentPanel.batchActions.generatingTranslation")
+              : t(
+                  "readingAssessmentPanel.batchActions.batchGenerateTranslation",
+                )}
           </Button>
         </div>
       </div>
