@@ -1083,6 +1083,11 @@ export default function ReadingAssessmentPanel({
   const [batchPasteAutoTTS, setBatchPasteAutoTTS] = useState(false);
   const [batchPasteAutoTranslate, setBatchPasteAutoTranslate] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true); // 🔥 標記是否為初始載入
+
+  // TTS settings for batch paste (Issue #121)
+  const [batchTTSAccent, setBatchTTSAccent] = useState("American English");
+  const [batchTTSGender, setBatchTTSGender] = useState("Male");
+  const [batchTTSSpeed, setBatchTTSSpeed] = useState("Normal x1");
   const [isBatchGeneratingTTS, setIsBatchGeneratingTTS] = useState(false); // 批次生成 TTS 中
   const [isBatchGeneratingTranslation, setIsBatchGeneratingTranslation] =
     useState(false); // 批次生成翻譯中
@@ -1102,6 +1107,65 @@ export default function ReadingAssessmentPanel({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  // TTS options for batch paste (Issue #121)
+  const batchTTSAccents = [
+    "American English",
+    "British English",
+    "Indian English",
+    "Australian English",
+  ];
+  const batchTTSGenders = ["Male", "Female"];
+  const batchTTSSpeeds = ["Slow x0.75", "Normal x1", "Fast x1.5"];
+
+  // Load saved TTS settings from localStorage (Issue #121)
+  useEffect(() => {
+    const saved = localStorage.getItem("duotopia_batch_tts_settings");
+    if (saved) {
+      try {
+        const settings = JSON.parse(saved);
+        if (settings.accent) setBatchTTSAccent(settings.accent);
+        if (settings.gender) setBatchTTSGender(settings.gender);
+        if (settings.speed) setBatchTTSSpeed(settings.speed);
+      } catch {
+        // Ignore parse errors
+      }
+    }
+  }, []);
+
+  // Helper function to get voice and rate from TTS settings (Issue #121)
+  const getVoiceAndRate = (accent: string, gender: string, speed: string) => {
+    let voice = "en-US-JennyNeural"; // default
+
+    if (accent === "American English") {
+      voice =
+        gender === "Male" ? "en-US-ChristopherNeural" : "en-US-JennyNeural";
+    } else if (accent === "British English") {
+      voice = gender === "Male" ? "en-GB-RyanNeural" : "en-GB-SoniaNeural";
+    } else if (accent === "Indian English") {
+      voice = gender === "Male" ? "en-IN-PrabhatNeural" : "en-IN-NeerjaNeural";
+    } else if (accent === "Australian English") {
+      voice = gender === "Male" ? "en-AU-WilliamNeural" : "en-AU-NatashaNeural";
+    }
+
+    let rate = "+0%";
+    if (speed === "Slow x0.75") rate = "-25%";
+    else if (speed === "Fast x1.5") rate = "+50%";
+
+    return { voice, rate };
+  };
+
+  // Save TTS settings to localStorage (Issue #121)
+  const saveBatchTTSSettings = () => {
+    localStorage.setItem(
+      "duotopia_batch_tts_settings",
+      JSON.stringify({
+        accent: batchTTSAccent,
+        gender: batchTTSGender,
+        speed: batchTTSSpeed,
+      }),
+    );
+  };
 
   // Load existing content data from database
   useEffect(() => {
@@ -1759,10 +1823,19 @@ export default function ReadingAssessmentPanel({
     if (autoTTS || autoTranslate) {
       try {
         if (autoTTS) {
+          // Get voice and rate from selected TTS settings (Issue #121)
+          const { voice, rate } = getVoiceAndRate(
+            batchTTSAccent,
+            batchTTSGender,
+            batchTTSSpeed,
+          );
+          // Save settings for next time
+          saveBatchTTSSettings();
+
           const ttsResult = await apiClient.batchGenerateTTS(
             lines,
-            "en-US-JennyNeural",
-            "+0%",
+            voice,
+            rate,
             "+0%",
           );
           if (
@@ -2158,7 +2231,7 @@ export default function ReadingAssessmentPanel({
               批次貼上素材
             </DialogTitle>
             <p className="text-sm text-gray-500 mt-2">
-              每行一個項目，支援自動生成 TTS 與翻譯
+              每行一個項目，支援自動生成音檔與翻譯
             </p>
           </DialogHeader>
           <div className="space-y-6 overflow-y-auto flex-1 min-h-0">
@@ -2187,7 +2260,7 @@ export default function ReadingAssessmentPanel({
                   className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-base font-medium text-gray-700">
-                  自動生成 TTS
+                  自動生成音檔
                 </span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
@@ -2202,6 +2275,65 @@ export default function ReadingAssessmentPanel({
                 </span>
               </label>
             </div>
+
+            {/* TTS Settings Section (Issue #121) */}
+            {batchPasteAutoTTS && (
+              <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                <label className="text-sm font-semibold text-gray-800 mb-3 block">
+                  音檔設定
+                </label>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 mb-1 block">
+                      口音
+                    </label>
+                    <select
+                      value={batchTTSAccent}
+                      onChange={(e) => setBatchTTSAccent(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      {batchTTSAccents.map((accent) => (
+                        <option key={accent} value={accent}>
+                          {accent}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 mb-1 block">
+                      性別
+                    </label>
+                    <select
+                      value={batchTTSGender}
+                      onChange={(e) => setBatchTTSGender(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      {batchTTSGenders.map((gender) => (
+                        <option key={gender} value={gender}>
+                          {gender}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 mb-1 block">
+                      語速
+                    </label>
+                    <select
+                      value={batchTTSSpeed}
+                      onChange={(e) => setBatchTTSSpeed(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      {batchTTSSpeeds.map((speed) => (
+                        <option key={speed} value={speed}>
+                          {speed}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter className="pt-6 flex-shrink-0 border-t border-gray-200 mt-4">
             <Button

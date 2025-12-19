@@ -2051,11 +2051,11 @@
     },
     "batchPasteDialog": {
       "title": "Batch Paste Content",
-      "description": "One item per line, supports auto TTS and translation",
+      "description": "One item per line, supports auto audio generation and translation",
       "inputLabel": "Paste content:",
       "inputPlaceholder": "put\nPut it away.\nIt's time to put everything away. Right now.",
       "itemCount": "{{count}} items",
-      "autoGenerateTTS": "Auto Generate TTS",
+      "autoGenerateTTS": "Auto Generate Audio",
       "autoTranslate": "Auto Translate",
       "cancel": "Cancel",
       "confirmPaste": "Confirm Paste",

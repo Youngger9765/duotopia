@@ -2059,11 +2059,11 @@
     },
     "batchPasteDialog": {
       "title": "批次貼上素材",
-      "description": "每行一個項目，支援自動生成 TTS 與翻譯",
+      "description": "每行一個項目，支援自動生成音檔與翻譯",
       "inputLabel": "請貼上內容：",
       "inputPlaceholder": "put\nPut it away.\nIt's time to put everything away. Right now.",
       "itemCount": "{{count}} 個項目",
-      "autoGenerateTTS": "自動生成 TTS",
+      "autoGenerateTTS": "自動生成音檔",
       "autoTranslate": "自動翻譯",
       "cancel": "取消",
       "confirmPaste": "確認貼上",
