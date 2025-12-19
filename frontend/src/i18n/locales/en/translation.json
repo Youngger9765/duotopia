@@ -3590,10 +3590,10 @@
     "modals": {
       "audioSettings": "Audio Settings",
       "batchPasteTitle": "Batch Paste Content",
-      "batchPasteSubtitle": "One item per line, supports auto-generate TTS and translation"
+      "batchPasteSubtitle": "One item per line, supports auto-generate Text to Speech and translation"
     },
     "checkboxes": {
-      "autoGenerateTTS": "Auto Generate TTS",
+      "autoGenerateTTS": "Auto Generate Text to Speech",
       "autoTranslate": "Auto Translate"
     },
     "tooltips": {
@@ -3681,6 +3681,12 @@
     "warnings": {
       "assignmentCopy": "Note: This is an assignment copy",
       "assignmentCopyDescription": "Items with student progress cannot be deleted (delete button is disabled). You can modify content but cannot remove answered items."
+    },
+    "ttsSettings": {
+      "title": "Audio Settings",
+      "accent": "Accent",
+      "gender": "Gender",
+      "speed": "Speed"
     }
   },
   "sentenceMakingPanel": {

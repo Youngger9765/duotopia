@@ -3600,10 +3600,10 @@
     "modals": {
       "audioSettings": "音檔設定",
       "batchPasteTitle": "批次貼上素材",
-      "batchPasteSubtitle": "每行一個項目，支援自動生成 TTS 與翻譯"
+      "batchPasteSubtitle": "每行一個項目，支援自動生成音檔與翻譯"
     },
     "checkboxes": {
-      "autoGenerateTTS": "自動生成 TTS",
+      "autoGenerateTTS": "自動生成音檔",
       "autoTranslate": "自動翻譯"
     },
     "tooltips": {
@@ -3691,6 +3691,12 @@
     "warnings": {
       "assignmentCopy": "注意：此為作業副本",
       "assignmentCopyDescription": "有學生進度的題目無法刪除（刪除按鈕已被禁用）。您可以修改題目內容，但不能移除已作答的題目。"
+    },
+    "ttsSettings": {
+      "title": "音檔設定",
+      "accent": "口音",
+      "gender": "性別",
+      "speed": "語速"
     }
   },
   "sentenceMakingPanel": {

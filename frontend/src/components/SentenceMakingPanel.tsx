@@ -2457,12 +2457,12 @@ export default function SentenceMakingPanel({
             {batchPasteAutoTTS && (
               <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                 <label className="text-sm font-semibold text-gray-800 mb-3 block">
-                  音檔設定
+                  {t("contentEditor.ttsSettings.title")}
                 </label>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="text-xs font-medium text-gray-600 mb-1 block">
-                      口音
+                      {t("contentEditor.ttsSettings.accent")}
                     </label>
                     <select
                       value={batchTTSAccent}
@@ -2478,7 +2478,7 @@ export default function SentenceMakingPanel({
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-600 mb-1 block">
-                      性別
+                      {t("contentEditor.ttsSettings.gender")}
                     </label>
                     <select
                       value={batchTTSGender}
@@ -2494,7 +2494,7 @@ export default function SentenceMakingPanel({
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-600 mb-1 block">
-                      語速
+                      {t("contentEditor.ttsSettings.speed")}
                     </label>
                     <select
                       value={batchTTSSpeed}
