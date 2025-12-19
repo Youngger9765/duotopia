@@ -288,7 +288,7 @@ export function AssignmentDialog({
     start_date: undefined as Date | undefined,
     // ===== 例句集作答模式設定 =====
     practice_mode: "reading" as "reading" | "rearrangement", // 作答模式
-    time_limit_per_question: 30 as 10 | 20 | 30 | 40, // 每題時間限制
+    time_limit_per_question: 30 as 0 | 10 | 20 | 30 | 40, // 每題時間限制 (0 = 不限時)
     shuffle_questions: false, // 是否打亂順序
     show_answer: false, // 答題結束後是否顯示正確答案（例句重組專用）
     play_audio: false, // 是否播放音檔（例句重組專用）
@@ -309,7 +309,7 @@ export function AssignmentDialog({
         due_date: undefined,
         start_date: new Date(), // 預設為今天
         practice_mode: "reading", // 預設為例句朗讀模式
-        time_limit_per_question: 30,
+        time_limit_per_question: 30 as 0 | 10 | 20 | 30 | 40,
         shuffle_questions: false,
         show_answer: false,
         play_audio: false,
@@ -751,7 +751,7 @@ export function AssignmentDialog({
       due_date: undefined,
       start_date: undefined,
       practice_mode: "reading",
-      time_limit_per_question: 40,
+      time_limit_per_question: 30 as 0 | 10 | 20 | 30 | 40,
       shuffle_questions: false,
       show_answer: false,
       play_audio: false,
@@ -1602,6 +1602,12 @@ export function AssignmentDialog({
                         setFormData((prev) => ({
                           ...prev,
                           practice_mode: "reading",
+                          // Reset time limit to 30 if currently set to unlimited (0)
+                          // because unlimited is only available for rearrangement mode
+                          time_limit_per_question:
+                            prev.time_limit_per_question === 0
+                              ? 30
+                              : prev.time_limit_per_question,
                         }))
                       }
                       className={`flex-1 p-6 rounded-xl border-2 transition-all ${
@@ -1676,11 +1682,19 @@ export function AssignmentDialog({
                               ...prev,
                               time_limit_per_question: Number(
                                 e.target.value,
-                              ) as 10 | 20 | 30 | 40,
+                              ) as 0 | 10 | 20 | 30 | 40,
                             }))
                           }
                           className="w-full h-9 px-3 rounded-md border border-gray-200 text-sm"
                         >
+                          {/* Unlimited option only available for rearrangement mode */}
+                          {formData.practice_mode === "rearrangement" && (
+                            <option value={0}>
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.unlimited",
+                              )}
+                            </option>
+                          )}
                           <option value={10}>
                             10{" "}
                             {t("dialogs.assignmentDialog.practiceMode.seconds")}
