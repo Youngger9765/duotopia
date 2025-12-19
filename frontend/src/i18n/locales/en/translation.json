@@ -1962,10 +1962,12 @@
     "batchActions": {
       "batchPaste": "Batch Paste",
       "batchPasteTooltip": "Batch paste content, one item per line",
-      "batchGenerateTTS": "Batch Generate TTS",
+      "batchGenerateTTS": "Batch Generate Text to Speech",
       "batchGenerateTTSTooltip": "Generate speech using free Microsoft Edge TTS",
       "batchGenerateTranslation": "Batch Generate Translation",
-      "batchGenerateTranslationTooltip": "Batch generate translations based on language settings"
+      "batchGenerateTranslationTooltip": "Batch generate translations based on language settings",
+      "generatingTTS": "Generating...",
+      "generatingTranslation": "Translating..."
     },
     "row": {
       "dragToReorder": "Drag to reorder",
@@ -3564,6 +3566,173 @@
     },
     "messages": {
       "linkExpiredDetail": "The password reset link has expired or is invalid, please request a new one"
+    }
+  },
+  "contentEditor": {
+    "labels": {
+      "title": "Title",
+      "pasteContent": "Paste content:"
+    },
+    "placeholders": {
+      "enterContentTitle": "Enter content title",
+      "enterText": "Enter text"
+    },
+    "buttons": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "addItem": "Add Item",
+      "confirmPaste": "Confirm Paste",
+      "processing": "Processing...",
+      "startRecording": "Start Recording",
+      "stopRecording": "Stop Recording",
+      "rerecord": "Re-record"
+    },
+    "modals": {
+      "audioSettings": "Audio Settings",
+      "batchPasteTitle": "Batch Paste Content",
+      "batchPasteSubtitle": "One item per line, supports auto-generate Text to Speech and translation"
+    },
+    "checkboxes": {
+      "autoGenerateTTS": "Auto Generate Text to Speech",
+      "autoTranslate": "Auto Translate"
+    },
+    "tooltips": {
+      "dragToReorder": "Drag to reorder",
+      "playAudio": "Play audio",
+      "removeAudio": "Remove audio",
+      "duplicate": "Duplicate",
+      "delete": "Delete",
+      "cannotDeleteWithProgress": "Cannot delete item with student progress",
+      "openTTSRecording": "Open TTS/Recording",
+      "rerecordOrGenerate": "Re-record/Generate",
+      "ttsMicrosoftEdge": "Generate speech using free Microsoft Edge TTS",
+      "playGeneratedAudio": "Play generated audio"
+    },
+    "audioSources": {
+      "tts": "TTS Voice",
+      "aiGenerated": "AI Generated",
+      "recording": "Recording",
+      "teacherRecorded": "Teacher Recorded"
+    },
+    "messages": {
+      "loading": "Loading...",
+      "savingSuccess": "Saved successfully",
+      "savingFailed": "Save failed",
+      "contentCreatedSuccess": "Content created successfully",
+      "creatingContentFailed": "Failed to create content",
+      "loadingContentFailed": "Failed to load content",
+      "enterTitle": "Please enter a title",
+      "addAtLeastOneItem": "Please add at least one content item",
+      "maxRowsReached": "Maximum 15 rows allowed",
+      "minRowsRequired": "At least 1 row is required",
+      "cannotDeleteWithProgress": "Cannot delete item with student progress",
+      "audioRemoved": "Audio removed",
+      "removeAudioFailed": "Failed to remove audio",
+      "audioGeneratedSuccess": "Audio generated! Click play to preview",
+      "generationFailed": "Generation failed, please try again",
+      "maxRecordingTimeReached": "Maximum recording time of 30 seconds reached",
+      "recordingFileTooLarge": "Recording file too large, please shorten recording",
+      "recordingFailed": "Recording failed, please check microphone permission",
+      "recordingComplete": "Recording complete! You can preview or re-record",
+      "recordingStarted": "Recording started",
+      "cannotStartRecording": "Cannot start recording, please check microphone permission",
+      "selectAudioSource": "Please select audio source (TTS or Recording)",
+      "uploadRetrying": "Upload failed, retrying...",
+      "uploadFailed": "Upload failed, please check network connection",
+      "generateOrRecordFirst": "Please generate or record audio first",
+      "ttsAudioDeleted": "TTS audio deleted",
+      "recordingDeleted": "Recording deleted",
+      "noRecordingToPlay": "No recording to play",
+      "cannotPlayRecording": "Cannot play recording",
+      "selectAudioSourceToUse": "You have two audio sources, please select one to use:",
+      "maxRecordingTime": "Maximum recording time 30 seconds",
+      "uploadingRecording": "Uploading recording...",
+      "recordingFileReady": "Recording ready ({{duration}}s)",
+      "audioGenerated": "Audio generated! Click play to preview",
+      "ttsAudioReady": "TTS audio ready",
+      "allItemsHaveAudio": "All items already have audio",
+      "generatingAudioFiles": "Generating {{count}} audio files...",
+      "audioGeneratedSuccessfully": "Successfully generated {{count}} audio files! Audio will be uploaded when saving content.",
+      "audioGeneratedAndSaved": "Successfully generated and saved {{count}} audio files!",
+      "savingFailedButAudioGenerated": "Save failed, but audio was generated",
+      "batchGenerationFailed": "Batch generation failed, please try again",
+      "enterTextFirst": "Please enter text first",
+      "generatingTranslation": "Generating translation...",
+      "translationComplete": "Translation complete",
+      "translationFailed": "Translation failed, please try again later",
+      "noItemsNeedTranslation": "No items need translation",
+      "startingBatchTranslation": "Starting batch translation...",
+      "batchTranslationComplete": "Batch translation complete! Processed {{count}} items",
+      "batchTranslationFailed": "Batch translation failed, please try again later",
+      "enterContent": "Please enter content",
+      "processingItems": "Processing {{count}} items...",
+      "batchProcessingFailed": "Batch processing failed",
+      "itemsAddedAndSaved": "Added {{added}} items and saved (total {{total}})",
+      "itemsAddedSaveToComplete": "Added {{added}} items (total {{total}}), click Save to complete",
+      "updateFailedButAudioGenerated": "Update failed, but audio was generated",
+      "items": "items"
+    },
+    "translationLanguages": {
+      "chinese": "Chinese",
+      "english": "English",
+      "japanese": "Japanese",
+      "korean": "Korean"
+    },
+    "warnings": {
+      "assignmentCopy": "Note: This is an assignment copy",
+      "assignmentCopyDescription": "Items with student progress cannot be deleted (delete button is disabled). You can modify content but cannot remove answered items."
+    },
+    "ttsSettings": {
+      "title": "Audio Settings",
+      "accent": "Accent",
+      "gender": "Gender",
+      "speed": "Speed"
+    }
+  },
+  "sentenceMakingPanel": {
+    "placeholders": {
+      "enterEnglishWord": "Enter English word",
+      "enterEnglishSentence": "Enter English sentence",
+      "aiPromptExample": "e.g., Please generate sentences related to daily life"
+    },
+    "tooltips": {
+      "generateExampleSentence": "AI Generate Example Sentence",
+      "batchAIGenerateExamples": "Batch AI Generate Examples"
+    },
+    "buttons": {
+      "batchAIGenerateExamples": "Batch AI Generate",
+      "generate": "Generate",
+      "generating": "Generating..."
+    },
+    "modals": {
+      "aiGenerateExamplesTitle": "AI Generate Examples"
+    },
+    "labels": {
+      "difficultyLevel": "Difficulty Level",
+      "aiPrompt": "AI Prompt (Optional)",
+      "translateTo": "Translate to"
+    },
+    "messages": {
+      "allItemsHaveAudioOrEmpty": "All items have audio or sentences are empty",
+      "generatingExampleAudio": "Generating {{count}} example audio files...",
+      "translationAndPOSComplete": "Translation and POS detection complete",
+      "enterExampleFirst": "Please enter example sentence first",
+      "generatingExampleTranslation": "Generating example translation...",
+      "exampleTranslationComplete": "Example translation complete",
+      "exampleTranslationFailed": "Example translation failed, please try again",
+      "noItemsForExampleGeneration": "No items for example generation (please enter words first)",
+      "generatingExamples": "Generating {{count}} examples...",
+      "examplesGeneratedSuccess": "Successfully generated {{count}} examples!",
+      "exampleGenerationFailed": "AI example generation failed, please try again",
+      "willRegenerateFor": "Will regenerate example for \"{{word}}\"",
+      "existingWillBeOverwritten": "Existing example will be overwritten",
+      "wordsWillRegenerate": "Will regenerate examples for {{count}} words",
+      "allExistingExamples": "All existing examples",
+      "andTranslations": "and translations",
+      "willBeOverwritten": "will be overwritten",
+      "translationFieldsCleared": "Translation fields will be cleared",
+      "itemsAddedAndCreated": "Added {{count}} items and created content",
+      "itemsAdded": "Added {{added}} items (total {{total}})"
     }
   }
 }
