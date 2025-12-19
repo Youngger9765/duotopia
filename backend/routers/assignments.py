@@ -417,8 +417,8 @@ class CreateAssignmentRequest(BaseModel):
     # 作答模式：'reading' (例句朗讀) / 'rearrangement' (例句重組)
     practice_mode: str = "reading"
 
-    # 每題時間限制（秒）：10/20/30/40
-    time_limit_per_question: int = 40
+    # 每題時間限制（秒）：0（不限時）/10/20/30/40
+    time_limit_per_question: int = 30
 
     # 是否打亂題目順序
     shuffle_questions: bool = False

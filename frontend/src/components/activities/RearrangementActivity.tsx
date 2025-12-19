@@ -211,9 +211,12 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       }
 
       // 開始計時（音檔播放由 useEffect 處理，避免重複播放）
+      // 如果 time_limit 為 0 表示不限時，不需要啟動計時器
       if (response.questions.length > 0) {
         const firstQuestion = response.questions[0];
-        startTimer(firstQuestion.content_item_id);
+        if (firstQuestion.time_limit > 0) {
+          startTimer(firstQuestion.content_item_id);
+        }
       }
     } catch (error) {
       console.error("Failed to load rearrangement questions:", error);
@@ -226,6 +229,16 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
   const startTimer = (contentItemId: number) => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
+    }
+
+    // 找到當前題目，檢查是否為不限時模式
+    const currentQuestion = questionsRef.current.find(
+      (q) => q.content_item_id === contentItemId,
+    );
+
+    // 如果 time_limit 為 0，表示不限時，不啟動計時器
+    if (currentQuestion && currentQuestion.time_limit === 0) {
+      return;
     }
 
     timerRef.current = setInterval(() => {
@@ -660,7 +673,8 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
     return null;
   }
 
-  const isLowTime = currentState.timeRemaining <= 10;
+  const isUnlimited = currentQuestion.time_limit === 0;
+  const isLowTime = !isUnlimited && currentState.timeRemaining <= 10;
   const progressPercent =
     ((currentQuestionIndex + (currentState.completed ? 1 : 0)) /
       questions.length) *
@@ -741,17 +755,21 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
               })}
             </CardTitle>
             <div className="flex items-center gap-3">
-              {/* 計時器 */}
+              {/* 計時器 - 不限時模式顯示 "不限時"，有限時模式顯示倒數 */}
               <div
                 className={cn(
                   "flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium",
-                  isLowTime
-                    ? "bg-red-100 text-red-700 animate-pulse"
-                    : "bg-gray-100 text-gray-700",
+                  isUnlimited
+                    ? "bg-green-100 text-green-700"
+                    : isLowTime
+                      ? "bg-red-100 text-red-700 animate-pulse"
+                      : "bg-gray-100 text-gray-700",
                 )}
               >
                 <Clock className="h-4 w-4" />
-                {formatTime(currentState.timeRemaining)}
+                {isUnlimited
+                  ? t("rearrangement.unlimited")
+                  : formatTime(currentState.timeRemaining)}
               </div>
 
               {/* 音檔按鈕與語速選單 - 已完成的題目不能播放 */}
