@@ -5,7 +5,44 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Edit, Trash2, GripVertical, LucideIcon } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Edit,
+  Trash2,
+  GripVertical,
+  LucideIcon,
+  MoreHorizontal,
+} from "lucide-react";
+
+// Level-based color system - flat design with colored left accent
+const getLevelColors = (level: number) => {
+  switch (level) {
+    case 0: // Program level - blue accent
+      return {
+        accent: "border-l-4 border-l-blue-500",
+        bg: "bg-white dark:bg-gray-800",
+        shadow: "shadow-sm hover:shadow-md",
+      };
+    case 1: // Lesson level - emerald accent
+      return {
+        accent: "border-l-4 border-l-emerald-500",
+        bg: "bg-gray-50/80 dark:bg-gray-800/80",
+        shadow: "shadow-sm hover:shadow-md",
+      };
+    case 2: // Content level - violet accent
+    default:
+      return {
+        accent: "border-l-4 border-l-violet-500",
+        bg: "bg-gray-100/60 dark:bg-gray-700/50",
+        shadow: "shadow-sm hover:shadow",
+      };
+  }
+};
 import {
   DndContext,
   closestCenter,
@@ -150,6 +187,9 @@ function RecursiveTreeNode({
     transition,
   };
 
+  // Get level-based colors
+  const levelColors = getLevelColors(level);
+
   // Render node (can be accordion or simple div)
   const nodeContent = (
     <div
@@ -159,155 +199,164 @@ function RecursiveTreeNode({
       data-dragging={isDragging ? "true" : "false"}
     >
       {config.canExpand !== false ? (
-        // Expandable node - wrap in styled container
-        <div className={`${config.colorScheme.bg} rounded-lg mb-2`}>
+        // Expandable node - flat design with colored accent
+        <div
+          className={`${levelColors.accent} ${levelColors.bg} ${levelColors.shadow} rounded-[0.15rem] mb-3 transition-shadow duration-200`}
+        >
           <AccordionItem
             value={accordionValue}
             className={`border-none transition-opacity duration-200 ${isDragging ? "opacity-30" : ""}`}
           >
-            <AccordionTrigger className="hover:no-underline group px-4 sm:px-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-3">
-                <div className="flex items-start sm:items-center space-x-2 sm:space-x-3 flex-1">
-                  {/* Drag handle */}
-                  {config.canDrag && (
-                    <div
-                      {...attributes}
-                      {...listeners}
-                      className="hidden sm:block cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity select-none"
-                      title="拖曳以重新排序"
-                    >
-                      <GripVertical className="h-5 w-5 text-gray-400" />
-                    </div>
-                  )}
-
-                  {/* Icon */}
-                  <div
-                    className={`w-8 h-8 sm:w-10 sm:h-10 ${config.colorScheme.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}
-                  >
-                    <config.icon
-                      className={`h-4 w-4 sm:h-5 sm:w-5 ${config.colorScheme.iconText}`}
-                    />
-                  </div>
-
-                  {/* Name and description */}
-                  <div className="text-left flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-semibold text-sm sm:text-base dark:text-gray-100 truncate">
-                        {itemName}
-                      </h4>
-                      {config.canEdit && onEdit && (
-                        <div
-                          className="h-7 w-7 sm:h-6 sm:w-6 p-0 inline-flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex-shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(data, level, parentId);
-                          }}
-                        >
-                          <Edit className="h-4 w-4 sm:h-3 sm:w-3 dark:text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-                    {itemDescription && (
-                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
-                        {itemDescription}
-                      </p>
-                    )}
-
-                    {/* Tags below description */}
-                    {data.tags &&
-                      Array.isArray(data.tags) &&
-                      data.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {data.tags.map((tag: string, index: number) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                    {/* Mobile: Display fields */}
-                    {config.displayFields && (
-                      <div className="flex items-center gap-2 mt-2 sm:hidden">
-                        {config.displayFields
-                          .filter((field) => !field.desktopOnly)
-                          .map((field, idx) => (
-                            <div key={idx}>
-                              {field.render
-                                ? field.render(data[field.key], data)
-                                : field.icon && (
-                                    <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                                      <field.icon className="h-3 w-3 mr-1" />
-                                      <span>
-                                        {data[field.key]}
-                                        {field.suffix}
-                                      </span>
-                                    </div>
-                                  )}
-                            </div>
-                          ))}
+            <AccordionTrigger
+              hideChevron={true}
+              className="hover:no-underline group px-3 sm:px-4 py-2.5 sm:py-3"
+            >
+              <div className="flex flex-col w-full gap-1.5 sm:gap-0">
+                {/* Row 1: Icon + Name + (Desktop: fields + menu) / (Mobile: menu only) */}
+                <div className="flex items-center justify-between w-full gap-2">
+                  {/* Left side: drag handle + icon + name/description */}
+                  <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+                    {/* Drag handle - desktop only */}
+                    {config.canDrag && (
+                      <div
+                        {...attributes}
+                        {...listeners}
+                        className="hidden sm:block cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity select-none flex-shrink-0"
+                        title="拖曳以重新排序"
+                      >
+                        <GripVertical className="h-4 w-4 text-gray-400" />
                       </div>
                     )}
+
+                    {/* Icon */}
+                    <div
+                      className={`w-7 h-7 sm:w-9 sm:h-9 ${config.colorScheme.iconBg} rounded-md flex items-center justify-center flex-shrink-0`}
+                    >
+                      <config.icon
+                        className={`h-4 w-4 sm:h-5 sm:w-5 ${config.colorScheme.iconText}`}
+                      />
+                    </div>
+
+                    {/* Name and description */}
+                    <div className="text-left flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm sm:text-base dark:text-gray-100 line-clamp-2 sm:truncate">
+                        {itemName}
+                      </h4>
+                      {itemDescription && (
+                        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 line-clamp-2 sm:truncate">
+                          {itemDescription}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right side: Desktop display fields + more menu */}
+                  <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                    {/* Desktop display fields */}
+                    {config.displayFields &&
+                      config.displayFields
+                        .filter((field) => !field.mobileOnly)
+                        .map((field, idx) => (
+                          <div key={idx} className="hidden sm:block">
+                            {field.render
+                              ? field.render(data[field.key], data)
+                              : field.icon && (
+                                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                    <field.icon className="h-4 w-4 mr-1" />
+                                    <span>
+                                      {data[field.key]}
+                                      {field.suffix}
+                                    </span>
+                                  </div>
+                                )}
+                          </div>
+                        ))}
+
+                    {/* More menu (⋯) with edit/delete */}
+                    {(config.canEdit || config.canDelete) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-7 w-7 sm:h-8 sm:w-8 inline-flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <MoreHorizontal className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                        >
+                          {config.canEdit && onEdit && (
+                            <DropdownMenuItem
+                              onClick={() => onEdit(data, level, parentId)}
+                              className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              編輯
+                            </DropdownMenuItem>
+                          )}
+                          {config.canDelete && onDelete && (
+                            <DropdownMenuItem
+                              onClick={() => onDelete(data, level, parentId)}
+                              className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 focus:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              刪除
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </div>
 
-                {/* Desktop: Display fields and delete */}
-                <div className="hidden sm:flex items-center space-x-4 flex-shrink-0">
-                  {config.displayFields &&
-                    config.displayFields
-                      .filter((field) => !field.mobileOnly)
-                      .map((field, idx) => (
-                        <div key={idx}>
-                          {field.render
-                            ? field.render(data[field.key], data)
-                            : field.icon && (
-                                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                                  <field.icon className="h-4 w-4 mr-1" />
-                                  <span>
-                                    {data[field.key]}
-                                    {field.suffix}
-                                  </span>
-                                </div>
-                              )}
-                        </div>
-                      ))}
-                  {config.canDelete && onDelete && (
-                    <div
-                      className="h-8 w-8 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(data, level, parentId);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
+                {/* Row 2 (Mobile only): Display fields - tags, time, etc. */}
+                {config.displayFields &&
+                  config.displayFields.filter((field) => !field.desktopOnly)
+                    .length > 0 && (
+                    <div className="flex sm:hidden items-center gap-2 pl-9 flex-wrap">
+                      {config.displayFields
+                        .filter((field) => !field.desktopOnly)
+                        .map((field, idx) => (
+                          <div key={idx}>
+                            {field.render
+                              ? field.render(data[field.key], data)
+                              : field.icon && (
+                                  <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+                                    <field.icon className="h-3 w-3 mr-0.5" />
+                                    <span>
+                                      {data[field.key]}
+                                      {field.suffix}
+                                    </span>
+                                  </div>
+                                )}
+                          </div>
+                        ))}
                     </div>
                   )}
-                </div>
-
-                {/* Mobile: Delete button */}
-                {config.canDelete && onDelete && (
-                  <div className="sm:hidden absolute right-2 top-3">
-                    <div
-                      className="h-8 w-8 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(data, level, parentId);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
-                    </div>
-                  </div>
-                )}
               </div>
             </AccordionTrigger>
 
             <AccordionContent>
-              <div
-                className={`${level > 0 ? "pl-14" : "pl-14"} pr-4 space-y-3`}
-              >
+              {/* Tags shown when expanded */}
+              {data.tags &&
+                Array.isArray(data.tags) &&
+                data.tags.length > 0 && (
+                  <div className="px-3 sm:px-4 pt-1 pb-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {data.tags.map((tag: string, index: number) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Children content - full width, no indentation */}
+              <div className="px-2 sm:px-3 pb-3 space-y-0">
                 {config.childConfig ? (
                   <>
                     <SortableContext
@@ -351,9 +400,9 @@ function RecursiveTreeNode({
                     {onCreate && (
                       <button
                         onClick={() => onCreate(level + 1, itemId)}
-                        className="w-full px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg border border-blue-200 hover:border-blue-300 transition-colors flex items-center justify-center gap-2"
+                        className={`w-full py-2.5 pl-3 sm:pl-4 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 ${getLevelColors(level + 1).accent} bg-gray-50/50 dark:bg-gray-800/30 hover:bg-gray-100/80 dark:hover:bg-gray-700/50 rounded-[0.15rem] transition-colors flex items-center justify-start gap-1.5`}
                       >
-                        <span>+</span>
+                        <span className="text-base">+</span>
                         <span>
                           新增
                           {config.childConfig?.nameKey === "name"
@@ -389,78 +438,82 @@ function RecursiveTreeNode({
           </AccordionItem>
         </div>
       ) : (
-        // Leaf node (no children)
+        // Leaf node (no children) - flat design with colored accent
         <div
-          className={`p-3 ${config.colorScheme.bg} ${config.colorScheme.hoverBg || "hover:bg-gray-100"} rounded-lg border border-gray-200 cursor-pointer transition-all duration-200 group ${isDragging ? "opacity-30" : ""}`}
+          className={`p-2.5 sm:p-3 mb-3 ${levelColors.accent} ${levelColors.bg} ${levelColors.shadow} rounded-[0.15rem] cursor-pointer transition-all duration-200 group ${isDragging ? "opacity-30" : ""}`}
           onClick={() => onClick?.(data, level, parentId)}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            {/* Left side: drag handle + icon + name */}
+            <div className="flex items-center space-x-2 flex-1 min-w-0">
               {config.canDrag && (
                 <div
                   {...attributes}
                   {...listeners}
-                  className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity select-none flex-shrink-0"
+                  className="hidden sm:block cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity select-none flex-shrink-0"
                 >
                   <GripVertical className="h-4 w-4 text-gray-400" />
                 </div>
               )}
               <div
-                className={`w-8 h-8 ${config.colorScheme.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}
+                className={`w-6 h-6 sm:w-7 sm:h-7 ${config.colorScheme.iconBg} rounded-md flex items-center justify-center flex-shrink-0`}
               >
                 <config.icon
-                  className={`h-4 w-4 ${config.colorScheme.iconText}`}
+                  className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${config.colorScheme.iconText}`}
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p
-                    className={`font-medium text-sm ${config.colorScheme.text} truncate`}
-                  >
-                    {itemName}
-                  </p>
-                </div>
+                <p
+                  className={`font-medium text-sm ${config.colorScheme.text} truncate`}
+                >
+                  {itemName}
+                </p>
                 {itemDescription && (
-                  <p className="text-xs text-gray-500 truncate">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                     {itemDescription}
                   </p>
                 )}
               </div>
             </div>
-            <div className="flex items-center space-x-2 flex-shrink-0">
+
+            {/* Right side: display fields + more menu */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               {config.displayFields?.map((field, idx) => (
-                <span key={idx} className="text-sm text-gray-500">
+                <span
+                  key={idx}
+                  className="text-xs sm:text-sm text-gray-500 dark:text-gray-400"
+                >
                   {field.render
                     ? field.render(data[field.key], data)
                     : `${data[field.key]}${field.suffix || ""}`}
                 </span>
               ))}
+
+              {/* More menu (⋯) with delete */}
               {config.canDelete && onDelete && (
-                <div
-                  className="h-6 w-6 p-0 inline-flex items-center justify-center rounded hover:bg-red-50 cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(data, level, parentId);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-6 w-6 sm:h-7 sm:w-7 inline-flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <MoreHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 dark:text-gray-400" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                  >
+                    <DropdownMenuItem
+                      onClick={() => onDelete(data, level, parentId)}
+                      className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 focus:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      刪除
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>
-          {/* Tags below for leaf nodes */}
-          {data.tags && Array.isArray(data.tags) && data.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2 ml-11">
-              {data.tags.map((tag: string, index: number) => (
-                <span
-                  key={index}
-                  className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       )}
     </div>
