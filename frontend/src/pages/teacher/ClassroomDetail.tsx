@@ -1402,77 +1402,95 @@ export default function ClassroomDetail({
                           {assignments.map((assignment) => {
                             const completionRate =
                               assignment.completion_rate || 0;
-                            const contentTypeLabels: Record<
-                              string,
-                              { label: string; color: string }
-                            > = {
-                              // 🎯 Issue #118: 新增 EXAMPLE_SENTENCES 和 VOCABULARY_SET
-                              EXAMPLE_SENTENCES: {
-                                label: t(
-                                  "classroomDetail.contentTypes.EXAMPLE_SENTENCES",
-                                ),
-                                color:
-                                  "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-                              },
-                              VOCABULARY_SET: {
-                                label: t(
-                                  "classroomDetail.contentTypes.VOCABULARY_SET",
-                                ),
-                                color:
-                                  "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-                              },
-                              READING_ASSESSMENT: {
-                                label: t(
-                                  "classroomDetail.contentTypes.readingAssessment",
-                                ),
-                                color:
-                                  "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-                              },
-                              SPEAKING_PRACTICE: {
-                                label: t(
-                                  "classroomDetail.contentTypes.speakingPractice",
-                                ),
-                                color:
-                                  "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-                              },
-                              SPEAKING_SCENARIO: {
-                                label: t(
-                                  "classroomDetail.contentTypes.speakingScenario",
-                                ),
-                                color:
-                                  "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-                              },
-                              LISTENING_CLOZE: {
-                                label: t(
-                                  "classroomDetail.contentTypes.listeningCloze",
-                                ),
-                                color:
-                                  "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-                              },
-                              SENTENCE_MAKING: {
-                                label: t(
-                                  "classroomDetail.contentTypes.sentenceMaking",
-                                ),
-                                color:
-                                  "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-                              },
-                              SPEAKING_QUIZ: {
-                                label: t(
-                                  "classroomDetail.contentTypes.speakingQuiz",
-                                ),
-                                color:
-                                  "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-                              },
+                            // 🎯 Issue #118: 根據 content_type + practice_mode 決定顯示標籤
+                            const getTypeInfo = () => {
+                              const contentType =
+                                assignment.content_type?.toUpperCase();
+                              const practiceMode = assignment.practice_mode;
+
+                              // VOCABULARY_SET 或 SENTENCE_MAKING → 單字集
+                              if (
+                                contentType === "VOCABULARY_SET" ||
+                                contentType === "SENTENCE_MAKING"
+                              ) {
+                                return {
+                                  label: t(
+                                    "classroomDetail.contentTypes.VOCABULARY_SET",
+                                  ),
+                                  color:
+                                    "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                };
+                              }
+
+                              // EXAMPLE_SENTENCES 或 READING_ASSESSMENT → 根據 practice_mode
+                              if (
+                                contentType === "EXAMPLE_SENTENCES" ||
+                                contentType === "READING_ASSESSMENT"
+                              ) {
+                                if (practiceMode === "rearrangement") {
+                                  return {
+                                    label: t(
+                                      "classroomDetail.contentTypes.REARRANGEMENT",
+                                    ),
+                                    color:
+                                      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                                  };
+                                }
+                                return {
+                                  label: t(
+                                    "classroomDetail.contentTypes.SPEAKING",
+                                  ),
+                                  color:
+                                    "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                                };
+                              }
+
+                              // 其他類型保持原有邏輯
+                              const otherTypeLabels: Record<
+                                string,
+                                { label: string; color: string }
+                              > = {
+                                SPEAKING_PRACTICE: {
+                                  label: t(
+                                    "classroomDetail.contentTypes.speakingPractice",
+                                  ),
+                                  color:
+                                    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+                                },
+                                SPEAKING_SCENARIO: {
+                                  label: t(
+                                    "classroomDetail.contentTypes.speakingScenario",
+                                  ),
+                                  color:
+                                    "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                                },
+                                LISTENING_CLOZE: {
+                                  label: t(
+                                    "classroomDetail.contentTypes.listeningCloze",
+                                  ),
+                                  color:
+                                    "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+                                },
+                                SPEAKING_QUIZ: {
+                                  label: t(
+                                    "classroomDetail.contentTypes.speakingQuiz",
+                                  ),
+                                  color:
+                                    "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+                                },
+                              };
+
+                              return (
+                                otherTypeLabels[contentType || ""] || {
+                                  label: t(
+                                    "classroomDetail.labels.unknownType",
+                                  ),
+                                  color:
+                                    "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
+                                }
+                              );
                             };
-                            const typeInfo = contentTypeLabels[
-                              assignment.content_type || ""
-                            ] || {
-                              label:
-                                assignment.content_type ||
-                                t("classroomDetail.labels.unknownType"),
-                              color:
-                                "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
-                            };
+                            const typeInfo = getTypeInfo();
 
                             return (
                               <div
@@ -1633,133 +1651,95 @@ export default function ClassroomDetail({
                               {assignments.map((assignment) => {
                                 const completionRate =
                                   assignment.completion_rate || 0;
-                                const contentTypeLabels: Record<
-                                  string,
-                                  { label: string; color: string }
-                                > = {
-                                  // 🎯 Issue #118: 新增 EXAMPLE_SENTENCES 和 VOCABULARY_SET
-                                  EXAMPLE_SENTENCES: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.EXAMPLE_SENTENCES",
-                                    ),
-                                    color:
-                                      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-                                  },
-                                  example_sentences: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.EXAMPLE_SENTENCES",
-                                    ),
-                                    color:
-                                      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-                                  },
-                                  VOCABULARY_SET: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.VOCABULARY_SET",
-                                    ),
-                                    color:
-                                      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-                                  },
-                                  vocabulary_set: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.VOCABULARY_SET",
-                                    ),
-                                    color:
-                                      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-                                  },
-                                  READING_ASSESSMENT: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.readingAssessment",
-                                    ),
-                                    color:
-                                      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-                                  },
-                                  reading_assessment: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.readingAssessment",
-                                    ),
-                                    color:
-                                      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-                                  },
-                                  SPEAKING_PRACTICE: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.speakingPractice",
-                                    ),
-                                    color:
-                                      "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-                                  },
-                                  speaking_practice: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.speakingPractice",
-                                    ),
-                                    color:
-                                      "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-                                  },
-                                  SPEAKING_SCENARIO: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.speakingScenario",
-                                    ),
-                                    color:
-                                      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-                                  },
-                                  speaking_scenario: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.speakingScenario",
-                                    ),
-                                    color:
-                                      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-                                  },
-                                  LISTENING_CLOZE: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.listeningCloze",
-                                    ),
-                                    color:
-                                      "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-                                  },
-                                  listening_cloze: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.listeningCloze",
-                                    ),
-                                    color:
-                                      "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-                                  },
-                                  SENTENCE_MAKING: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.sentenceMaking",
-                                    ),
-                                    color:
-                                      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-                                  },
-                                  sentence_making: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.sentenceMaking",
-                                    ),
-                                    color:
-                                      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-                                  },
-                                  SPEAKING_QUIZ: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.speakingQuiz",
-                                    ),
-                                    color:
-                                      "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-                                  },
-                                  speaking_quiz: {
-                                    label: t(
-                                      "classroomDetail.contentTypes.speakingQuiz",
-                                    ),
-                                    color:
-                                      "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-                                  },
+                                // 🎯 Issue #118: 根據 content_type + practice_mode 決定顯示標籤
+                                const getTypeInfo = () => {
+                                  const contentType =
+                                    assignment.content_type?.toUpperCase();
+                                  const practiceMode = assignment.practice_mode;
+
+                                  // VOCABULARY_SET 或 SENTENCE_MAKING → 單字集
+                                  if (
+                                    contentType === "VOCABULARY_SET" ||
+                                    contentType === "SENTENCE_MAKING"
+                                  ) {
+                                    return {
+                                      label: t(
+                                        "classroomDetail.contentTypes.VOCABULARY_SET",
+                                      ),
+                                      color:
+                                        "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                    };
+                                  }
+
+                                  // EXAMPLE_SENTENCES 或 READING_ASSESSMENT → 根據 practice_mode
+                                  if (
+                                    contentType === "EXAMPLE_SENTENCES" ||
+                                    contentType === "READING_ASSESSMENT"
+                                  ) {
+                                    if (practiceMode === "rearrangement") {
+                                      return {
+                                        label: t(
+                                          "classroomDetail.contentTypes.REARRANGEMENT",
+                                        ),
+                                        color:
+                                          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                                      };
+                                    }
+                                    return {
+                                      label: t(
+                                        "classroomDetail.contentTypes.SPEAKING",
+                                      ),
+                                      color:
+                                        "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                                    };
+                                  }
+
+                                  // 其他類型
+                                  const otherTypeLabels: Record<
+                                    string,
+                                    { label: string; color: string }
+                                  > = {
+                                    SPEAKING_PRACTICE: {
+                                      label: t(
+                                        "classroomDetail.contentTypes.speakingPractice",
+                                      ),
+                                      color:
+                                        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+                                    },
+                                    SPEAKING_SCENARIO: {
+                                      label: t(
+                                        "classroomDetail.contentTypes.speakingScenario",
+                                      ),
+                                      color:
+                                        "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                                    },
+                                    LISTENING_CLOZE: {
+                                      label: t(
+                                        "classroomDetail.contentTypes.listeningCloze",
+                                      ),
+                                      color:
+                                        "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+                                    },
+                                    SPEAKING_QUIZ: {
+                                      label: t(
+                                        "classroomDetail.contentTypes.speakingQuiz",
+                                      ),
+                                      color:
+                                        "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+                                    },
+                                  };
+
+                                  return (
+                                    otherTypeLabels[contentType || ""] || {
+                                      label: t(
+                                        "classroomDetail.labels.unknownType",
+                                      ),
+                                      color:
+                                        "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
+                                    }
+                                  );
                                 };
-                                const typeInfo = contentTypeLabels[
-                                  assignment.content_type || ""
-                                ] || {
-                                  label:
-                                    assignment.content_type ||
-                                    t("classroomDetail.labels.unknownType"),
-                                  color:
-                                    "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
-                                };
+                                const typeInfo = getTypeInfo();
 
                                 return (
                                   <tr

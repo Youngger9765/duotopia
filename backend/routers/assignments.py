@@ -1470,13 +1470,22 @@ async def get_student_assignments(
         StudentAssignment.assigned_at.desc(),
     ).all()
 
-    # 🎯 Issue #118: 批次查詢所有作業的 content_type（避免 N+1）
+    # 🎯 Issue #118: 批次查詢所有作業的 content_type 和 practice_mode（避免 N+1）
     # 使用 MIN(order_index) 而非 == 0，因為有些資料 order_index 從 1 開始
     assignment_ids = [a.assignment_id for a in assignments]
     content_type_map = {}
+    practice_mode_map = {}
 
     if assignment_ids:
         from sqlalchemy import func as sqla_func
+
+        # 查詢 practice_mode（從 Assignment 表）
+        assignment_settings = (
+            db.query(Assignment.id, Assignment.practice_mode)
+            .filter(Assignment.id.in_(assignment_ids))
+            .all()
+        )
+        practice_mode_map = {row.id: row.practice_mode for row in assignment_settings}
 
         # 子查詢：每個作業的最小 order_index
         min_order_subq = (
@@ -1556,9 +1565,12 @@ async def get_student_assignments(
                 "feedback": assignment.feedback,
                 "time_remaining": time_remaining,
                 "is_overdue": is_overdue,
-                # 🎯 Issue #118: 正規化內容類型
+                # 🎯 Issue #118: 正規化內容類型 + 作答模式
                 "content_type": normalize_content_type_for_response(
                     content_type_map.get(assignment.assignment_id)
+                ),
+                "practice_mode": practice_mode_map.get(
+                    assignment.assignment_id, "reading"
                 ),
                 "content": (
                     {

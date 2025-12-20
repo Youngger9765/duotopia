@@ -603,13 +603,12 @@
       "activities": "{{completed}} / {{total}} 個活動"
     },
     "contentType": {
-      "default": "朗讀練習"
+      "default": "練習"
     },
     "contentTypes": {
-      "EXAMPLE_SENTENCES": "例句朗讀",
-      "VOCABULARY_SET": "例句重組",
-      "READING_ASSESSMENT": "例句朗讀",
-      "SENTENCE_MAKING": "例句重組"
+      "VOCABULARY_SET": "單字集",
+      "SPEAKING": "例句朗讀",
+      "REARRANGEMENT": "例句重組"
     },
     "dueDate": {
       "overdue": "已逾期 {{days}} 天",
@@ -2211,18 +2210,9 @@
       "editContent": "編輯內容"
     },
     "contentTypes": {
-      "exampleSentences": "例句朗讀",
-      "example_sentences": "例句朗讀",
-      "EXAMPLE_SENTENCES": "例句朗讀",
-      "vocabularySet": "例句重組",
-      "vocabulary_set": "例句重組",
-      "VOCABULARY_SET": "例句重組",
-      "readingAssessment": "例句朗讀",
-      "reading_assessment": "例句朗讀",
-      "READING_ASSESSMENT": "例句朗讀",
-      "sentenceMaking": "例句重組",
-      "sentence_making": "例句重組",
-      "SENTENCE_MAKING": "例句重組",
+      "VOCABULARY_SET": "單字集",
+      "SPEAKING": "例句朗讀",
+      "REARRANGEMENT": "例句重組",
       "speakingPractice": "口說練習",
       "speaking_practice": "口說練習",
       "SPEAKING_PRACTICE": "口說練習",

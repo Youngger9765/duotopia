@@ -603,7 +603,12 @@
       "activities": "{{completed}} / {{total}} activities"
     },
     "contentType": {
-      "default": "Reading Practice"
+      "default": "Practice"
+    },
+    "contentTypes": {
+      "VOCABULARY_SET": "Vocabulary Set",
+      "SPEAKING": "Sentence Reading",
+      "REARRANGEMENT": "Sentence Rearrangement"
     },
     "dueDate": {
       "overdue": "Overdue by {{days}} day(s)",
@@ -2199,9 +2204,9 @@
       "editContent": "Edit Content"
     },
     "contentTypes": {
-      "readingAssessment": "Reading Assessment",
-      "reading_assessment": "Reading Assessment",
-      "READING_ASSESSMENT": "Reading Assessment",
+      "VOCABULARY_SET": "Vocabulary Set",
+      "SPEAKING": "Sentence Reading",
+      "REARRANGEMENT": "Sentence Rearrangement",
       "speakingPractice": "Speaking Practice",
       "speaking_practice": "Speaking Practice",
       "SPEAKING_PRACTICE": "Speaking Practice",
@@ -2211,9 +2216,6 @@
       "listeningCloze": "Listening Cloze",
       "listening_cloze": "Listening Cloze",
       "LISTENING_CLOZE": "Listening Cloze",
-      "sentenceMaking": "Sentence Making",
-      "sentence_making": "Sentence Making",
-      "SENTENCE_MAKING": "Sentence Making",
       "speakingQuiz": "Speaking Quiz",
       "speaking_quiz": "Speaking Quiz",
       "SPEAKING_QUIZ": "Speaking Quiz",
