@@ -95,10 +95,12 @@ export class AzureSpeechService {
       speechConfig.speechRecognitionLanguage = "en-US";
 
       // 3. 配置发音评估参数
+      // 🎯 Issue #118: 使用 Word 層級而非 Phoneme，加快分析速度
+      // 音素分析保留給未來的單字朗讀功能
       const pronunciationConfig = new sdk.PronunciationAssessmentConfig(
         referenceText,
         sdk.PronunciationAssessmentGradingSystem.HundredMark,
-        sdk.PronunciationAssessmentGranularity.Phoneme,
+        sdk.PronunciationAssessmentGranularity.Word,
         true, // enableMiscue
       );
 

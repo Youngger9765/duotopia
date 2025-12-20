@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
 
+// 🎯 Issue #118: 簡化類型定義，Phoneme/Syllable 層級改為可選
+// 音素分析保留給未來的單字朗讀功能
 interface PhonemeDetail {
   index: number;
   phoneme: string;
@@ -41,10 +43,11 @@ interface AIScores {
   detailed_words?: DetailedWord[];
   reference_text?: string;
   recognized_text?: string;
+  // 🎯 Issue #118: low_score_phonemes 改為可選（例句朗讀不再使用）
   analysis_summary?: {
     total_words: number;
     problematic_words: string[];
-    low_score_phonemes: Array<{
+    low_score_phonemes?: Array<{
       phoneme: string;
       score: number;
       in_word: string;

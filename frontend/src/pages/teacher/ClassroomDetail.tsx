@@ -1406,6 +1406,21 @@ export default function ClassroomDetail({
                               string,
                               { label: string; color: string }
                             > = {
+                              // 🎯 Issue #118: 新增 EXAMPLE_SENTENCES 和 VOCABULARY_SET
+                              EXAMPLE_SENTENCES: {
+                                label: t(
+                                  "classroomDetail.contentTypes.EXAMPLE_SENTENCES",
+                                ),
+                                color:
+                                  "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                              },
+                              VOCABULARY_SET: {
+                                label: t(
+                                  "classroomDetail.contentTypes.VOCABULARY_SET",
+                                ),
+                                color:
+                                  "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                              },
                               READING_ASSESSMENT: {
                                 label: t(
                                   "classroomDetail.contentTypes.readingAssessment",
@@ -1622,6 +1637,35 @@ export default function ClassroomDetail({
                                   string,
                                   { label: string; color: string }
                                 > = {
+                                  // 🎯 Issue #118: 新增 EXAMPLE_SENTENCES 和 VOCABULARY_SET
+                                  EXAMPLE_SENTENCES: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.EXAMPLE_SENTENCES",
+                                    ),
+                                    color:
+                                      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                                  },
+                                  example_sentences: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.EXAMPLE_SENTENCES",
+                                    ),
+                                    color:
+                                      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                                  },
+                                  VOCABULARY_SET: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.VOCABULARY_SET",
+                                    ),
+                                    color:
+                                      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                  },
+                                  vocabulary_set: {
+                                    label: t(
+                                      "classroomDetail.contentTypes.VOCABULARY_SET",
+                                    ),
+                                    color:
+                                      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                  },
                                   READING_ASSESSMENT: {
                                     label: t(
                                       "classroomDetail.contentTypes.readingAssessment",

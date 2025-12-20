@@ -309,8 +309,28 @@ export default function StudentAssignmentList() {
             <div className="flex items-center gap-2 text-sm sm:text-base text-gray-600">
               <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0" />
               <span>
-                {assignment.content_type ||
-                  t("studentAssignmentList.contentType.default")}
+                {/* 🎯 Issue #118: 正確顯示內容類型 */}
+                {(() => {
+                  const contentType = assignment.content_type?.toUpperCase();
+                  const typeLabels: Record<string, string> = {
+                    EXAMPLE_SENTENCES: t(
+                      "studentAssignmentList.contentTypes.EXAMPLE_SENTENCES",
+                    ),
+                    VOCABULARY_SET: t(
+                      "studentAssignmentList.contentTypes.VOCABULARY_SET",
+                    ),
+                    READING_ASSESSMENT: t(
+                      "studentAssignmentList.contentTypes.READING_ASSESSMENT",
+                    ),
+                    SENTENCE_MAKING: t(
+                      "studentAssignmentList.contentTypes.SENTENCE_MAKING",
+                    ),
+                  };
+                  return (
+                    typeLabels[contentType || ""] ||
+                    t("studentAssignmentList.contentType.default")
+                  );
+                })()}
               </span>
             </div>
             {assignment.estimated_time && (

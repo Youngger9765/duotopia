@@ -605,6 +605,12 @@
     "contentType": {
       "default": "朗讀練習"
     },
+    "contentTypes": {
+      "EXAMPLE_SENTENCES": "例句朗讀",
+      "VOCABULARY_SET": "例句重組",
+      "READING_ASSESSMENT": "例句朗讀",
+      "SENTENCE_MAKING": "例句重組"
+    },
     "dueDate": {
       "overdue": "已逾期 {{days}} 天",
       "today": "今天到期",
@@ -746,10 +752,7 @@
       "itemCountSingular": "{{count}}題"
     },
     "activityTypes": {
-      "reading": "朗讀練習",
-      "listening": "聽力練習",
-      "speaking": "口說練習",
-      "sentence": "造句練習",
+      "reading": "例句朗讀",
       "rearrangement": "例句重組"
     },
     "stats": {
@@ -2208,9 +2211,18 @@
       "editContent": "編輯內容"
     },
     "contentTypes": {
-      "readingAssessment": "朗讀評測",
-      "reading_assessment": "朗讀評測",
-      "READING_ASSESSMENT": "朗讀評測",
+      "exampleSentences": "例句朗讀",
+      "example_sentences": "例句朗讀",
+      "EXAMPLE_SENTENCES": "例句朗讀",
+      "vocabularySet": "例句重組",
+      "vocabulary_set": "例句重組",
+      "VOCABULARY_SET": "例句重組",
+      "readingAssessment": "例句朗讀",
+      "reading_assessment": "例句朗讀",
+      "READING_ASSESSMENT": "例句朗讀",
+      "sentenceMaking": "例句重組",
+      "sentence_making": "例句重組",
+      "SENTENCE_MAKING": "例句重組",
       "speakingPractice": "口說練習",
       "speaking_practice": "口說練習",
       "SPEAKING_PRACTICE": "口說練習",
@@ -2220,9 +2232,6 @@
       "listeningCloze": "聽力填空",
       "listening_cloze": "聽力填空",
       "LISTENING_CLOZE": "聽力填空",
-      "sentenceMaking": "造句練習",
-      "sentence_making": "造句練習",
-      "SENTENCE_MAKING": "造句練習",
       "speakingQuiz": "口說測驗",
       "speaking_quiz": "口說測驗",
       "SPEAKING_QUIZ": "口說測驗",

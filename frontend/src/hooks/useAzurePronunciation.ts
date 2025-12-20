@@ -4,26 +4,15 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
 // Azure SDK response type definitions
+// 🎯 Issue #118: 簡化類型定義，移除 Phoneme/Syllable 層級（加快分析速度）
 interface AzurePronunciationAssessment {
   AccuracyScore?: number;
   ErrorType?: string;
 }
 
-interface AzurePhoneme {
-  Phoneme: string;
-  PronunciationAssessment?: AzurePronunciationAssessment;
-}
-
-interface AzureSyllable {
-  Syllable: string;
-  PronunciationAssessment?: AzurePronunciationAssessment;
-}
-
 interface AzureWordData {
   Word: string;
   PronunciationAssessment?: AzurePronunciationAssessment;
-  Syllables?: AzureSyllable[];
-  Phonemes?: AzurePhoneme[];
 }
 
 interface AzurePrivPronJson {
@@ -35,25 +24,12 @@ interface AzureAnalysisResult {
   [key: string]: unknown;
 }
 
-interface PhonemeDetail {
-  index: number;
-  phoneme: string;
-  accuracy_score: number;
-}
-
-interface SyllableDetail {
-  index: number;
-  syllable: string;
-  accuracy_score: number;
-}
-
+// 🎯 Issue #118: 簡化 DetailedWord，只保留 Word 層級資訊
 interface DetailedWord {
   index: number;
   word: string;
   accuracy_score: number;
   error_type?: string;
-  syllables?: SyllableDetail[];
-  phonemes?: PhonemeDetail[];
 }
 
 interface PronunciationResult {
@@ -67,14 +43,10 @@ interface PronunciationResult {
     errorType: string;
   }>;
   detailed_words?: DetailedWord[];
+  // 🎯 Issue #118: 簡化 analysis_summary，移除 low_score_phonemes
   analysis_summary?: {
     total_words: number;
     problematic_words: string[];
-    low_score_phonemes: Array<{
-      phoneme: string;
-      score: number;
-      in_word: string;
-    }>;
     assessment_time?: string;
   };
 }
@@ -104,6 +76,7 @@ export function useAzurePronunciation() {
         await azureSpeechService.analyzePronunciation(audioBlob, referenceText);
 
       // Convert Azure result to our format
+      // 🎯 Issue #118: 簡化類型，只保留 Word 層級
       const azureResult = analysisResult as unknown as {
         pronunciationScore: number;
         accuracyScore: number;
@@ -114,95 +87,27 @@ export function useAzurePronunciation() {
           accuracyScore: number;
           errorType: string;
         }>;
-        detailResult?: {
-          NBest?: Array<{
-            Words?: Array<{
-              Word: string;
-              PronunciationAssessment?: {
-                AccuracyScore: number;
-                ErrorType: string;
-              };
-              Syllables?: Array<{
-                Syllable: string;
-                PronunciationAssessment?: {
-                  AccuracyScore: number;
-                };
-              }>;
-              Phonemes?: Array<{
-                Phoneme: string;
-                PronunciationAssessment?: {
-                  AccuracyScore: number;
-                };
-              }>;
-            }>;
-          }>;
-        };
       };
 
-      // Extract detailed words from Azure's privPronJson (which contains NBest data)
+      // 🎯 Issue #118: 簡化解析邏輯，只處理 Word 層級（不解析 Syllables/Phonemes）
       const detailed_words: DetailedWord[] = [];
       const privPronJson = (analysisResult as unknown as AzureAnalysisResult)
         .privPronJson;
 
-      // Azure SDK stores Words directly in privPronJson, not in NBest
+      // Azure SDK stores Words directly in privPronJson
       const wordsData = privPronJson?.Words || [];
 
       if (wordsData.length > 0) {
         wordsData.forEach((wordData: AzureWordData, idx: number) => {
-          const word: DetailedWord = {
+          detailed_words.push({
             index: idx,
             word: wordData.Word,
             accuracy_score:
               wordData.PronunciationAssessment?.AccuracyScore || 0,
             error_type: wordData.PronunciationAssessment?.ErrorType || "None",
-            syllables: [],
-            phonemes: [],
-          };
-
-          // Parse syllables
-          if (wordData.Syllables) {
-            word.syllables = wordData.Syllables.map(
-              (syl: AzureSyllable, sylIdx: number) => ({
-                index: sylIdx,
-                syllable: syl.Syllable,
-                accuracy_score: syl.PronunciationAssessment?.AccuracyScore || 0,
-              }),
-            );
-          }
-
-          // Parse phonemes
-          if (wordData.Phonemes) {
-            word.phonemes = wordData.Phonemes.map(
-              (pho: AzurePhoneme, phoIdx: number) => ({
-                index: phoIdx,
-                phoneme: pho.Phoneme,
-                accuracy_score: pho.PronunciationAssessment?.AccuracyScore || 0,
-              }),
-            );
-          }
-
-          detailed_words.push(word);
+          });
         });
       }
-
-      // Collect low score phonemes for analysis summary
-      const low_score_phonemes: Array<{
-        phoneme: string;
-        score: number;
-        in_word: string;
-      }> = [];
-
-      detailed_words.forEach((word) => {
-        word.phonemes?.forEach((phoneme) => {
-          if (phoneme.accuracy_score < 70) {
-            low_score_phonemes.push({
-              phoneme: phoneme.phoneme,
-              score: phoneme.accuracy_score,
-              in_word: word.word,
-            });
-          }
-        });
-      });
 
       const pronunciationResult: PronunciationResult = {
         pronunciationScore: azureResult.pronunciationScore,
@@ -216,7 +121,6 @@ export function useAzurePronunciation() {
           problematic_words: detailed_words
             .filter((w) => w.accuracy_score < 80)
             .map((w) => w.word),
-          low_score_phonemes,
           assessment_time: new Date().toISOString(),
         },
       };

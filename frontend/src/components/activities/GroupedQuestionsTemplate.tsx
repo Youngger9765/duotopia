@@ -55,32 +55,19 @@ interface AssessmentResult {
     word: string;
     error_type?: string;
   }>;
+  // 🎯 Issue #118: 簡化 detailed_words，移除 syllables/phonemes
   detailed_words?: Array<{
     index: number;
     word: string;
     accuracy_score: number;
     error_type?: string;
-    syllables?: Array<{
-      index: number;
-      syllable: string;
-      accuracy_score: number;
-    }>;
-    phonemes?: Array<{
-      index: number;
-      phoneme: string;
-      accuracy_score: number;
-    }>;
   }>;
   reference_text?: string;
   recognized_text?: string;
+  // 🎯 Issue #118: 簡化 analysis_summary，移除 low_score_phonemes
   analysis_summary?: {
     total_words: number;
     problematic_words: string[];
-    low_score_phonemes: Array<{
-      phoneme: string;
-      score: number;
-      in_word: string;
-    }>;
     assessment_time?: string;
   };
   error_type?: string;

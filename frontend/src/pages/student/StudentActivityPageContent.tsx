@@ -1892,10 +1892,21 @@ export default function StudentActivityPageContent({
                           const needsCorrection =
                             hasTeacherGraded && teacherPassed === false;
 
+                          // 🎯 Issue #118: 判斷是否為例句朗讀模式（禁止跳題）
+                          const isReadingMode =
+                            isExampleSentencesType(activity.type) &&
+                            practiceMode !== "rearrangement";
+
+                          // 🎯 Issue #118: 檢查當前題目是否已分析（用於顯示狀態）
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          const hasAssessment = !!(item as any)?.ai_assessment;
+
                           return (
                             <button
                               key={itemIndex}
                               onClick={() => {
+                                // 🎯 Issue #118: 例句朗讀模式禁止點擊跳題
+                                if (isReadingMode) return;
                                 if (isAnalyzing) return; // 🔒 分析中禁止切換
                                 if (activityIndex !== currentActivityIndex) {
                                   // 切換 activity
@@ -1914,19 +1925,31 @@ export default function StudentActivityPageContent({
                                 "flex items-center justify-center text-sm sm:text-xs font-medium",
                                 "min-w-[32px] sm:min-w-[32px]",
                                 // 保持學生原本的完成狀態樣式
-                                isCompleted
-                                  ? "bg-green-100 text-green-800 border-green-400"
-                                  : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
+                                // 🎯 Issue #118: 例句朗讀模式顯示分析狀態（綠色=已分析）
+                                isReadingMode
+                                  ? hasAssessment
+                                    ? "bg-green-100 text-green-800 border-green-400"
+                                    : "bg-white text-gray-600 border-gray-300"
+                                  : isCompleted
+                                    ? "bg-green-100 text-green-800 border-green-400"
+                                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
                                 isActiveItem && "border-2 border-blue-600",
+                                // 🎯 Issue #118: 例句朗讀模式禁止點擊樣式
+                                isReadingMode &&
+                                  "pointer-events-none cursor-default",
                               )}
                               title={
-                                needsCorrection
-                                  ? "老師要求訂正"
-                                  : isTeacherPassed
-                                    ? "老師已通過"
-                                    : isCompleted
-                                      ? "已完成"
-                                      : "未完成"
+                                isReadingMode
+                                  ? hasAssessment
+                                    ? "已分析"
+                                    : "未分析"
+                                  : needsCorrection
+                                    ? "老師要求訂正"
+                                    : isTeacherPassed
+                                      ? "老師已通過"
+                                      : isCompleted
+                                        ? "已完成"
+                                        : "未完成"
                               }
                             >
                               {itemIndex + 1}
@@ -2017,7 +2040,14 @@ export default function StudentActivityPageContent({
                 );
               }
 
-              if (!isAssessed && !isPreviewMode) {
+              // 🎯 Issue #118: 判斷是否為例句朗讀模式
+              const isReadingMode =
+                isExampleSentencesType(currentActivity.type) &&
+                practiceMode !== "rearrangement";
+
+              // 🎯 Issue #118: 例句朗讀模式始終顯示導航按鈕（即使未分析）
+              // 其他模式維持原行為：未分析時不顯示導航按鈕
+              if (!isAssessed && !isPreviewMode && !isReadingMode) {
                 return null;
               }
 
@@ -2176,7 +2206,10 @@ export default function StudentActivityPageContent({
                         }
                         disabled={
                           isAnalyzing || // 🔒 分析中禁用
-                          (isRearrangementMode ? !hasNextUnanswered : false)
+                          (isRearrangementMode
+                            ? !hasNextUnanswered
+                            : // 🎯 Issue #118: 例句朗讀模式必須分析後才能下一題
+                              isReadingMode && !isAssessed && !isPreviewMode)
                         }
                         className="flex-1 sm:flex-none min-w-0"
                       >
