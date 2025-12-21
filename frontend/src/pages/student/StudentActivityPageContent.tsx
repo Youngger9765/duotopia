@@ -48,6 +48,7 @@ import { retryAudioUpload } from "@/utils/retryHelper";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { useTranslation } from "react-i18next";
 import { useAzurePronunciation } from "@/hooks/useAzurePronunciation";
+import { azureSpeechService } from "@/services/azureSpeechService";
 
 // Activity type from API
 export interface Activity {
@@ -1305,6 +1306,26 @@ export default function StudentActivityPageContent({
     if (onSubmit) {
       try {
         setSubmitting(true);
+
+        // 🎯 Issue #118: Retry any pending uploads before submitting
+        const pendingCount = azureSpeechService.getPendingUploadCount();
+        if (pendingCount > 0) {
+          console.log(
+            `Retrying ${pendingCount} pending uploads before submit...`,
+          );
+          const retryResult = await azureSpeechService.retryPendingUploads();
+          if (retryResult.failed.length > 0) {
+            console.warn(
+              `${retryResult.failed.length} uploads still failed after retry`,
+            );
+          }
+          if (retryResult.success.length > 0) {
+            console.log(
+              `Successfully uploaded ${retryResult.success.length} pending files`,
+            );
+          }
+        }
+
         await onSubmit({
           answers: [], // Will be filled by parent component
         });

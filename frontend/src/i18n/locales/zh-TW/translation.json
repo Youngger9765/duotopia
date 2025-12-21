@@ -2313,7 +2313,9 @@
       "aiGrading": "AI 批改中...",
       "aiGradingComplete": "AI 批改完成！",
       "aiGradingFailed": "AI 批改失敗，請稍後再試",
-      "noStudentToGrade": "沒有可批改的學生（狀態須為已提交或已訂正）"
+      "noStudentToGrade": "沒有可批改的學生（狀態須為已提交或已訂正）",
+      "audioUploadFailed": "錄音檔案上傳異常",
+      "audioUploadFailedDetail": "有分析結果，但錄音檔案未成功上傳"
     },
     "status": {
       "notStarted": "未開始",

@@ -1472,7 +1472,9 @@ async def get_student_assignments(
 
     # 🎯 Issue #118: 批次查詢所有作業的 content_type 和 practice_mode（避免 N+1）
     # 使用 MIN(order_index) 而非 == 0，因為有些資料 order_index 從 1 開始
-    assignment_ids = [a.assignment_id for a in assignments]
+    assignment_ids = [
+        a.assignment_id for a in assignments if a.assignment_id is not None
+    ]
     content_type_map = {}
     practice_mode_map = {}
 

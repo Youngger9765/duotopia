@@ -1261,6 +1261,7 @@ async def upload_pronunciation_analysis(
     analysis_json: str = Form(...),
     latency_ms: Optional[int] = Form(None),
     progress_id: Optional[int] = Form(None),  # 👈 改为 Optional（允许前端不传）
+    upload_status: str = Form("success"),  # 🎯 Issue #118: 上傳狀態 (success/failed)
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
@@ -1277,12 +1278,14 @@ async def upload_pronunciation_analysis(
         analysis_json: 前端 Azure Speech SDK 返回的分析结果（JSON 字符串）
         latency_ms: 前端到 Azure 的延迟（毫秒）
         progress_id: StudentItemProgress 的 ID
+        upload_status: 上傳狀態 ("success" 或 "failed")
+                      🎯 Issue #118: 若為 "failed"，僅保存分析結果，不上傳音檔
 
     Returns:
         {
             "status": "success",
             "progress_id": 123,
-            "audio_url": "https://storage.googleapis.com/..."
+            "audio_url": "https://storage.googleapis.com/..." (或 None 若 upload_status="failed")
         }
 
     数据库方案 A（零 Migration）：
@@ -1294,7 +1297,8 @@ async def upload_pronunciation_analysis(
             "source": "frontend_direct",
             "latency_ms": 1500,
             "azure_token_used": true,
-            "uploaded_at": "2025-12-16T10:30:00Z"
+            "uploaded_at": "2025-12-16T10:30:00Z",
+            "audio_upload_status": "success" | "failed"
         }
     }
     """
@@ -1338,23 +1342,32 @@ async def upload_pronunciation_analysis(
         elif user_type not in ["student", "teacher"]:
             raise HTTPException(status_code=403, detail="Invalid user type")
 
-        # 3. 上传音档到 GCS
-        from services.audio_upload import get_audio_upload_service
+        # 3. 上传音档到 GCS（🎯 Issue #118: 若 upload_status="failed" 則跳過上傳）
+        audio_url = None
 
-        upload_service = get_audio_upload_service()
+        if upload_status != "failed":
+            from services.audio_upload import get_audio_upload_service
 
-        audio_url = await upload_service.upload_audio(
-            file=audio_file,
-            duration_seconds=30,  # Frontend should validate this
-            content_id=progress.content_item.content_id
-            if progress and progress.content_item
-            else None,
-            item_index=progress.content_item.order_index
-            if progress and progress.content_item
-            else None,
-            assignment_id=progress.student_assignment_id if progress else None,
-            student_id=user_id if user_type == "student" else None,
-        )
+            upload_service = get_audio_upload_service()
+
+            audio_url = await upload_service.upload_audio(
+                file=audio_file,
+                duration_seconds=30,  # Frontend should validate this
+                content_id=progress.content_item.content_id
+                if progress and progress.content_item
+                else None,
+                item_index=progress.content_item.order_index
+                if progress and progress.content_item
+                else None,
+                assignment_id=progress.student_assignment_id if progress else None,
+                student_id=user_id if user_type == "student" else None,
+            )
+        else:
+            # 🎯 Issue #118: 上傳失敗模式 - 僅保存分析結果
+            logger.warning(
+                f"Saving analysis without audio for progress_id={progress_id} "
+                f"(upload_status=failed)"
+            )
 
         # 4. 添加 metadata 到 analysis（方案 A：零 migration）
         if "_metadata" not in analysis:
@@ -1367,6 +1380,8 @@ async def upload_pronunciation_analysis(
                 "azure_token_used": True,
                 "uploaded_at": datetime.now().isoformat(),
                 "client_timestamp": datetime.now().isoformat(),
+                # 🎯 Issue #118: 記錄上傳狀態
+                "audio_upload_status": upload_status,
             }
         )
 

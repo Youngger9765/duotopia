@@ -2307,7 +2307,9 @@
       "aiGrading": "AI is grading...",
       "aiGradingComplete": "AI grading completed!",
       "aiGradingFailed": "AI grading failed, please try again",
-      "noStudentToGrade": "No student to grade (status must be Submitted or Resubmitted)"
+      "noStudentToGrade": "No student to grade (status must be Submitted or Resubmitted)",
+      "audioUploadFailed": "Recording upload failed",
+      "audioUploadFailedDetail": "Analysis results available, but recording file was not uploaded"
     },
     "status": {
       "notStarted": "Not Started",

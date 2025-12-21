@@ -32,6 +32,9 @@ interface DetailedWord {
   error_type?: string;
 }
 
+// 🎯 Issue #118: Upload status for retry mechanism
+export type UploadStatus = "success" | "pending_retry" | "failed";
+
 interface PronunciationResult {
   pronunciationScore: number;
   accuracyScore: number;
@@ -49,6 +52,9 @@ interface PronunciationResult {
     problematic_words: string[];
     assessment_time?: string;
   };
+  // 🎯 Issue #118: Upload status tracking for retry mechanism
+  uploadStatus?: UploadStatus;
+  uploadId?: string;
 }
 
 export function useAzurePronunciation() {
@@ -109,6 +115,13 @@ export function useAzurePronunciation() {
         });
       }
 
+      // 🎯 Issue #118: Upload with retry mechanism (non-blocking)
+      const uploadResult = await azureSpeechService.uploadWithRetry(
+        audioBlob,
+        analysisResult,
+        latencyMs,
+      );
+
       const pronunciationResult: PronunciationResult = {
         pronunciationScore: azureResult.pronunciationScore,
         accuracyScore: azureResult.accuracyScore,
@@ -123,17 +136,13 @@ export function useAzurePronunciation() {
             .map((w) => w.word),
           assessment_time: new Date().toISOString(),
         },
+        // 🎯 Issue #118: Track upload status
+        uploadStatus: uploadResult.success ? "success" : "pending_retry",
+        uploadId: uploadResult.uploadId,
       };
 
       setResult(pronunciationResult);
       setIsAnalyzing(false);
-
-      // Background upload - non-blocking
-      azureSpeechService.uploadAnalysisInBackground(
-        audioBlob,
-        analysisResult,
-        latencyMs,
-      );
 
       return pronunciationResult;
     } catch (err) {

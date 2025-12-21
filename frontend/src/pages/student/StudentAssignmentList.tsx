@@ -72,7 +72,6 @@ export default function StudentAssignmentList() {
       }
 
       const data = await response.json();
-      console.log(Array.isArray(data) ? data.length : "not array");
 
       // Transform data to match StudentAssignmentCard type
       interface AssignmentData {
