@@ -79,8 +79,8 @@ jobs:
 
           echo "🔍 DEBUG: Deploying to Cloud Run"
 
-          # 計算 frontend URL（待 frontend 部署完成後會更新）
-          FRONTEND_URL="https://duotopia-preview-issue-${ISSUE}-frontend-${PROJECT_ID}.${REGION}.run.app"
+          # 使用 placeholder，會在 frontend 部署後更新為實際 URL
+          FRONTEND_URL="https://placeholder-will-be-updated.run.app"
 
           # 環境變數設定（使用 staging 的配置）
           ENV_VARS="DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}"
@@ -197,9 +197,37 @@ jobs:
           echo "url=${URL}" >> $GITHUB_OUTPUT
           echo "✅ Frontend deployed: ${URL}"
 
-  cleanup-images:
+  update-backend-frontend-url:
     runs-on: ubuntu-latest
     needs: [extract, deploy-backend, deploy-frontend]
+    if: success()
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Update backend FRONTEND_URL with actual frontend URL
+        run: |
+          echo "🔄 Updating backend FRONTEND_URL..."
+          ISSUE=${{ needs.extract.outputs.issue_number }}
+          SERVICE="duotopia-preview-issue-${ISSUE}-backend"
+          FRONTEND_URL="${{ needs.deploy-frontend.outputs.url }}"
+
+          echo "📝 Frontend URL: ${FRONTEND_URL}"
+
+          # Update only the FRONTEND_URL environment variable
+          gcloud run services update "${SERVICE}" \
+            --platform managed \
+            --region ${{ env.REGION }} \
+            --update-env-vars "FRONTEND_URL=${FRONTEND_URL}"
+
+          echo "✅ Backend FRONTEND_URL updated to: ${FRONTEND_URL}"
+
+  cleanup-images:
+    runs-on: ubuntu-latest
+    needs: [extract, deploy-backend, deploy-frontend, update-backend-frontend-url]
     if: success()
     steps:
       - uses: google-github-actions/auth@v2
@@ -279,7 +307,7 @@ jobs:
 
   comment:
     runs-on: ubuntu-latest
-    needs: [extract, deploy-backend, deploy-frontend, cleanup-images]
+    needs: [extract, deploy-backend, deploy-frontend, update-backend-frontend-url, cleanup-images]
     if: success()
     permissions:
       issues: write
