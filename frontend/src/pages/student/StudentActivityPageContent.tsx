@@ -1499,9 +1499,7 @@ export default function StudentActivityPageContent({
           timeLimit={activity.duration || 30}
           progressIds={
             answer?.progressIds ||
-            activity.items
-              ?.map((item) => item.progress_id)
-              .filter((id): id is number => typeof id === "number") ||
+            activity.items?.map((item) => item.progress_id ?? 0) ||
             []
           }
           initialAssessmentResults={assessmentResults}
