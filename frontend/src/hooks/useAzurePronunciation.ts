@@ -78,7 +78,7 @@ export function useAzurePronunciation() {
 
     try {
       // Call Azure Speech Service directly - fast!
-      const { result: analysisResult, latencyMs } =
+      const { result: analysisResult } =
         await azureSpeechService.analyzePronunciation(audioBlob, referenceText);
 
       // Convert Azure result to our format
@@ -115,12 +115,10 @@ export function useAzurePronunciation() {
         });
       }
 
-      // 🎯 Issue #118: Upload with retry mechanism (non-blocking)
-      const uploadResult = await azureSpeechService.uploadWithRetry(
-        audioBlob,
-        analysisResult,
-        latencyMs,
-      );
+      // 🔧 Issue #118 Fix: Removed uploadWithRetry here because:
+      // 1. This hook doesn't have progressId, so uploads go to GCS but don't update DB
+      // 2. Component-level uploadAnalysisInBackground() has progressId and handles upload correctly
+      // 3. Having both caused duplicate uploads (2 API calls per recording)
 
       const pronunciationResult: PronunciationResult = {
         pronunciationScore: azureResult.pronunciationScore,
@@ -136,9 +134,6 @@ export function useAzurePronunciation() {
             .map((w) => w.word),
           assessment_time: new Date().toISOString(),
         },
-        // 🎯 Issue #118: Track upload status
-        uploadStatus: uploadResult.success ? "success" : "pending_retry",
-        uploadId: uploadResult.uploadId,
       };
 
       setResult(pronunciationResult);
