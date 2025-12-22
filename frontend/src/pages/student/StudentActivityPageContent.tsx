@@ -1498,9 +1498,13 @@ export default function StudentActivityPageContent({
           formatTime={formatTime}
           timeLimit={activity.duration || 30}
           progressIds={
-            answer?.progressIds ||
-            activity.items?.map((item) => item.progress_id ?? 0) ||
-            []
+            // 🔧 Issue #118 Fix: Always use activity.items as base, merge in updated progressIds
+            // Previous bug: answer?.progressIds || ... would use incomplete array [101] after first upload
+            // causing items 1-4 to have undefined progressId
+            activity.items?.map(
+              (item, index) =>
+                answer?.progressIds?.[index] ?? item.progress_id ?? 0,
+            ) || []
           }
           initialAssessmentResults={assessmentResults}
           readOnly={isReadOnly}

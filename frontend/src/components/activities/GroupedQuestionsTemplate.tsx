@@ -191,7 +191,6 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const uploadButtonRef = useRef<HTMLButtonElement | null>(null);
-  const autoAnalyzedRef = useRef<Set<string>>(new Set()); // Track auto-analyzed items
 
   // 使用傳入的 token（預覽模式）或從 student store 取得（正常模式）
   const { token: studentToken } = useStudentAuthStore();
@@ -244,36 +243,8 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
     }
   }, [initialAssessmentResults]);
 
-  // 🎯 Auto-analyze when recording is complete (Issue #118)
-  useEffect(() => {
-    const currentRecording = items[currentQuestionIndex]?.recording_url;
-    const hasAssessment = assessmentResults[currentQuestionIndex];
-    const itemKey = `${currentQuestionIndex}-${currentRecording}`;
-
-    // Auto-trigger analysis if:
-    // 1. There's a recording URL
-    // 2. No existing assessment result
-    // 3. Not currently analyzing
-    // 4. Haven't auto-analyzed this recording yet
-    if (
-      currentRecording &&
-      !hasAssessment &&
-      !isAssessing &&
-      !autoAnalyzedRef.current.has(itemKey)
-    ) {
-      autoAnalyzedRef.current.add(itemKey);
-
-      // Delay slightly to ensure state is stable
-      setTimeout(() => {
-        handleAssessment();
-      }, 100);
-    }
-  }, [
-    items[currentQuestionIndex]?.recording_url,
-    currentQuestionIndex,
-    assessmentResults,
-    isAssessing,
-  ]);
+  // 🔧 Issue #118: Removed auto-analyze useEffect
+  // User now manually clicks "上傳並分析" button after recording stops
 
   // 檢查題目是否已完成 - 目前未使用
   // const isQuestionCompleted = (index: number) => {
@@ -764,12 +735,6 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           setCurrentTime(0);
                           setDuration(0);
 
-                          // 🎯 Clear auto-analyzed tracking for this item
-                          const currentRecording =
-                            items[currentQuestionIndex]?.recording_url;
-                          const itemKey = `${currentQuestionIndex}-${currentRecording}`;
-                          autoAnalyzedRef.current.delete(itemKey);
-
                           // 🎯 Issue #75: 呼叫後端 DELETE API 清空 DB (僅在非預覽模式)
                           if (
                             !isPreviewMode &&
@@ -1086,12 +1051,6 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                 >
                   <button
                     onClick={async () => {
-                      // 🎯 Clear auto-analyzed tracking for this item
-                      const currentRecording =
-                        items[currentQuestionIndex]?.recording_url;
-                      const itemKey = `${currentQuestionIndex}-${currentRecording}`;
-                      autoAnalyzedRef.current.delete(itemKey);
-
                       // 🎯 Issue #75: 呼叫後端 DELETE API 清空 DB (僅在非預覽模式)
                       if (
                         !isPreviewMode &&
@@ -1172,6 +1131,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                     scores={assessmentResults[currentQuestionIndex]}
                     hasRecording={true}
                     title=""
+                    isStudentView={!isPreviewMode}
                   />
                 </div>
 
