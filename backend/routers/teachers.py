@@ -3365,7 +3365,7 @@ async def get_assignment_preview(
                 "title": content.title,
                 "duration": (
                     assignment.time_limit_per_question
-                    if assignment.time_limit_per_question
+                    if assignment.time_limit_per_question is not None
                     else 30
                 ),
                 "points": 100 // len(assignment_contents)
@@ -3493,7 +3493,11 @@ async def preview_rearrangement_questions(
                 shuffled_words=shuffled_words,
                 word_count=item.word_count or len(words),
                 max_errors=item.max_errors or (3 if len(words) <= 10 else 5),
-                time_limit=assignment.time_limit_per_question or 40,
+                time_limit=(
+                    assignment.time_limit_per_question
+                    if assignment.time_limit_per_question is not None
+                    else 30
+                ),
                 play_audio=assignment.play_audio or False,
                 audio_url=item.audio_url,
                 translation=item.translation,

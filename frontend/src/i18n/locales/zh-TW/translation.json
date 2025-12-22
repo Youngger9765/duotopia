@@ -42,6 +42,7 @@
     "totalScore": "目前總分",
     "expectedScore": "預期得分",
     "errorsRemaining": "剩餘 {{remaining}} 次錯誤機會",
+    "unlimited": "不限時",
     "selectWordsHint": "請依序點選下方單字組成正確句子",
     "correctAnswer": "正確答案",
     "jumpToQuestion": "跳至第 {{number}} 題",
@@ -1283,6 +1284,7 @@
         "rearrangementDesc": "學生將打散的單字重新排列成正確句子",
         "timeLimit": "單題作答時間限制",
         "seconds": "秒",
+        "unlimited": "不限時",
         "default": "預設",
         "shuffleQuestions": "隨機題目順序",
         "shuffleQuestionsDesc": "每次練習時隨機排列題目順序",
@@ -1968,10 +1970,12 @@
     "batchActions": {
       "batchPaste": "批次貼上",
       "batchPasteTooltip": "批次貼上素材，每行一個項目",
-      "batchGenerateTTS": "批次生成TTS",
+      "batchGenerateTTS": "批次生成音檔",
       "batchGenerateTTSTooltip": "使用免費的 Microsoft Edge TTS 生成語音",
       "batchGenerateTranslation": "批次生成翻譯",
-      "batchGenerateTranslationTooltip": "批次生成翻譯（根據各行語言設定）"
+      "batchGenerateTranslationTooltip": "批次生成翻譯（根據各行語言設定）",
+      "generatingTTS": "生成中...",
+      "generatingTranslation": "翻譯中..."
     },
     "row": {
       "dragToReorder": "拖曳以重新排序",
@@ -2057,11 +2061,11 @@
     },
     "batchPasteDialog": {
       "title": "批次貼上素材",
-      "description": "每行一個項目，支援自動生成 TTS 與翻譯",
+      "description": "每行一個項目，支援自動生成音檔與翻譯",
       "inputLabel": "請貼上內容：",
       "inputPlaceholder": "put\nPut it away.\nIt's time to put everything away. Right now.",
       "itemCount": "{{count}} 個項目",
-      "autoGenerateTTS": "自動生成 TTS",
+      "autoGenerateTTS": "自動生成音檔",
       "autoTranslate": "自動翻譯",
       "cancel": "取消",
       "confirmPaste": "確認貼上",
@@ -3572,6 +3576,173 @@
     },
     "messages": {
       "linkExpiredDetail": "密碼重設連結已過期或無效，請重新申請"
+    }
+  },
+  "contentEditor": {
+    "labels": {
+      "title": "標題",
+      "pasteContent": "請貼上內容："
+    },
+    "placeholders": {
+      "enterContentTitle": "請輸入內容標題",
+      "enterText": "輸入文本"
+    },
+    "buttons": {
+      "save": "儲存",
+      "cancel": "取消",
+      "addItem": "新增項目",
+      "confirmPaste": "確認貼上",
+      "processing": "處理中...",
+      "startRecording": "開始錄音",
+      "stopRecording": "停止錄音",
+      "rerecord": "重新錄製"
+    },
+    "modals": {
+      "audioSettings": "音檔設定",
+      "batchPasteTitle": "批次貼上素材",
+      "batchPasteSubtitle": "每行一個項目，支援自動生成音檔與翻譯"
+    },
+    "checkboxes": {
+      "autoGenerateTTS": "自動生成音檔",
+      "autoTranslate": "自動翻譯"
+    },
+    "tooltips": {
+      "dragToReorder": "拖曳以重新排序",
+      "playAudio": "播放音檔",
+      "removeAudio": "移除音檔",
+      "duplicate": "複製",
+      "delete": "刪除",
+      "cannotDeleteWithProgress": "此題目有學生進度，無法刪除",
+      "openTTSRecording": "開啟 TTS/錄音",
+      "rerecordOrGenerate": "重新錄製/生成",
+      "ttsMicrosoftEdge": "使用免費的 Microsoft Edge TTS 生成語音",
+      "playGeneratedAudio": "播放生成的音檔"
+    },
+    "audioSources": {
+      "tts": "TTS 語音",
+      "aiGenerated": "AI 生成",
+      "recording": "錄音檔案",
+      "teacherRecorded": "教師錄製"
+    },
+    "messages": {
+      "loading": "載入中...",
+      "savingSuccess": "儲存成功",
+      "savingFailed": "儲存失敗",
+      "contentCreatedSuccess": "內容已成功創建",
+      "creatingContentFailed": "創建內容失敗",
+      "loadingContentFailed": "載入內容失敗",
+      "enterTitle": "請輸入標題",
+      "addAtLeastOneItem": "請至少新增一個內容項目",
+      "maxRowsReached": "最多只能新增 15 列",
+      "minRowsRequired": "至少需要保留 1 列",
+      "cannotDeleteWithProgress": "此題目有學生進度，無法刪除",
+      "audioRemoved": "已移除音檔",
+      "removeAudioFailed": "移除音檔失敗",
+      "audioGeneratedSuccess": "音檔生成成功！點擊播放按鈕試聽",
+      "generationFailed": "生成失敗，請重試",
+      "maxRecordingTimeReached": "已達到最長錄音時間 30 秒",
+      "recordingFileTooLarge": "錄音檔案太大，請縮短錄音時間",
+      "recordingFailed": "錄音失敗，請檢查麥克風權限",
+      "recordingComplete": "錄音完成！可以試聽或重新錄製",
+      "recordingStarted": "開始錄音",
+      "cannotStartRecording": "無法啟動錄音，請檢查麥克風權限",
+      "selectAudioSource": "請選擇要使用的音源（TTS 或錄音）",
+      "uploadRetrying": "上傳失敗，正在重試...",
+      "uploadFailed": "上傳失敗，請檢查網路連線後重試",
+      "generateOrRecordFirst": "請先生成或錄製音檔",
+      "ttsAudioDeleted": "已刪除 TTS 音檔",
+      "recordingDeleted": "已刪除錄音檔案",
+      "noRecordingToPlay": "沒有錄音可播放",
+      "cannotPlayRecording": "無法播放錄音",
+      "selectAudioSourceToUse": "您有兩種音源可選擇，請選擇要使用的音檔：",
+      "maxRecordingTime": "最長錄音時間 30 秒",
+      "uploadingRecording": "正在上傳錄音檔案...",
+      "recordingFileReady": "錄音檔案已準備 ({{duration}}秒)",
+      "audioGenerated": "音檔已生成！點擊播放按鈕試聽",
+      "ttsAudioReady": "TTS 音檔已準備",
+      "allItemsHaveAudio": "所有項目都已有音檔",
+      "generatingAudioFiles": "正在生成 {{count}} 個音檔...",
+      "audioGeneratedSuccessfully": "成功生成 {{count}} 個音檔！音檔將在儲存內容時一併上傳。",
+      "audioGeneratedAndSaved": "成功生成並儲存 {{count}} 個音檔！",
+      "savingFailedButAudioGenerated": "儲存失敗，但音檔已生成",
+      "batchGenerationFailed": "批次生成失敗，請重試",
+      "enterTextFirst": "請先輸入文本",
+      "generatingTranslation": "生成翻譯中...",
+      "translationComplete": "翻譯生成完成",
+      "translationFailed": "翻譯失敗，請稍後再試",
+      "noItemsNeedTranslation": "沒有需要翻譯的項目",
+      "startingBatchTranslation": "開始批次生成翻譯...",
+      "batchTranslationComplete": "批次翻譯完成！處理了 {{count}} 個項目",
+      "batchTranslationFailed": "批次翻譯失敗，請稍後再試",
+      "enterContent": "請輸入內容",
+      "processingItems": "正在處理 {{count}} 個項目...",
+      "batchProcessingFailed": "批次處理失敗",
+      "itemsAddedAndSaved": "已新增 {{added}} 個項目並儲存（共 {{total}} 個）",
+      "itemsAddedSaveToComplete": "已新增 {{added}} 個項目（共 {{total}} 個），請按「儲存」完成創建",
+      "updateFailedButAudioGenerated": "更新失敗，但音檔已生成",
+      "items": "個項目"
+    },
+    "translationLanguages": {
+      "chinese": "中文",
+      "english": "英文",
+      "japanese": "日文",
+      "korean": "韓文"
+    },
+    "warnings": {
+      "assignmentCopy": "注意：此為作業副本",
+      "assignmentCopyDescription": "有學生進度的題目無法刪除（刪除按鈕已被禁用）。您可以修改題目內容，但不能移除已作答的題目。"
+    },
+    "ttsSettings": {
+      "title": "音檔設定",
+      "accent": "口音",
+      "gender": "性別",
+      "speed": "語速"
+    }
+  },
+  "sentenceMakingPanel": {
+    "placeholders": {
+      "enterEnglishWord": "輸入英文單字",
+      "enterEnglishSentence": "輸入英文例句",
+      "aiPromptExample": "例如：請生成與日常生活相關的例句"
+    },
+    "tooltips": {
+      "generateExampleSentence": "AI 生成例句",
+      "batchAIGenerateExamples": "批次 AI 生成例句"
+    },
+    "buttons": {
+      "batchAIGenerateExamples": "批次AI生成例句",
+      "generate": "生成",
+      "generating": "生成中..."
+    },
+    "modals": {
+      "aiGenerateExamplesTitle": "AI 生成例句"
+    },
+    "labels": {
+      "difficultyLevel": "難度等級",
+      "aiPrompt": "給 AI 的提示 (選填)",
+      "translateTo": "翻譯成"
+    },
+    "messages": {
+      "allItemsHaveAudioOrEmpty": "所有項目都已有音檔，或例句為空",
+      "generatingExampleAudio": "正在生成 {{count}} 個例句音檔...",
+      "translationAndPOSComplete": "翻譯及詞性辨識完成",
+      "enterExampleFirst": "請先輸入例句",
+      "generatingExampleTranslation": "生成例句翻譯中...",
+      "exampleTranslationComplete": "例句翻譯生成完成",
+      "exampleTranslationFailed": "例句翻譯失敗，請稍後再試",
+      "noItemsForExampleGeneration": "沒有可生成例句的項目（請先輸入單字）",
+      "generatingExamples": "正在生成 {{count}} 個例句...",
+      "examplesGeneratedSuccess": "成功生成 {{count}} 個例句！",
+      "exampleGenerationFailed": "AI 生成例句失敗，請稍後再試",
+      "willRegenerateFor": "將為「{{word}}」重新生成例句",
+      "existingWillBeOverwritten": "現有例句將被覆蓋",
+      "wordsWillRegenerate": "將為 {{count}} 個單字重新生成例句",
+      "allExistingExamples": "所有現有例句",
+      "andTranslations": "及翻譯",
+      "willBeOverwritten": "將被覆蓋",
+      "translationFieldsCleared": "翻譯欄位將被清空",
+      "itemsAddedAndCreated": "已新增 {{count}} 個項目並創建內容",
+      "itemsAdded": "已新增 {{added}} 個項目（共 {{total}} 個）"
     }
   }
 }
