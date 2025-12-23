@@ -675,18 +675,24 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDrawing = useRef(false);
+  const isInitialized = useRef(false);
 
   const initCanvas = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      console.warn('initCanvas(): canvas ref is null');
+      return;
+    }
     
-    // Only initialize once - do not reinitialize on resize to preserve drawings
-    if (canvas.width > 0 && canvas.height > 0 && contextRef.current) {
+    // Only initialize once to preserve drawings
+    if (isInitialized.current) {
+      console.log('initCanvas(): already initialized, skipping');
       return;
     }
     
     const width = window.innerWidth;
     const height = Math.max(window.innerHeight, document.documentElement.scrollHeight || 0);
+    console.log('initCanvas(): setting canvas dimensions to', width, 'x', height);
     canvas.width = width * 2;
     canvas.height = height * 2;
     canvas.style.width = `${width}px`;
@@ -698,13 +704,15 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       context.lineCap = 'round';
       context.lineJoin = 'round';
       contextRef.current = context;
+      isInitialized.current = true;
+      console.log('initCanvas(): canvas initialized successfully');
+    } else {
+      console.error('initCanvas(): failed to get canvas context');
     }
   }, []);
 
   useEffect(() => {
     initCanvas();
-    // Note: Removed resize listener to preserve drawings
-    // Canvas will maintain its initial size
   }, [initCanvas]);
 
   const getCoordinates = (e: MouseEvent | TouchEvent): { x: number; y: number } => {
@@ -717,6 +725,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   };
 
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    console.log('startDrawing() called, drawMode:', drawMode);
     let currentMode = drawMode;
     if ((e as React.TouchEvent).touches && (e as React.TouchEvent).touches.length > 0) {
       const touch = (e as React.TouchEvent).touches[0];
@@ -731,10 +740,14 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         }
       }
     }
-    if (!currentMode) return;
+    if (!currentMode) {
+      console.warn('startDrawing(): currentMode is null, returning');
+      return;
+    }
     const { x, y } = getCoordinates(
       e as unknown as MouseEvent | TouchEvent
     );
+    console.log('startDrawing(): x=', x, 'y=', y, 'contextRef:', contextRef.current ? 'set' : 'null', 'currentMode:', currentMode);
     if (contextRef.current) {
       contextRef.current.beginPath();
       contextRef.current.moveTo(x, y);
@@ -742,12 +755,14 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         contextRef.current.globalCompositeOperation = 'source-over';
         contextRef.current.strokeStyle = pencilColor;
         contextRef.current.lineWidth = pencilWidth;
+        console.log('startDrawing(): pencil mode, color=', pencilColor, 'width=', pencilWidth);
       } else {
         contextRef.current.globalCompositeOperation = 'destination-out';
         contextRef.current.lineWidth = eraserWidth * 2.5;
       }
     }
     isDrawing.current = true;
+    console.log('startDrawing(): isDrawing set to true');
   };
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
@@ -766,13 +781,18 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         }
       }
     }
-    if (!drawMode) return;
+    if (!drawMode) {
+      console.warn('draw(): drawMode is', drawMode, 'isDrawing:', isDrawing.current);
+      return;
+    }
     const { x, y } = getCoordinates(
       e as unknown as MouseEvent | TouchEvent
     );
+    console.log('draw(): x=', x, 'y=', y, 'contextRef:', contextRef.current ? 'set' : 'null');
     if (contextRef.current) {
       contextRef.current.lineTo(x, y);
       contextRef.current.stroke();
+      console.log('draw(): stroke called');
     }
     if ((e as React.TouchEvent).touches) e.preventDefault();
   };
