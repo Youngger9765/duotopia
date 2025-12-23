@@ -789,7 +789,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       <canvas
         ref={canvasRef}
         className={`absolute top-0 left-0 z-10 ${
-          drawMode ? 'cursor-crosshair touch-none' : 'pointer-events-none'
+          drawMode ? 'cursor-crosshair touch-none pointer-events-auto' : 'pointer-events-none'
         }`}
         onMouseDown={startDrawing}
         onMouseMove={draw}
