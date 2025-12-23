@@ -28,6 +28,17 @@ const TimerTool: React.FC<{
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hasInitializedTimerPos = useRef(false);
+
+  // Initialize timer position to center when first shown
+  useEffect(() => {
+    if (show && !hasInitializedTimerPos.current) {
+      const centerX = window.innerWidth / 2 - 150;
+      const centerY = window.innerHeight / 2 - 150;
+      setTimerPos({ x: centerX, y: centerY });
+      hasInitializedTimerPos.current = true;
+    }
+  }, [show]);
 
   // 初始化音效
   useEffect(() => {
