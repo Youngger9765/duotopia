@@ -3,6 +3,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DigitalTeachingToolbar from '../DigitalTeachingToolbar';
 
+// Mock i18n useTranslation hook
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: {
+      language: 'zh-TW',
+    },
+  }),
+}));
+
 describe('DigitalTeachingToolbar', () => {
   beforeEach(() => {
     // Mock canvas for testing
@@ -168,7 +178,7 @@ describe('DigitalTeachingToolbar', () => {
       const pencilButton = screen.getByLabelText('Pencil');
 
       await user.dblClick(pencilButton);
-      expect(screen.getByText('畫筆設定')).toBeInTheDocument();
+      expect(screen.getByText('teachingTools.pencil.settings')).toBeInTheDocument();
     });
 
     it('should open eraser settings on double click', async () => {
@@ -177,7 +187,7 @@ describe('DigitalTeachingToolbar', () => {
       const eraserButton = screen.getByLabelText('Eraser');
 
       await user.dblClick(eraserButton);
-      expect(screen.getByText('橡皮擦設定')).toBeInTheDocument();
+      expect(screen.getByText('teachingTools.eraser.settings')).toBeInTheDocument();
     });
 
     it('should allow color selection in pencil settings', async () => {
@@ -194,7 +204,7 @@ describe('DigitalTeachingToolbar', () => {
       render(<DigitalTeachingToolbar />);
       await user.dblClick(screen.getByLabelText('Eraser'));
 
-      expect(screen.getByText('清除畫布')).toBeInTheDocument();
+      expect(screen.getByText('teachingTools.eraser.clearCanvas')).toBeInTheDocument();
     });
   });
 
