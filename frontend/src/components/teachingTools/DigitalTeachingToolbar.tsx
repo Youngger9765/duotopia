@@ -669,6 +669,10 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const [eraserWidth, setEraserWidth] = useState(20);
   const [showPencilSettings, setShowPencilSettings] = useState(false);
   const [showEraserSettings, setShowEraserSettings] = useState(false);
+  const [canvasWidth, setCanvasWidth] = useState(window.innerWidth);
+  const [canvasHeight, setCanvasHeight] = useState(
+    Math.max(window.innerHeight, document.documentElement.scrollHeight || 0)
+  );
 
   const previousModeBeforePalm = useRef<'pencil' | 'eraser' | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -684,25 +688,14 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       return;
     }
     
-    // Only initialize once to preserve drawings
+    // Only initialize context once to preserve drawings
     if (isInitialized.current) {
-      console.log('initCanvas(): already initialized, skipping');
+      console.log('initCanvas(): context already initialized, skipping');
       return;
     }
     
     const dpr = window.devicePixelRatio || 1;
-    const width = window.innerWidth;
-    const height = Math.max(window.innerHeight, document.documentElement.scrollHeight || 0);
-    
-    console.log('initCanvas(): width=', width, 'height=', height, 'dpr=', dpr);
-    
-    // Set canvas physical dimensions
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    
-    // Set canvas display dimensions (CSS)
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+    console.log('initCanvas(): initializing context with dpr=', dpr, 'canvas dimensions=', canvas.width, 'x', canvas.height);
     
     const context = canvas.getContext('2d');
     if (context) {
@@ -712,25 +705,34 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       context.lineJoin = 'round';
       contextRef.current = context;
       isInitialized.current = true;
-      
-      // Set a transparent background (optional - for debugging, comment out after testing)
-      // context.fillStyle = 'rgba(255, 0, 0, 0.02)';
-      // context.fillRect(0, 0, width, height);
-      
-      console.log('initCanvas(): canvas initialized successfully with scale', dpr, 'and dimensions', width, 'x', height);
+      console.log('initCanvas(): context initialized successfully');
     } else {
       console.error('initCanvas(): failed to get canvas context');
     }
   }, []);
 
   useEffect(() => {
+    // Update canvas dimensions state when window resizes
+    const handleResize = () => {
+      setCanvasWidth(window.innerWidth);
+      setCanvasHeight(
+        Math.max(window.innerHeight, document.documentElement.scrollHeight || 0)
+      );
+      console.log('Canvas resized to', window.innerWidth, 'x', window.innerHeight);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
     initCanvas();
-    console.log('DrawingCanvas mounted/re-rendered');
+    console.log('DrawingCanvas mounted/re-rendered, canvas:', canvasWidth, 'x', canvasHeight);
     
     return () => {
       console.log('DrawingCanvas unmounting');
     };
-  }, [initCanvas]);
+  }, [initCanvas, canvasWidth, canvasHeight]);
 
   const getCoordinates = (e: MouseEvent | TouchEvent): { x: number; y: number } => {
     const canvas = canvasRef.current;
@@ -839,9 +841,12 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     <div ref={containerRef} className="fixed inset-0 pointer-events-none">
       <canvas
         ref={canvasRef}
+        width={canvasWidth * (window.devicePixelRatio || 1)}
+        height={canvasHeight * (window.devicePixelRatio || 1)}
         className={`fixed inset-0 z-[130] ${
           drawMode ? 'cursor-crosshair touch-none pointer-events-auto' : 'pointer-events-none'
         }`}
+        style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px` }}
         onMouseDown={startDrawing}
         onMouseMove={draw}
         onMouseUp={stopDrawing}
