@@ -721,7 +721,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const rect = canvas.getBoundingClientRect();
     const clientX = (e as TouchEvent).touches ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
     const clientY = (e as TouchEvent).touches ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY;
-    return { x: clientX - rect.left, y: clientY - rect.top };
+    // Canvas is scaled by 2x, so coordinates need to be multiplied by 2
+    const x = (clientX - rect.left) * 2;
+    const y = (clientY - rect.top) * 2;
+    console.log('getCoordinates(): raw=', clientX - rect.left, clientY - rect.top, '-> scaled=', x, y);
+    return { x, y };
   };
 
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
