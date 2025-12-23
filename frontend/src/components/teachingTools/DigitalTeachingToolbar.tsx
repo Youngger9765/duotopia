@@ -713,16 +713,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       contextRef.current = context;
       isInitialized.current = true;
       
-      // Draw a test line to verify canvas is working
-      context.strokeStyle = '#0000ff';
-      context.lineWidth = 2;
-      context.beginPath();
-      context.moveTo(10, 10);
-      context.lineTo(50, 10);
-      context.stroke();
-      console.log('initCanvas(): drew test line at (10,10) to (50,10) in blue');
+      // Set a transparent background (optional - for debugging, comment out after testing)
+      // context.fillStyle = 'rgba(255, 0, 0, 0.02)';
+      // context.fillRect(0, 0, width, height);
       
-      console.log('initCanvas(): canvas initialized successfully with scale', dpr);
+      console.log('initCanvas(): canvas initialized successfully with scale', dpr, 'and dimensions', width, 'x', height);
     } else {
       console.error('initCanvas(): failed to get canvas context');
     }
@@ -841,10 +836,10 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const colors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#000000', '#8b5cf6', '#ec4899', '#64748b'];
 
   return (
-    <div ref={containerRef} className="relative w-full h-full pointer-events-none">
+    <div ref={containerRef} className="fixed inset-0 pointer-events-none">
       <canvas
         ref={canvasRef}
-        className={`absolute top-0 left-0 z-[130] ${
+        className={`fixed inset-0 z-[130] ${
           drawMode ? 'cursor-crosshair touch-none pointer-events-auto' : 'pointer-events-none'
         }`}
         onMouseDown={startDrawing}
