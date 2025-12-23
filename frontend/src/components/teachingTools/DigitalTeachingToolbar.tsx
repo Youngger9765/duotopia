@@ -407,6 +407,13 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
     rollTimerRef.current = setTimeout(() => {
       setDiceValue(newValue);
       setIsRolling(false);
+      
+      // Reset rotation to target value (without 1440 offset) for next roll
+      // This ensures next animation starts from same baseline
+      setRotation({
+        x: targetRotations[newValue].x,
+        y: targetRotations[newValue].y,
+      });
     }, 700);
   };
 
