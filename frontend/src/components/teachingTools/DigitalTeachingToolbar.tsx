@@ -355,7 +355,7 @@ const TimerTool: React.FC<{
 
       <div className="absolute inset-0 pointer-events-none transition-opacity">
         <div
-          className="resize-handle pointer-events-auto absolute -right-2 -bottom-2 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full border-2 border-white shadow-lg cursor-nwse-resize transition-all"
+          className="resize-handle pointer-events-auto absolute -right-2 -bottom-2 w-2.5 h-2.5 bg-blue-500 hover:bg-blue-600 rounded-full border border-white shadow-lg cursor-nwse-resize transition-all"
           onMouseDown={(e) => startResize(e, setTimerScale, timerScale)}
           onTouchStart={(e) => startResize(e, setTimerScale, timerScale)}
         />
@@ -604,7 +604,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
     >
       <div className="absolute inset-0 pointer-events-none transition-opacity">
         <div
-          className="resize-handle pointer-events-auto absolute -right-2 -bottom-2 w-6 h-6 bg-indigo-500 hover:bg-indigo-600 rounded-full border-2 border-white shadow-lg cursor-nwse-resize transition-all"
+          className="resize-handle pointer-events-auto absolute -right-2 -bottom-2 w-2.5 h-2.5 bg-indigo-500 hover:bg-indigo-600 rounded-full border border-white shadow-lg cursor-nwse-resize transition-all"
           onMouseDown={(e) => startResize(e, setDiceScale, diceScale)}
           onTouchStart={(e) => startResize(e, setDiceScale, diceScale)}
         />
