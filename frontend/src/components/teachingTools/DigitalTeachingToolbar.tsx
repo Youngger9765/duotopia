@@ -949,12 +949,14 @@ const DigitalTeachingToolbar: React.FC = () => {
 
   return (
     <div className="fixed inset-0 pointer-events-none z-[140]">
-      <DrawingCanvas
-        onToggleTimer={handleToggleTimer}
-        onToggleDice={handleToggleDice}
-        isTimerOpen={showTimer}
-        isDiceOpen={showDice}
-      />
+      <div className="relative w-full h-full">
+        <DrawingCanvas
+          onToggleTimer={handleToggleTimer}
+          onToggleDice={handleToggleDice}
+          isTimerOpen={showTimer}
+          isDiceOpen={showDice}
+        />
+      </div>
 
       <div className="pointer-events-auto">
         <TimerTool
