@@ -374,10 +374,11 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
   }, [show]);
 
   const rollDice = () => {
-    if (rollTimerRef.current) clearTimeout(rollTimerRef.current);
+    // Prevent overlapping rolls
+    if (isRolling) return;
     
-    // Reset rotation to baseline before each roll for consistent animation
-    setRotation({ x: 0, y: 0 });
+    // Clear any pending timeouts
+    if (rollTimerRef.current) clearTimeout(rollTimerRef.current);
     
     setIsRolling(true);
     const newValue = Math.floor(Math.random() * 6) + 1;
@@ -393,18 +394,20 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
       6: { x: 90, y: 0 },
     };
     
-    // Use setTimeout to ensure rotation reset is applied before animation
-    rollTimerRef.current = setTimeout(() => {
+    // Use a microtask to ensure state updates batch properly
+    queueMicrotask(() => {
       setRotation({
         x: targetRotations[newValue].x + 1440,
         y: targetRotations[newValue].y + 1440,
       });
-    }, 10);
+    });
     
+    // Wait for CSS animation to complete (700ms) before updating dice value
+    // This prevents visual glitches from state updates during animation
     rollTimerRef.current = setTimeout(() => {
       setDiceValue(newValue);
       setIsRolling(false);
-    }, 810);
+    }, 700);
   };
 
   const DieFace: React.FC<{
