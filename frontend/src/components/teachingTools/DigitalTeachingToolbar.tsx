@@ -358,6 +358,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
   const [diceValue, setDiceValue] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
+  const [enableTransition, setEnableTransition] = useState(true);
   const [diceScale, setDiceScale] = useState(1);
   const [dicePos, setDicePos] = useState<{ x: number; y: number } | null>(null);
 
@@ -394,25 +395,29 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
       6: { x: 90, y: 0 },
     };
     
-    // Use a microtask to ensure state updates batch properly
-    queueMicrotask(() => {
-      setRotation({
-        x: targetRotations[newValue].x + 1440,
-        y: targetRotations[newValue].y + 1440,
-      });
+    // Enable transition for animation
+    setEnableTransition(true);
+    
+    // Set rotation with 1440 offset for smooth rolling animation
+    setRotation({
+      x: targetRotations[newValue].x + 1440,
+      y: targetRotations[newValue].y + 1440,
     });
     
-    // Wait for CSS animation to complete (700ms) before updating dice value
-    // This prevents visual glitches from state updates during animation
+    // Wait for CSS animation to complete (700ms)
     rollTimerRef.current = setTimeout(() => {
       setDiceValue(newValue);
       setIsRolling(false);
       
-      // Reset rotation to target value (without 1440 offset) for next roll
-      // This ensures next animation starts from same baseline
-      setRotation({
-        x: targetRotations[newValue].x,
-        y: targetRotations[newValue].y,
+      // Disable transition temporarily to reset rotation without animation
+      setEnableTransition(false);
+      
+      // Reset rotation to target value for next roll
+      requestAnimationFrame(() => {
+        setRotation({
+          x: targetRotations[newValue].x,
+          y: targetRotations[newValue].y,
+        });
       });
     }, 700);
   };
@@ -614,7 +619,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div
-          className="relative w-full h-full transition-transform duration-700 ease-out"
+          className={`relative w-full h-full ${enableTransition ? 'transition-transform duration-700 ease-out' : ''}`}
           style={{
             transformStyle: 'preserve-3d',
             transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
