@@ -1928,8 +1928,6 @@ export default function StudentActivityPageContent({
                             <button
                               key={itemIndex}
                               onClick={() => {
-                                // 🎯 Issue #118: 例句朗讀模式禁止點擊跳題
-                                if (isReadingMode) return;
                                 if (isAnalyzing) return; // 🔒 分析中禁止切換
                                 if (activityIndex !== currentActivityIndex) {
                                   // 切換 activity
@@ -1951,21 +1949,18 @@ export default function StudentActivityPageContent({
                                 // 🎯 Issue #118: 例句朗讀模式顯示分析狀態（綠色=已分析）
                                 isReadingMode
                                   ? hasAssessment
-                                    ? "bg-green-100 text-green-800 border-green-400"
-                                    : "bg-white text-gray-600 border-gray-300"
+                                    ? "bg-green-100 text-green-800 border-green-400 hover:border-blue-400"
+                                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
                                   : isCompleted
                                     ? "bg-green-100 text-green-800 border-green-400"
                                     : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
                                 isActiveItem && "border-2 border-blue-600",
-                                // 🎯 Issue #118: 例句朗讀模式禁止點擊樣式
-                                isReadingMode &&
-                                  "pointer-events-none cursor-default",
                               )}
                               title={
                                 isReadingMode
                                   ? hasAssessment
-                                    ? "已分析"
-                                    : "未分析"
+                                    ? `第 ${itemIndex + 1} 題 (已分析)`
+                                    : `第 ${itemIndex + 1} 題 (未分析)`
                                   : needsCorrection
                                     ? "老師要求訂正"
                                     : isTeacherPassed
