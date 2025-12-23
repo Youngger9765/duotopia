@@ -610,8 +610,20 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
   );
 };
 
+interface DrawingCanvasProps {
+  onToggleTimer: () => void;
+  onToggleDice: () => void;
+  isTimerOpen: boolean;
+  isDiceOpen: boolean;
+}
+
 // Drawing Canvas Component
-const DrawingCanvas: React.FC = () => {
+const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
+  onToggleTimer,
+  onToggleDice,
+  isTimerOpen,
+  isDiceOpen,
+}) => {
   const { t } = useTranslation();
   const [drawMode, setDrawMode] = useState<'pencil' | 'eraser' | null>(null);
   const [pencilColor, setPencilColor] = useState('#ef4444');
@@ -751,7 +763,33 @@ const DrawingCanvas: React.FC = () => {
       />
 
       {/* 側邊工具列 */}
-      <div className="fixed right-0 top-1/2 -translate-y-1/2 flex flex-col gap-1 bg-white/90 backdrop-blur-md shadow-2xl border border-gray-200 rounded-l-xl p-1.5 z-[150]">
+      <div className="fixed right-4 top-1/2 -translate-y-1/2 flex flex-col gap-1 bg-white/90 backdrop-blur-md shadow-2xl border border-gray-200 rounded-l-xl p-1.5 z-[150] pointer-events-auto">
+        <button
+          onClick={onToggleTimer}
+          className={`p-1.5 rounded-lg transition-all duration-300 ${
+            isTimerOpen
+              ? 'bg-blue-500 text-white shadow-md'
+              : 'hover:bg-gray-100 text-blue-500'
+          }`}
+          aria-label="Timer"
+        >
+          <Timer size={16} />
+        </button>
+
+        <button
+          onClick={onToggleDice}
+          className={`p-1.5 rounded-lg transition-all duration-300 ${
+            isDiceOpen
+              ? 'bg-gray-800 text-white shadow-md'
+              : 'hover:bg-gray-100 text-gray-600'
+          }`}
+          aria-label="Dice"
+        >
+          <Dice5 size={16} />
+        </button>
+
+        <div className="w-full h-px bg-gray-200 my-1" />
+
         <div className="relative">
           <button
             onClick={() => setDrawMode(drawMode === 'pencil' ? null : 'pencil')}
@@ -863,44 +901,30 @@ const DigitalTeachingToolbar: React.FC = () => {
   const [showTimer, setShowTimer] = useState(false);
   const [showDice, setShowDice] = useState(false);
 
-  return (
-    <div className="relative w-full h-full">
-      <DrawingCanvas />
+  const handleToggleTimer = () => {
+    setShowTimer((prev) => {
+      const next = !prev;
+      if (next) setShowDice(false);
+      return next;
+    });
+  };
 
-      {/* 側邊工具列 */}
-      <div className="fixed right-0 top-1/2 -translate-y-1/2 flex flex-col gap-1 bg-white/90 backdrop-blur-md shadow-2xl border border-gray-200 rounded-l-xl p-1.5 z-[150]">
-        <button
-          onClick={() => {
-            const newShow = !showTimer;
-            setShowTimer(newShow);
-            if (newShow) setShowDice(false);
-          }}
-          className={`p-1.5 rounded-lg transition-all duration-300 ${
-            showTimer
-              ? 'bg-blue-500 text-white shadow-md'
-              : 'hover:bg-gray-100 text-blue-500'
-          }`}
-          aria-label="Timer"
-        >
-          <Timer size={16} />
-        </button>
-        <button
-          onClick={() => {
-            const newShow = !showDice;
-            setShowDice(newShow);
-            if (newShow) setShowTimer(false);
-          }}
-          className={`p-1.5 rounded-lg transition-all duration-300 ${
-            showDice
-              ? 'bg-gray-800 text-white shadow-md'
-              : 'hover:bg-gray-100 text-gray-600'
-          }`}
-          aria-label="Dice"
-        >
-          <Dice5 size={16} />
-        </button>
-        <div className="w-full h-px bg-gray-200 my-1" />
-      </div>
+  const handleToggleDice = () => {
+    setShowDice((prev) => {
+      const next = !prev;
+      if (next) setShowTimer(false);
+      return next;
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[140]">
+      <DrawingCanvas
+        onToggleTimer={handleToggleTimer}
+        onToggleDice={handleToggleDice}
+        isTimerOpen={showTimer}
+        isDiceOpen={showDice}
+      />
 
       <TimerTool
         show={showTimer}
