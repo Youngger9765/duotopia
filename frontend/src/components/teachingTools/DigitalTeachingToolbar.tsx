@@ -675,22 +675,43 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDrawing = useRef(false);
+  const imageDataRef = useRef<ImageData | null>(null);
 
   const initCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    
+    // Save current canvas content before resizing
+    const context = canvas.getContext('2d');
+    if (context && canvas.width > 0 && canvas.height > 0) {
+      try {
+        imageDataRef.current = context.getImageData(0, 0, canvas.width, canvas.height);
+      } catch (e) {
+        console.log('Could not save canvas data:', e);
+      }
+    }
+    
     const width = window.innerWidth;
     const height = Math.max(window.innerHeight, containerRef.current?.scrollHeight || 0);
     canvas.width = width * 2;
     canvas.height = height * 2;
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
-    const context = canvas.getContext('2d');
+    
     if (context) {
       context.scale(2, 2);
       context.lineCap = 'round';
       context.lineJoin = 'round';
       contextRef.current = context;
+      
+      // Restore saved content if available
+      if (imageDataRef.current) {
+        try {
+          context.putImageData(imageDataRef.current, 0, 0);
+        } catch (e) {
+          console.log('Could not restore canvas data:', e);
+        }
+      }
     }
   }, []);
 
