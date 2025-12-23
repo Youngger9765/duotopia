@@ -831,10 +831,10 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const colors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#000000', '#8b5cf6', '#ec4899', '#64748b'];
 
   return (
-    <div ref={containerRef} className="relative w-full h-full">
+    <div ref={containerRef} className="relative w-full h-full pointer-events-none">
       <canvas
         ref={canvasRef}
-        className={`absolute top-0 left-0 z-10 ${
+        className={`absolute top-0 left-0 z-[130] ${
           drawMode ? 'cursor-crosshair touch-none pointer-events-auto' : 'pointer-events-none'
         }`}
         onMouseDown={startDrawing}
