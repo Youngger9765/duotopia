@@ -690,22 +690,29 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       return;
     }
     
+    const dpr = window.devicePixelRatio || 1;
     const width = window.innerWidth;
     const height = Math.max(window.innerHeight, document.documentElement.scrollHeight || 0);
-    console.log('initCanvas(): setting canvas dimensions to', width, 'x', height);
-    canvas.width = width * 2;
-    canvas.height = height * 2;
+    
+    console.log('initCanvas(): width=', width, 'height=', height, 'dpr=', dpr);
+    
+    // Set canvas physical dimensions
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    
+    // Set canvas display dimensions (CSS)
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
     
     const context = canvas.getContext('2d');
     if (context) {
-      context.scale(2, 2);
+      // Scale to account for device pixel ratio
+      context.scale(dpr, dpr);
       context.lineCap = 'round';
       context.lineJoin = 'round';
       contextRef.current = context;
       isInitialized.current = true;
-      console.log('initCanvas(): canvas initialized successfully');
+      console.log('initCanvas(): canvas initialized successfully with scale', dpr);
     } else {
       console.error('initCanvas(): failed to get canvas context');
     }
@@ -713,6 +720,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
   useEffect(() => {
     initCanvas();
+    console.log('DrawingCanvas mounted/re-rendered');
+    
+    return () => {
+      console.log('DrawingCanvas unmounting');
+    };
   }, [initCanvas]);
 
   const getCoordinates = (e: MouseEvent | TouchEvent): { x: number; y: number } => {
@@ -721,15 +733,18 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const rect = canvas.getBoundingClientRect();
     const clientX = (e as TouchEvent).touches ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
     const clientY = (e as TouchEvent).touches ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY;
-    // Canvas is scaled by 2x, so coordinates need to be multiplied by 2
-    const x = (clientX - rect.left) * 2;
-    const y = (clientY - rect.top) * 2;
-    console.log('getCoordinates(): raw=', clientX - rect.left, clientY - rect.top, '-> scaled=', x, y);
+    // Coordinates are relative to CSS display size, scale(2,2) will handle the transformation
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    console.log('getCoordinates(): x=', x, 'y=', y, 'rect:', rect.width, 'x', rect.height);
     return { x, y };
   };
 
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-    console.log('startDrawing() called, drawMode:', drawMode);
+    const canvas = canvasRef.current;
+    const context = contextRef.current;
+    console.log('startDrawing() called, drawMode:', drawMode, 'canvas:', canvas ? `${canvas.width}x${canvas.height}` : 'null', 'context:', context ? 'set' : 'null');
+    
     let currentMode = drawMode;
     if ((e as React.TouchEvent).touches && (e as React.TouchEvent).touches.length > 0) {
       const touch = (e as React.TouchEvent).touches[0];
