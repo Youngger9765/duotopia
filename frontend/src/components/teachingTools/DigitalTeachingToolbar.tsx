@@ -714,19 +714,55 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   useEffect(() => {
     // Update canvas dimensions state when window resizes
     const handleResize = () => {
-      setCanvasWidth(window.innerWidth);
-      setCanvasHeight(
-        Math.max(window.innerHeight, document.documentElement.scrollHeight || 0)
-      );
-      console.log('Canvas resized to', window.innerWidth, 'x', window.innerHeight);
+      const canvas = canvasRef.current;
+      const context = contextRef.current;
+      
+      // Save current canvas content before resizing
+      let savedImageData: ImageData | null = null;
+      if (canvas && context && canvas.width > 0 && canvas.height > 0) {
+        try {
+          savedImageData = context.getImageData(0, 0, canvas.width, canvas.height);
+          console.log('handleResize(): saved canvas content');
+        } catch (e) {
+          console.warn('handleResize(): failed to save canvas content', e);
+        }
+      }
+      
+      const newWidth = window.innerWidth;
+      const newHeight = Math.max(window.innerHeight, document.documentElement.scrollHeight || 0);
+      
+      console.log('handleResize(): resizing from', canvasWidth, 'x', canvasHeight, 'to', newWidth, 'x', newHeight);
+      
+      setCanvasWidth(newWidth);
+      setCanvasHeight(newHeight);
+      
+      // Restore canvas content after state update (will happen via useEffect callback)
+      if (savedImageData) {
+        // Store for restoration in next effect
+        (window as any).__savedCanvasImageData = savedImageData;
+      }
     };
     
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [canvasWidth, canvasHeight]);
 
   useEffect(() => {
     initCanvas();
+    
+    // Restore saved canvas content if it exists
+    if ((window as any).__savedCanvasImageData && contextRef.current) {
+      try {
+        const savedData = (window as any).__savedCanvasImageData;
+        const dpr = window.devicePixelRatio || 1;
+        contextRef.current.putImageData(savedData, 0, 0);
+        console.log('Canvas content restored');
+        (window as any).__savedCanvasImageData = null;
+      } catch (e) {
+        console.warn('Failed to restore canvas content', e);
+      }
+    }
+    
     console.log('DrawingCanvas mounted/re-rendered, canvas:', canvasWidth, 'x', canvasHeight);
     
     return () => {
@@ -740,10 +776,10 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const rect = canvas.getBoundingClientRect();
     const clientX = (e as TouchEvent).touches ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
     const clientY = (e as TouchEvent).touches ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY;
-    // Coordinates are relative to CSS display size, scale(2,2) will handle the transformation
+    // Coordinates are relative to CSS display size
     const x = clientX - rect.left;
     const y = clientY - rect.top;
-    console.log('getCoordinates(): x=', x, 'y=', y, 'rect:', rect.width, 'x', rect.height);
+    console.log('getCoordinates(): clientX=', clientX, 'clientY=', clientY, 'rect.left=', rect.left, 'rect.top=', rect.top, 'x=', x, 'y=', y, 'canvasWidth=', canvasWidth, 'canvasHeight=', canvasHeight);
     return { x, y };
   };
 
