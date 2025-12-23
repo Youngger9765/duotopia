@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import DigitalTeachingToolbar from "@/components/teachingTools/DigitalTeachingToolbar";
 import {
   BookOpen,
   Home,
@@ -303,7 +302,6 @@ export default function StudentLayout() {
 
         {/* Page Content */}
         <main className="flex-1 overflow-auto relative">
-          <DigitalTeachingToolbar />
           <Outlet />
         </main>
       </div>

@@ -29,6 +29,19 @@
     "yes": "是",
     "no": "否"
   },
+  "teachingTools": {
+    "pencil": {
+      "settings": "畫筆設定",
+      "thickness": "粗細",
+      "thicknessValue": "粗細: {{value}}px"
+    },
+    "eraser": {
+      "settings": "橡皮擦設定",
+      "size": "大小",
+      "sizeValue": "大小: {{value}}px",
+      "clearCanvas": "清除畫布"
+    }
+  },
   "rearrangement": {
     "loading": "正在載入題目...",
     "noQuestions": "目前沒有需要練習的題目",

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import DigitalTeachingToolbar from './DigitalTeachingToolbar';
+import DigitalTeachingToolbar from '../DigitalTeachingToolbar';
 
 describe('DigitalTeachingToolbar', () => {
   beforeEach(() => {
@@ -220,6 +220,31 @@ describe('DigitalTeachingToolbar', () => {
       expect(screen.getByLabelText('Dice')).toBeInTheDocument();
       expect(screen.getByLabelText('Pencil')).toBeInTheDocument();
       expect(screen.getByLabelText('Eraser')).toBeInTheDocument();
+    });
+  });
+
+  describe('i18n Support', () => {
+    it('should use translation keys instead of hardcoded Chinese text', async () => {
+      const user = userEvent.setup();
+      render(<DigitalTeachingToolbar />);
+      
+      // Open pencil settings
+      await user.dblClick(screen.getByLabelText('Pencil'));
+      
+      // Should use t('teachingTools.pencil.settings') instead of '畫筆設定'
+      expect(screen.queryByText('teachingTools.pencil.settings')).toBeInTheDocument();
+      
+      // Close pencil settings
+      await user.click(screen.getAllByRole('button')[0]); // Close button
+      
+      // Open eraser settings
+      await user.dblClick(screen.getByLabelText('Eraser'));
+      
+      // Should use t('teachingTools.eraser.settings') instead of '橡皮擦設定'
+      expect(screen.queryByText('teachingTools.eraser.settings')).toBeInTheDocument();
+      
+      // Should use t('teachingTools.eraser.clearCanvas') instead of '清除畫布'
+      expect(screen.queryByText('teachingTools.eraser.clearCanvas')).toBeInTheDocument();
     });
   });
 });

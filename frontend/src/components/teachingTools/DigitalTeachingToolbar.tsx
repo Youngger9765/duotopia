@@ -10,6 +10,7 @@ import {
   Pencil,
   Eraser,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import './styles/toolbar.css';
 
 // Timer Component
@@ -611,6 +612,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
 
 // Drawing Canvas Component
 const DrawingCanvas: React.FC = () => {
+  const { t } = useTranslation();
   const [drawMode, setDrawMode] = useState<'pencil' | 'eraser' | null>(null);
   const [pencilColor, setPencilColor] = useState('#ef4444');
   const [pencilWidth, setPencilWidth] = useState(3);
@@ -769,7 +771,7 @@ const DrawingCanvas: React.FC = () => {
           {showPencilSettings && (
             <div className="settings-panel absolute right-full mr-2 top-0 bg-white shadow-xl border border-gray-200 rounded-xl p-3 flex flex-col gap-3 min-w-[120px]">
               <div className="flex justify-between items-center text-[10px] font-bold text-gray-400">
-                <span>畫筆設定</span>
+                <span>{t('teachingTools.pencil.settings')}</span>
                 <button onClick={() => setShowPencilSettings(false)}>
                   <X size={12} />
                 </button>
@@ -788,7 +790,7 @@ const DrawingCanvas: React.FC = () => {
                 ))}
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] text-gray-500">粗細: {pencilWidth}px</span>
+                <span className="text-[10px] text-gray-500">{t('teachingTools.pencil.thicknessValue', { value: pencilWidth })}</span>
                 <input
                   type="range"
                   min="1"
@@ -821,13 +823,13 @@ const DrawingCanvas: React.FC = () => {
           {showEraserSettings && (
             <div className="settings-panel absolute right-full mr-2 top-0 bg-white shadow-xl border border-gray-200 rounded-xl p-3 flex flex-col gap-3 min-w-[120px]">
               <div className="flex justify-between items-center text-[10px] font-bold text-gray-400">
-                <span>橡皮擦設定</span>
+                <span>{t('teachingTools.eraser.settings')}</span>
                 <button onClick={() => setShowEraserSettings(false)}>
                   <X size={12} />
                 </button>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] text-gray-500">大小: {eraserWidth}px</span>
+                <span className="text-[10px] text-gray-500">{t('teachingTools.eraser.sizeValue', { value: eraserWidth })}</span>
                 <input
                   type="range"
                   min="5"
@@ -846,7 +848,7 @@ const DrawingCanvas: React.FC = () => {
                 }}
                 className="text-[10px] bg-gray-100 hover:bg-red-50 py-1 rounded text-red-500 font-bold border border-red-100"
               >
-                清除畫布
+                {t('teachingTools.eraser.clearCanvas')}
               </button>
             </div>
           )}
