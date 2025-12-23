@@ -375,6 +375,10 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
 
   const rollDice = () => {
     if (rollTimerRef.current) clearTimeout(rollTimerRef.current);
+    
+    // Reset rotation to baseline before each roll for consistent animation
+    setRotation({ x: 0, y: 0 });
+    
     setIsRolling(true);
     const newValue = Math.floor(Math.random() * 6) + 1;
     const targetRotations: Record<
@@ -388,14 +392,19 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
       5: { x: -90, y: 0 },
       6: { x: 90, y: 0 },
     };
-    setRotation({
-      x: targetRotations[newValue].x + 1440,
-      y: targetRotations[newValue].y + 1440,
-    });
+    
+    // Use setTimeout to ensure rotation reset is applied before animation
+    rollTimerRef.current = setTimeout(() => {
+      setRotation({
+        x: targetRotations[newValue].x + 1440,
+        y: targetRotations[newValue].y + 1440,
+      });
+    }, 10);
+    
     rollTimerRef.current = setTimeout(() => {
       setDiceValue(newValue);
       setIsRolling(false);
-    }, 800);
+    }, 810);
   };
 
   const DieFace: React.FC<{
