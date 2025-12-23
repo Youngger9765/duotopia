@@ -902,19 +902,11 @@ const DigitalTeachingToolbar: React.FC = () => {
   const [showDice, setShowDice] = useState(false);
 
   const handleToggleTimer = () => {
-    setShowTimer((prev) => {
-      const next = !prev;
-      if (next) setShowDice(false);
-      return next;
-    });
+    setShowTimer((prev) => !prev);
   };
 
   const handleToggleDice = () => {
-    setShowDice((prev) => {
-      const next = !prev;
-      if (next) setShowTimer(false);
-      return next;
-    });
+    setShowDice((prev) => !prev);
   };
 
   return (
@@ -926,14 +918,18 @@ const DigitalTeachingToolbar: React.FC = () => {
         isDiceOpen={showDice}
       />
 
-      <TimerTool
-        show={showTimer}
-        onClose={() => setShowTimer(false)}
-      />
-      <DiceTool
-        show={showDice}
-        onClose={() => setShowDice(false)}
-      />
+      <div className="pointer-events-auto">
+        <TimerTool
+          show={showTimer}
+          onClose={() => setShowTimer(false)}
+        />
+      </div>
+      <div className="pointer-events-auto">
+        <DiceTool
+          show={showDice}
+          onClose={() => setShowDice(false)}
+        />
+      </div>
     </div>
   );
 };
