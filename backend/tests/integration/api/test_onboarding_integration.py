@@ -110,7 +110,7 @@ class TestOnboardingIntegrationBasic:
 
         assert student is not None
         assert student.name == "Bruce"
-        assert student.birthdate == date(2010, 1, 1)
+        assert student.birthdate == date(2012, 1, 1)
 
         # Verify student enrolled in classroom
         enrollment = (

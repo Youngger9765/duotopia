@@ -106,7 +106,7 @@ class TestCreateDefaultStudent:
 
         # Verify student properties
         assert student.name == "Bruce"
-        assert student.birthdate == date(2010, 1, 1)
+        assert student.birthdate == date(2012, 1, 1)
         assert student.email is None
         assert student.password_hash is not None
 
@@ -276,6 +276,9 @@ class TestSimulateStudentSubmission:
         mock_db = Mock(spec=Session)
         # Mock query to return empty results (simulates unit test without real DB)
         mock_db.query.return_value.filter.return_value.first.return_value = None
+        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = (
+            []
+        )
         service = OnboardingService(db=mock_db)
 
         assignment = Mock(spec=Assignment, id=1)

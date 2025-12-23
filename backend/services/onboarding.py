@@ -23,6 +23,7 @@ from models import (
     Assignment,
     AssignmentContent,
     StudentAssignment,
+    StudentContentProgress,
     StudentItemProgress,
     ProgramLevel,
     ContentType,
@@ -118,9 +119,9 @@ class OnboardingService:
         Returns:
             Created Student instance
         """
-        # Create student with birthdate 2010-01-01 (as per tests)
-        birthdate = date(2010, 1, 1)
-        default_password = birthdate.strftime("%Y%m%d")  # "20100101"
+        # Create student with birthdate 2012-01-01
+        birthdate = date(2012, 1, 1)
+        default_password = birthdate.strftime("%Y%m%d")  # "20120101"
 
         student = Student(
             name=self.DEFAULT_STUDENT_NAME,
@@ -342,59 +343,75 @@ class OnboardingService:
 
         # Get content items from assignment (only for integration tests)
         try:
-            assignment_content = (
+            assignment_contents = (
                 self.db.query(AssignmentContent)
                 .filter(AssignmentContent.assignment_id == assignment.id)
-                .first()
+                .order_by(AssignmentContent.order_index)
+                .all()
             )
 
-            if not assignment_content:
+            if not assignment_contents:
                 # No content in unit tests (mocked), return early
                 logger.info(
                     f"No content found for assignment {assignment.id} (likely unit test)"
                 )
                 return student_assignment
 
-            content_items = (
-                self.db.query(ContentItem)
-                .filter(ContentItem.content_id == assignment_content.content_id)
-                .order_by(ContentItem.order_index)
-                .all()
-            )
-
-            # Create progress for each item with AI assessment
+            # Create StudentContentProgress for each AssignmentContent
+            # This is required for the get_assignment_activities API to work
             assessment_service = AssessmentService()
 
-            for item in content_items:
-                # Mock recording URL
-                mock_recording_url = (
-                    f"https://storage.googleapis.com/mock-recordings/"
-                    f"onboarding-{student.id}-{item.id}.mp3"
-                )
-
-                # Get AI scores
-                ai_scores = await assessment_service.assess_recording(
-                    mock_recording_url, item.text
-                )
-
-                # Create item progress
-                progress = StudentItemProgress(
+            for idx, ac in enumerate(assignment_contents):
+                # Create StudentContentProgress record
+                content_progress = StudentContentProgress(
                     student_assignment_id=student_assignment.id,
-                    content_item_id=item.id,
-                    recording_url=mock_recording_url,
-                    transcription=item.text,  # Mock perfect transcription
-                    submitted_at=now,
-                    accuracy_score=ai_scores["accuracy_score"],
-                    fluency_score=ai_scores["fluency_score"],
-                    pronunciation_score=ai_scores["pronunciation_score"],
-                    completeness_score=ai_scores["completeness_score"],
-                    ai_feedback="Great job! Keep practicing!",
-                    ai_assessed_at=now,
-                    status="COMPLETED",
-                    attempts=1,
+                    content_id=ac.content_id,
+                    status=AssignmentStatus.SUBMITTED,
+                    order_index=idx,
+                    score=90.0,  # Demo score
+                    completed_at=now,
+                )
+                self.db.add(content_progress)
+                self.db.flush()
+
+                # Get content items for this content
+                content_items = (
+                    self.db.query(ContentItem)
+                    .filter(ContentItem.content_id == ac.content_id)
+                    .order_by(ContentItem.order_index)
+                    .all()
                 )
 
-                self.db.add(progress)
+                for item in content_items:
+                    # Mock recording URL
+                    mock_recording_url = (
+                        f"https://storage.googleapis.com/mock-recordings/"
+                        f"onboarding-{student.id}-{item.id}.mp3"
+                    )
+
+                    # Get AI scores
+                    ai_scores = await assessment_service.assess_recording(
+                        mock_recording_url, item.text
+                    )
+
+                    # Create item progress
+                    item_progress = StudentItemProgress(
+                        student_assignment_id=student_assignment.id,
+                        content_item_id=item.id,
+                        recording_url=mock_recording_url,
+                        transcription=item.text,  # Mock perfect transcription
+                        submitted_at=now,
+                        accuracy_score=ai_scores["accuracy_score"],
+                        fluency_score=ai_scores["fluency_score"],
+                        pronunciation_score=ai_scores["pronunciation_score"],
+                        completeness_score=ai_scores["completeness_score"],
+                        ai_feedback="Great job! Keep practicing!",
+                        ai_assessed_at=now,
+                        status="COMPLETED",
+                        attempts=1,
+                    )
+
+                    self.db.add(item_progress)
 
             self.db.commit()
 
