@@ -607,7 +607,10 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
       <div
         className="dice-clickable w-20 h-20 mt-4 cursor-pointer drop-shadow-2xl"
         style={{ perspective: '800px' }}
-        onClick={rollDice}
+        onClick={(e) => {
+          e.stopPropagation();
+          rollDice();
+        }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div
