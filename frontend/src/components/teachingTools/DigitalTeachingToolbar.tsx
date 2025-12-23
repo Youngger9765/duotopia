@@ -353,9 +353,9 @@ const TimerTool: React.FC<{
         ))}
       </div>
 
-      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute inset-0 pointer-events-none transition-opacity">
         <div
-          className="resize-handle pointer-events-auto absolute -right-2 -bottom-2 w-5 h-5 bg-blue-500 rounded-full border-4 border-white shadow-lg cursor-nwse-resize"
+          className="resize-handle pointer-events-auto absolute -right-2 -bottom-2 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full border-2 border-white shadow-lg cursor-nwse-resize transition-all"
           onMouseDown={(e) => startResize(e, setTimerScale, timerScale)}
           onTouchStart={(e) => startResize(e, setTimerScale, timerScale)}
         />
@@ -602,9 +602,9 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
       onMouseDown={(e) => startDrag(e, setDicePos, dicePos)}
       onTouchStart={(e) => startDrag(e, setDicePos, dicePos)}
     >
-      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute inset-0 pointer-events-none transition-opacity">
         <div
-          className="resize-handle pointer-events-auto absolute -right-2 -bottom-2 w-5 h-5 bg-gray-800 rounded-full border-4 border-white shadow-lg cursor-nwse-resize"
+          className="resize-handle pointer-events-auto absolute -right-2 -bottom-2 w-6 h-6 bg-indigo-500 hover:bg-indigo-600 rounded-full border-2 border-white shadow-lg cursor-nwse-resize transition-all"
           onMouseDown={(e) => startResize(e, setDiceScale, diceScale)}
           onTouchStart={(e) => startResize(e, setDiceScale, diceScale)}
         />
