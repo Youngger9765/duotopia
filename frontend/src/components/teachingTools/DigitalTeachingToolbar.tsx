@@ -712,6 +712,16 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       context.lineJoin = 'round';
       contextRef.current = context;
       isInitialized.current = true;
+      
+      // Draw a test line to verify canvas is working
+      context.strokeStyle = '#0000ff';
+      context.lineWidth = 2;
+      context.beginPath();
+      context.moveTo(10, 10);
+      context.lineTo(50, 10);
+      context.stroke();
+      console.log('initCanvas(): drew test line at (10,10) to (50,10) in blue');
+      
       console.log('initCanvas(): canvas initialized successfully with scale', dpr);
     } else {
       console.error('initCanvas(): failed to get canvas context');
