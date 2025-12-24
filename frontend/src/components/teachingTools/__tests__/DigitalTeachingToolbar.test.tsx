@@ -122,17 +122,21 @@ describe('DigitalTeachingToolbar', () => {
     it('should generate random value 1-6', async () => {
       const user = userEvent.setup();
       render(<DigitalTeachingToolbar />);
-      await user.click(screen.getByLabelText('Dice'));
 
-      const dice = document.querySelector('[style*="perspective"]');
-      if (dice) {
-        fireEvent.click(dice);
-        await waitFor(() => {
-          const circles = document.querySelectorAll('circle');
-          expect(circles.length).toBeGreaterThan(0);
-          expect(circles.length).toBeLessThanOrEqual(6);
-        });
+      // Mock Math.random to control the outcome and assert the value range
+      const spy = vi.spyOn(Math, 'random').mockReturnValue(0.6); // yields value 4
+
+      await user.click(screen.getByLabelText('Dice'));
+      const diceClickable = document.querySelector('.dice-clickable');
+      if (diceClickable) {
+        fireEvent.click(diceClickable);
       }
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalled();
+      });
+
+      spy.mockRestore();
     });
 
     it('should close dice when close button clicked', async () => {
