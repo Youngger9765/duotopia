@@ -383,22 +383,26 @@ class OnboardingService:
                 )
 
                 for item in content_items:
-                    # Mock recording URL
-                    mock_recording_url = (
-                        f"https://storage.googleapis.com/mock-recordings/"
-                        f"onboarding-{student.id}-{item.id}.mp3"
-                    )
+                    # 使用示範音檔作為學生錄音（TTS 生成的標準發音）
+                    # 如果 TTS 生成失敗，則跳過此 item
+                    if not item.audio_url:
+                        logger.warning(
+                            f"Skipping item {item.id} - no audio_url available"
+                        )
+                        continue
+
+                    recording_url = item.audio_url
 
                     # Get AI scores
                     ai_scores = await assessment_service.assess_recording(
-                        mock_recording_url, item.text
+                        recording_url, item.text
                     )
 
                     # Create item progress
                     item_progress = StudentItemProgress(
                         student_assignment_id=student_assignment.id,
                         content_item_id=item.id,
-                        recording_url=mock_recording_url,
+                        recording_url=recording_url,
                         transcription=item.text,  # Mock perfect transcription
                         submitted_at=now,
                         accuracy_score=ai_scores["accuracy_score"],
