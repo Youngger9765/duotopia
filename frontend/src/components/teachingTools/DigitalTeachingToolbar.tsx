@@ -689,7 +689,7 @@ const DigitalTeachingToolbar: React.FC = () => {
           }`}
           aria-label="Timer"
         >
-          <Timer size={16} />
+          <Timer size={18} />
         </button>
 
         <button
@@ -701,7 +701,7 @@ const DigitalTeachingToolbar: React.FC = () => {
           }`}
           aria-label="Dice"
         >
-          <Dice5 size={16} />
+          <Dice5 size={18} />
         </button>
       </div>
 
