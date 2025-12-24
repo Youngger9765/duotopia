@@ -616,4 +616,83 @@ git diff --stat
 - **Code Review**: See code-reviewer.md
 
 ---
+
+## 🧪 PRE-COMMIT TESTING GUIDELINES
+
+### Mandatory Local Testing Checklist
+
+#### Backend Verification
+- [ ] Server starts without errors
+- [ ] Health endpoint responds
+- [ ] All critical services initialized
+- [ ] Database connections successful
+- [ ] Environment variables correctly loaded
+
+#### Frontend Verification
+- [ ] Application starts in development mode
+- [ ] No console errors
+- [ ] Initial routes load correctly
+- [ ] Development proxy configured
+
+### API and Integration Testing
+
+#### Endpoint Validation
+- [ ] Test ALL relevant API endpoints
+- [ ] Verify authentication/authorization
+- [ ] Check response codes and payload structures
+- [ ] Simulate various input scenarios (valid/invalid)
+
+#### End-to-End Flow Testing
+- [ ] Complete user journeys tested
+- [ ] Error states handled gracefully
+- [ ] Loading and transition states functional
+
+### Production Configuration Checks
+
+#### URL and Environment Configuration
+- [ ] Use environment-specific API URLs
+- [ ] NO hardcoded relative paths
+- [ ] `.env` files validated for each environment
+- [ ] Configuration matches deployment target
+
+### Code Quality Gates
+
+#### Pre-Commit Blocking Criteria
+If ANY of these are true, BLOCK COMMIT:
+- Local tests fail
+- Console shows errors
+- API endpoints return non-200 status
+- User requirements not fully met
+- No end-to-end flow demonstration
+
+### Automated Pre-Commit Hooks
+
+```bash
+#!/bin/bash
+# Pre-commit hook template
+
+# Backend checks
+python3 -m pytest tests/
+flake8 .
+black --check .
+
+# Frontend checks
+npm run typecheck
+npm run lint
+npm run test:unit
+
+# Integration checks
+python3 scripts/pre-commit-integration-test.py
+```
+
+### Performance Metrics
+
+- Test coverage: 90%+ required
+- Cyclomatic complexity: < 10
+- Build time: < 5 minutes
+- Test execution time: < 2 minutes
+
+---
+
 *Agent Manager - Route the right agent for the right task. Every decision matters for code quality.*
+*Pre-commit guidelines integrated 2025-12-17*

@@ -37,6 +37,7 @@ from routers import (
     files,
     programs,
     speech_assessment,
+    azure_speech_token,
     admin,
     admin_subscriptions,
     admin_monitoring,
@@ -256,6 +257,7 @@ app.include_router(unassign.router)
 app.include_router(files.router)  # 檔案服務路由
 app.include_router(programs.router)  # 課程管理路由
 app.include_router(speech_assessment.router)  # 語音評估路由
+app.include_router(azure_speech_token.router)  # Azure Speech Token 路由
 app.include_router(teacher_review.router)  # 老師批改路由
 app.include_router(admin.router)  # 管理路由
 app.include_router(admin_subscriptions.router)  # Admin 訂閱管理路由（新）

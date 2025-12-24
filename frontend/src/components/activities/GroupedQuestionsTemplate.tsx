@@ -19,7 +19,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
-import { retryAIAnalysis, retryAudioUpload } from "@/utils/retryHelper";
+import { useAzurePronunciation } from "@/hooks/useAzurePronunciation";
 
 interface Question {
   text?: string;
@@ -55,32 +55,19 @@ interface AssessmentResult {
     word: string;
     error_type?: string;
   }>;
+  // 🎯 Issue #118: 簡化 detailed_words，移除 syllables/phonemes
   detailed_words?: Array<{
     index: number;
     word: string;
     accuracy_score: number;
     error_type?: string;
-    syllables?: Array<{
-      index: number;
-      syllable: string;
-      accuracy_score: number;
-    }>;
-    phonemes?: Array<{
-      index: number;
-      phoneme: string;
-      accuracy_score: number;
-    }>;
   }>;
   reference_text?: string;
   recognized_text?: string;
+  // 🎯 Issue #118: 簡化 analysis_summary，移除 low_score_phonemes
   analysis_summary?: {
     total_words: number;
     problematic_words: string[];
-    low_score_phonemes: Array<{
-      phoneme: string;
-      score: number;
-      in_word: string;
-    }>;
     assessment_time?: string;
   };
   error_type?: string;
@@ -139,7 +126,8 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   onFileUpload,
   formatTime = (s) =>
     `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`,
-  progressId,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  progressId: _progressId, // Legacy prop (not used with Azure direct calls)
   progressIds = [], // 接收 progress_id 數組
   initialAssessmentResults,
   readOnly = false, // 唯讀模式
@@ -154,6 +142,9 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 }: GroupedQuestionsTemplateProps) {
   const { t } = useTranslation();
   const currentQuestion = items[currentQuestionIndex];
+
+  // 🚀 Azure Speech Service hook for direct API calls
+  const { analyzePronunciation } = useAzurePronunciation();
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -252,24 +243,8 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
     }
   }, [initialAssessmentResults]);
 
-  // 手機版：錄音完成後自動滾動到上傳按鈕
-  useEffect(() => {
-    const hasRecording = items[currentQuestionIndex]?.recording_url;
-    const hasNoAssessment = !assessmentResults[currentQuestionIndex];
-    const isMobile = window.innerWidth < 640; // Tailwind sm breakpoint
-
-    if (hasRecording && hasNoAssessment && !isAssessing && isMobile) {
-      // 延遲一點時間確保按鈕已渲染
-      setTimeout(() => {
-        if (uploadButtonRef.current) {
-          uploadButtonRef.current.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
-        }
-      }, 300);
-    }
-  }, [items, currentQuestionIndex, assessmentResults, isAssessing]);
+  // 🔧 Issue #118: Removed auto-analyze useEffect
+  // User now manually clicks "上傳並分析" button after recording stops
 
   // 檢查題目是否已完成 - 目前未使用
   // const isQuestionCompleted = (index: number) => {
@@ -415,7 +390,80 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // AI 發音評估
+  /**
+   * 背景上傳音檔和分析結果（不阻塞 UI）
+   */
+  const uploadAnalysisInBackground = async (
+    audioBlob: Blob,
+    analysisResult: AssessmentResult,
+    progressId: number | null,
+  ) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      const formData = new FormData();
+
+      // 根據 blob 的 MIME type 決定檔案副檔名
+      const uploadFileExtension = audioBlob.type.includes("mp4")
+        ? "recording.mp4"
+        : audioBlob.type.includes("webm")
+          ? "recording.webm"
+          : "recording.audio";
+
+      formData.append("audio_file", audioBlob, uploadFileExtension);
+      formData.append(
+        "analysis_json",
+        JSON.stringify({
+          pronunciation_score: analysisResult.pronunciation_score,
+          accuracy_score: analysisResult.accuracy_score,
+          fluency_score: analysisResult.fluency_score,
+          completeness_score: analysisResult.completeness_score,
+          words: analysisResult.words,
+        }),
+      );
+
+      if (progressId) {
+        formData.append("progress_id", progressId.toString());
+      }
+
+      // 不等待結果，立即返回（背景上傳）
+      fetch(`${apiUrl}/api/speech/upload-analysis`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            console.error(
+              "Upload failed:",
+              response.status,
+              response.statusText,
+            );
+            throw new Error(`Upload failed: ${response.status}`);
+          }
+
+          const result = await response.json();
+
+          // 通知父元件上傳成功
+          if (onUploadSuccess && result.progress_id && result.audio_url) {
+            onUploadSuccess(
+              currentQuestionIndex,
+              result.audio_url,
+              result.progress_id,
+            );
+          }
+        })
+        .catch((error) => {
+          console.error("Background upload failed:", error.message);
+          // 可選：存到 localStorage 待後續重試
+        });
+    } catch (error) {
+      console.error("Failed to prepare upload:", error);
+    }
+  };
+
+  // AI 發音評估 - 優化流程：先分析（快），再背景上傳
   const handleAssessment = async () => {
     const audioUrl = items[currentQuestionIndex]?.recording_url;
     const referenceText = currentQuestion?.text;
@@ -433,200 +481,43 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
     setIsAssessing(true);
     onAnalyzingStateChange?.(true); // 🔒 通知父元件開始分析
+
     try {
-      let gcsAudioUrl = audioUrl as string;
-      let currentProgressId =
+      const currentProgressId =
         progressIds && progressIds[currentQuestionIndex]
           ? progressIds[currentQuestionIndex]
           : null;
 
-      // 🔍 檢查是否需要上傳（如果是 blob URL）
-      // 預覽模式跳過上傳到資料庫
-      if (
-        typeof audioUrl === "string" &&
-        audioUrl.startsWith("blob:") &&
-        !isPreviewMode
-      ) {
-        toast.info(t("groupedQuestionsTemplate.messages.uploadingRecording"));
-
-        // Convert blob URL to blob
-        const response = await fetch(audioUrl as string);
-        const audioBlob = await response.blob();
-
-        // 上傳到 GCS
-        const formData = new FormData();
-        formData.append("assignment_id", assignmentId);
-        formData.append("content_item_id", contentItemId.toString());
-        // 根據 blob 的 MIME type 決定檔案副檔名
-        const uploadFileExtension = audioBlob.type.includes("mp4")
-          ? "recording.mp4"
-          : audioBlob.type.includes("webm")
-            ? "recording.webm"
-            : "recording.audio";
-        formData.append("audio_file", audioBlob, uploadFileExtension);
-
-        const apiUrl = import.meta.env.VITE_API_URL || "";
-        const uploadResult = await retryAudioUpload(
-          async () => {
-            const uploadResponse = await fetch(
-              `${apiUrl}/api/students/upload-recording`,
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-                body: formData,
-              },
-            );
-
-            if (!uploadResponse.ok) {
-              const error = new Error(
-                `Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`,
-              );
-              if (uploadResponse.status >= 500) {
-                throw error;
-              }
-              throw Object.assign(error, { noRetry: true });
-            }
-
-            return await uploadResponse.json();
-          },
-          (attempt) => {
-            toast.warning(
-              t("groupedQuestionsTemplate.messages.uploadRetrying", {
-                attempt,
-              }),
-            );
-          },
-        );
-
-        gcsAudioUrl = uploadResult.audio_url;
-        currentProgressId = uploadResult.progress_id;
-
-        // 通知父元件上傳成功
-        if (onUploadSuccess && currentProgressId) {
-          onUploadSuccess(currentQuestionIndex, gcsAudioUrl, currentProgressId);
-        }
-
-        toast.success(t("groupedQuestionsTemplate.messages.uploadSuccess"));
-      }
-
-      // 🤖 開始 AI 分析
+      // 🚀 優化流程：直接從 Blob 分析（不等上傳）
       toast.info(t("groupedQuestionsTemplate.messages.aiAnalyzing"));
 
       // Convert audio URL to blob for AI analysis
-      const response = await fetch(
-        isPreviewMode ? (audioUrl as string) : gcsAudioUrl,
-      );
+      const response = await fetch(audioUrl as string);
       const audioBlob = await response.blob();
 
-      // Create form data
-      const formData = new FormData();
-      // 根據 blob 的 MIME type 決定檔案副檔名
-      const fileExtension = audioBlob.type.includes("mp4")
-        ? "recording.mp4"
-        : audioBlob.type.includes("webm")
-          ? "recording.webm"
-          : "recording.audio";
-      formData.append("audio_file", audioBlob, fileExtension);
-      formData.append("reference_text", referenceText);
+      // 🚀 調用 Azure Speech Service（立即顯示結果）
+      const azureResult = await analyzePronunciation(audioBlob, referenceText);
 
-      // Get authentication token from store
-      if (!token) {
-        toast.error(t("groupedQuestionsTemplate.messages.relogin"));
-        return;
+      if (!azureResult) {
+        throw new Error("Azure analysis failed");
       }
 
-      const apiUrl = import.meta.env.VITE_API_URL || "";
-      let result;
+      // Convert Azure result format to our existing format
+      const result: AssessmentResult = {
+        pronunciation_score: azureResult.pronunciationScore,
+        accuracy_score: azureResult.accuracyScore,
+        fluency_score: azureResult.fluencyScore,
+        completeness_score: azureResult.completenessScore,
+        words: azureResult.words?.map((w) => ({
+          word: w.word,
+          accuracy_score: w.accuracyScore,
+          error_type: w.errorType,
+        })),
+        detailed_words: azureResult.detailed_words, // 🔥 Include detailed syllable/phoneme data
+        analysis_summary: azureResult.analysis_summary, // 🔥 Include analysis summary
+      };
 
-      // 預覽模式使用預覽 API，正常模式使用學生 API
-      if (isPreviewMode) {
-        // 預覽模式：使用老師的預覽 API，不需要 progress_id
-        result = await retryAIAnalysis(
-          async () => {
-            const assessResponse = await fetch(
-              `${apiUrl}/api/teachers/assignments/preview/assess-speech`,
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-                body: formData,
-              },
-            );
-
-            if (!assessResponse.ok) {
-              const error = new Error(
-                `AI Analysis failed: ${assessResponse.status} ${assessResponse.statusText}`,
-              );
-              if (
-                assessResponse.status >= 500 ||
-                assessResponse.status === 429
-              ) {
-                throw error;
-              }
-              throw Object.assign(error, { noRetry: true });
-            }
-
-            const data = await assessResponse.json();
-            // 預覽 API 返回格式：{ success: true, preview_mode: true, assessment: {...} }
-            return data.assessment;
-          },
-          (attempt) => {
-            toast.warning(
-              t("groupedQuestionsTemplate.messages.aiRetrying", { attempt }),
-            );
-          },
-        );
-      } else {
-        // 正常模式：使用學生 API，需要 progress_id
-        // 🔥 如果還沒有 progress_id，使用 fallback
-        if (!currentProgressId) {
-          currentProgressId = (progressId as number) || 1;
-        }
-
-        formData.append("progress_id", String(currentProgressId));
-        formData.append("item_index", String(currentQuestionIndex));
-        // 🔥 加上 assignment_id 以便後端扣除配額
-        if (assignmentId) {
-          formData.append("assignment_id", String(assignmentId));
-        }
-
-        result = await retryAIAnalysis(
-          async () => {
-            const assessResponse = await fetch(`${apiUrl}/api/speech/assess`, {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              body: formData,
-            });
-
-            if (!assessResponse.ok) {
-              const error = new Error(
-                `AI Analysis failed: ${assessResponse.status} ${assessResponse.statusText}`,
-              );
-              if (
-                assessResponse.status >= 500 ||
-                assessResponse.status === 429
-              ) {
-                throw error;
-              }
-              throw Object.assign(error, { noRetry: true });
-            }
-
-            return await assessResponse.json();
-          },
-          (attempt) => {
-            toast.warning(
-              t("groupedQuestionsTemplate.messages.aiRetrying", { attempt }),
-            );
-          },
-        );
-      }
-
-      // Store result
+      // ⚡ 立即顯示結果（用戶無需等待上傳）
       setAssessmentResults((prev) => ({
         ...prev,
         [currentQuestionIndex]: result,
@@ -638,6 +529,15 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
       }
 
       toast.success(t("groupedQuestionsTemplate.messages.assessmentComplete"));
+
+      // 🎯 背景上傳音檔和分析結果（不阻塞 UI，僅在非預覽模式）
+      if (
+        !isPreviewMode &&
+        typeof audioUrl === "string" &&
+        audioUrl.startsWith("blob:")
+      ) {
+        uploadAnalysisInBackground(audioBlob, result, currentProgressId);
+      }
     } catch (error) {
       console.error("Assessment error:", error);
       toast.error(t("groupedQuestionsTemplate.messages.assessmentFailed"));
@@ -1073,12 +973,9 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         >
           {/* AI 評估結果 */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
-            {/* 🎯 Issue #75: 只為 GCS URL 顯示 Analyze 按鈕 (不為 blob URL 顯示) */}
+            {/* 🎯 Issue #118: 有錄音就顯示 Analyze 按鈕（blob URL 或 GCS URL 都可以） */}
             {items[currentQuestionIndex]?.recording_url &&
-            !assessmentResults[currentQuestionIndex] &&
-            !(items[currentQuestionIndex]?.recording_url as string).startsWith(
-              "blob:",
-            ) ? (
+            !assessmentResults[currentQuestionIndex] ? (
               <div className="flex justify-center mb-4 py-6">
                 <Button
                   ref={uploadButtonRef}
@@ -1234,6 +1131,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                     scores={assessmentResults[currentQuestionIndex]}
                     hasRecording={true}
                     title=""
+                    isStudentView={!isPreviewMode}
                   />
                 </div>
 

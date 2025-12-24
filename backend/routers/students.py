@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import text, func, cast, Date
+from sqlalchemy import text, func, cast, Date, and_
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any  # noqa: F401
 from datetime import datetime, timedelta, timezone  # noqa: F401
@@ -46,8 +46,17 @@ router = APIRouter(prefix="/api/students", tags=["students"])
 # - SENTENCE_MAKING (legacy) → VOCABULARY_SET (new) - 單字集
 
 
-def normalize_content_type_for_response(content_type: str) -> str:
-    """將舊的 ContentType 值轉換為新值（用於 API 回傳）"""
+def normalize_content_type_for_response(content_type) -> str:
+    """將舊的 ContentType 值轉換為新值（用於 API 回傳）
+
+    🎯 Issue #118: 確保前端顯示正確的內容類型
+    - READING_ASSESSMENT → EXAMPLE_SENTENCES
+    - SENTENCE_MAKING → VOCABULARY_SET
+    """
+    # Handle None
+    if not content_type:
+        return "EXAMPLE_SENTENCES"
+
     mapping = {
         "READING_ASSESSMENT": "EXAMPLE_SENTENCES",
         "reading_assessment": "EXAMPLE_SENTENCES",
@@ -286,8 +295,61 @@ async def get_student_assignments(
         .all()
     )
 
+    # 🎯 Issue #118: 批次查詢 content_type 和 practice_mode
+    assignment_ids = [
+        a.assignment_id for a in assignments if a.assignment_id is not None
+    ]
+    content_type_map = {}
+    practice_mode_map = {}
+
+    if assignment_ids:
+        from sqlalchemy import func as sqla_func
+
+        # 查詢 practice_mode（從 Assignment 表）
+        assignment_settings = (
+            db.query(Assignment.id, Assignment.practice_mode)
+            .filter(Assignment.id.in_(assignment_ids))
+            .all()
+        )
+        practice_mode_map = {row.id: row.practice_mode for row in assignment_settings}
+
+        # 子查詢：每個作業的最小 order_index
+        min_order_subq = (
+            db.query(
+                AssignmentContent.assignment_id,
+                sqla_func.min(AssignmentContent.order_index).label("min_order"),
+            )
+            .filter(AssignmentContent.assignment_id.in_(assignment_ids))
+            .group_by(AssignmentContent.assignment_id)
+            .subquery()
+        )
+
+        # 主查詢：取得第一個內容的 type
+        first_contents = (
+            db.query(
+                AssignmentContent.assignment_id,
+                Content.type,
+            )
+            .join(Content, AssignmentContent.content_id == Content.id)
+            .join(
+                min_order_subq,
+                and_(
+                    AssignmentContent.assignment_id == min_order_subq.c.assignment_id,
+                    AssignmentContent.order_index == min_order_subq.c.min_order,
+                ),
+            )
+            .all()
+        )
+        content_type_map = {row.assignment_id: row.type for row in first_contents}
+
     result = []
     for assignment in assignments:
+        # 🎯 Issue #118: 取得並正規化 content_type
+        raw_ct = content_type_map.get(assignment.assignment_id)
+        normalized_ct = normalize_content_type_for_response(
+            raw_ct.value if hasattr(raw_ct, "value") else raw_ct
+        )
+
         result.append(
             {
                 "id": assignment.id,
@@ -311,6 +373,11 @@ async def get_student_assignments(
                 "classroom_id": assignment.classroom_id,
                 "score": assignment.score,
                 "feedback": assignment.feedback,
+                # 🎯 Issue #118: 新增 content_type 和 practice_mode
+                "content_type": normalized_ct,
+                "practice_mode": practice_mode_map.get(
+                    assignment.assignment_id, "reading"
+                ),
             }
         )
 

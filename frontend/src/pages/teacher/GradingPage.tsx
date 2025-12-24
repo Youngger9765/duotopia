@@ -63,6 +63,12 @@ interface SubmissionItem {
       accuracy_score: number;
       error_type?: string;
     }>;
+    // 🎯 Issue #118: Metadata for upload status tracking
+    _metadata?: {
+      audio_upload_status?: "success" | "failed";
+      source?: string;
+      latency_ms?: number;
+    };
   };
 }
 
@@ -1289,6 +1295,27 @@ export default function GradingPage() {
                                   <label className="text-xs font-semibold text-gray-600 mb-1 block">
                                     {t("gradingPage.labels.aiAutoScoring")}
                                   </label>
+
+                                  {/* 🎯 Issue #118: 音檔上傳異常警告 */}
+                                  {item.ai_scores?._metadata
+                                    ?.audio_upload_status === "failed" && (
+                                    <div className="flex items-center gap-2 text-amber-600 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg mb-2">
+                                      <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                                      <div>
+                                        <p className="text-xs font-medium">
+                                          {t(
+                                            "gradingPage.messages.audioUploadFailed",
+                                          )}
+                                        </p>
+                                        <p className="text-xs text-amber-500">
+                                          {t(
+                                            "gradingPage.messages.audioUploadFailedDetail",
+                                          )}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+
                                   {item.ai_scores ? (
                                     <AIScoreDisplay
                                       scores={item.ai_scores}
