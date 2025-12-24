@@ -29,19 +29,6 @@
     "yes": "Yes",
     "no": "No"
   },
-  "teachingTools": {
-    "pencil": {
-      "settings": "Pencil Settings",
-      "thickness": "Thickness",
-      "thicknessValue": "Thickness: {{value}}px"
-    },
-    "eraser": {
-      "settings": "Eraser Settings",
-      "size": "Size",
-      "sizeValue": "Size: {{value}}px",
-      "clearCanvas": "Clear Canvas"
-    }
-  },
   "rearrangement": {
     "loading": "Loading questions...",
     "noQuestions": "No questions available",

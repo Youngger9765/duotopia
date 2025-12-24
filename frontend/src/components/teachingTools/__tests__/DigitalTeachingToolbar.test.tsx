@@ -45,12 +45,12 @@ describe('DigitalTeachingToolbar', () => {
       expect(diceButton).toBeInTheDocument();
     });
 
-    it('should have pencil and eraser buttons in toolbar', () => {
+    it('should not render pencil and eraser buttons anymore', () => {
       render(<DigitalTeachingToolbar />);
-      const pencilButton = screen.getByLabelText('Pencil');
-      const eraserButton = screen.getByLabelText('Eraser');
-      expect(pencilButton).toBeInTheDocument();
-      expect(eraserButton).toBeInTheDocument();
+      const pencilButton = screen.queryByLabelText('Pencil');
+      const eraserButton = screen.queryByLabelText('Eraser');
+      expect(pencilButton).not.toBeInTheDocument();
+      expect(eraserButton).not.toBeInTheDocument();
     });
   });
 
@@ -147,114 +147,19 @@ describe('DigitalTeachingToolbar', () => {
     });
   });
 
-  describe('Drawing Tools', () => {
-    it('should toggle pencil mode', async () => {
-      const user = userEvent.setup();
-      render(<DigitalTeachingToolbar />);
-      const pencilButton = screen.getByLabelText('Pencil');
+  // Drawing tools removed; related tests deleted per scope change.
 
-      await user.click(pencilButton);
-      expect(pencilButton).toHaveClass('bg-red-500');
-
-      await user.click(pencilButton);
-      expect(pencilButton).not.toHaveClass('bg-red-500');
-    });
-
-    it('should toggle eraser mode', async () => {
-      const user = userEvent.setup();
-      render(<DigitalTeachingToolbar />);
-      const eraserButton = screen.getByLabelText('Eraser');
-
-      await user.click(eraserButton);
-      expect(eraserButton).toHaveClass('bg-blue-600');
-
-      await user.click(eraserButton);
-      expect(eraserButton).not.toHaveClass('bg-blue-600');
-    });
-
-    it('should open pencil settings on double click', async () => {
-      const user = userEvent.setup();
-      render(<DigitalTeachingToolbar />);
-      const pencilButton = screen.getByLabelText('Pencil');
-
-      await user.dblClick(pencilButton);
-      expect(screen.getByText('teachingTools.pencil.settings')).toBeInTheDocument();
-    });
-
-    it('should open eraser settings on double click', async () => {
-      const user = userEvent.setup();
-      render(<DigitalTeachingToolbar />);
-      const eraserButton = screen.getByLabelText('Eraser');
-
-      await user.dblClick(eraserButton);
-      expect(screen.getByText('teachingTools.eraser.settings')).toBeInTheDocument();
-    });
-
-    it('should allow color selection in pencil settings', async () => {
-      const user = userEvent.setup();
-      render(<DigitalTeachingToolbar />);
-      await user.dblClick(screen.getByLabelText('Pencil'));
-
-      const colorButtons = screen.getAllByLabelText(/Color/);
-      expect(colorButtons.length).toBe(8);
-    });
-
-    it('should show clear canvas button in eraser settings', async () => {
-      const user = userEvent.setup();
-      render(<DigitalTeachingToolbar />);
-      await user.dblClick(screen.getByLabelText('Eraser'));
-
-      expect(screen.getByText('teachingTools.eraser.clearCanvas')).toBeInTheDocument();
-    });
-  });
-
-  describe('Canvas Integration', () => {
-    it('should render canvas element', () => {
-      render(<DigitalTeachingToolbar />);
-      const canvas = document.querySelector('canvas');
-      expect(canvas).toBeInTheDocument();
-    });
-
-    it('should set correct canvas dimensions', () => {
-      render(<DigitalTeachingToolbar />);
-      const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-      expect(canvas.width).toBe(window.innerWidth * 2);
-      expect(canvas.height).toBeGreaterThanOrEqual(window.innerHeight * 2);
-    });
-  });
+  // Canvas removed with drawing tools; skip canvas tests.
 
   describe('Accessibility', () => {
     it('should have proper ARIA labels for all buttons', () => {
       render(<DigitalTeachingToolbar />);
       expect(screen.getByLabelText('Timer')).toBeInTheDocument();
       expect(screen.getByLabelText('Dice')).toBeInTheDocument();
-      expect(screen.getByLabelText('Pencil')).toBeInTheDocument();
-      expect(screen.getByLabelText('Eraser')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Pencil')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Eraser')).not.toBeInTheDocument();
     });
   });
 
-  describe('i18n Support', () => {
-    it('should use translation keys instead of hardcoded Chinese text', async () => {
-      const user = userEvent.setup();
-      render(<DigitalTeachingToolbar />);
-      
-      // Open pencil settings
-      await user.dblClick(screen.getByLabelText('Pencil'));
-      
-      // Should use t('teachingTools.pencil.settings') instead of '畫筆設定'
-      expect(screen.queryByText('teachingTools.pencil.settings')).toBeInTheDocument();
-      
-      // Close pencil settings
-      await user.click(screen.getAllByRole('button')[0]); // Close button
-      
-      // Open eraser settings
-      await user.dblClick(screen.getByLabelText('Eraser'));
-      
-      // Should use t('teachingTools.eraser.settings') instead of '橡皮擦設定'
-      expect(screen.queryByText('teachingTools.eraser.settings')).toBeInTheDocument();
-      
-      // Should use t('teachingTools.eraser.clearCanvas') instead of '清除畫布'
-      expect(screen.queryByText('teachingTools.eraser.clearCanvas')).toBeInTheDocument();
-    });
-  });
+  // i18n tests for drawing tools removed; remaining tools use labels as expected.
 });
