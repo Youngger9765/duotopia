@@ -196,7 +196,7 @@ const TimerTool: React.FC<{
 
       if (frameId) cancelAnimationFrame(frameId);
       frameId = requestAnimationFrame(() => {
-        setScale(Math.max(0.5, Math.min(2.0, startScale + delta)));
+        setScale(Math.max(0.5, Math.min(1.5, startScale + delta)));
       });
 
       if ((moveEvent as TouchEvent).touches) moveEvent.preventDefault();
@@ -579,7 +579,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
 
       if (frameId) cancelAnimationFrame(frameId);
       frameId = requestAnimationFrame(() => {
-        setScale(Math.max(0.5, Math.min(2.0, startScale + delta)));
+        setScale(Math.max(0.5, Math.min(1.5, startScale + delta)));
       });
 
       if ((moveEvent as TouchEvent).touches) moveEvent.preventDefault();
