@@ -679,7 +679,7 @@ const DigitalTeachingToolbar: React.FC = () => {
   return (
     <div className="fixed inset-0 pointer-events-none z-[140]">
       {/* Side toolbar with only Timer and Dice */}
-      <div className="fixed right-4 top-1/2 -translate-y-1/2 flex flex-col gap-1 bg-white/90 backdrop-blur-md shadow-2xl border border-gray-200 rounded-l-xl p-1.5 z-[150] pointer-events-auto">
+      <div className="fixed right-0 top-1/2 -translate-y-1/2 flex flex-col gap-1 bg-white/90 backdrop-blur-md shadow-2xl border border-gray-200 rounded-l-xl p-1.5 z-[150] pointer-events-auto">
         <button
           onClick={handleToggleTimer}
           className={`p-1.5 rounded-lg transition-all duration-300 ${
