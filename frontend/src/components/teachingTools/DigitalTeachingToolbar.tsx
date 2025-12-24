@@ -359,8 +359,24 @@ const TimerTool: React.FC<{
       </div>
 
       <div className="absolute inset-0 pointer-events-none transition-opacity">
+        {/* Four-corner resize handles */}
         <div
-          className="resize-handle pointer-events-auto absolute -right-2 -bottom-2 w-2.5 h-2.5 bg-blue-500 hover:bg-blue-600 rounded-full border border-white shadow-lg cursor-nwse-resize transition-all"
+          className="resize-handle pointer-events-auto absolute -left-2 -top-2 w-3 h-3 border-l-2 border-t-2 border-blue-500 bg-white rounded-sm shadow cursor-nwse-resize"
+          onMouseDown={(e) => startResize(e, setTimerScale, timerScale)}
+          onTouchStart={(e) => startResize(e, setTimerScale, timerScale)}
+        />
+        <div
+          className="resize-handle pointer-events-auto absolute -right-2 -top-2 w-3 h-3 border-r-2 border-t-2 border-blue-500 bg-white rounded-sm shadow cursor-nesw-resize"
+          onMouseDown={(e) => startResize(e, setTimerScale, timerScale)}
+          onTouchStart={(e) => startResize(e, setTimerScale, timerScale)}
+        />
+        <div
+          className="resize-handle pointer-events-auto absolute -left-2 -bottom-2 w-3 h-3 border-l-2 border-b-2 border-blue-500 bg-white rounded-sm shadow cursor-nesw-resize"
+          onMouseDown={(e) => startResize(e, setTimerScale, timerScale)}
+          onTouchStart={(e) => startResize(e, setTimerScale, timerScale)}
+        />
+        <div
+          className="resize-handle pointer-events-auto absolute -right-2 -bottom-2 w-3 h-3 border-r-2 border-b-2 border-blue-500 bg-white rounded-sm shadow cursor-nwse-resize"
           onMouseDown={(e) => startResize(e, setTimerScale, timerScale)}
           onTouchStart={(e) => startResize(e, setTimerScale, timerScale)}
         />
@@ -616,8 +632,24 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
       onTouchStart={(e) => startDrag(e, setDicePos, dicePos)}
     >
       <div className="absolute inset-0 pointer-events-none transition-opacity">
+        {/* Four-corner resize handles */}
         <div
-          className="resize-handle pointer-events-auto absolute -right-2 -bottom-2 w-2.5 h-2.5 bg-indigo-500 hover:bg-indigo-600 rounded-full border border-white shadow-lg cursor-nwse-resize transition-all"
+          className="resize-handle pointer-events-auto absolute -left-2 -top-2 w-3 h-3 border-l-2 border-t-2 border-indigo-500 bg-white rounded-sm shadow cursor-nwse-resize"
+          onMouseDown={(e) => startResize(e, setDiceScale, diceScale)}
+          onTouchStart={(e) => startResize(e, setDiceScale, diceScale)}
+        />
+        <div
+          className="resize-handle pointer-events-auto absolute -right-2 -top-2 w-3 h-3 border-r-2 border-t-2 border-indigo-500 bg-white rounded-sm shadow cursor-nesw-resize"
+          onMouseDown={(e) => startResize(e, setDiceScale, diceScale)}
+          onTouchStart={(e) => startResize(e, setDiceScale, diceScale)}
+        />
+        <div
+          className="resize-handle pointer-events-auto absolute -left-2 -bottom-2 w-3 h-3 border-l-2 border-b-2 border-indigo-500 bg-white rounded-sm shadow cursor-nesw-resize"
+          onMouseDown={(e) => startResize(e, setDiceScale, diceScale)}
+          onTouchStart={(e) => startResize(e, setDiceScale, diceScale)}
+        />
+        <div
+          className="resize-handle pointer-events-auto absolute -right-2 -bottom-2 w-3 h-3 border-r-2 border-b-2 border-indigo-500 bg-white rounded-sm shadow cursor-nwse-resize"
           onMouseDown={(e) => startResize(e, setDiceScale, diceScale)}
           onTouchStart={(e) => startResize(e, setDiceScale, diceScale)}
         />
