@@ -8,7 +8,6 @@ import {
   GripHorizontal,
   Triangle,
 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import './styles/toolbar.css';
 
 // Timer Component
@@ -649,6 +648,28 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
 // Removed DrawingCanvas and all drawing-related UI and logic.
 
 // Main Toolbar Component
+const DigitalTeachingToolbar: React.FC = () => {
+  const [showTimer, setShowTimer] = useState(false);
+  const [showDice, setShowDice] = useState(false);
+
+  const handleToggleTimer = useCallback(() => {
+    setShowTimer((prev) => {
+      const next = !prev;
+      if (next) setShowDice(false);
+      return next;
+    });
+  }, []);
+
+  const handleToggleDice = useCallback(() => {
+    setShowDice((prev) => {
+      const next = !prev;
+      if (next) setShowTimer(false);
+      return next;
+    });
+  }, []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[140]">
       {/* Side toolbar with only Timer and Dice */}
       <div className="fixed right-4 top-1/2 -translate-y-1/2 flex flex-col gap-1 bg-white/90 backdrop-blur-md shadow-2xl border border-gray-200 rounded-l-xl p-1.5 z-[150] pointer-events-auto">
         <button
@@ -675,32 +696,13 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
           <Dice5 size={16} />
         </button>
       </div>
-  const handleToggleDice = () => {
-    setShowDice((prev) => !prev);
-  };
 
-  return (
-    <div className="fixed inset-0 pointer-events-none z-[140]">
-      <div className="relative w-full h-full">
-        <DrawingCanvas
-          onToggleTimer={handleToggleTimer}
-          onToggleDice={handleToggleDice}
-          isTimerOpen={showTimer}
-          isDiceOpen={showDice}
-        />
-      </div>
-
+      {/* Tools */}
       <div className="pointer-events-auto">
-        <TimerTool
-          show={showTimer}
-          onClose={() => setShowTimer(false)}
-        />
+        <TimerTool show={showTimer} onClose={() => setShowTimer(false)} />
       </div>
       <div className="pointer-events-auto">
-        <DiceTool
-          show={showDice}
-          onClose={() => setShowDice(false)}
-        />
+        <DiceTool show={showDice} onClose={() => setShowDice(false)} />
       </div>
     </div>
   );
