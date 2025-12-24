@@ -40,7 +40,7 @@ const TimerTool: React.FC<{
   // 初始化音效
   useEffect(() => {
     const audio = new Audio(
-      'https://storage.googleapis.com/duotopia-social-media-videos/website/sounds/timerring.mp3'
+      'https://storage.googleapis.com/duotopia-social-media-videos/website/sounds/timerring.mp3.mp3'
     );
     audio.loop = true;
     audioRef.current = audio;
