@@ -652,27 +652,12 @@ const DigitalTeachingToolbar: React.FC = () => {
   const [showTimer, setShowTimer] = useState(false);
   const [showDice, setShowDice] = useState(false);
 
-  // Enforce mutual exclusivity even if states are toggled rapidly.
-  useEffect(() => {
-    if (showTimer && showDice) {
-      setShowDice(false);
-    }
-  }, [showTimer, showDice]);
-
   const handleToggleTimer = useCallback(() => {
-    setShowTimer((prev) => {
-      const next = !prev;
-      if (next) setShowDice(false);
-      return next;
-    });
+    setShowTimer((prev) => !prev);
   }, []);
 
   const handleToggleDice = useCallback(() => {
-    setShowDice((prev) => {
-      const next = !prev;
-      if (next) setShowTimer(false);
-      return next;
-    });
+    setShowDice((prev) => !prev);
   }, []);
 
   return (

@@ -96,17 +96,6 @@ describe('DigitalTeachingToolbar', () => {
 
       expect(screen.queryByLabelText('Start timer')).not.toBeInTheDocument();
     });
-
-    it('should toggle mutual exclusivity between timer and dice', async () => {
-      const user = userEvent.setup();
-      render(<DigitalTeachingToolbar />);
-
-      await user.click(screen.getByLabelText('Timer'));
-      expect(screen.getByLabelText('Start timer')).toBeInTheDocument();
-
-      await user.click(screen.getByLabelText('Dice'));
-      expect(screen.queryByLabelText('Start timer')).not.toBeInTheDocument();
-    });
   });
 
   describe('Dice Tool', () => {
