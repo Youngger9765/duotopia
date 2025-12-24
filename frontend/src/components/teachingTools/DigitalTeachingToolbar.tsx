@@ -138,6 +138,9 @@ const TimerTool: React.FC<{
     const startY = clientY - currentPos.y;
     let frameId: number | null = null;
 
+    // Prevent text selection during drag
+    document.body.style.userSelect = 'none';
+
     const onMove = (moveEvent: MouseEvent | TouchEvent) => {
       const moveX = (moveEvent as TouchEvent).touches
         ? (moveEvent as TouchEvent).touches[0].clientX
@@ -156,6 +159,7 @@ const TimerTool: React.FC<{
 
     const onEnd = () => {
       if (frameId) cancelAnimationFrame(frameId);
+      document.body.style.userSelect = '';
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onEnd);
       window.removeEventListener('touchmove', onMove);
@@ -181,6 +185,9 @@ const TimerTool: React.FC<{
     const startScale = currentScale;
     let frameId: number | null = null;
 
+    // Prevent text selection during resize
+    document.body.style.userSelect = 'none';
+
     const onMove = (moveEvent: MouseEvent | TouchEvent) => {
       const moveX = (moveEvent as TouchEvent).touches
         ? (moveEvent as TouchEvent).touches[0].clientX
@@ -197,6 +204,7 @@ const TimerTool: React.FC<{
 
     const onEnd = () => {
       if (frameId) cancelAnimationFrame(frameId);
+      document.body.style.userSelect = '';
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onEnd);
       window.removeEventListener('touchmove', onMove);
@@ -513,6 +521,9 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
     const startY = clientY - currentPos.y;
     let frameId: number | null = null;
 
+    // Prevent text selection during drag
+    document.body.style.userSelect = 'none';
+
     const onMove = (moveEvent: MouseEvent | TouchEvent) => {
       const moveX = (moveEvent as TouchEvent).touches
         ? (moveEvent as TouchEvent).touches[0].clientX
@@ -531,6 +542,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
 
     const onEnd = () => {
       if (frameId) cancelAnimationFrame(frameId);
+      document.body.style.userSelect = '';
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onEnd);
       window.removeEventListener('touchmove', onMove);
@@ -556,6 +568,9 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
     const startScale = currentScale;
     let frameId: number | null = null;
 
+    // Prevent text selection during resize
+    document.body.style.userSelect = 'none';
+
     const onMove = (moveEvent: MouseEvent | TouchEvent) => {
       const moveX = (moveEvent as TouchEvent).touches
         ? (moveEvent as TouchEvent).touches[0].clientX
@@ -572,6 +587,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
 
     const onEnd = () => {
       if (frameId) cancelAnimationFrame(frameId);
+      document.body.style.userSelect = '';
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onEnd);
       window.removeEventListener('touchmove', onMove);
