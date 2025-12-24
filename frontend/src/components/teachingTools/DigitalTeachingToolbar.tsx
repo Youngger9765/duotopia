@@ -7,8 +7,6 @@ import {
   X,
   GripHorizontal,
   Triangle,
-  Pencil,
-  Eraser,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import './styles/toolbar.css';
@@ -648,208 +646,15 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
   );
 };
 
-interface DrawingCanvasProps {
-  onToggleTimer: () => void;
-  onToggleDice: () => void;
-  isTimerOpen: boolean;
-  isDiceOpen: boolean;
-}
+// Removed DrawingCanvas and all drawing-related UI and logic.
 
-// Drawing Canvas Component
-const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
-  onToggleTimer,
-  onToggleDice,
-  isTimerOpen,
-  isDiceOpen,
-}) => {
-  const { t } = useTranslation();
-  const [drawMode, setDrawMode] = useState<'pencil' | 'eraser' | null>(null);
-  const [pencilColor, setPencilColor] = useState('#ef4444');
-  const [pencilWidth, setPencilWidth] = useState(3);
-  const [eraserWidth, setEraserWidth] = useState(20);
-  const [showPencilSettings, setShowPencilSettings] = useState(false);
-  const [showEraserSettings, setShowEraserSettings] = useState(false);
-
-  const previousModeBeforePalm = useRef<'pencil' | 'eraser' | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const contextRef = useRef<CanvasRenderingContext2D | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isDrawing = useRef(false);
-  const isInitialized = useRef(false);
-
-  const initCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      console.warn('initCanvas(): canvas ref is null');
-      return;
-    }
-    
-    // Only initialize context once to preserve drawings
-    if (isInitialized.current && contextRef.current) {
-      console.log('initCanvas(): context already initialized, skipping');
-      return;
-    }
-    
-    const dpr = window.devicePixelRatio || 1;
-    const width = window.innerWidth;
-    const height = Math.max(window.innerHeight, document.documentElement.scrollHeight || 0);
-    
-    console.log('initCanvas(): initializing - width=', width, 'height=', height, 'dpr=', dpr);
-    
-    // Set canvas dimensions - THIS WILL CLEAR THE CANVAS!
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-    
-    const context = canvas.getContext('2d');
-    if (context) {
-      // Scale to account for device pixel ratio
-      context.scale(dpr, dpr);
-      context.lineCap = 'round';
-      context.lineJoin = 'round';
-      contextRef.current = context;
-      isInitialized.current = true;
-      console.log('initCanvas(): context initialized successfully');
-    } else {
-      console.error('initCanvas(): failed to get canvas context');
-    }
-  }, []);
-
-  useEffect(() => {
-    initCanvas();
-    console.log('DrawingCanvas mounted');
-    
-    return () => {
-      console.log('DrawingCanvas unmounting');
-    };
-  }, [initCanvas]);
-
-  const getCoordinates = (e: MouseEvent | TouchEvent): { x: number; y: number } => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    const clientX = (e as TouchEvent).touches ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
-    const clientY = (e as TouchEvent).touches ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY;
-    // Coordinates are relative to CSS display size
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    console.log('getCoordinates(): x=', x, 'y=', y, 'canvas:', canvas.width, 'x', canvas.height, 'rect:', rect.width, 'x', rect.height);
-    return { x, y };
-  };
-
-  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-    const canvas = canvasRef.current;
-    const context = contextRef.current;
-    console.log('startDrawing() called, drawMode:', drawMode, 'canvas:', canvas ? `${canvas.width}x${canvas.height}` : 'null', 'context:', context ? 'set' : 'null');
-    
-    let currentMode = drawMode;
-    if ((e as React.TouchEvent).touches && (e as React.TouchEvent).touches.length > 0) {
-      const touch = (e as React.TouchEvent).touches[0];
-      const isPalm =
-        (e as React.TouchEvent).touches.length > 1 ||
-        (touch.radiusX && touch.radiusX > 15);
-      if (isPalm) {
-        if (drawMode !== 'eraser') {
-          previousModeBeforePalm.current = drawMode;
-          setDrawMode('eraser');
-          currentMode = 'eraser';
-        }
-      }
-    }
-    if (!currentMode) {
-      console.warn('startDrawing(): currentMode is null, returning');
-      return;
-    }
-    const { x, y } = getCoordinates(
-      e as unknown as MouseEvent | TouchEvent
-    );
-    console.log('startDrawing(): x=', x, 'y=', y, 'contextRef:', contextRef.current ? 'set' : 'null', 'currentMode:', currentMode);
-    if (contextRef.current) {
-      contextRef.current.beginPath();
-      contextRef.current.moveTo(x, y);
-      if (currentMode === 'pencil') {
-        contextRef.current.globalCompositeOperation = 'source-over';
-        contextRef.current.strokeStyle = pencilColor;
-        contextRef.current.lineWidth = pencilWidth;
-        console.log('startDrawing(): pencil mode, color=', pencilColor, 'width=', pencilWidth);
-      } else {
-        contextRef.current.globalCompositeOperation = 'destination-out';
-        contextRef.current.lineWidth = eraserWidth * 2.5;
-      }
-    }
-    isDrawing.current = true;
-    console.log('startDrawing(): isDrawing set to true');
-  };
-
-  const draw = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing.current) return;
-    if ((e as React.TouchEvent).touches && (e as React.TouchEvent).touches.length > 0) {
-      const touch = (e as React.TouchEvent).touches[0];
-      const isPalm =
-        (e as React.TouchEvent).touches.length > 1 ||
-        (touch.radiusX && touch.radiusX > 15);
-      if (isPalm && drawMode !== 'eraser') {
-        previousModeBeforePalm.current = drawMode;
-        setDrawMode('eraser');
-        if (contextRef.current) {
-          contextRef.current.globalCompositeOperation = 'destination-out';
-          contextRef.current.lineWidth = eraserWidth * 2.5;
-        }
-      }
-    }
-    if (!drawMode) {
-      console.warn('draw(): drawMode is', drawMode, 'isDrawing:', isDrawing.current);
-      return;
-    }
-    const { x, y } = getCoordinates(
-      e as unknown as MouseEvent | TouchEvent
-    );
-    console.log('draw(): x=', x, 'y=', y, 'contextRef:', contextRef.current ? 'set' : 'null');
-    if (contextRef.current) {
-      contextRef.current.lineTo(x, y);
-      contextRef.current.stroke();
-      console.log('draw(): stroke called');
-    }
-    if ((e as React.TouchEvent).touches) e.preventDefault();
-  };
-
-  const stopDrawing = () => {
-    if (!isDrawing.current) return;
-    if (contextRef.current) {
-      contextRef.current.closePath();
-    }
-    isDrawing.current = false;
-    if (previousModeBeforePalm.current !== null) {
-      setDrawMode(previousModeBeforePalm.current);
-      previousModeBeforePalm.current = null;
-    }
-  };
-
-  const colors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#000000', '#8b5cf6', '#ec4899', '#64748b'];
-
-  return (
-    <div ref={containerRef} className="fixed inset-0 pointer-events-none">
-      <canvas
-        ref={canvasRef}
-        className={`fixed inset-0 z-[130] ${
-          drawMode ? 'cursor-crosshair touch-none pointer-events-auto' : 'pointer-events-none'
-        }`}
-        onMouseDown={startDrawing}
-        onMouseMove={draw}
-        onMouseUp={stopDrawing}
-        onMouseOut={stopDrawing}
-        onTouchStart={startDrawing}
-        onTouchMove={draw}
-        onTouchEnd={stopDrawing}
-      />
-
-      {/* 側邊工具列 */}
+// Main Toolbar Component
+      {/* Side toolbar with only Timer and Dice */}
       <div className="fixed right-4 top-1/2 -translate-y-1/2 flex flex-col gap-1 bg-white/90 backdrop-blur-md shadow-2xl border border-gray-200 rounded-l-xl p-1.5 z-[150] pointer-events-auto">
         <button
-          onClick={onToggleTimer}
+          onClick={handleToggleTimer}
           className={`p-1.5 rounded-lg transition-all duration-300 ${
-            isTimerOpen
+            showTimer
               ? 'bg-blue-500 text-white shadow-md'
               : 'hover:bg-gray-100 text-blue-500'
           }`}
@@ -859,9 +664,9 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         </button>
 
         <button
-          onClick={onToggleDice}
+          onClick={handleToggleDice}
           className={`p-1.5 rounded-lg transition-all duration-300 ${
-            isDiceOpen
+            showDice
               ? 'bg-gray-800 text-white shadow-md'
               : 'hover:bg-gray-100 text-gray-600'
           }`}
@@ -869,124 +674,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         >
           <Dice5 size={16} />
         </button>
-
-        <div className="w-full h-px bg-gray-200 my-1" />
-
-        <div className="relative">
-          <button
-            onClick={() => setDrawMode(drawMode === 'pencil' ? null : 'pencil')}
-            onDoubleClick={() => {
-              setDrawMode('pencil');
-              setShowPencilSettings(true);
-            }}
-            className={`p-1.5 rounded-lg transition-all duration-300 ${
-              drawMode === 'pencil'
-                ? 'bg-red-500 text-white shadow-md'
-                : 'hover:bg-gray-100 text-red-500'
-            }`}
-            aria-label="Pencil"
-          >
-            <Pencil size={16} />
-          </button>
-          {showPencilSettings && (
-            <div className="settings-panel absolute right-full mr-2 top-0 bg-white shadow-xl border border-gray-200 rounded-xl p-3 flex flex-col gap-3 min-w-[120px]">
-              <div className="flex justify-between items-center text-[10px] font-bold text-gray-400">
-                <span>{t('teachingTools.pencil.settings')}</span>
-                <button onClick={() => setShowPencilSettings(false)}>
-                  <X size={12} />
-                </button>
-              </div>
-              <div className="grid grid-cols-4 gap-1">
-                {colors.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setPencilColor(c)}
-                    className={`w-5 h-5 rounded-full border ${
-                      pencilColor === c ? 'ring-2 ring-offset-1 ring-gray-400' : 'border-gray-200'
-                    }`}
-                    style={{ backgroundColor: c }}
-                    aria-label={`Color ${c}`}
-                  />
-                ))}
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] text-gray-500">{t('teachingTools.pencil.thicknessValue', { value: pencilWidth })}</span>
-                <input
-                  type="range"
-                  min="1"
-                  max="20"
-                  value={pencilWidth}
-                  onChange={(e) => setPencilWidth(parseInt(e.target.value))}
-                  className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-500"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="relative">
-          <button
-            onClick={() => setDrawMode(drawMode === 'eraser' ? null : 'eraser')}
-            onDoubleClick={() => {
-              setDrawMode('eraser');
-              setShowEraserSettings(true);
-            }}
-            className={`p-1.5 rounded-lg transition-all duration-300 ${
-              drawMode === 'eraser'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'hover:bg-gray-100 text-blue-600'
-            }`}
-            aria-label="Eraser"
-          >
-            <Eraser size={16} />
-          </button>
-          {showEraserSettings && (
-            <div className="settings-panel absolute right-full mr-2 top-0 bg-white shadow-xl border border-gray-200 rounded-xl p-3 flex flex-col gap-3 min-w-[120px]">
-              <div className="flex justify-between items-center text-[10px] font-bold text-gray-400">
-                <span>{t('teachingTools.eraser.settings')}</span>
-                <button onClick={() => setShowEraserSettings(false)}>
-                  <X size={12} />
-                </button>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] text-gray-500">{t('teachingTools.eraser.sizeValue', { value: eraserWidth })}</span>
-                <input
-                  type="range"
-                  min="5"
-                  max="100"
-                  value={eraserWidth}
-                  onChange={(e) => setEraserWidth(parseInt(e.target.value))}
-                  className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                />
-              </div>
-              <button
-                onClick={() => {
-                  if (canvasRef.current && contextRef.current) {
-                    contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-                    setShowEraserSettings(false);
-                  }
-                }}
-                className="text-[10px] bg-gray-100 hover:bg-red-50 py-1 rounded text-red-500 font-bold border border-red-100"
-              >
-                {t('teachingTools.eraser.clearCanvas')}
-              </button>
-            </div>
-          )}
-        </div>
       </div>
-    </div>
-  );
-};
-
-// Main Toolbar Component
-const DigitalTeachingToolbar: React.FC = () => {
-  const [showTimer, setShowTimer] = useState(false);
-  const [showDice, setShowDice] = useState(false);
-
-  const handleToggleTimer = () => {
-    setShowTimer((prev) => !prev);
-  };
-
   const handleToggleDice = () => {
     setShowDice((prev) => !prev);
   };
