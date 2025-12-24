@@ -1,25 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import {
-  Timer,
-  Dice5,
-  Play,
-  Square,
-  X,
-  GripHorizontal,
-  Triangle,
-} from 'lucide-react';
-import './styles/toolbar.css';
+import { Timer, Dice5, X, GripHorizontal, Triangle, Play, Square } from 'lucide-react';
 
 // Timer Component
-const TimerTool: React.FC<{
-  show: boolean;
-  onClose: () => void;
-}> = ({ show, onClose }) => {
+const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onClose }) => {
   const [minutes, setMinutes] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [isActive, setIsActive] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(0);
   const [isBeeping, setIsBeeping] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [timerScale, setTimerScale] = useState(1);
   const [timerPos, setTimerPos] = useState({ x: 40, y: 80 });
 
@@ -36,6 +24,15 @@ const TimerTool: React.FC<{
       hasInitializedTimerPos.current = true;
     }
   }, [show]);
+
+  // 固定點大小，同時讓間距跟隨工具縮放
+  const handleTransform = useCallback(
+    (tx: number, ty: number) => ({
+      transform: `translate(${tx}%, ${ty}%) scale(${1 / timerScale})`,
+      transformOrigin: 'center',
+    }),
+    [timerScale]
+  );
 
   // 初始化音效
   useEffect(() => {
@@ -175,7 +172,8 @@ const TimerTool: React.FC<{
   const startResize = (
     e: React.MouseEvent | React.TouchEvent,
     setScale: (scale: number) => void,
-    currentScale: number
+    currentScale: number,
+    direction: number = 1 // use -1 for left handles so pulling outward increases size
   ) => {
     e.stopPropagation();
     const clientX = (e as React.TouchEvent).touches
@@ -192,7 +190,7 @@ const TimerTool: React.FC<{
       const moveX = (moveEvent as TouchEvent).touches
         ? (moveEvent as TouchEvent).touches[0].clientX
         : (moveEvent as MouseEvent).clientX;
-      const delta = (moveX - startX) * 0.005;
+      const delta = direction * (moveX - startX) * 0.005;
 
       if (frameId) cancelAnimationFrame(frameId);
       frameId = requestAnimationFrame(() => {
@@ -358,25 +356,29 @@ const TimerTool: React.FC<{
         ))}
       </div>
 
-      <div className="absolute inset-0 pointer-events-none transition-opacity">
-        {/* Four-corner resize handles (only visible on hover) */}
+      <div className="absolute inset-0 pointer-events-none transition-opacity opacity-0 group-hover:opacity-100">
+        {/* Four-corner resize handles styled like Word image handles (always visible) */}
         <div
-          className="resize-handle pointer-events-auto absolute -left-2 -top-2 w-3 h-3 border-l-2 border-t-2 border-blue-500 bg-transparent rounded-sm shadow opacity-0 group-hover:opacity-100 transition-opacity cursor-nwse-resize"
+          className="resize-handle pointer-events-auto absolute top-0 left-0 w-[5px] h-[5px] rounded-full bg-blue-500 shadow-sm cursor-nwse-resize"
+          style={handleTransform(-50, -50)}
+          onMouseDown={(e) => startResize(e, setTimerScale, timerScale, -1)}
+          onTouchStart={(e) => startResize(e, setTimerScale, timerScale, -1)}
+        />
+        <div
+          className="resize-handle pointer-events-auto absolute top-0 right-0 w-[5px] h-[5px] rounded-full bg-blue-500 shadow-sm cursor-nesw-resize"
+          style={handleTransform(50, -50)}
           onMouseDown={(e) => startResize(e, setTimerScale, timerScale)}
           onTouchStart={(e) => startResize(e, setTimerScale, timerScale)}
         />
         <div
-          className="resize-handle pointer-events-auto absolute -right-2 -top-2 w-3 h-3 border-r-2 border-t-2 border-blue-500 bg-transparent rounded-sm shadow opacity-0 group-hover:opacity-100 transition-opacity cursor-nesw-resize"
-          onMouseDown={(e) => startResize(e, setTimerScale, timerScale)}
-          onTouchStart={(e) => startResize(e, setTimerScale, timerScale)}
+          className="resize-handle pointer-events-auto absolute bottom-0 left-0 w-[5px] h-[5px] rounded-full bg-blue-500 shadow-sm cursor-nesw-resize"
+          style={handleTransform(-50, 50)}
+          onMouseDown={(e) => startResize(e, setTimerScale, timerScale, -1)}
+          onTouchStart={(e) => startResize(e, setTimerScale, timerScale, -1)}
         />
         <div
-          className="resize-handle pointer-events-auto absolute -left-2 -bottom-2 w-3 h-3 border-l-2 border-b-2 border-blue-500 bg-transparent rounded-sm shadow opacity-0 group-hover:opacity-100 transition-opacity cursor-nesw-resize"
-          onMouseDown={(e) => startResize(e, setTimerScale, timerScale)}
-          onTouchStart={(e) => startResize(e, setTimerScale, timerScale)}
-        />
-        <div
-          className="resize-handle pointer-events-auto absolute -right-2 -bottom-2 w-3 h-3 border-r-2 border-b-2 border-blue-500 bg-transparent rounded-sm shadow opacity-0 group-hover:opacity-100 transition-opacity cursor-nwse-resize"
+          className="resize-handle pointer-events-auto absolute bottom-0 right-0 w-[5px] h-[5px] rounded-full bg-blue-500 shadow-sm cursor-nwse-resize"
+          style={handleTransform(50, 50)}
           onMouseDown={(e) => startResize(e, setTimerScale, timerScale)}
           onTouchStart={(e) => startResize(e, setTimerScale, timerScale)}
         />
@@ -393,6 +395,13 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
   const [enableTransition, setEnableTransition] = useState(true);
   const [diceScale, setDiceScale] = useState(1);
   const [dicePos, setDicePos] = useState<{ x: number; y: number } | null>(null);
+  const handleTransform = useCallback(
+    (tx: number, ty: number, extraY: number = 0) => ({
+      transform: `translate(${tx}%, ${ty}%) translateY(${extraY}px) scale(${1 / diceScale})`,
+      transformOrigin: 'center',
+    }),
+    [diceScale]
+  );
 
   const rollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasInitializedDicePos = useRef(false);
@@ -631,25 +640,29 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
       onMouseDown={(e) => startDrag(e, setDicePos, dicePos)}
       onTouchStart={(e) => startDrag(e, setDicePos, dicePos)}
     >
-      <div className="absolute inset-0 pointer-events-none transition-opacity">
-        {/* Four-corner resize handles (only visible on hover) */}
+      <div className="absolute inset-0 pointer-events-none transition-opacity opacity-0 group-hover:opacity-100">
+        {/* Four-corner resize handles styled like Word image handles (always visible) */}
         <div
-          className="resize-handle pointer-events-auto absolute -left-2 -top-2 w-3 h-3 border-l-2 border-t-2 border-indigo-500 bg-transparent rounded-sm shadow opacity-0 group-hover:opacity-100 transition-opacity cursor-nwse-resize"
+          className="resize-handle pointer-events-auto absolute top-0 left-0 w-[5px] h-[5px] rounded-full bg-blue-500 shadow-sm cursor-nwse-resize"
+          style={handleTransform(-50, -50, 0)}
+          onMouseDown={(e) => startResize(e, setDiceScale, diceScale, -1)}
+          onTouchStart={(e) => startResize(e, setDiceScale, diceScale, -1)}
+        />
+        <div
+          className="resize-handle pointer-events-auto absolute top-0 right-0 w-[5px] h-[5px] rounded-full bg-blue-500 shadow-sm cursor-nesw-resize"
+          style={handleTransform(50, -50, 0)}
           onMouseDown={(e) => startResize(e, setDiceScale, diceScale)}
           onTouchStart={(e) => startResize(e, setDiceScale, diceScale)}
         />
         <div
-          className="resize-handle pointer-events-auto absolute -right-2 -top-2 w-3 h-3 border-r-2 border-t-2 border-indigo-500 bg-transparent rounded-sm shadow opacity-0 group-hover:opacity-100 transition-opacity cursor-nesw-resize"
-          onMouseDown={(e) => startResize(e, setDiceScale, diceScale)}
-          onTouchStart={(e) => startResize(e, setDiceScale, diceScale)}
+          className="resize-handle pointer-events-auto absolute bottom-0 left-0 w-[5px] h-[5px] rounded-full bg-blue-500 shadow-sm cursor-nesw-resize"
+          style={handleTransform(-50, 50, 60)}
+          onMouseDown={(e) => startResize(e, setDiceScale, diceScale, -1)}
+          onTouchStart={(e) => startResize(e, setDiceScale, diceScale, -1)}
         />
         <div
-          className="resize-handle pointer-events-auto absolute -left-2 -bottom-2 w-3 h-3 border-l-2 border-b-2 border-indigo-500 bg-transparent rounded-sm shadow opacity-0 group-hover:opacity-100 transition-opacity cursor-nesw-resize"
-          onMouseDown={(e) => startResize(e, setDiceScale, diceScale)}
-          onTouchStart={(e) => startResize(e, setDiceScale, diceScale)}
-        />
-        <div
-          className="resize-handle pointer-events-auto absolute -right-2 -bottom-2 w-3 h-3 border-r-2 border-b-2 border-indigo-500 bg-transparent rounded-sm shadow opacity-0 group-hover:opacity-100 transition-opacity cursor-nwse-resize"
+          className="resize-handle pointer-events-auto absolute bottom-0 right-0 w-[5px] h-[5px] rounded-full bg-blue-500 shadow-sm cursor-nwse-resize"
+          style={handleTransform(50, 50, 60)}
           onMouseDown={(e) => startResize(e, setDiceScale, diceScale)}
           onTouchStart={(e) => startResize(e, setDiceScale, diceScale)}
         />
