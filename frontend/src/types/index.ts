@@ -209,6 +209,7 @@ export interface StudentAssignmentCard {
   completed_count: number;
   estimated_time?: string;
   content_type?: string;
+  practice_mode?: string; // 'reading' | 'rearrangement'
   classroom_name?: string;
   teacher_name?: string;
   score?: number;

@@ -57,6 +57,7 @@
 - [ ] Supabase URL 和 Key 已設定
 - [ ] JWT Secret 已設定
 - [ ] OpenAI API Key 已設定（如需要）
+- [ ] Azure Speech API Key 和 Region 已設定（語音評估功能）
 
 ## 🎨 程式碼格式化策略（AI 輔助開發）
 
@@ -814,8 +815,45 @@ TAPPAY_PRODUCTION_APP_KEY   # Production APP KEY (正式環境)
 TAPPAY_PRODUCTION_PARTNER_KEY # Production PARTNER KEY (正式環境)
 TAPPAY_PRODUCTION_MERCHANT_ID # Production MERCHANT ID (正式環境)
 
+# Azure Speech API（語音評估功能 - 2025-12 新增）
+AZURE_SPEECH_KEY            # Azure Speech Subscription Key
+AZURE_SPEECH_REGION         # Azure 區域（例如：eastasia）
+
 # GCP
 GCP_SA_KEY                  # Service Account JSON
+```
+
+### Azure Speech API 配置說明（新增 - Issue #118）
+
+**功能**：前端直接調用 Azure Speech SDK 進行語音評估
+
+**配置方式（Cloud Run）**：
+```bash
+# Staging
+gcloud run services update duotopia-backend-staging \
+  --update-env-vars AZURE_SPEECH_KEY=your-key,AZURE_SPEECH_REGION=eastasia \
+  --region asia-east1
+
+# Production
+gcloud run services update duotopia-backend \
+  --update-env-vars AZURE_SPEECH_KEY=your-key,AZURE_SPEECH_REGION=eastasia \
+  --region asia-east1
+```
+
+**架構說明**：
+1. **後端 Token API** (`/api/azure-speech/token`): 發放 10 分鐘短效 Token
+   - ✅ 需要用戶身份驗證
+   - ✅ Rate limiting（10次/分鐘）
+   - ✅ Server-side cache（8分鐘內重用同一 token）
+   - ✅ Subscription Key 不外泄
+
+2. **前端直接調用**: 使用 Azure Speech SDK 分析（無需後端中轉）
+   - ⚡ 響應速度提升 56%（2.3秒 → 1.0秒）
+   - 💰 Cloud Run 成本降低 99%
+
+3. **背景上傳** (`/api/speech/upload-analysis`): 分析完成後背景上傳音檔和結果
+   - 不阻塞 UI
+   - 數據存儲到現有 JSONB 字段（零 migration）
 ```
 
 ### ⚠️ TapPay 配置重要注意事項

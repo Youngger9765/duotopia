@@ -72,7 +72,6 @@ export default function StudentAssignmentList() {
       }
 
       const data = await response.json();
-      console.log(Array.isArray(data) ? data.length : "not array");
 
       // Transform data to match StudentAssignmentCard type
       interface AssignmentData {
@@ -86,6 +85,8 @@ export default function StudentAssignmentList() {
         feedback?: string;
         content_id?: number;
         classroom_id: number;
+        content_type?: string;
+        practice_mode?: string;
       }
       const assignmentCards: StudentAssignmentCard[] = data.map(
         (assignment: AssignmentData) => ({
@@ -99,6 +100,8 @@ export default function StudentAssignmentList() {
           feedback: assignment.feedback,
           content_id: assignment.content_id,
           classroom_id: assignment.classroom_id,
+          content_type: assignment.content_type,
+          practice_mode: assignment.practice_mode,
           progress_percentage: 0,
           total_contents: 1,
           completed_contents:
@@ -309,8 +312,34 @@ export default function StudentAssignmentList() {
             <div className="flex items-center gap-2 text-sm sm:text-base text-gray-600">
               <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0" />
               <span>
-                {assignment.content_type ||
-                  t("studentAssignmentList.contentType.default")}
+                {/* 🎯 Issue #118: 根據 content_type + practice_mode 顯示正確標籤 */}
+                {(() => {
+                  const contentType = assignment.content_type?.toUpperCase();
+                  const practiceMode = assignment.practice_mode;
+
+                  // VOCABULARY_SET 或 SENTENCE_MAKING → 顯示「單字集」
+                  if (
+                    contentType === "VOCABULARY_SET" ||
+                    contentType === "SENTENCE_MAKING"
+                  ) {
+                    return t(
+                      "studentAssignmentList.contentTypes.VOCABULARY_SET",
+                    );
+                  }
+
+                  // EXAMPLE_SENTENCES 或 READING_ASSESSMENT → 根據 practice_mode 區分
+                  if (
+                    contentType === "EXAMPLE_SENTENCES" ||
+                    contentType === "READING_ASSESSMENT"
+                  ) {
+                    return practiceMode === "rearrangement"
+                      ? t("studentAssignmentList.contentTypes.REARRANGEMENT")
+                      : t("studentAssignmentList.contentTypes.SPEAKING");
+                  }
+
+                  // 預設
+                  return t("studentAssignmentList.contentType.default");
+                })()}
               </span>
             </div>
             {assignment.estimated_time && (

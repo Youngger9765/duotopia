@@ -1,29 +1,12 @@
-import { Star, AlertCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
 
-interface PhonemeDetail {
-  index: number;
-  phoneme: string;
-  accuracy_score: number;
-}
-
-interface SyllableDetail {
-  index: number;
-  syllable: string;
-  accuracy_score: number;
-}
-
+// 🎯 Issue #118: 簡化類型定義，移除 Phoneme/Syllable 層級
 interface WordDetail {
   word: string;
   accuracy_score: number;
   error_type?: string;
-  syllables?: SyllableDetail[];
-  phonemes?: PhonemeDetail[];
 }
 
 interface DetailedWord extends WordDetail {
@@ -44,11 +27,6 @@ interface AIScores {
   analysis_summary?: {
     total_words: number;
     problematic_words: string[];
-    low_score_phonemes: Array<{
-      phoneme: string;
-      score: number;
-      in_word: string;
-    }>;
     assessment_time?: string;
   };
 }
@@ -58,28 +36,20 @@ interface AIScoreDisplayEnhancedProps {
   hasRecording?: boolean;
   title?: string;
   showDetailed?: boolean;
+  isStudentView?: boolean; // 🔧 Issue #118: 控制是否為學生視角（隱藏 AI 提示）
 }
 
 export default function AIScoreDisplay({
   scores,
-  // hasRecording = false, // 暫時未使用
-  // title = "AI 自動評分結果", // 暫時未使用
   showDetailed = true,
+  isStudentView = false, // 預設為老師視角
 }: AIScoreDisplayEnhancedProps) {
   const { t } = useTranslation();
-  const [selectedTab, setSelectedTab] = useState<"overview" | "phoneme">(
-    "overview",
-  );
 
   if (!scores) return null;
 
   // 使用詳細資料（如果有）或舊版資料
   const wordsToDisplay = scores.detailed_words || scores.word_details || [];
-  const hasDetailedData = !!(
-    scores.detailed_words && scores.detailed_words.length > 0
-  );
-
-  // 保持預設顯示總覽
 
   // Calculate overall score if not provided
   const overallScore =
@@ -92,18 +62,10 @@ export default function AIScoreDisplay({
     );
 
   // 評分門檻
-  const thresholds = {
-    word: 80,
-    syllable: 75,
-    phoneme: 70,
-  };
+  const threshold = 80;
 
   // 評分顏色
-  const getScoreColor = (
-    score: number,
-    type: "word" | "syllable" | "phoneme" = "word",
-  ) => {
-    const threshold = thresholds[type];
+  const getScoreColor = (score: number) => {
     if (score >= threshold)
       return {
         bg: "bg-green-100",
@@ -121,8 +83,6 @@ export default function AIScoreDisplay({
 
   return (
     <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-200 shadow-lg">
-      {/* Header - 移除標題和右上方的已錄製、詳細分析標籤 */}
-
       {/* 總體分數 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {/* 總體發音 */}
@@ -168,152 +128,8 @@ export default function AIScoreDisplay({
         </div>
       </div>
 
-      {/* 切換視圖標籤 */}
-      {showDetailed && hasDetailedData && (
-        <Tabs
-          value={selectedTab}
-          onValueChange={(v) => setSelectedTab(v as "overview" | "phoneme")}
-          className="mb-4"
-        >
-          <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg">
-            <TabsTrigger
-              value="overview"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-purple-600 data-[state=active]:font-semibold transition-all duration-200 rounded-md"
-            >
-              {t("aiScoreDisplay.tabs.overview")}
-            </TabsTrigger>
-            <TabsTrigger
-              value="phoneme"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-purple-600 data-[state=active]:font-semibold transition-all duration-200 rounded-md"
-            >
-              {t("aiScoreDisplay.tabs.phonemeLevel")}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="mt-4">
-            {/* 單字總覽 */}
-            <div className="space-y-2">
-              <h5 className="text-sm font-semibold text-gray-700">
-                {t("aiScoreDisplay.sections.wordDetails")}
-              </h5>
-              <div className="flex flex-wrap gap-2">
-                {wordsToDisplay.map((word, index) => {
-                  const score = word.accuracy_score || 0;
-                  const colors = getScoreColor(score, "word");
-
-                  return (
-                    <div
-                      key={index}
-                      className={cn(
-                        "border rounded-lg px-3 py-1.5 text-sm font-medium",
-                        colors.bg,
-                        colors.border,
-                        colors.text,
-                      )}
-                      title={
-                        word.error_type ||
-                        t("aiScoreDisplay.labels.accuracyLabel", { score })
-                      }
-                    >
-                      <span className="font-semibold">{word.word}</span>
-                      <span className="ml-2 text-xs opacity-80">
-                        ({Math.round(score)})
-                      </span>
-                      {word.error_type && word.error_type !== "None" && (
-                        <span className="ml-1 text-xs">⚠️</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="phoneme" className="mt-4">
-            {/* 音素層級總覽 */}
-            <div className="space-y-4">
-              {/* 低分音素 */}
-              {scores.analysis_summary?.low_score_phonemes &&
-                scores.analysis_summary.low_score_phonemes.length > 0 && (
-                  <Card className="p-3">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5" />
-                      <div className="space-y-2 flex-1">
-                        <div className="text-sm font-medium text-orange-800">
-                          {t("aiScoreDisplay.sections.phonemesNeedImprovement")}
-                        </div>
-                        <div className="space-y-1">
-                          {scores.analysis_summary.low_score_phonemes.map(
-                            (item, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-center justify-between text-xs"
-                              >
-                                <span className="font-mono">
-                                  /{item.phoneme}/
-                                </span>
-                                <span className="text-gray-600">
-                                  {t("aiScoreDisplay.sections.inWord", {
-                                    word: item.in_word,
-                                  })}
-                                </span>
-                                <Badge
-                                  variant="destructive"
-                                  className="text-xs"
-                                >
-                                  {Math.round(item.score)}
-                                </Badge>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                )}
-
-              {/* 所有音素列表 */}
-              <div>
-                <h5 className="text-sm font-semibold text-gray-700 mb-2">
-                  {t("aiScoreDisplay.sections.allPhonemeScores")}
-                </h5>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {scores.detailed_words
-                    ?.map((word) =>
-                      word.phonemes?.map((phoneme) => {
-                        const colors = getScoreColor(
-                          phoneme.accuracy_score,
-                          "phoneme",
-                        );
-                        return (
-                          <div
-                            key={`${word.index}-${phoneme.index}`}
-                            className={cn(
-                              "flex items-center justify-between p-2 rounded text-xs",
-                              colors.bg,
-                            )}
-                          >
-                            <span className={cn("font-mono", colors.text)}>
-                              /{phoneme.phoneme}/
-                            </span>
-                            <span className={cn("font-bold", colors.text)}>
-                              {Math.round(phoneme.accuracy_score)}
-                            </span>
-                          </div>
-                        );
-                      }),
-                    )
-                    .flat()
-                    .filter(Boolean)}
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-      )}
-
-      {/* 簡單視圖（當沒有詳細資料時） */}
-      {(!showDetailed || !hasDetailedData) && wordsToDisplay.length > 0 && (
+      {/* 🔧 Issue #118: 移除 tabs，直接顯示單字發音詳情 */}
+      {showDetailed && wordsToDisplay.length > 0 && (
         <div className="space-y-2">
           <h5 className="text-sm font-semibold text-gray-700">
             {t("aiScoreDisplay.sections.wordDetails")}
@@ -321,7 +137,7 @@ export default function AIScoreDisplay({
           <div className="flex flex-wrap gap-2">
             {wordsToDisplay.map((word, index) => {
               const score = word.accuracy_score || 0;
-              const colors = getScoreColor(score, "word");
+              const colors = getScoreColor(score);
 
               return (
                 <div
@@ -379,28 +195,18 @@ export default function AIScoreDisplay({
             ) : (
               <span className="font-medium text-red-700">
                 {t("aiScoreDisplay.feedback.needsPractice")}
-                {scores.analysis_summary?.low_score_phonemes &&
-                  scores.analysis_summary.low_score_phonemes.length > 0 && (
-                    <span>
-                      {" "}
-                      {t("aiScoreDisplay.feedback.focusPhonemes", {
-                        phonemes: scores.analysis_summary.low_score_phonemes
-                          .slice(0, 3)
-                          .map((p) => `/${p.phoneme}/`)
-                          .join("、"),
-                      })}
-                    </span>
-                  )}
               </span>
             )}
           </div>
         </div>
       </div>
 
-      {/* AI 評語提示 */}
-      <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
-        {t("aiScoreDisplay.hints.aiReference")}
-      </div>
+      {/* 🔧 Issue #118: AI 提示只在老師端顯示，學生端不需要 */}
+      {!isStudentView && (
+        <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
+          {t("aiScoreDisplay.hints.aiReference")}
+        </div>
+      )}
     </div>
   );
 }

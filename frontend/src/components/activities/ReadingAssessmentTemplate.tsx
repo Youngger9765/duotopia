@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { Brain, Star, Mic, Clock, RotateCcw, SkipForward } from "lucide-react";
 import { toast } from "sonner";
-import { retryAIAnalysis } from "@/utils/retryHelper";
 import AudioRecorder from "@/components/shared/AudioRecorder";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { useAzurePronunciation } from "@/hooks/useAzurePronunciation";
 import {
   Dialog,
   DialogContent,
@@ -46,7 +45,7 @@ export default function ReadingAssessmentTemplate({
   existingAudioUrl,
   onRecordingComplete,
   exampleAudioUrl,
-  progressId,
+  progressId: _progressId, // Legacy prop (not used with Azure direct calls)
   readOnly = false,
   timeLimit = 30, // 預設 30 秒
   onTimeout,
@@ -62,6 +61,9 @@ export default function ReadingAssessmentTemplate({
   const [assessmentResult, setAssessmentResult] =
     useState<AssessmentResult | null>(null);
   const exampleAudioRef = useRef<HTMLAudioElement>(null);
+
+  // 🚀 Azure Speech Service hook for direct API calls
+  const { analyzePronunciation } = useAzurePronunciation();
 
   // 計時器狀態
   const [timeRemaining, setTimeRemaining] = useState(timeLimit);
@@ -152,79 +154,98 @@ export default function ReadingAssessmentTemplate({
   //   setIsPlayingExample(!isPlayingExample);
   // };
 
+  /**
+   * 背景上傳音檔和分析結果（不阻塞 UI）
+   */
+  const uploadAnalysisInBackground = async (
+    audioBlob: Blob,
+    analysisResult: AssessmentResult,
+  ) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      const formData = new FormData();
+
+      // 決定檔案副檔名
+      const uploadFileExtension = audioBlob.type.includes("mp4")
+        ? "recording.mp4"
+        : audioBlob.type.includes("webm")
+          ? "recording.webm"
+          : "recording.audio";
+
+      formData.append("audio_file", audioBlob, uploadFileExtension);
+      formData.append(
+        "analysis_json",
+        JSON.stringify({
+          pronunciation_score: analysisResult.pronunciationScore,
+          accuracy_score: analysisResult.accuracyScore,
+          fluency_score: analysisResult.fluencyScore,
+          completeness_score: analysisResult.completenessScore,
+          overall_score: analysisResult.overallScore,
+        }),
+      );
+
+      if (_progressId) {
+        formData.append("progress_id", _progressId.toString());
+      }
+
+      // 背景上傳（不等待結果）
+      fetch(`${apiUrl}/api/speech/upload-analysis`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${import.meta.env.VITE_STUDENT_TOKEN || ""}`,
+        },
+        body: formData,
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            throw new Error(`Upload failed: ${response.status}`);
+          }
+          console.log("✅ Background upload completed");
+        })
+        .catch((error) => {
+          console.error("❌ Background upload failed:", error);
+        });
+    } catch (error) {
+      console.error("Failed to prepare background upload:", error);
+    }
+  };
+
   const handleAssessment = async () => {
-    if (!audioUrl || !progressId) {
+    if (!audioUrl) {
       toast.error(t("readingAssessment.toast.missingData"));
       return;
     }
 
     setIsAssessing(true);
     try {
-      // Convert audioUrl to blob for upload
+      // Convert audioUrl to blob for analysis
       const response = await fetch(audioUrl);
       const audioBlob = await response.blob();
 
-      // Create form data
-      const formData = new FormData();
-      // 根據 blob 的 MIME type 決定檔案副檔名
-      const fileExtension = audioBlob.type.includes("mp4")
-        ? "recording.mp4"
-        : audioBlob.type.includes("webm")
-          ? "recording.webm"
-          : "recording.audio";
-      formData.append("audio_file", audioBlob, fileExtension);
-      formData.append("reference_text", targetText);
-      formData.append("progress_id", progressId.toString());
+      // 🚀 先分析（快速顯示結果）
+      const azureResult = await analyzePronunciation(audioBlob, targetText);
 
-      // Get authentication token from store
-      const { token } = useStudentAuthStore();
-      if (!token) {
-        toast.error(t("readingAssessment.toast.reloginRequired"));
-        return;
+      if (!azureResult) {
+        throw new Error("Azure analysis failed");
       }
 
-      // Call assessment API with retry mechanism
-      const result = await retryAIAnalysis(
-        async () => {
-          const apiResponse = await fetch("/api/speech/assess", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          });
+      // ⚡ 立即顯示結果（用戶無需等待上傳）
+      const result: AssessmentResult = {
+        overallScore: azureResult.pronunciationScore,
+        accuracyScore: azureResult.accuracyScore,
+        fluencyScore: azureResult.fluencyScore,
+        completenessScore: azureResult.completenessScore,
+        pronunciationScore: azureResult.pronunciationScore,
+        feedback: "", // Azure doesn't provide feedback text
+      };
 
-          if (!apiResponse.ok) {
-            const errorData = await apiResponse
-              .json()
-              .catch(() => ({ detail: "AI Analysis failed" }));
-            const error = new Error(
-              errorData.detail || `AI Analysis failed: ${apiResponse.status}`,
-            );
-            if (apiResponse.status >= 500 || apiResponse.status === 429) {
-              // Server errors and rate limits are retryable
-              throw error;
-            }
-            // Client errors (4xx except 429) should not be retried
-            throw Object.assign(error, { noRetry: true });
-          }
-
-          return await apiResponse.json();
-        },
-        (attempt) => {
-          toast.warning(t("readingAssessment.toast.aiRetrying", { attempt }));
-        },
-      );
-      setAssessmentResult({
-        overallScore: result.overall_score,
-        accuracyScore: result.accuracy_score,
-        fluencyScore: result.fluency_score,
-        completenessScore: result.completeness_score,
-        pronunciationScore: result.pronunciation_score,
-        feedback: result.feedback,
-      });
-
+      setAssessmentResult(result);
       toast.success(t("readingAssessment.toast.aiComplete"));
+
+      // 🎯 背景上傳（不阻塞 UI）
+      if (!readOnly && audioUrl.startsWith("blob:")) {
+        uploadAnalysisInBackground(audioBlob, result);
+      }
     } catch (error) {
       console.error("Assessment error:", error);
       toast.error(

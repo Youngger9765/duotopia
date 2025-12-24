@@ -44,9 +44,11 @@ import {
   selectSupportedMimeType,
   validateDuration,
 } from "@/utils/audioRecordingStrategy";
-import { retryAudioUpload, retryAIAnalysis } from "@/utils/retryHelper";
+import { retryAudioUpload } from "@/utils/retryHelper";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { useTranslation } from "react-i18next";
+import { useAzurePronunciation } from "@/hooks/useAzurePronunciation";
+import { azureSpeechService } from "@/services/azureSpeechService";
 
 // Activity type from API
 export interface Activity {
@@ -190,6 +192,9 @@ export default function StudentActivityPageContent({
   showAnswer = false,
 }: StudentActivityPageContentProps) {
   const { t } = useTranslation();
+
+  // 🚀 Azure Speech Service hook for direct API calls (background analysis)
+  const { analyzePronunciation } = useAzurePronunciation();
 
   // State management
   const [activities, setActivities] = useState<Activity[]>(initialActivities);
@@ -549,118 +554,11 @@ export default function StudentActivityPageContent({
           });
         }
 
-        console.log("✅ 錄音完成，開始上傳到 GCS");
         isReRecording.current = false;
 
-        // 🎯 Issue #75: 立即上傳到 GCS (不觸發自動分析)
-        if (
-          !isPreviewMode &&
-          currentActivity.items &&
-          currentActivity.items.length > 0
-        ) {
-          const contentItemId =
-            currentActivity.items[currentSubQuestionIndex]?.id;
-
-          if (contentItemId) {
-            console.log("🚀 開始上傳錄音到 GCS...");
-            // 🎯 Issue #82: 顯示上傳中提示，讓用戶知道要等待
-            toast.info(t("studentActivityPage.recording.uploading"), {
-              duration: 3000,
-            });
-
-            const formData = new FormData();
-            formData.append("assignment_id", assignmentId!.toString());
-            formData.append("content_item_id", contentItemId.toString());
-            const uploadFileExtension = audioBlob.type.includes("mp4")
-              ? "recording.mp4"
-              : audioBlob.type.includes("webm")
-                ? "recording.webm"
-                : "recording.audio";
-            formData.append("audio_file", audioBlob, uploadFileExtension);
-
-            const apiUrl = import.meta.env.VITE_API_URL || "";
-            const authToken = useStudentAuthStore.getState().token;
-
-            retryAudioUpload(
-              async () => {
-                const uploadResponse = await fetch(
-                  `${apiUrl}/api/students/upload-recording`,
-                  {
-                    method: "POST",
-                    headers: {
-                      Authorization: `Bearer ${authToken}`,
-                    },
-                    body: formData,
-                  },
-                );
-
-                if (!uploadResponse.ok) {
-                  throw new Error(`Upload failed: ${uploadResponse.status}`);
-                }
-
-                return await uploadResponse.json();
-              },
-              (attempt, error) => {
-                console.log(`上傳重試 (${attempt}):`, error);
-              },
-            )
-              .then((uploadResult) => {
-                console.log("✅ 上傳成功:", uploadResult.audio_url);
-                // 🎯 Issue #82: 上傳成功提示，讓用戶知道可以點擊分析按鈕
-                toast.success(t("studentActivityPage.recording.uploadSuccess"));
-
-                // 更新為 GCS URL
-                setActivities((prevActivities) => {
-                  const newActivities = [...prevActivities];
-                  const activityIndex = newActivities.findIndex(
-                    (a) => a.id === currentActivity.id,
-                  );
-                  if (
-                    activityIndex !== -1 &&
-                    newActivities[activityIndex].items
-                  ) {
-                    const newItems = [...newActivities[activityIndex].items!];
-                    if (newItems[currentSubQuestionIndex]) {
-                      newItems[currentSubQuestionIndex] = {
-                        ...newItems[currentSubQuestionIndex],
-                        recording_url: uploadResult.audio_url,
-                      };
-                    }
-                    newActivities[activityIndex] = {
-                      ...newActivities[activityIndex],
-                      items: newItems,
-                    };
-                  }
-                  return newActivities;
-                });
-
-                // 更新 progressIds
-                setAnswers((prev) => {
-                  const newAnswers = new Map(prev);
-                  const answer = newAnswers.get(currentActivity.id);
-                  if (answer) {
-                    if (!answer.progressIds) answer.progressIds = [];
-                    while (
-                      answer.progressIds.length <= currentSubQuestionIndex
-                    ) {
-                      answer.progressIds.push(0);
-                    }
-                    answer.progressIds[currentSubQuestionIndex] =
-                      uploadResult.progress_id;
-                    answer.status = "completed";
-                  }
-                  newAnswers.set(currentActivity.id, answer!);
-                  return newAnswers;
-                });
-              })
-              .catch((error) => {
-                console.error("❌ 上傳失敗:", error);
-                toast.error("上傳錄音失敗", {
-                  description: "請檢查網路連接後重試",
-                });
-              });
-          }
-        }
+        // 🎯 Issue #118: 不自動上傳，等待用戶點擊「上傳並分析」按鈕
+        // recording_url 已在 Line 544 設置為 localAudioUrl (blob URL)
+        // GroupedQuestionsTemplate 會顯示「上傳並分析」按鈕
 
         // 🔧 錄音完成後清理所有錄音狀態
         if (streamRef.current) {
@@ -899,8 +797,6 @@ export default function StudentActivityPageContent({
         description: `${file.name}（${Math.round(duration)} 秒）`,
       });
 
-      console.log("✅ File validated successfully, starting upload to GCS...");
-
       // 🎯 立即上傳到 GCS (與錄音完成後的上傳邏輯相同)
       if (
         !isPreviewMode &&
@@ -911,7 +807,6 @@ export default function StudentActivityPageContent({
           currentActivity.items[currentSubQuestionIndex]?.id;
 
         if (contentItemId) {
-          console.log("🚀 開始上傳檔案到 GCS...");
           toast.info(t("studentActivityPage.recording.uploading"), {
             duration: 3000,
           });
@@ -957,7 +852,6 @@ export default function StudentActivityPageContent({
             },
           )
             .then((uploadResult) => {
-              console.log("✅ 上傳成功:", uploadResult.audio_url);
               toast.success(t("studentActivityPage.recording.uploadSuccess"));
 
               // 更新為 GCS URL
@@ -1160,46 +1054,31 @@ export default function StudentActivityPageContent({
             throw new Error("No progress_id available for analysis");
           }
 
-          // 🤖 AI 分析
-          const aiFormData = new FormData();
+          // 🚀 使用 Azure Speech Service 直接分析（快速！）
           const audioResponse = await fetch(gcsAudioUrl);
           const audioBlob = await audioResponse.blob();
-          const fileExtension = audioBlob.type.includes("mp4")
-            ? "recording.mp4"
-            : audioBlob.type.includes("webm")
-              ? "recording.webm"
-              : "recording.audio";
-          aiFormData.append("audio_file", audioBlob, fileExtension);
-          aiFormData.append("reference_text", referenceText!);
-          aiFormData.append("progress_id", String(currentProgressId));
-          aiFormData.append("item_index", String(itemIndex));
-          if (assignmentId) {
-            aiFormData.append("assignment_id", String(assignmentId));
+
+          const azureResult = await analyzePronunciation(
+            audioBlob,
+            referenceText!,
+          );
+
+          if (!azureResult) {
+            throw new Error("Azure analysis failed");
           }
 
-          const analysisResult = await retryAIAnalysis(
-            async () => {
-              const analysisResponse = await fetch(
-                `${apiUrl}/api/speech/assess`,
-                {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                  body: aiFormData,
-                },
-              );
-
-              if (!analysisResponse.ok) {
-                throw new Error(`Analysis failed: ${analysisResponse.status}`);
-              }
-
-              return await analysisResponse.json();
-            },
-            (attempt, error) => {
-              console.log(`Background analysis retrying (${attempt}):`, error);
-            },
-          );
+          // Convert Azure result format to our existing format
+          const analysisResult = {
+            pronunciation_score: azureResult.pronunciationScore,
+            accuracy_score: azureResult.accuracyScore,
+            fluency_score: azureResult.fluencyScore,
+            completeness_score: azureResult.completenessScore,
+            words: azureResult.words?.map((w) => ({
+              word: w.word,
+              accuracy_score: w.accuracyScore,
+              error_type: w.errorType,
+            })),
+          };
 
           // 更新 activity 的 ai_scores
           setActivities((prevActivities) => {
@@ -1427,6 +1306,26 @@ export default function StudentActivityPageContent({
     if (onSubmit) {
       try {
         setSubmitting(true);
+
+        // 🎯 Issue #118: Retry any pending uploads before submitting
+        const pendingCount = azureSpeechService.getPendingUploadCount();
+        if (pendingCount > 0) {
+          console.log(
+            `Retrying ${pendingCount} pending uploads before submit...`,
+          );
+          const retryResult = await azureSpeechService.retryPendingUploads();
+          if (retryResult.failed.length > 0) {
+            console.warn(
+              `${retryResult.failed.length} uploads still failed after retry`,
+            );
+          }
+          if (retryResult.success.length > 0) {
+            console.log(
+              `Successfully uploaded ${retryResult.success.length} pending files`,
+            );
+          }
+        }
+
         await onSubmit({
           answers: [], // Will be filled by parent component
         });
@@ -1599,11 +1498,13 @@ export default function StudentActivityPageContent({
           formatTime={formatTime}
           timeLimit={activity.duration || 30}
           progressIds={
-            answer?.progressIds ||
-            activity.items
-              ?.map((item) => item.progress_id)
-              .filter((id): id is number => typeof id === "number") ||
-            []
+            // 🔧 Issue #118 Fix: Always use activity.items as base, merge in updated progressIds
+            // Previous bug: answer?.progressIds || ... would use incomplete array [101] after first upload
+            // causing items 1-4 to have undefined progressId
+            activity.items?.map(
+              (item, index) =>
+                answer?.progressIds?.[index] ?? item.progress_id ?? 0,
+            ) || []
           }
           initialAssessmentResults={assessmentResults}
           readOnly={isReadOnly}
@@ -2014,6 +1915,15 @@ export default function StudentActivityPageContent({
                           const needsCorrection =
                             hasTeacherGraded && teacherPassed === false;
 
+                          // 🎯 Issue #118: 判斷是否為例句朗讀模式（禁止跳題）
+                          const isReadingMode =
+                            isExampleSentencesType(activity.type) &&
+                            practiceMode !== "rearrangement";
+
+                          // 🎯 Issue #118: 檢查當前題目是否已分析（用於顯示狀態）
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          const hasAssessment = !!(item as any)?.ai_assessment;
+
                           return (
                             <button
                               key={itemIndex}
@@ -2036,19 +1946,28 @@ export default function StudentActivityPageContent({
                                 "flex items-center justify-center text-sm sm:text-xs font-medium",
                                 "min-w-[32px] sm:min-w-[32px]",
                                 // 保持學生原本的完成狀態樣式
-                                isCompleted
-                                  ? "bg-green-100 text-green-800 border-green-400"
-                                  : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
+                                // 🎯 Issue #118: 例句朗讀模式顯示分析狀態（綠色=已分析）
+                                isReadingMode
+                                  ? hasAssessment
+                                    ? "bg-green-100 text-green-800 border-green-400 hover:border-blue-400"
+                                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                                  : isCompleted
+                                    ? "bg-green-100 text-green-800 border-green-400"
+                                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
                                 isActiveItem && "border-2 border-blue-600",
                               )}
                               title={
-                                needsCorrection
-                                  ? "老師要求訂正"
-                                  : isTeacherPassed
-                                    ? "老師已通過"
-                                    : isCompleted
-                                      ? "已完成"
-                                      : "未完成"
+                                isReadingMode
+                                  ? hasAssessment
+                                    ? `第 ${itemIndex + 1} 題 (已分析)`
+                                    : `第 ${itemIndex + 1} 題 (未分析)`
+                                  : needsCorrection
+                                    ? "老師要求訂正"
+                                    : isTeacherPassed
+                                      ? "老師已通過"
+                                      : isCompleted
+                                        ? "已完成"
+                                        : "未完成"
                               }
                             >
                               {itemIndex + 1}
@@ -2139,7 +2058,14 @@ export default function StudentActivityPageContent({
                 );
               }
 
-              if (!isAssessed && !isPreviewMode) {
+              // 🎯 Issue #118: 判斷是否為例句朗讀模式
+              const isReadingMode =
+                isExampleSentencesType(currentActivity.type) &&
+                practiceMode !== "rearrangement";
+
+              // 🎯 Issue #118: 例句朗讀模式始終顯示導航按鈕（即使未分析）
+              // 其他模式維持原行為：未分析時不顯示導航按鈕
+              if (!isAssessed && !isPreviewMode && !isReadingMode) {
                 return null;
               }
 
@@ -2298,7 +2224,10 @@ export default function StudentActivityPageContent({
                         }
                         disabled={
                           isAnalyzing || // 🔒 分析中禁用
-                          (isRearrangementMode ? !hasNextUnanswered : false)
+                          (isRearrangementMode
+                            ? !hasNextUnanswered
+                            : // 🎯 Issue #118: 例句朗讀模式必須分析後才能下一題
+                              isReadingMode && !isAssessed && !isPreviewMode)
                         }
                         className="flex-1 sm:flex-none min-w-0"
                       >

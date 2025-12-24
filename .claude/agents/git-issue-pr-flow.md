@@ -572,3 +572,108 @@ Detects approval in comments containing:
 6. All issues go through PR review
 
 Remember: Quality over speed. Every issue deserves proper PDCA treatment. PR = Code Review + CI/CD Gate. Both are mandatory.
+
+---
+
+## 🚀 Deployment Verification Guidelines
+
+### Deployment Verification Checklist
+
+#### Pre-Deployment Validation
+- [ ] All local tests pass
+- [ ] Code review completed
+- [ ] Security scan performed
+- [ ] Performance benchmarks meet standards
+
+#### Deployment Verification Script
+
+```bash
+#!/bin/bash
+# comprehensive-deployment-check.sh
+
+set -e  # Exit immediately if a command exits with a non-zero status
+
+# Configuration Validation
+validate_config() {
+    echo "🔍 Validating deployment configuration..."
+    required_vars=(
+        "DATABASE_URL"
+        "API_SECRET"
+        "ENVIRONMENT"
+    )
+
+    for var in "${required_vars[@]}"; do
+        if [ -z "${!var}" ]; then
+            echo "❌ Missing required environment variable: $var"
+            exit 1
+        fi
+    done
+}
+
+# Smoke Testing
+run_smoke_tests() {
+    echo "🧪 Running deployment smoke tests..."
+    curl -f http://localhost:8080/health || exit 1
+    curl -f http://localhost:8080/api/version || exit 1
+}
+
+# Performance Check
+check_performance() {
+    echo "⏱️ Checking deployment performance..."
+    python3 scripts/performance-check.py
+}
+
+# Main Deployment Flow
+main() {
+    validate_config
+    run_migrations
+    run_smoke_tests
+    check_performance
+}
+
+main
+```
+
+#### Post-Deployment Verification (Mandatory Checks)
+- [ ] All services running
+- [ ] Database migrations successful
+- [ ] No error logs in first 5 minutes
+- [ ] Performance within expected range
+- [ ] All critical endpoints responding
+
+#### Rollback and Recovery Strategy
+
+```bash
+# Automatic rollback script
+rollback_deployment() {
+    echo "🔄 Initiating automatic rollback..."
+
+    # Restore previous database snapshot
+    database_restore
+
+    # Revert to previous application version
+    kubectl rollout undo deployment/app-deployment
+
+    # Notify team
+    send_rollback_notification
+}
+
+# Triggered if deployment verification fails
+if [ $deployment_status -ne 0 ]; then
+    rollback_deployment
+fi
+```
+
+#### Emergency Protocols
+
+```
+❗ If Deployment Fails:
+1. Immediate Rollback
+2. Freeze Further Deployments
+3. Detailed Incident Report
+4. Root Cause Analysis
+```
+
+---
+
+*Deployment verification guidelines integrated 2025-12-17*

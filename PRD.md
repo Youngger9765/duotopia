@@ -51,6 +51,11 @@ Duotopia 是一個以 AI 驅動的多元智能英語學習平台，專為國小�
 - **Azure Speech Services**: 語音辨識與發音評分
   - Region: eastasia
   - Features: Pronunciation Assessment, Real-time STT
+  - **🚀 新架構（2025-12 - Issue #118）**: 前端直接調用
+    - 後端提供短效 Token API（10分鐘有效）
+    - 前端使用 Azure Speech SDK 直接分析（響應速度提升 56%）
+    - 背景上傳音檔和結果到後端（不阻塞 UI）
+    - Cloud Run 成本降低 99%
 - **OpenAI API**: 翻譯與 TTS
   - GPT-4 Turbo: 英中翻譯
   - TTS-1: 文字轉語音

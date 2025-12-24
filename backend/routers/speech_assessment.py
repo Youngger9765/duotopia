@@ -6,6 +6,7 @@ Azure Speech Assessment Router
 import os
 import logging
 import asyncio
+import json
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from io import BytesIO
@@ -289,8 +290,6 @@ def assess_pronunciation(audio_data: bytes, reference_text: str) -> Dict[str, An
             pronunciation_result = speechsdk.PronunciationAssessmentResult(result)
 
             # 記錄原始結果以便調試
-            import json
-
             result_json = json.loads(result.json)
             nbest = result_json.get("NBest", [{}])[0]
             print("\n🔍 Azure Speech API Raw Result:")
@@ -498,8 +497,6 @@ def save_assessment_result(
 
     # 將完整評估結果和詞彙細節儲存為 JSON 格式的 ai_feedback
     # 這個 JSON 包含完整的 Word→Syllable→Phoneme 層級資訊
-    import json
-
     ai_feedback = {
         # 總體分數
         "accuracy_score": assessment_result["accuracy_score"],
@@ -1252,4 +1249,185 @@ async def test_thread_pool_concurrent():
 #     此端點由 Cloud Tasks 呼叫，不需要認證 token，因為是內部服務呼叫。
 #     如果需要加強安全性，可以檢查請求來源 IP 或使用服務帳號認證。
 #     """
-#     pass
+
+
+# ===== 新功能：前端直接调用 Azure 后的背景上传 =====
+
+
+@router.post("/upload-analysis")
+@trace_function("Upload Pronunciation Analysis")
+async def upload_pronunciation_analysis(
+    audio_file: UploadFile = File(...),
+    analysis_json: str = Form(...),
+    latency_ms: Optional[int] = Form(None),
+    progress_id: Optional[int] = Form(None),  # 👈 改为 Optional（允许前端不传）
+    upload_status: str = Form("success"),  # 🎯 Issue #118: 上傳狀態 (success/failed)
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    背景上传：接收前端已分析的音档和结果
+
+    前端流程：
+    1. 前端获取 Azure Speech Token
+    2. 前端直接调用 Azure Speech SDK 分析（立即显示结果给用户）
+    3. 前端背景调用此 API 上传音档和结果（不阻塞 UI）
+
+    Args:
+        audio_file: 音档文件
+        analysis_json: 前端 Azure Speech SDK 返回的分析结果（JSON 字符串）
+        latency_ms: 前端到 Azure 的延迟（毫秒）
+        progress_id: StudentItemProgress 的 ID
+        upload_status: 上傳狀態 ("success" 或 "failed")
+                      🎯 Issue #118: 若為 "failed"，僅保存分析結果，不上傳音檔
+
+    Returns:
+        {
+            "status": "success",
+            "progress_id": 123,
+            "audio_url": "https://storage.googleapis.com/..." (或 None 若 upload_status="failed")
+        }
+
+    数据库方案 A（零 Migration）：
+    使用现有 ai_feedback JSONB 字段存储，添加 _metadata 区块：
+    {
+        "pronunciation_score": 85,
+        "words": [...],
+        "_metadata": {
+            "source": "frontend_direct",
+            "latency_ms": 1500,
+            "azure_token_used": true,
+            "uploaded_at": "2025-12-16T10:30:00Z",
+            "audio_upload_status": "success" | "failed"
+        }
+    }
+    """
+    try:
+        # 1. 验证和解析 analysis JSON
+        try:
+            analysis = json.loads(analysis_json)
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=400, detail="Invalid JSON format in analysis_json"
+            )
+
+        # 2. 获取 progress 记录并验证权限（如果提供了 progress_id）
+        progress = None
+        if progress_id:
+            progress = (
+                db.query(StudentItemProgress)
+                .filter(StudentItemProgress.id == progress_id)
+                .first()
+            )
+
+            if not progress:
+                raise HTTPException(status_code=404, detail="Progress not found")
+
+        # 验证权限：学生只能上传自己的作业
+        user_type = current_user.get("type")
+        user_id = int(current_user.get("sub"))
+
+        if progress and user_type == "student":
+            # 获取 student_assignment 来验证所属学生
+            student_assignment = (
+                db.query(StudentAssignment)
+                .filter(StudentAssignment.id == progress.student_assignment_id)
+                .first()
+            )
+
+            if not student_assignment or student_assignment.student_id != user_id:
+                raise HTTPException(
+                    status_code=403, detail="You can only upload your own assignments"
+                )
+        elif user_type not in ["student", "teacher"]:
+            raise HTTPException(status_code=403, detail="Invalid user type")
+
+        # 3. 上传音档到 GCS（🎯 Issue #118: 若 upload_status="failed" 則跳過上傳）
+        audio_url = None
+
+        if upload_status != "failed":
+            from services.audio_upload import get_audio_upload_service
+
+            upload_service = get_audio_upload_service()
+
+            audio_url = await upload_service.upload_audio(
+                file=audio_file,
+                duration_seconds=30,  # Frontend should validate this
+                content_id=progress.content_item.content_id
+                if progress and progress.content_item
+                else None,
+                item_index=progress.content_item.order_index
+                if progress and progress.content_item
+                else None,
+                assignment_id=progress.student_assignment_id if progress else None,
+                student_id=user_id if user_type == "student" else None,
+            )
+        else:
+            # 🎯 Issue #118: 上傳失敗模式 - 僅保存分析結果
+            logger.warning(
+                f"Saving analysis without audio for progress_id={progress_id} "
+                f"(upload_status=failed)"
+            )
+
+        # 4. 添加 metadata 到 analysis（方案 A：零 migration）
+        if "_metadata" not in analysis:
+            analysis["_metadata"] = {}
+
+        analysis["_metadata"].update(
+            {
+                "source": "frontend_direct",
+                "latency_ms": latency_ms,
+                "azure_token_used": True,
+                "uploaded_at": datetime.now().isoformat(),
+                "client_timestamp": datetime.now().isoformat(),
+                # 🎯 Issue #118: 記錄上傳狀態
+                "audio_upload_status": upload_status,
+            }
+        )
+
+        # 5. 更新数据库（如果有 progress 记录）
+        if progress:
+            progress.recording_url = audio_url
+
+            # 提取分数并更新
+            if "pronunciation_score" in analysis:
+                progress.pronunciation_score = analysis["pronunciation_score"]
+            if "accuracy_score" in analysis:
+                progress.accuracy_score = analysis["accuracy_score"]
+            if "fluency_score" in analysis:
+                progress.fluency_score = analysis["fluency_score"]
+            if "completeness_score" in analysis:
+                progress.completeness_score = analysis["completeness_score"]
+
+            # 存储完整分析结果（包含 metadata）
+            progress.ai_feedback = json.dumps(analysis)
+            progress.ai_assessed_at = datetime.now()
+
+            # 更新状态
+            if progress.status != "SUBMITTED":
+                progress.status = "SUBMITTED"
+                progress.submitted_at = datetime.now()
+
+            # 增加尝试次数
+            progress.attempts = (progress.attempts or 0) + 1
+
+            db.commit()
+            db.refresh(progress)
+
+        logger.info(
+            f"Successfully uploaded analysis: progress_id={progress_id}, "
+            f"user_id={user_id}, latency_ms={latency_ms}"
+        )
+
+        return {
+            "status": "success",
+            "progress_id": progress.id if progress else None,
+            "audio_url": audio_url,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Upload analysis failed: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
