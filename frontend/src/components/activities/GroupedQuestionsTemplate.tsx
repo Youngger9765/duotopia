@@ -905,10 +905,15 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                             onAssessmentComplete(currentQuestionIndex, null);
                           }
                         }}
-                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                        title={t(
-                          "groupedQuestionsTemplate.labels.clearRecording",
-                        )}
+                        disabled={readOnly}
+                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-500 disabled:hover:bg-transparent"
+                        title={
+                          readOnly
+                            ? t("groupedQuestionsTemplate.labels.viewOnlyMode")
+                            : t(
+                                "groupedQuestionsTemplate.labels.clearRecording",
+                              )
+                        }
                       >
                         <svg
                           className="w-3.5 h-3.5"
@@ -1223,9 +1228,13 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                         onAssessmentComplete(currentQuestionIndex, null);
                       }
                     }}
-                    className="absolute top-0 right-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors z-10"
-                    title={t("groupedQuestionsTemplate.labels.deleteRecording")}
-                    disabled={isAssessing}
+                    className="absolute top-0 right-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors z-10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-400 disabled:hover:bg-transparent"
+                    title={
+                      readOnly || isAssessing
+                        ? t("groupedQuestionsTemplate.labels.viewOnlyMode")
+                        : t("groupedQuestionsTemplate.labels.deleteRecording")
+                    }
+                    disabled={isAssessing || readOnly}
                   >
                     <X className="w-4 h-4" />
                   </button>
