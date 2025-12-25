@@ -434,7 +434,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({
   show,
   onClose,
 }) => {
-  const [diceValue, setDiceValue] = useState(1);
+  const [, setDiceValue] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
   const [enableTransition, setEnableTransition] = useState(true);

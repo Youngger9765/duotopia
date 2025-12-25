@@ -16,20 +16,23 @@ vi.mock("react-i18next", () => ({
 describe("DigitalTeachingToolbar", () => {
   beforeEach(() => {
     // Mock canvas for testing
-    HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
-      scale: vi.fn(),
-      lineCap: "",
-      lineJoin: "",
-      beginPath: vi.fn(),
-      moveTo: vi.fn(),
-      lineTo: vi.fn(),
-      stroke: vi.fn(),
-      closePath: vi.fn(),
-      clearRect: vi.fn(),
-      globalCompositeOperation: "",
-      strokeStyle: "",
-      lineWidth: 0,
-    })) as any;
+    HTMLCanvasElement.prototype.getContext = vi.fn(
+      () =>
+        ({
+          scale: vi.fn(),
+          lineCap: "",
+          lineJoin: "",
+          beginPath: vi.fn(),
+          moveTo: vi.fn(),
+          lineTo: vi.fn(),
+          stroke: vi.fn(),
+          closePath: vi.fn(),
+          clearRect: vi.fn(),
+          globalCompositeOperation: "",
+          strokeStyle: "",
+          lineWidth: 0,
+        }) as unknown as CanvasRenderingContext2D,
+    );
 
     // Mock window.innerWidth and innerHeight
     window.innerWidth = 1024;

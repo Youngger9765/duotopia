@@ -38,7 +38,7 @@ describe("TeacherLayout", () => {
 
   it("should render DigitalTeachingToolbar", async () => {
     const { apiClient } = await import("@/lib/api");
-    (apiClient.get as any).mockResolvedValue({
+    vi.mocked(apiClient.get).mockResolvedValue({
       data: { enablePayment: true, environment: "development" },
     });
 
@@ -60,7 +60,7 @@ describe("TeacherLayout", () => {
 
   it("should render teacher navigation", async () => {
     const { apiClient } = await import("@/lib/api");
-    (apiClient.get as any).mockResolvedValue({
+    vi.mocked(apiClient.get).mockResolvedValue({
       data: { enablePayment: true, environment: "development" },
     });
 
