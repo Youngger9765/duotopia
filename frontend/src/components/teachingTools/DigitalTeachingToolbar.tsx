@@ -1,8 +1,25 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Timer, Dice5, X, GripHorizontal, Triangle, Play, Square } from 'lucide-react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
+import {
+  Timer,
+  Dice5,
+  X,
+  GripHorizontal,
+  Triangle,
+  Play,
+  Square,
+} from "lucide-react";
 
 // Timer Component
-const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onClose }) => {
+const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({
+  show,
+  onClose,
+}) => {
   const [minutes, setMinutes] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [isActive, setIsActive] = useState(false);
@@ -29,21 +46,21 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onC
   const handleTransform = useCallback(
     (tx: number, ty: number) => ({
       transform: `translate(${tx}%, ${ty}%) scale(${1 / timerScale})`,
-      transformOrigin: 'center',
+      transformOrigin: "center",
     }),
-    [timerScale]
+    [timerScale],
   );
 
   // 初始化音效
   useEffect(() => {
     const audio = new Audio(
-      'https://storage.googleapis.com/duotopia-social-media-videos/website/sounds/timerring.mp3.mp3'
+      "https://storage.googleapis.com/duotopia-social-media-videos/website/sounds/timerring.mp3.mp3",
     );
     audio.loop = true;
     audioRef.current = audio;
     return () => {
       audio.pause();
-      audio.src = '';
+      audio.src = "";
     };
   }, []);
 
@@ -58,7 +75,9 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onC
   const startBeeping = useCallback(() => {
     setIsBeeping(true);
     if (audioRef.current) {
-      audioRef.current.play().catch((e) => console.log('Audio play prevented:', e));
+      audioRef.current
+        .play()
+        .catch((e) => console.log("Audio play prevented:", e));
     }
   }, []);
 
@@ -96,16 +115,16 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onC
       ticks.push(
         <div
           key={i}
-          className={`absolute ${isMajor ? 'bg-gray-800' : 'bg-gray-400'}`}
+          className={`absolute ${isMajor ? "bg-gray-800" : "bg-gray-400"}`}
           style={{
-            width: isMajor ? '3px' : '1px',
-            height: isMajor ? '14px' : '7px',
-            left: '50%',
-            top: '50%',
+            width: isMajor ? "3px" : "1px",
+            height: isMajor ? "14px" : "7px",
+            left: "50%",
+            top: "50%",
             transformOrigin: `50% 120px`,
             transform: `translate(-50%, -120px) rotate(${i * 6}deg)`,
           }}
-        />
+        />,
       );
     }
     return ticks;
@@ -114,12 +133,12 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onC
   const startDrag = (
     e: React.MouseEvent | React.TouchEvent,
     setPos: (pos: { x: number; y: number }) => void,
-    currentPos: { x: number; y: number }
+    currentPos: { x: number; y: number },
   ) => {
     if (
-      (e.target as HTMLElement).closest('button') ||
-      (e.target as HTMLElement).closest('.resize-handle') ||
-      (e.target as HTMLElement).closest('.settings-panel')
+      (e.target as HTMLElement).closest("button") ||
+      (e.target as HTMLElement).closest(".resize-handle") ||
+      (e.target as HTMLElement).closest(".settings-panel")
     ) {
       return;
     }
@@ -136,7 +155,7 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onC
     let frameId: number | null = null;
 
     // Prevent text selection during drag
-    document.body.style.userSelect = 'none';
+    document.body.style.userSelect = "none";
 
     const onMove = (moveEvent: MouseEvent | TouchEvent) => {
       const moveX = (moveEvent as TouchEvent).touches
@@ -156,24 +175,24 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onC
 
     const onEnd = () => {
       if (frameId) cancelAnimationFrame(frameId);
-      document.body.style.userSelect = '';
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onEnd);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
     };
 
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onEnd);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onEnd);
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd);
   };
 
   const startResize = (
     e: React.MouseEvent | React.TouchEvent,
     setScale: (scale: number) => void,
     currentScale: number,
-    direction: number = 1 // use -1 for left handles so pulling outward increases size
+    direction: number = 1, // use -1 for left handles so pulling outward increases size
   ) => {
     e.stopPropagation();
     const clientX = (e as React.TouchEvent).touches
@@ -184,7 +203,7 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onC
     let frameId: number | null = null;
 
     // Prevent text selection during resize
-    document.body.style.userSelect = 'none';
+    document.body.style.userSelect = "none";
 
     const onMove = (moveEvent: MouseEvent | TouchEvent) => {
       const moveX = (moveEvent as TouchEvent).touches
@@ -202,17 +221,17 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onC
 
     const onEnd = () => {
       if (frameId) cancelAnimationFrame(frameId);
-      document.body.style.userSelect = '';
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onEnd);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
     };
 
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onEnd);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onEnd);
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd);
   };
 
   if (!show) return null;
@@ -222,11 +241,11 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onC
       className="fixed flex flex-col items-center group z-[200]"
       ref={containerRef}
       style={{
-        width: '320px',
+        width: "320px",
         left: `${timerPos.x}px`,
         top: `${timerPos.y}px`,
         transform: `scale(${timerScale})`,
-        transformOrigin: 'top left',
+        transformOrigin: "top left",
       }}
       onMouseDown={(e) => startDrag(e, setTimerPos, timerPos)}
       onTouchStart={(e) => startDrag(e, setTimerPos, timerPos)}
@@ -244,11 +263,14 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onC
 
       <div
         className={`relative flex items-center justify-center w-[260px] h-[260px] rounded-full bg-white/70 backdrop-blur-md border-[6px] border-white/80 shadow-2xl transition-all ${
-          isBeeping ? 'animate-pulse ring-8 ring-blue-400' : ''
+          isBeeping ? "animate-pulse ring-8 ring-blue-400" : ""
         }`}
       >
         {ticksElement}
-        <div className="relative flex flex-col items-center z-10" onMouseDown={(e) => e.stopPropagation()}>
+        <div
+          className="relative flex flex-col items-center z-10"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           <div className="flex gap-4 mb-4">
             <button
               onClick={() => {
@@ -261,8 +283,8 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onC
               disabled={isActive}
               className={`rounded-full shadow-lg w-10 h-10 flex items-center justify-center ${
                 isActive
-                  ? 'bg-gray-100 text-gray-300'
-                  : 'bg-green-500 text-white hover:scale-105 transition-transform'
+                  ? "bg-gray-100 text-gray-300"
+                  : "bg-green-500 text-white hover:scale-105 transition-transform"
               }`}
               aria-label="Start timer"
             >
@@ -288,18 +310,28 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onC
               <button
                 onClick={() => {
                   if (!isActive)
-                    setTimeLeft(Math.max(0, (timeLeft > 0 ? timeLeft : minutes * 60) + 60));
+                    setTimeLeft(
+                      Math.max(
+                        0,
+                        (timeLeft > 0 ? timeLeft : minutes * 60) + 60,
+                      ),
+                    );
                 }}
                 className="text-gray-400 hover:text-blue-500"
                 aria-label="Increase minutes"
               >
                 <Triangle size={12} className="fill-current" />
               </button>
-              <span>{String(currentMin).padStart(2, '0')}</span>
+              <span>{String(currentMin).padStart(2, "0")}</span>
               <button
                 onClick={() => {
                   if (!isActive)
-                    setTimeLeft(Math.max(0, (timeLeft > 0 ? timeLeft : minutes * 60) - 60));
+                    setTimeLeft(
+                      Math.max(
+                        0,
+                        (timeLeft > 0 ? timeLeft : minutes * 60) - 60,
+                      ),
+                    );
                 }}
                 className="text-gray-400 hover:text-blue-500 rotate-180"
                 aria-label="Decrease minutes"
@@ -312,18 +344,28 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onC
               <button
                 onClick={() => {
                   if (!isActive)
-                    setTimeLeft(Math.max(0, (timeLeft > 0 ? timeLeft : minutes * 60) + 10));
+                    setTimeLeft(
+                      Math.max(
+                        0,
+                        (timeLeft > 0 ? timeLeft : minutes * 60) + 10,
+                      ),
+                    );
                 }}
                 className="text-gray-400 hover:text-blue-500"
                 aria-label="Increase seconds"
               >
                 <Triangle size={12} className="fill-current" />
               </button>
-              <span>{String(currentSec).padStart(2, '0')}</span>
+              <span>{String(currentSec).padStart(2, "0")}</span>
               <button
                 onClick={() => {
                   if (!isActive)
-                    setTimeLeft(Math.max(0, (timeLeft > 0 ? timeLeft : minutes * 60) - 10));
+                    setTimeLeft(
+                      Math.max(
+                        0,
+                        (timeLeft > 0 ? timeLeft : minutes * 60) - 10,
+                      ),
+                    );
                 }}
                 className="text-gray-400 hover:text-blue-500 rotate-180"
                 aria-label="Decrease seconds"
@@ -388,7 +430,10 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onC
 };
 
 // Dice Component
-const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onClose }) => {
+const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({
+  show,
+  onClose,
+}) => {
   const [diceValue, setDiceValue] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
@@ -398,9 +443,9 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
   const handleTransform = useCallback(
     (tx: number, ty: number, extraY: number = 0) => ({
       transform: `translate(${tx}%, ${ty}%) translateY(${extraY}px) scale(${1 / diceScale})`,
-      transformOrigin: 'center',
+      transformOrigin: "center",
     }),
-    [diceScale]
+    [diceScale],
   );
 
   const rollTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -418,16 +463,13 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
   const rollDice = () => {
     // Prevent overlapping rolls
     if (isRolling) return;
-    
+
     // Clear any pending timeouts
     if (rollTimerRef.current) clearTimeout(rollTimerRef.current);
-    
+
     setIsRolling(true);
     const newValue = Math.floor(Math.random() * 6) + 1;
-    const targetRotations: Record<
-      number,
-      { x: number; y: number }
-    > = {
+    const targetRotations: Record<number, { x: number; y: number }> = {
       1: { x: 0, y: 0 },
       2: { x: 0, y: 180 },
       3: { x: 0, y: -90 },
@@ -435,24 +477,24 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
       5: { x: -90, y: 0 },
       6: { x: 90, y: 0 },
     };
-    
+
     // Enable transition for animation
     setEnableTransition(true);
-    
+
     // Set rotation with 1440 offset for smooth rolling animation
     setRotation({
       x: targetRotations[newValue].x + 1440,
       y: targetRotations[newValue].y + 1440,
     });
-    
+
     // Wait for CSS animation to complete (700ms)
     rollTimerRef.current = setTimeout(() => {
       setDiceValue(newValue);
       setIsRolling(false);
-      
+
       // Disable transition temporarily to reset rotation without animation
       setEnableTransition(false);
-      
+
       // Reset rotation to target value for next roll
       requestAnimationFrame(() => {
         setRotation({
@@ -505,7 +547,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
     return (
       <div
         className="absolute w-full h-full bg-white border border-gray-200 rounded-2xl flex items-center justify-center shadow-inner"
-        style={{ transform, backfaceVisibility: 'hidden' }}
+        style={{ transform, backfaceVisibility: "hidden" }}
       >
         <svg width="100%" height="100%" viewBox="0 0 100 100">
           {(dotMap[dots] || []).map(([cx, cy], i) => (
@@ -514,7 +556,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
               cx={cx}
               cy={cy}
               r={dots === 1 ? 12 : 8}
-              fill={isRed ? '#ef4444' : '#374151'}
+              fill={isRed ? "#ef4444" : "#374151"}
             />
           ))}
         </svg>
@@ -525,12 +567,12 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
   const startDrag = (
     e: React.MouseEvent | React.TouchEvent,
     setPos: (pos: { x: number; y: number }) => void,
-    currentPos: { x: number; y: number }
+    currentPos: { x: number; y: number },
   ) => {
     if (
-      (e.target as HTMLElement).closest('button') ||
-      (e.target as HTMLElement).closest('.resize-handle') ||
-      (e.target as HTMLElement).closest('.dice-clickable')
+      (e.target as HTMLElement).closest("button") ||
+      (e.target as HTMLElement).closest(".resize-handle") ||
+      (e.target as HTMLElement).closest(".dice-clickable")
     ) {
       return;
     }
@@ -547,7 +589,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
     let frameId: number | null = null;
 
     // Prevent text selection during drag
-    document.body.style.userSelect = 'none';
+    document.body.style.userSelect = "none";
 
     const onMove = (moveEvent: MouseEvent | TouchEvent) => {
       const moveX = (moveEvent as TouchEvent).touches
@@ -567,23 +609,23 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
 
     const onEnd = () => {
       if (frameId) cancelAnimationFrame(frameId);
-      document.body.style.userSelect = '';
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onEnd);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
     };
 
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onEnd);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onEnd);
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd);
   };
 
   const startResize = (
     e: React.MouseEvent | React.TouchEvent,
     setScale: (scale: number) => void,
-    currentScale: number
+    currentScale: number,
   ) => {
     e.stopPropagation();
     const clientX = (e as React.TouchEvent).touches
@@ -594,7 +636,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
     let frameId: number | null = null;
 
     // Prevent text selection during resize
-    document.body.style.userSelect = 'none';
+    document.body.style.userSelect = "none";
 
     const onMove = (moveEvent: MouseEvent | TouchEvent) => {
       const moveX = (moveEvent as TouchEvent).touches
@@ -612,17 +654,17 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
 
     const onEnd = () => {
       if (frameId) cancelAnimationFrame(frameId);
-      document.body.style.userSelect = '';
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onEnd);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
     };
 
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onEnd);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onEnd);
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd);
   };
 
   if (!show || !dicePos) return null;
@@ -631,11 +673,11 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
     <div
       className="fixed flex flex-col items-center group z-[200]"
       style={{
-        width: '150px',
+        width: "150px",
         left: `${dicePos.x}px`,
         top: `${dicePos.y}px`,
         transform: `scale(${diceScale})`,
-        transformOrigin: 'top left',
+        transformOrigin: "top left",
       }}
       onMouseDown={(e) => startDrag(e, setDicePos, dicePos)}
       onTouchStart={(e) => startDrag(e, setDicePos, dicePos)}
@@ -680,7 +722,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
 
       <div
         className="dice-clickable w-20 h-20 mt-4 cursor-pointer drop-shadow-2xl"
-        style={{ perspective: '800px' }}
+        style={{ perspective: "800px" }}
         onClick={(e) => {
           e.stopPropagation();
           rollDice();
@@ -688,9 +730,9 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({ show, onCl
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div
-          className={`relative w-full h-full ${enableTransition ? 'transition-transform duration-700 ease-out' : ''}`}
+          className={`relative w-full h-full ${enableTransition ? "transition-transform duration-700 ease-out" : ""}`}
           style={{
-            transformStyle: 'preserve-3d',
+            transformStyle: "preserve-3d",
             transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
           }}
         >
@@ -729,8 +771,8 @@ const DigitalTeachingToolbar: React.FC = () => {
           onClick={handleToggleTimer}
           className={`p-1.5 rounded-lg transition-all duration-300 ${
             showTimer
-              ? 'bg-blue-500 text-white shadow-md'
-              : 'hover:bg-gray-100 text-blue-500'
+              ? "bg-blue-500 text-white shadow-md"
+              : "hover:bg-gray-100 text-blue-500"
           }`}
           aria-label="Timer"
         >
@@ -741,8 +783,8 @@ const DigitalTeachingToolbar: React.FC = () => {
           onClick={handleToggleDice}
           className={`p-1.5 rounded-lg transition-all duration-300 ${
             showDice
-              ? 'bg-gray-800 text-white shadow-md'
-              : 'hover:bg-gray-100 text-gray-600'
+              ? "bg-gray-800 text-white shadow-md"
+              : "hover:bg-gray-100 text-gray-600"
           }`}
           aria-label="Dice"
         >
