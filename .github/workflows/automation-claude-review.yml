@@ -3,6 +3,8 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize]
+    branches:
+      - staging  # 只在 PR 目標是 staging 時觸發 code review
     # Optional: Only run on specific file changes
     # paths:
     #   - "src/**/*.ts"
