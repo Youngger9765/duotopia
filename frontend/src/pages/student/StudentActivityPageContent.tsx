@@ -49,6 +49,7 @@ import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { useTranslation } from "react-i18next";
 import { useAzurePronunciation } from "@/hooks/useAzurePronunciation";
 import { azureSpeechService } from "@/services/azureSpeechService";
+import { useAutoAnalysis } from "@/hooks/useAutoAnalysis"; // Issue #141: 例句朗讀自動分析
 
 // Activity type from API
 export interface Activity {
@@ -195,6 +196,13 @@ export default function StudentActivityPageContent({
 
   // 🚀 Azure Speech Service hook for direct API calls (background analysis)
   const { analyzePronunciation } = useAzurePronunciation();
+
+  // 🎯 Issue #141: 例句朗讀自動分析 hook
+  const {
+    isAnalyzing: isAutoAnalyzing,
+    analyzingMessage,
+    analyzeAndUpload,
+  } = useAutoAnalysis(assignmentId, isPreviewMode);
 
   // State management
   const [activities, setActivities] = useState<Activity[]>(initialActivities);
@@ -1217,6 +1225,101 @@ export default function StudentActivityPageContent({
   };
 
   /**
+   * Issue #141: 處理題號按鈕跳題
+   * 如果當前題目有錄音但未分析，自動觸發分析後再跳轉
+   */
+  const handleQuestionJump = async (
+    targetActivityIndex: number,
+    targetItemIndex: number,
+  ) => {
+    const currentActivity = activities[currentActivityIndex];
+
+    // 檢查是否為例句朗讀模式（items 有值且非重組模式）
+    const isReadingMode =
+      isExampleSentencesType(currentActivity.type) &&
+      practiceMode !== "rearrangement" &&
+      currentActivity.items &&
+      currentActivity.items.length > 0;
+
+    // 只有例句朗讀模式才需要自動分析
+    if (!isReadingMode) {
+      // 其他模式直接跳轉
+      if (targetActivityIndex !== currentActivityIndex) {
+        handleActivitySelect(targetActivityIndex, targetItemIndex);
+      } else {
+        setCurrentSubQuestionIndex(targetItemIndex);
+      }
+      return;
+    }
+
+    // 檢查當前題目是否有錄音但未分析
+    const currentItem = currentActivity.items![currentSubQuestionIndex];
+    const hasRecording =
+      currentItem.recording_url && currentItem.recording_url !== "";
+    const isBlobUrl =
+      hasRecording && currentItem.recording_url!.startsWith("blob:");
+    const hasAssessment = !!(currentItem as any)?.ai_assessment;
+
+    // 如果有 blob URL 但沒有分析結果，自動分析
+    if (isBlobUrl && !hasAssessment) {
+      const targetText = currentItem.text || "";
+      const progressId = currentItem.progress_id;
+      const contentItemId = currentItem.id;
+
+      if (!targetText) {
+        console.warn("缺少參考文本，無法分析");
+        // 即使無法分析，也允許跳轉
+        if (targetActivityIndex !== currentActivityIndex) {
+          handleActivitySelect(targetActivityIndex, targetItemIndex);
+        } else {
+          setCurrentSubQuestionIndex(targetItemIndex);
+        }
+        return;
+      }
+
+      // 觸發自動分析
+      const analysisResult = await analyzeAndUpload(
+        currentItem.recording_url!,
+        targetText,
+        progressId,
+        contentItemId,
+      );
+
+      // 如果分析成功，更新 activities state
+      if (analysisResult) {
+        setActivities((prevActivities) => {
+          const newActivities = [...prevActivities];
+          const activityIndex = newActivities.findIndex(
+            (a) => a.id === currentActivity.id,
+          );
+          if (activityIndex !== -1 && newActivities[activityIndex].items) {
+            const newItems = [...newActivities[activityIndex].items!];
+            if (newItems[currentSubQuestionIndex]) {
+              newItems[currentSubQuestionIndex] = {
+                ...newItems[currentSubQuestionIndex],
+                ai_assessment: analysisResult,
+              };
+            }
+            newActivities[activityIndex] = {
+              ...newActivities[activityIndex],
+              items: newItems,
+            };
+          }
+          return newActivities;
+        });
+      }
+      // 分析失敗時不阻擋跳轉（讓用戶可以繼續）
+    }
+
+    // 執行跳轉
+    if (targetActivityIndex !== currentActivityIndex) {
+      handleActivitySelect(targetActivityIndex, targetItemIndex);
+    } else {
+      setCurrentSubQuestionIndex(targetItemIndex);
+    }
+  };
+
+  /**
    * Issue #75: 提交邏輯說明
    *
    * 當學生點擊「提交」時：
@@ -1927,20 +2030,16 @@ export default function StudentActivityPageContent({
                           return (
                             <button
                               key={itemIndex}
-                              onClick={() => {
-                                if (isAnalyzing) return; // 🔒 分析中禁止切換
-                                if (activityIndex !== currentActivityIndex) {
-                                  // 切換 activity
-                                  handleActivitySelect(
-                                    activityIndex,
-                                    itemIndex,
-                                  );
-                                } else {
-                                  // 🎯 Issue #75: 同一 activity 內切換 - 不再觸發背景分析
-                                  setCurrentSubQuestionIndex(itemIndex);
-                                }
+                              onClick={async () => {
+                                // 🔒 分析中禁止切換（包含 GroupedQuestionsTemplate 分析和自動分析）
+                                if (isAnalyzing || isAutoAnalyzing) return;
+                                // 🎯 Issue #141: 使用新的跳題邏輯（會自動分析未分析的錄音）
+                                await handleQuestionJump(
+                                  activityIndex,
+                                  itemIndex,
+                                );
                               }}
-                              disabled={isAnalyzing} // 🔒 分析中禁用
+                              disabled={isAnalyzing || isAutoAnalyzing} // 🔒 分析中禁用
                               className={cn(
                                 "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
                                 "flex items-center justify-center text-sm sm:text-xs font-medium",
@@ -2149,10 +2248,13 @@ export default function StudentActivityPageContent({
                     }
                     disabled={
                       isAnalyzing || // 🔒 分析中禁用
+                      isAutoAnalyzing || // 🔒 Issue #141: 自動分析中禁用
                       (isRearrangementMode
                         ? !hasPrevUnanswered
-                        : currentActivityIndex === 0 &&
-                          currentSubQuestionIndex === 0)
+                        : // 🎯 Issue #141: 例句朗讀模式必須分析後才能上一題（含預覽模式）
+                          (isReadingMode && !isAssessed) ||
+                          (currentActivityIndex === 0 &&
+                            currentSubQuestionIndex === 0))
                     }
                     className="flex-1 sm:flex-none min-w-0"
                   >
@@ -2224,10 +2326,11 @@ export default function StudentActivityPageContent({
                         }
                         disabled={
                           isAnalyzing || // 🔒 分析中禁用
+                          isAutoAnalyzing || // 🔒 Issue #141: 自動分析中禁用
                           (isRearrangementMode
                             ? !hasNextUnanswered
-                            : // 🎯 Issue #118: 例句朗讀模式必須分析後才能下一題
-                              isReadingMode && !isAssessed && !isPreviewMode)
+                            : // 🎯 Issue #118 & #141: 例句朗讀模式必須分析後才能下一題（含預覽模式）
+                              isReadingMode && !isAssessed)
                         }
                         className="flex-1 sm:flex-none min-w-0"
                       >
@@ -2360,6 +2463,30 @@ export default function StudentActivityPageContent({
             <p className="text-sm text-gray-500">
               {t("studentActivityPage.messages.doNotLeave")}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* 🎯 Issue #141: 自動分析遮罩（跳題時觸發） */}
+      {isAutoAnalyzing && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl max-w-md mx-4 text-center">
+            <div className="relative w-24 h-24 mx-auto mb-6">
+              {/* 外圈脈動動畫 */}
+              <div className="absolute inset-0 rounded-full bg-blue-100 animate-ping opacity-75"></div>
+              {/* 中圈脈動動畫 */}
+              <div className="absolute inset-2 rounded-full bg-blue-200 animate-pulse"></div>
+              {/* 圖示 - 旋轉動畫 */}
+              <Loader2
+                className="w-24 h-24 absolute inset-0 animate-spin text-blue-600"
+                style={{ animationDuration: "2s" }}
+              />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              {analyzingMessage || "正在分析錄音..."}
+            </h3>
+            <p className="text-gray-600 mb-4">分析完成後將自動跳轉</p>
+            <p className="text-sm text-gray-500">請稍候，不要離開此頁面</p>
           </div>
         </div>
       )}
