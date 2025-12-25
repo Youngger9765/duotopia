@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import DigitalTeachingToolbar from "@/components/teachingTools/DigitalTeachingToolbar";
 import {
   Users,
   GraduationCap,
@@ -319,7 +320,10 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-4 md:p-6 overflow-auto">{children}</div>
+        <div className="flex-1 p-4 md:p-6 overflow-auto relative">
+          <DigitalTeachingToolbar />
+          {children}
+        </div>
       </div>
     </div>
   );
