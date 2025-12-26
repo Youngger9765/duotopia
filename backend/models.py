@@ -146,10 +146,15 @@ class ContentType(str, enum.Enum):
 
 
 class PracticeMode(str, enum.Enum):
-    """作答模式（例句集專用）"""
+    """作答模式"""
 
+    # 例句集 (EXAMPLE_SENTENCES)
     READING = "reading"  # 例句朗讀 -> 口說分類
     REARRANGEMENT = "rearrangement"  # 例句重組 -> 聽力/寫作分類
+
+    # 單字集 (VOCABULARY_SET) - Phase 2
+    WORD_READING = "word_reading"  # 單字朗讀 -> 口說分類
+    WORD_SELECTION = "word_selection"  # 單字選擇 -> 艾賓浩斯記憶曲線
 
 
 class ScoreCategory(str, enum.Enum):
@@ -158,6 +163,7 @@ class ScoreCategory(str, enum.Enum):
     SPEAKING = "speaking"  # 口說
     LISTENING = "listening"  # 聽力
     WRITING = "writing"  # 寫作
+    VOCABULARY = "vocabulary"  # 單字（Phase 2 新增）
 
 
 # ============ 使用者系統 ============
@@ -777,8 +783,21 @@ class Assignment(Base):
     # 答題結束後是否顯示正確答案（例句重組專用）
     show_answer = Column(Boolean, default=False)
 
-    # 分數記錄分類：'speaking' / 'listening' / 'writing'
+    # 分數記錄分類：'speaking' / 'listening' / 'writing' / 'vocabulary'
     score_category = Column(String(20), default=None)
+
+    # ===== Phase 2: 單字集作答模式設定 =====
+    # 達標熟悉度（百分比，預設 80%）- 單字選擇模式專用
+    target_proficiency = Column(Integer, default=80)
+
+    # 是否顯示翻譯（預設 true）- 單字朗讀模式可選擇隱藏
+    show_translation = Column(Boolean, default=True)
+
+    # 是否顯示單字（預設 true）- 單字選擇模式可選擇隱藏（只播音檔）
+    show_word = Column(Boolean, default=True)
+
+    # 是否顯示圖片（預設 true）- 單字集專用
+    show_image = Column(Boolean, default=True)
 
     # 軟刪除標記
     is_active = Column(Boolean, default=True)
@@ -973,6 +992,13 @@ class ContentItem(Base):
 
     # 允許錯誤次數（根據 word_count 自動計算：2-10 字 → 3 次，11-25 字 → 5 次）
     max_errors = Column(Integer, nullable=True)
+
+    # ===== Phase 2: 單字集相關欄位 =====
+    # 單字圖片 URL（用於視覺輔助記憶）
+    image_url = Column(Text, nullable=True)
+
+    # 詞性（n., v., adj., adv., prep., conj., etc.）
+    part_of_speech = Column(String(20), nullable=True)
 
     item_metadata = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -2761,3 +2761,758 @@ async def complete_rearrangement(
         "timeout": request.timeout,
         "completed_at": datetime.now().isoformat(),
     }
+
+
+# =============================================================================
+# Phase 2-2: Vocabulary Set - Word Reading APIs
+# =============================================================================
+
+
+@router.get("/assignments/{assignment_id}/vocabulary/activities")
+async def get_vocabulary_activities(
+    assignment_id: int,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Get vocabulary items for word reading practice.
+
+    Returns all words from the assignment's content with their progress status.
+    """
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = int(current_user.get("sub"))
+
+    # Verify student has this assignment
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == student_id,
+            StudentAssignment.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assignment not found or not assigned to you",
+        )
+
+    # Get the Assignment to check practice_mode
+    assignment = None
+    if student_assignment.assignment_id:
+        assignment = (
+            db.query(Assignment)
+            .filter(Assignment.id == student_assignment.assignment_id)
+            .first()
+        )
+
+    # Verify this is a word_reading assignment
+    if assignment and assignment.practice_mode != "word_reading":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This is not a word reading assignment",
+        )
+
+    # Get all content items for this assignment
+    items = []
+
+    if student_assignment.assignment_id:
+        # Get assignment contents
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == student_assignment.assignment_id)
+            .order_by(AssignmentContent.order_index)
+            .all()
+        )
+
+        content_ids = [ac.content_id for ac in assignment_contents]
+
+        # Get all ContentItems
+        content_items = (
+            db.query(ContentItem)
+            .filter(ContentItem.content_id.in_(content_ids))
+            .order_by(ContentItem.content_id, ContentItem.order_index)
+            .all()
+        )
+
+        # Get all StudentItemProgress for this assignment
+        all_progress = (
+            db.query(StudentItemProgress)
+            .filter(StudentItemProgress.student_assignment_id == student_assignment.id)
+            .all()
+        )
+        progress_by_item = {p.content_item_id: p for p in all_progress}
+
+        # Build items list
+        for ci in content_items:
+            progress = progress_by_item.get(ci.id)
+
+            item_data = {
+                "id": ci.id,
+                "text": ci.text,
+                "translation": ci.translation,
+                "audio_url": ci.audio_url,
+                "image_url": ci.image_url,
+                "part_of_speech": ci.part_of_speech,
+                "order_index": ci.order_index,
+            }
+
+            if progress:
+                item_data["progress_id"] = progress.id
+                item_data["recording_url"] = progress.recording_url
+                item_data["status"] = progress.status
+
+                # AI Assessment scores
+                if progress.ai_assessed_at:
+                    item_data["ai_assessment"] = {
+                        "accuracy_score": (
+                            float(progress.accuracy_score)
+                            if progress.accuracy_score
+                            else None
+                        ),
+                        "fluency_score": (
+                            float(progress.fluency_score)
+                            if progress.fluency_score
+                            else None
+                        ),
+                        "completeness_score": (
+                            float(progress.completeness_score)
+                            if progress.completeness_score
+                            else None
+                        ),
+                        "pronunciation_score": (
+                            float(progress.pronunciation_score)
+                            if progress.pronunciation_score
+                            else None
+                        ),
+                    }
+
+                # Teacher review
+                if progress.teacher_reviewed_at:
+                    item_data["teacher_feedback"] = progress.teacher_feedback
+                    item_data["teacher_passed"] = progress.teacher_passed
+                    item_data["teacher_review_score"] = (
+                        float(progress.teacher_review_score)
+                        if progress.teacher_review_score
+                        else None
+                    )
+                    item_data["review_status"] = progress.review_status
+
+            items.append(item_data)
+
+    # Get assignment settings
+    show_translation = assignment.show_translation if assignment else True
+    show_image = assignment.show_image if assignment else True
+
+    return {
+        "assignment_id": assignment_id,
+        "title": student_assignment.title,
+        "status": student_assignment.status.value,
+        "practice_mode": "word_reading",
+        "show_translation": show_translation,
+        "show_image": show_image,
+        "total_items": len(items),
+        "items": items,
+    }
+
+
+class SaveAssessmentRequest(BaseModel):
+    progress_id: int
+    ai_assessment: Dict[str, Any]
+
+
+@router.post("/assignments/{assignment_id}/vocabulary/save-assessment")
+async def save_vocabulary_assessment(
+    assignment_id: int,
+    request: SaveAssessmentRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Save AI assessment result for a vocabulary item.
+    """
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = int(current_user.get("sub"))
+
+    # Verify student has this assignment
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == student_id,
+            StudentAssignment.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assignment not found or not assigned to you",
+        )
+
+    # Find the progress record
+    progress = (
+        db.query(StudentItemProgress)
+        .filter(
+            StudentItemProgress.id == request.progress_id,
+            StudentItemProgress.student_assignment_id == assignment_id,
+        )
+        .first()
+    )
+
+    if not progress:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Progress record not found",
+        )
+
+    # Update assessment scores
+    ai = request.ai_assessment
+    progress.accuracy_score = ai.get("accuracy_score")
+    progress.fluency_score = ai.get("fluency_score")
+    progress.completeness_score = ai.get("completeness_score")
+    progress.pronunciation_score = ai.get("pronunciation_score")
+    progress.ai_assessed_at = datetime.now(timezone.utc)
+    progress.ai_feedback = json.dumps(ai)
+
+    db.commit()
+
+    return {
+        "success": True,
+        "progress_id": progress.id,
+        "message": "Assessment saved successfully",
+    }
+
+
+@router.post("/assignments/{assignment_id}/vocabulary/submit")
+async def submit_vocabulary_assignment(
+    assignment_id: int,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Submit a vocabulary word reading assignment.
+
+    Marks the assignment as SUBMITTED for teacher review.
+    """
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = int(current_user.get("sub"))
+
+    # Verify student has this assignment
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == student_id,
+            StudentAssignment.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assignment not found or not assigned to you",
+        )
+
+    # Check if already submitted
+    if student_assignment.status in [
+        AssignmentStatus.SUBMITTED,
+        AssignmentStatus.GRADED,
+    ]:
+        return {
+            "success": True,
+            "message": "Assignment already submitted",
+            "status": student_assignment.status.value,
+        }
+
+    # Update assignment status
+    student_assignment.status = AssignmentStatus.SUBMITTED
+    student_assignment.submitted_at = datetime.now(timezone.utc)
+
+    # Update all item progress to SUBMITTED status
+    db.query(StudentItemProgress).filter(
+        StudentItemProgress.student_assignment_id == assignment_id
+    ).update({"status": "SUBMITTED", "review_status": "PENDING"})
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Assignment submitted successfully",
+        "status": "SUBMITTED",
+        "submitted_at": student_assignment.submitted_at.isoformat(),
+    }
+
+
+# =============================================================================
+# Phase 2-3: Vocabulary Set - Word Selection APIs
+# =============================================================================
+
+
+class WordSelectionStartResponse(BaseModel):
+    session_id: int
+    words: List[Dict[str, Any]]
+    total_words: int
+    current_proficiency: float
+    target_proficiency: int
+
+
+class WordSelectionAnswerRequest(BaseModel):
+    content_item_id: int
+    selected_answer: str
+    is_correct: bool
+    time_spent_seconds: int = 0
+
+
+class WordSelectionAnswerResponse(BaseModel):
+    success: bool
+    is_correct: bool
+    correct_answer: str
+    new_memory_strength: float
+    message: str
+
+
+@router.get("/assignments/{assignment_id}/vocabulary/selection/start")
+async def start_word_selection_practice(
+    assignment_id: int,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Start a new word selection practice session.
+
+    Returns 10 words selected by the intelligent get_words_for_practice function,
+    each with 3 AI-generated distractors plus the correct answer.
+    """
+    from services.translation import translation_service
+
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = int(current_user.get("sub"))
+
+    # Verify student has this assignment
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == student_id,
+            StudentAssignment.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assignment not found or not assigned to you",
+        )
+
+    # Get the Assignment to check practice_mode
+    assignment = None
+    if student_assignment.assignment_id:
+        assignment = (
+            db.query(Assignment)
+            .filter(Assignment.id == student_assignment.assignment_id)
+            .first()
+        )
+
+    # Verify this is a word_selection assignment
+    if assignment and assignment.practice_mode != "word_selection":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This is not a word selection assignment",
+        )
+
+    # Update assignment status to IN_PROGRESS if not started
+    if student_assignment.status == AssignmentStatus.NOT_STARTED:
+        student_assignment.status = AssignmentStatus.IN_PROGRESS
+        student_assignment.started_at = datetime.now(timezone.utc)
+        db.commit()
+
+    # Get target proficiency from assignment (default 80%)
+    target_proficiency = assignment.target_proficiency if assignment else 80
+
+    # Call get_words_for_practice PostgreSQL function
+    words_result = db.execute(
+        text("SELECT * FROM get_words_for_practice(:sa_id, :limit_count)"),
+        {"sa_id": assignment_id, "limit_count": 10},
+    ).fetchall()
+
+    if not words_result:
+        # No words found - get all content items directly
+        assignment_contents = (
+            db.query(AssignmentContent)
+            .filter(AssignmentContent.assignment_id == student_assignment.assignment_id)
+            .all()
+        )
+        content_ids = [ac.content_id for ac in assignment_contents]
+
+        content_items = (
+            db.query(ContentItem)
+            .filter(ContentItem.content_id.in_(content_ids))
+            .limit(10)
+            .all()
+        )
+
+        if not content_items:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No vocabulary items found for this assignment",
+            )
+
+        # Build words list from content items
+        words_data = []
+        for ci in content_items:
+            words_data.append(
+                {
+                    "content_item_id": ci.id,
+                    "text": ci.text,
+                    "translation": ci.translation or "",
+                    "audio_url": ci.audio_url,
+                    "image_url": ci.image_url,
+                    "memory_strength": 0,
+                }
+            )
+    else:
+        # Build words list from function result
+        words_data = []
+        for row in words_result:
+            words_data.append(
+                {
+                    "content_item_id": row.content_item_id,
+                    "text": row.text,
+                    "translation": row.translation or "",
+                    "audio_url": row.audio_url,
+                    "image_url": getattr(row, "image_url", None),
+                    "memory_strength": float(row.memory_strength)
+                    if row.memory_strength
+                    else 0,
+                }
+            )
+
+    # Generate distractors for each word using AI
+    words_for_distractors = [
+        {"word": w["text"], "translation": w["translation"]} for w in words_data
+    ]
+
+    try:
+        all_distractors = await translation_service.batch_generate_distractors(
+            words_for_distractors, count=3
+        )
+    except Exception as e:
+        logger.error(f"Failed to generate distractors: {e}")
+        # Fallback: use generic distractors
+        all_distractors = [["選項A", "選項B", "選項C"] for _ in words_data]
+
+    # Create practice session
+    practice_session = PracticeSession(
+        student_id=student_id,
+        student_assignment_id=assignment_id,
+        practice_mode="word_selection",
+        words_practiced=0,
+        correct_count=0,
+        started_at=datetime.now(timezone.utc),
+    )
+    db.add(practice_session)
+    db.commit()
+    db.refresh(practice_session)
+
+    # Build response with words and their options
+    words_with_options = []
+    import random
+
+    for i, word in enumerate(words_data):
+        distractors = (
+            all_distractors[i] if i < len(all_distractors) else ["選項A", "選項B", "選項C"]
+        )
+        correct_answer = word["translation"]
+
+        # Create options array with correct answer and distractors
+        options = [correct_answer] + distractors[:3]
+        # Shuffle options
+        random.shuffle(options)
+
+        words_with_options.append(
+            {
+                "content_item_id": word["content_item_id"],
+                "text": word["text"],
+                "translation": correct_answer,
+                "audio_url": word.get("audio_url"),
+                "image_url": word.get("image_url"),
+                "memory_strength": word.get("memory_strength", 0),
+                "options": options,
+            }
+        )
+
+    # Get current proficiency
+    mastery_result = db.execute(
+        text("SELECT * FROM calculate_assignment_mastery(:sa_id)"),
+        {"sa_id": assignment_id},
+    ).fetchone()
+
+    current_proficiency = (
+        float(mastery_result.current_mastery) * 100 if mastery_result else 0
+    )
+
+    return {
+        "session_id": practice_session.id,
+        "words": words_with_options,
+        "total_words": len(words_with_options),
+        "current_proficiency": current_proficiency,
+        "target_proficiency": target_proficiency,
+        "show_word": assignment.show_word if assignment else True,
+        "show_image": assignment.show_image if assignment else True,
+        "play_audio": assignment.play_audio if assignment else False,
+    }
+
+
+@router.post("/assignments/{assignment_id}/vocabulary/selection/answer")
+async def submit_word_selection_answer(
+    assignment_id: int,
+    request: WordSelectionAnswerRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Submit an answer for a word selection question.
+
+    Calls update_memory_strength() to update proficiency based on the answer.
+    """
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = int(current_user.get("sub"))
+
+    # Verify student has this assignment
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == student_id,
+            StudentAssignment.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assignment not found or not assigned to you",
+        )
+
+    # Get the correct answer from content item
+    content_item = (
+        db.query(ContentItem).filter(ContentItem.id == request.content_item_id).first()
+    )
+
+    if not content_item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content item not found",
+        )
+
+    correct_answer = content_item.translation or ""
+
+    # Call update_memory_strength PostgreSQL function
+    result = db.execute(
+        text(
+            """
+            SELECT * FROM update_memory_strength(
+                :sa_id,
+                :item_id,
+                :is_correct
+            )
+            """
+        ),
+        {
+            "sa_id": assignment_id,
+            "item_id": request.content_item_id,
+            "is_correct": request.is_correct,
+        },
+    ).fetchone()
+
+    db.commit()
+
+    new_memory_strength = float(result.memory_strength) if result else 0
+
+    return {
+        "success": True,
+        "is_correct": request.is_correct,
+        "correct_answer": correct_answer,
+        "new_memory_strength": new_memory_strength,
+        "message": "正確！" if request.is_correct else f"正確答案是: {correct_answer}",
+    }
+
+
+@router.get("/assignments/{assignment_id}/vocabulary/selection/proficiency")
+async def get_word_selection_proficiency(
+    assignment_id: int,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Get current proficiency status for word selection assignment.
+
+    Returns current mastery percentage, target, and whether achieved.
+    """
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = int(current_user.get("sub"))
+
+    # Verify student has this assignment
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == student_id,
+            StudentAssignment.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assignment not found or not assigned to you",
+        )
+
+    # Get the Assignment for target_proficiency
+    assignment = None
+    if student_assignment.assignment_id:
+        assignment = (
+            db.query(Assignment)
+            .filter(Assignment.id == student_assignment.assignment_id)
+            .first()
+        )
+
+    target_proficiency = assignment.target_proficiency if assignment else 80
+
+    # Call calculate_assignment_mastery PostgreSQL function
+    result = db.execute(
+        text("SELECT * FROM calculate_assignment_mastery(:sa_id)"),
+        {"sa_id": assignment_id},
+    ).fetchone()
+
+    if not result:
+        return {
+            "current_mastery": 0,
+            "target_mastery": target_proficiency,
+            "achieved": False,
+            "words_mastered": 0,
+            "total_words": 0,
+        }
+
+    current_mastery = float(result.current_mastery) * 100  # Convert to percentage
+    achieved = current_mastery >= target_proficiency
+
+    return {
+        "current_mastery": current_mastery,
+        "target_mastery": target_proficiency,
+        "achieved": achieved,
+        "words_mastered": result.words_mastered,
+        "total_words": result.total_words,
+    }
+
+
+@router.post("/assignments/{assignment_id}/vocabulary/selection/complete")
+async def complete_word_selection_assignment(
+    assignment_id: int,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Mark word selection assignment as completed.
+
+    Called when student reaches target proficiency and clicks "Close" button.
+    """
+    if current_user.get("type") != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for students only",
+        )
+
+    student_id = int(current_user.get("sub"))
+
+    # Verify student has this assignment
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(
+            StudentAssignment.id == assignment_id,
+            StudentAssignment.student_id == student_id,
+            StudentAssignment.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not student_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assignment not found or not assigned to you",
+        )
+
+    # Get current proficiency to verify achievement
+    result = db.execute(
+        text("SELECT * FROM calculate_assignment_mastery(:sa_id)"),
+        {"sa_id": assignment_id},
+    ).fetchone()
+
+    # Get target proficiency
+    assignment = None
+    if student_assignment.assignment_id:
+        assignment = (
+            db.query(Assignment)
+            .filter(Assignment.id == student_assignment.assignment_id)
+            .first()
+        )
+
+    target_proficiency = assignment.target_proficiency if assignment else 80
+    current_mastery = float(result.current_mastery) * 100 if result else 0
+
+    # Update assignment status to COMPLETED
+    student_assignment.status = (
+        AssignmentStatus.GRADED
+    )  # GRADED = completed for auto-graded
+    student_assignment.submitted_at = datetime.now(timezone.utc)
+
+    # Calculate final score based on mastery
+    student_assignment.final_score = min(100, int(current_mastery))
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "作業已完成！",
+        "status": "COMPLETED",
+        "final_score": student_assignment.final_score,
+        "achieved_target": current_mastery >= target_proficiency,
+    }

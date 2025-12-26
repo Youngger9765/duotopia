@@ -455,6 +455,19 @@ class CreateAssignmentRequest(BaseModel):
     # 答題結束後是否顯示正確答案（例句重組專用）
     show_answer: bool = False
 
+    # ===== Phase 2: 單字集作答模式設定 =====
+    # 達標熟悉度（百分比，預設 80%）- 單字選擇模式專用
+    target_proficiency: int = 80
+
+    # 是否顯示翻譯（預設 true）- 單字朗讀模式可選擇隱藏
+    show_translation: bool = True
+
+    # 是否顯示單字（預設 true）- 單字選擇模式可選擇隱藏（只播音檔）
+    show_word: bool = True
+
+    # 是否顯示圖片（預設 true）- 單字集專用
+    show_image: bool = True
+
 
 class UpdateAssignmentRequest(BaseModel):
     """更新作業請求（部分更新）"""
@@ -698,6 +711,11 @@ async def create_assignment(
             play_audio=request.play_audio,
             show_answer=request.show_answer,
             score_category=score_category,
+            # ===== Phase 2: 單字集作答模式設定 =====
+            target_proficiency=request.target_proficiency,
+            show_translation=request.show_translation,
+            show_word=request.show_word,
+            show_image=request.show_image,
             is_active=True,
         )
         db.add(assignment)

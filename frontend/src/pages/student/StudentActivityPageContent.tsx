@@ -28,6 +28,8 @@ import RearrangementActivity, {
   type RearrangementQuestion,
   type RearrangementQuestionState,
 } from "@/components/activities/RearrangementActivity";
+import WordReadingActivity from "@/components/activities/WordReadingActivity";
+import WordSelectionActivity from "@/components/activities/WordSelectionActivity";
 import {
   ChevronLeft,
   ChevronRight,
@@ -1832,6 +1834,41 @@ export default function StudentActivityPageContent({
 
     // 單字集類型（包含 SENTENCE_MAKING 和 VOCABULARY_SET）
     if (isVocabularySetType(activity.type)) {
+      // Check practice mode for vocabulary set
+      if (practiceMode === "word_reading") {
+        // Phase 2-2: 單字朗讀練習
+        return (
+          <WordReadingActivity
+            assignmentId={assignmentId}
+            isPreviewMode={isPreviewMode}
+            onComplete={() => {
+              toast.success(t("wordReading.toast.completed") || "作業已完成！");
+              if (onSubmit) {
+                onSubmit({ answers: [] });
+              }
+            }}
+          />
+        );
+      }
+
+      if (practiceMode === "word_selection") {
+        // Phase 2-3: 單字選擇練習
+        return (
+          <WordSelectionActivity
+            assignmentId={assignmentId}
+            isPreviewMode={isPreviewMode}
+            onComplete={() => {
+              toast.success(
+                t("wordSelection.toast.completed") || "作業已完成！",
+              );
+              if (onSubmit) {
+                onSubmit({ answers: [] });
+              }
+            }}
+          />
+        );
+      }
+
       // 造句練習：使用艾賓浩斯記憶曲線系統
       return (
         <SentenceMakingActivity
