@@ -9,13 +9,10 @@ import { toast } from "sonner";
  *
  * 當學生點擊題號跳題時，如果當前題目有錄音但未分析，自動觸發 Azure 分析
  *
- * @param assignmentId 作業 ID
+ * @param assignmentId 作業 ID（用於上傳錄音時建立 progress 記錄）
  * @param isPreviewMode 是否為預覽模式（預覽模式不上傳到 GCS）
  */
-export function useAutoAnalysis(
-  _assignmentId: number,
-  isPreviewMode: boolean,
-) {
+export function useAutoAnalysis(assignmentId: number, isPreviewMode: boolean) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzingMessage, setAnalyzingMessage] = useState("");
   const { analyzePronunciation } = useAzurePronunciation();
@@ -23,10 +20,14 @@ export function useAutoAnalysis(
   /**
    * 自動分析錄音並上傳（如果非預覽模式）
    *
+   * Issue #141 Fix:
+   * - 如果有 progressId：直接使用 /api/speech/upload-analysis 上傳分析結果
+   * - 如果沒有 progressId：先上傳錄音取得 progressId，再上傳分析結果
+   *
    * @param blobUrl 錄音的 blob URL
    * @param targetText 參考文本
-   * @param progressId StudentItemProgress ID（用於上傳）
-   * @param contentItemId ContentItem ID（用於上傳）
+   * @param progressId StudentItemProgress ID（用於上傳，可選）
+   * @param contentItemId ContentItem ID（用於建立 progress 記錄）
    * @returns 分析結果，失敗時返回 null
    */
   const analyzeAndUpload = async (
@@ -50,11 +51,12 @@ export function useAutoAnalysis(
         throw new Error("Azure 分析失敗");
       }
 
-      // 3. 非預覽模式且有 progressId：上傳到 GCS 並更新資料庫（包含 AI 分數）
-      if (!isPreviewMode && progressId && contentItemId) {
+      // 3. 非預覽模式且有 contentItemId：上傳到 GCS 並更新資料庫（包含 AI 分數）
+      if (!isPreviewMode && contentItemId) {
         setAnalyzingMessage("正在上傳分析結果...");
 
-        const formData = new FormData();
+        const apiUrl = import.meta.env.VITE_API_URL || "";
+        const authToken = useStudentAuthStore.getState().token;
 
         // 檔案副檔名處理
         const uploadFileExtension = audioBlob.type.includes("mp4")
@@ -62,26 +64,68 @@ export function useAutoAnalysis(
           : audioBlob.type.includes("webm")
             ? "recording.webm"
             : "recording.audio";
-        formData.append("audio_file", audioBlob, uploadFileExtension);
 
-        // Issue #141 Fix: 使用 /api/speech/upload-analysis 並包含 analysis_json
-        // 這樣 AI 分數才會被正確儲存到資料庫
-        formData.append(
+        let currentProgressId = progressId;
+
+        // Issue #141 Fix: 如果沒有 progressId，先上傳錄音取得 progressId
+        if (!currentProgressId) {
+          console.log(
+            "No progressId, uploading recording first to get progressId...",
+          );
+
+          const uploadFormData = new FormData();
+          uploadFormData.append("assignment_id", assignmentId.toString());
+          uploadFormData.append("content_item_id", contentItemId.toString());
+          uploadFormData.append("audio_file", audioBlob, uploadFileExtension);
+
+          const uploadResult = await retryAudioUpload(
+            async () => {
+              const uploadResponse = await fetch(
+                `${apiUrl}/api/students/upload-recording`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${authToken}`,
+                  },
+                  body: uploadFormData,
+                },
+              );
+
+              if (!uploadResponse.ok) {
+                throw new Error(
+                  `Upload recording failed: ${uploadResponse.status}`,
+                );
+              }
+
+              return await uploadResponse.json();
+            },
+            (attempt, error) => {
+              console.log(`錄音上傳重試 (${attempt}):`, error);
+            },
+          );
+
+          currentProgressId = uploadResult?.progress_id;
+          console.log("Got progressId from upload:", currentProgressId);
+        }
+
+        if (!currentProgressId) {
+          throw new Error("無法取得 progress_id，無法儲存分析結果");
+        }
+
+        // 使用 /api/speech/upload-analysis 上傳分析結果
+        const analysisFormData = new FormData();
+        analysisFormData.append("audio_file", audioBlob, uploadFileExtension);
+        analysisFormData.append(
           "analysis_json",
           JSON.stringify({
             pronunciation_score: azureResult.pronunciationScore,
             accuracy_score: azureResult.accuracyScore,
             fluency_score: azureResult.fluencyScore,
             completeness_score: azureResult.completenessScore,
-            overall_score: azureResult.pronunciationScore, // 使用 pronunciation 作為 overall
+            overall_score: azureResult.pronunciationScore,
           }),
         );
-
-        // 使用 progress_id 而非 assignment_id + content_item_id
-        formData.append("progress_id", progressId.toString());
-
-        const apiUrl = import.meta.env.VITE_API_URL || "";
-        const authToken = useStudentAuthStore.getState().token;
+        analysisFormData.append("progress_id", currentProgressId.toString());
 
         await retryAudioUpload(
           async () => {
@@ -92,20 +136,24 @@ export function useAutoAnalysis(
                 headers: {
                   Authorization: `Bearer ${authToken}`,
                 },
-                body: formData,
+                body: analysisFormData,
               },
             );
 
             if (!uploadResponse.ok) {
-              throw new Error(`Upload failed: ${uploadResponse.status}`);
+              throw new Error(
+                `Upload analysis failed: ${uploadResponse.status}`,
+              );
             }
 
             return await uploadResponse.json();
           },
           (attempt, error) => {
-            console.log(`自動上傳重試 (${attempt}):`, error);
+            console.log(`分析結果上傳重試 (${attempt}):`, error);
           },
         );
+
+        console.log("✅ Analysis result uploaded successfully");
       }
 
       // 4. 回傳分析結果
