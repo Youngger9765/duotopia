@@ -1405,6 +1405,100 @@ export default function StudentActivityPageContent({
       }
     }
 
+    // 🎯 Issue #141: 提交前先分析所有未分析的 blob URL 錄音
+    if (!isPreviewMode) {
+      const unanalyzedItems: {
+        activity: Activity;
+        itemIndex: number;
+        item: Activity["items"] extends (infer T)[] | undefined ? T : never;
+      }[] = [];
+
+      // 收集所有有 blob URL 但未分析的題目
+      activities.forEach((activity) => {
+        if (
+          isExampleSentencesType(activity.type) &&
+          practiceMode !== "rearrangement" &&
+          activity.items
+        ) {
+          activity.items.forEach((item, itemIndex) => {
+            const hasRecording =
+              item.recording_url && item.recording_url !== "";
+            const isBlobUrl =
+              hasRecording && item.recording_url!.startsWith("blob:");
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const hasAssessment = !!(item as any)?.ai_assessment;
+
+            if (isBlobUrl && !hasAssessment) {
+              unanalyzedItems.push({ activity, itemIndex, item });
+            }
+          });
+        }
+      });
+
+      // 逐一分析未分析的錄音
+      if (unanalyzedItems.length > 0) {
+        console.log(
+          `Issue #141: 提交前分析 ${unanalyzedItems.length} 個未分析的錄音`,
+        );
+        setSubmitting(true);
+
+        for (const { activity, itemIndex, item } of unanalyzedItems) {
+          try {
+            const targetText = item.text || "";
+            const progressId = item.progress_id;
+            const contentItemId = item.id;
+
+            if (targetText && item.recording_url) {
+              console.log(
+                `Analyzing item ${itemIndex + 1} of activity ${activity.id}...`,
+              );
+              const result = await analyzeAndUpload(
+                item.recording_url,
+                targetText,
+                progressId,
+                contentItemId,
+              );
+
+              if (result) {
+                // 更新 activities state
+                setActivities((prevActivities) => {
+                  const newActivities = [...prevActivities];
+                  const activityIndex = newActivities.findIndex(
+                    (a) => a.id === activity.id,
+                  );
+                  if (
+                    activityIndex !== -1 &&
+                    newActivities[activityIndex].items
+                  ) {
+                    const newItems = [...newActivities[activityIndex].items!];
+                    if (newItems[itemIndex]) {
+                      newItems[itemIndex] = {
+                        ...newItems[itemIndex],
+                        ai_assessment: result,
+                      };
+                    }
+                    newActivities[activityIndex] = {
+                      ...newActivities[activityIndex],
+                      items: newItems,
+                    };
+                  }
+                  return newActivities;
+                });
+              }
+            }
+          } catch (error) {
+            console.error(
+              `Failed to analyze item ${itemIndex + 1} of activity ${activity.id}:`,
+              error,
+            );
+            // 繼續分析其他題目，不中斷提交流程
+          }
+        }
+
+        setSubmitting(false);
+      }
+    }
+
     // 🎯 立即提交（只上傳音檔，不執行分析）
     if (onSubmit) {
       try {
@@ -2031,15 +2125,22 @@ export default function StudentActivityPageContent({
                             <button
                               key={itemIndex}
                               onClick={async () => {
-                                // 🔒 分析中禁止切換（包含 GroupedQuestionsTemplate 分析和自動分析）
-                                if (isAnalyzing || isAutoAnalyzing) return;
+                                // 🔒 分析中或錄音中禁止切換
+                                if (
+                                  isAnalyzing ||
+                                  isAutoAnalyzing ||
+                                  isRecording
+                                )
+                                  return;
                                 // 🎯 Issue #141: 使用新的跳題邏輯（會自動分析未分析的錄音）
                                 await handleQuestionJump(
                                   activityIndex,
                                   itemIndex,
                                 );
                               }}
-                              disabled={isAnalyzing || isAutoAnalyzing} // 🔒 分析中禁用
+                              disabled={
+                                isAnalyzing || isAutoAnalyzing || isRecording
+                              } // 🔒 分析中或錄音中禁用
                               className={cn(
                                 "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
                                 "flex items-center justify-center text-sm sm:text-xs font-medium",
