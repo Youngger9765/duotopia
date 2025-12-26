@@ -12,7 +12,10 @@ import { toast } from "sonner";
  * @param assignmentId 作業 ID
  * @param isPreviewMode 是否為預覽模式（預覽模式不上傳到 GCS）
  */
-export function useAutoAnalysis(assignmentId: number, isPreviewMode: boolean) {
+export function useAutoAnalysis(
+  _assignmentId: number,
+  isPreviewMode: boolean,
+) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzingMessage, setAnalyzingMessage] = useState("");
   const { analyzePronunciation } = useAzurePronunciation();
@@ -47,14 +50,13 @@ export function useAutoAnalysis(assignmentId: number, isPreviewMode: boolean) {
         throw new Error("Azure 分析失敗");
       }
 
-      // 3. 非預覽模式且有 progressId：上傳到 GCS 並更新資料庫
+      // 3. 非預覽模式且有 progressId：上傳到 GCS 並更新資料庫（包含 AI 分數）
       if (!isPreviewMode && progressId && contentItemId) {
         setAnalyzingMessage("正在上傳分析結果...");
 
         const formData = new FormData();
-        formData.append("assignment_id", assignmentId.toString());
-        formData.append("content_item_id", contentItemId.toString());
 
+        // 檔案副檔名處理
         const uploadFileExtension = audioBlob.type.includes("mp4")
           ? "recording.mp4"
           : audioBlob.type.includes("webm")
@@ -62,13 +64,29 @@ export function useAutoAnalysis(assignmentId: number, isPreviewMode: boolean) {
             : "recording.audio";
         formData.append("audio_file", audioBlob, uploadFileExtension);
 
+        // Issue #141 Fix: 使用 /api/speech/upload-analysis 並包含 analysis_json
+        // 這樣 AI 分數才會被正確儲存到資料庫
+        formData.append(
+          "analysis_json",
+          JSON.stringify({
+            pronunciation_score: azureResult.pronunciationScore,
+            accuracy_score: azureResult.accuracyScore,
+            fluency_score: azureResult.fluencyScore,
+            completeness_score: azureResult.completenessScore,
+            overall_score: azureResult.pronunciationScore, // 使用 pronunciation 作為 overall
+          }),
+        );
+
+        // 使用 progress_id 而非 assignment_id + content_item_id
+        formData.append("progress_id", progressId.toString());
+
         const apiUrl = import.meta.env.VITE_API_URL || "";
         const authToken = useStudentAuthStore.getState().token;
 
         await retryAudioUpload(
           async () => {
             const uploadResponse = await fetch(
-              `${apiUrl}/api/students/upload-recording`,
+              `${apiUrl}/api/speech/upload-analysis`,
               {
                 method: "POST",
                 headers: {
