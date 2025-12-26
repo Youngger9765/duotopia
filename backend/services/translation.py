@@ -494,6 +494,205 @@ Where translation is in {lang_name}."""
             # Fallback: 返回簡單的預設例句
             return [{"sentence": f"This is an example with {word}."} for word in words]
 
+    async def generate_distractors(
+        self,
+        word: str,
+        translation: str,
+        count: int = 3,
+        part_of_speech: Optional[str] = None,
+    ) -> List[str]:
+        """
+        Generate distractor options for vocabulary selection quiz.
+
+        Uses AI to generate semantically similar but different Chinese translations
+        that can be used as wrong answer choices.
+
+        Args:
+            word: The English word (e.g., "apple")
+            translation: The correct Chinese translation (e.g., "蘋果")
+            count: Number of distractors to generate (default: 3)
+            part_of_speech: Optional part of speech to help generate better distractors
+
+        Returns:
+            List of distractor translations (e.g., ["香蕉", "橘子", "葡萄"])
+        """
+        self._ensure_client()
+        import json
+
+        try:
+            pos_hint = f"詞性: {part_of_speech}" if part_of_speech else ""
+
+            prompt = f"""為單字 "{word}"（正確翻譯: {translation}）生成 {count} 個干擾項。
+{pos_hint}
+
+要求:
+- 必須是繁體中文翻譯
+- 語義相近但不同義（例如都是水果類、都是動物類、都是動詞等）
+- 同詞性（名詞配名詞、動詞配動詞）
+- 不能是同義詞
+- 不能是正確答案 "{translation}"
+- 每個干擾項應該是常見、易混淆的詞彙
+
+請以 JSON 陣列格式回覆，只包含 {count} 個干擾項翻譯：
+["干擾項1", "干擾項2", "干擾項3"]
+
+只回覆 JSON 陣列，不要其他文字。"""
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a vocabulary quiz generator. Generate plausible "
+                            "but incorrect translation options for language learners. "
+                            "Always respond with valid JSON array only."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.7,  # Higher temperature for variety
+                max_tokens=200,
+            )
+
+            # Parse JSON response
+            import re
+
+            content = response.choices[0].message.content.strip()
+            # Remove markdown code block markers if present
+            content = re.sub(r"^```json\s*", "", content)
+            content = re.sub(r"\s*```$", "", content)
+            content = content.strip()
+
+            distractors = json.loads(content)
+
+            # Ensure we have the right count and no duplicates with correct answer
+            distractors = [d for d in distractors if d != translation][:count]
+
+            # Ensure we have enough distractors
+            if len(distractors) < count:
+                logger.warning(
+                    f"Only generated {len(distractors)} distractors for '{word}', "
+                    f"expected {count}"
+                )
+
+            return distractors
+
+        except Exception as e:
+            logger.error(f"Generate distractors error for '{word}': {e}")
+            # Fallback: return generic distractors
+            fallback = ["選項A", "選項B", "選項C"]
+            return fallback[:count]
+
+    async def batch_generate_distractors(
+        self,
+        words: List[Dict[str, str]],
+        count: int = 3,
+    ) -> List[List[str]]:
+        """
+        Batch generate distractors for multiple words.
+
+        Args:
+            words: List of dicts with 'word', 'translation', and optionally 'part_of_speech'
+            count: Number of distractors per word (default: 3)
+
+        Returns:
+            List of distractor lists, one per input word
+        """
+        self._ensure_client()
+        import json
+
+        try:
+            words_json = json.dumps(
+                [{"word": w["word"], "translation": w["translation"]} for w in words],
+                ensure_ascii=False,
+            )
+
+            prompt = f"""為以下單字列表生成干擾項。每個單字需要 {count} 個干擾項。
+
+單字列表:
+{words_json}
+
+要求:
+- 所有干擾項必須是繁體中文
+- 語義相近但不同義
+- 同詞性
+- 不能是同義詞
+- 不能與正確答案相同
+
+請以 JSON 陣列格式回覆，每個元素是一個包含 {count} 個干擾項的陣列：
+[["干擾項1", "干擾項2", "干擾項3"], ["干擾項1", "干擾項2", "干擾項3"], ...]
+
+只回覆 JSON 陣列，不要其他文字。"""
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a vocabulary quiz generator. Generate plausible "
+                            "but incorrect translation options for language learners. "
+                            "Always respond with valid JSON array only."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.7,
+                max_tokens=1000,
+            )
+
+            # Parse JSON response
+            import re
+
+            content = response.choices[0].message.content.strip()
+            content = re.sub(r"^```json\s*", "", content)
+            content = re.sub(r"\s*```$", "", content)
+            content = content.strip()
+
+            all_distractors = json.loads(content)
+
+            # Verify count matches
+            if len(all_distractors) != len(words):
+                logger.warning(
+                    f"Batch distractors count mismatch: expected {len(words)}, "
+                    f"got {len(all_distractors)}. Falling back to individual generation."
+                )
+                # Fallback to individual generation
+                tasks = [
+                    self.generate_distractors(
+                        w["word"],
+                        w["translation"],
+                        count,
+                        w.get("part_of_speech"),
+                    )
+                    for w in words
+                ]
+                return await asyncio.gather(*tasks)
+
+            # Filter out correct answers from each distractor list
+            result = []
+            for i, distractors in enumerate(all_distractors):
+                correct = words[i]["translation"]
+                filtered = [d for d in distractors if d != correct][:count]
+                result.append(filtered)
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Batch generate distractors error: {e}")
+            # Fallback to individual generation
+            tasks = [
+                self.generate_distractors(
+                    w["word"],
+                    w["translation"],
+                    count,
+                    w.get("part_of_speech"),
+                )
+                for w in words
+            ]
+            return await asyncio.gather(*tasks)
+
 
 # 創建全局實例
 translation_service = TranslationService()

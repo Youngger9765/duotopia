@@ -1,0 +1,469 @@
+/**
+ * WordReadingActivity - 單字朗讀練習活動容器
+ *
+ * Phase 2-2: 管理單字朗讀練習的完整流程
+ *
+ * 功能:
+ * - 載入單字集的所有單字
+ * - 管理練習進度
+ * - 處理錄音上傳
+ * - 顯示 AI 評估結果
+ * - 提交作業
+ */
+
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Send,
+  CheckCircle,
+} from "lucide-react";
+import { toast } from "sonner";
+import WordReadingTemplate from "./WordReadingTemplate";
+import { useTranslation } from "react-i18next";
+import { useStudentAuthStore } from "@/stores/studentAuthStore";
+import { cn } from "@/lib/utils";
+
+interface WordItem {
+  id: number;
+  text: string;
+  translation?: string;
+  audio_url?: string;
+  image_url?: string;
+  part_of_speech?: string;
+  progress_id?: number;
+  recording_url?: string;
+  ai_assessment?: {
+    accuracy_score?: number;
+    fluency_score?: number;
+    completeness_score?: number;
+    pronunciation_score?: number;
+  };
+  teacher_feedback?: string;
+  teacher_passed?: boolean;
+  teacher_review_score?: number;
+  review_status?: string;
+}
+
+interface WordReadingActivityProps {
+  assignmentId: number;
+  isPreviewMode?: boolean;
+  showTranslation?: boolean;
+  showImage?: boolean;
+  onComplete?: () => void;
+}
+
+export default function WordReadingActivity({
+  assignmentId,
+  isPreviewMode = false,
+  showTranslation = true,
+  showImage = true,
+  onComplete,
+}: WordReadingActivityProps) {
+  const { t } = useTranslation();
+  const { token } = useStudentAuthStore();
+
+  // State
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<WordItem[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // Load vocabulary items from backend
+  const loadItems = useCallback(async () => {
+    try {
+      setLoading(true);
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+
+      const response = await fetch(
+        `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/activities`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to load vocabulary items: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setItems(data.items || []);
+
+      // Find first incomplete item
+      const firstIncomplete = (data.items || []).findIndex(
+        (item: WordItem) => !item.recording_url,
+      );
+      if (firstIncomplete >= 0) {
+        setCurrentIndex(firstIncomplete);
+      }
+    } catch (error) {
+      console.error("Error loading vocabulary items:", error);
+      toast.error(
+        t("wordReading.toast.loadFailed") || "Failed to load vocabulary items",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [assignmentId, token, t]);
+
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
+
+  // Handle recording complete
+  const handleRecordingComplete = async (blob: Blob, url: string) => {
+    const currentItem = items[currentIndex];
+
+    // Update local state immediately
+    setItems((prev) => {
+      const updated = [...prev];
+      updated[currentIndex] = {
+        ...updated[currentIndex],
+        recording_url: url,
+      };
+      return updated;
+    });
+
+    // Skip upload in preview mode
+    if (isPreviewMode) {
+      toast.success(
+        t("wordReading.toast.recordedPreview") ||
+          "Recording saved (preview mode)",
+      );
+      return;
+    }
+
+    // Upload to server
+    try {
+      setUploading(true);
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+
+      const formData = new FormData();
+      formData.append("assignment_id", assignmentId.toString());
+      formData.append("content_item_id", currentItem.id.toString());
+
+      const uploadFileExtension = blob.type.includes("mp4")
+        ? "recording.mp4"
+        : blob.type.includes("webm")
+          ? "recording.webm"
+          : "recording.audio";
+      formData.append("audio_file", blob, uploadFileExtension);
+
+      const response = await fetch(`${apiUrl}/api/students/upload-recording`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Update with server URL
+      setItems((prev) => {
+        const updated = [...prev];
+        updated[currentIndex] = {
+          ...updated[currentIndex],
+          recording_url: result.audio_url,
+          progress_id: result.progress_id,
+        };
+        return updated;
+      });
+
+      toast.success(t("wordReading.toast.uploaded") || "Recording uploaded");
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error(t("wordReading.toast.uploadFailed") || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Handle assessment complete
+  const handleAssessmentComplete = async (result: {
+    overallScore: number;
+    accuracyScore: number;
+    fluencyScore: number;
+    completenessScore: number;
+    pronunciationScore: number;
+  }) => {
+    const currentItem = items[currentIndex];
+
+    // Update local state
+    setItems((prev) => {
+      const updated = [...prev];
+      updated[currentIndex] = {
+        ...updated[currentIndex],
+        ai_assessment: {
+          accuracy_score: result.accuracyScore,
+          fluency_score: result.fluencyScore,
+          completeness_score: result.completenessScore,
+          pronunciation_score: result.pronunciationScore,
+        },
+      };
+      return updated;
+    });
+
+    // Save to server
+    if (!isPreviewMode && currentItem.progress_id) {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || "";
+
+        await fetch(
+          `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/save-assessment`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              progress_id: currentItem.progress_id,
+              ai_assessment: {
+                accuracy_score: result.accuracyScore,
+                fluency_score: result.fluencyScore,
+                completeness_score: result.completenessScore,
+                pronunciation_score: result.pronunciationScore,
+              },
+            }),
+          },
+        );
+      } catch (error) {
+        console.error("Failed to save assessment:", error);
+      }
+    }
+  };
+
+  // Navigate to next item
+  const handleNext = () => {
+    if (currentIndex < items.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  // Navigate to previous item
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
+
+  // Handle skip
+  const handleSkip = () => {
+    handleNext();
+  };
+
+  // Submit assignment
+  const handleSubmit = async () => {
+    if (isPreviewMode) {
+      toast.info(
+        t("wordReading.toast.cannotSubmitPreview") ||
+          "Cannot submit in preview mode",
+      );
+      return;
+    }
+
+    // Check for incomplete items
+    const incompleteCount = items.filter((item) => !item.recording_url).length;
+    if (incompleteCount > 0) {
+      toast.warning(
+        t("wordReading.toast.incompleteItems", { count: incompleteCount }) ||
+          `${incompleteCount} items not recorded`,
+      );
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+
+      const response = await fetch(
+        `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/submit`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Submit failed: ${response.status}`);
+      }
+
+      toast.success(t("wordReading.toast.submitted") || "Assignment submitted");
+      onComplete?.();
+    } catch (error) {
+      console.error("Submit error:", error);
+      toast.error(t("wordReading.toast.submitFailed") || "Submit failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <Card className="p-8">
+        <CardContent className="flex flex-col items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
+          <p className="text-gray-600">
+            {t("wordReading.loading") || "Loading vocabulary items..."}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // No items
+  if (items.length === 0) {
+    return (
+      <Card className="p-8">
+        <CardContent className="text-center">
+          <p className="text-gray-600">
+            {t("wordReading.noItems") || "No vocabulary items found"}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const currentItem = items[currentIndex];
+  const completedCount = items.filter((item) => item.recording_url).length;
+  const progress = (completedCount / items.length) * 100;
+  const isLastItem = currentIndex === items.length - 1;
+  const allCompleted = completedCount === items.length;
+
+  return (
+    <div className="space-y-6">
+      {/* Progress Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline">
+            {t("wordReading.wordReading") || "Word Reading"}
+          </Badge>
+          <span className="text-sm text-gray-600">
+            {t("wordReading.itemProgress", {
+              current: currentIndex + 1,
+              total: items.length,
+            }) || `${currentIndex + 1} / ${items.length}`}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <CheckCircle className="h-4 w-4 text-green-500" />
+          <span>
+            {t("wordReading.completedCount", { count: completedCount }) ||
+              `${completedCount} completed`}
+          </span>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <Progress value={progress} className="h-2" />
+
+      {/* Item Navigation Dots */}
+      <div className="flex gap-1 flex-wrap justify-center">
+        {items.map((item, index) => {
+          const isActive = index === currentIndex;
+          const isCompleted = !!item.recording_url;
+          const hasAssessment = !!item.ai_assessment;
+
+          return (
+            <button
+              key={item.id}
+              onClick={() => setCurrentIndex(index)}
+              className={cn(
+                "w-8 h-8 rounded border transition-all flex items-center justify-center text-xs font-medium",
+                isActive && "border-2 border-blue-600",
+                hasAssessment
+                  ? "bg-green-100 text-green-800 border-green-400"
+                  : isCompleted
+                    ? "bg-yellow-100 text-yellow-800 border-yellow-400"
+                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
+              )}
+              title={
+                hasAssessment
+                  ? t("wordReading.assessed") || "Assessed"
+                  : isCompleted
+                    ? t("wordReading.recorded") || "Recorded"
+                    : t("wordReading.notRecorded") || "Not recorded"
+              }
+            >
+              {index + 1}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Word Reading Template */}
+      <WordReadingTemplate
+        currentItem={currentItem}
+        currentIndex={currentIndex}
+        totalItems={items.length}
+        showTranslation={showTranslation}
+        showImage={showImage}
+        existingAudioUrl={currentItem.recording_url}
+        onRecordingComplete={handleRecordingComplete}
+        progressId={currentItem.progress_id}
+        readOnly={false}
+        timeLimit={5}
+        onSkip={handleSkip}
+        onAssessmentComplete={handleAssessmentComplete}
+      />
+
+      {/* Navigation Buttons */}
+      <div className="flex items-center justify-center gap-4 pt-4 border-t">
+        <Button
+          variant="outline"
+          onClick={handlePrevious}
+          disabled={currentIndex === 0 || uploading}
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          {t("wordReading.previous") || "Previous"}
+        </Button>
+
+        {isLastItem && allCompleted ? (
+          <Button
+            onClick={handleSubmit}
+            disabled={submitting || uploading}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                {t("wordReading.submitting") || "Submitting..."}
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-1" />
+                {t("wordReading.submit") || "Submit"}
+              </>
+            )}
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            onClick={handleNext}
+            disabled={currentIndex === items.length - 1 || uploading}
+          >
+            {t("wordReading.next") || "Next"}
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
