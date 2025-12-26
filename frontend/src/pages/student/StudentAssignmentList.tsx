@@ -382,7 +382,8 @@ export default function StudentAssignmentList() {
                 !canStart &&
                 assignment.status !== "GRADED" &&
                 assignment.status !== "SUBMITTED" &&
-                assignment.status !== "RETURNED"
+                assignment.status !== "RETURNED" &&
+                assignment.status !== "RESUBMITTED"
               }
               className={`w-full py-2.5 sm:py-3 text-sm sm:text-base font-medium transition-all ${
                 canStart || assignment.status === "RETURNED"
