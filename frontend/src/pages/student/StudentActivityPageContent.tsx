@@ -245,10 +245,12 @@ export default function StudentActivityPageContent({
   const [rearrangementQuestionIndex, setRearrangementQuestionIndex] =
     useState(0);
 
-  // Read-only mode (for submitted/graded assignments)
+  // Read-only mode (for submitted/graded/resubmitted assignments)
   // Note: isPreviewMode is NOT read-only - it allows all operations but doesn't save to DB
   const isReadOnly =
-    assignmentStatus === "SUBMITTED" || assignmentStatus === "GRADED";
+    assignmentStatus === "SUBMITTED" ||
+    assignmentStatus === "GRADED" ||
+    assignmentStatus === "RESUBMITTED";
 
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
