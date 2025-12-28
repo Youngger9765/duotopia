@@ -1,4 +1,5 @@
 // Test workflow trigger: 2025-11-10
+import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Home from "./pages/Home";
@@ -35,10 +36,43 @@ import PricingPage from "./pages/PricingPage";
 import TestSubscription from "./pages/TestSubscription";
 import { Toaster } from "sonner";
 
+/**
+ * Custom hook to detect mobile screen size
+ * Uses Tailwind's sm breakpoint (640px) as the threshold
+ * Issue #142: Toast notifications block question numbers on mobile
+ */
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth < 640;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return isMobile;
+}
+
 function App() {
+  // Issue #142: Use bottom-center on mobile to avoid blocking question numbers
+  const isMobile = useIsMobile();
+
   return (
     <>
-      <Toaster position="top-center" richColors closeButton duration={3000} />
+      <Toaster
+        position={isMobile ? "bottom-center" : "top-center"}
+        richColors
+        closeButton
+        duration={3000}
+      />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/terms" element={<TermsOfService />} />
