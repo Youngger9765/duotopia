@@ -270,8 +270,7 @@ export default function StudentActivityPageContent({
     initialActivities.forEach((activity) => {
       let audioUrl: string | undefined = undefined;
       if (isExampleSentencesType(activity.type) && activity.items?.[0]) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        audioUrl = (activity.items[0] as any).recording_url || "";
+        audioUrl = activity.items[0].recording_url || "";
       }
 
       initialAnswers.set(activity.id, {
@@ -1260,7 +1259,7 @@ export default function StudentActivityPageContent({
       currentItem.recording_url && currentItem.recording_url !== "";
     const isBlobUrl =
       hasRecording && currentItem.recording_url!.startsWith("blob:");
-    const hasAssessment = !!(currentItem as any)?.ai_assessment;
+    const hasAssessment = !!currentItem?.ai_assessment;
 
     // 如果有 blob URL 但沒有分析結果，自動分析
     if (isBlobUrl && !hasAssessment) {
@@ -1427,8 +1426,7 @@ export default function StudentActivityPageContent({
               item.recording_url && item.recording_url !== "";
             const isBlobUrl =
               hasRecording && item.recording_url!.startsWith("blob:");
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const hasAssessment = !!(item as any)?.ai_assessment;
+            const hasAssessment = !!item?.ai_assessment;
 
             if (isBlobUrl && !hasAssessment) {
               unanalyzedItems.push({ activity, itemIndex, item });
@@ -2120,8 +2118,7 @@ export default function StudentActivityPageContent({
                             practiceMode !== "rearrangement";
 
                           // 🎯 Issue #118: 檢查當前題目是否已分析（用於顯示狀態）
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          const hasAssessment = !!(item as any)?.ai_assessment;
+                          const hasAssessment = !!item?.ai_assessment;
 
                           return (
                             <button
@@ -2249,8 +2246,7 @@ export default function StudentActivityPageContent({
               if (currentActivity.items && currentActivity.items.length > 0) {
                 const currentItem =
                   currentActivity.items[currentSubQuestionIndex];
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                isAssessed = !!(currentItem as any)?.ai_assessment;
+                isAssessed = !!currentItem?.ai_assessment;
               } else if (isExampleSentencesType(currentActivity.type)) {
                 isAssessed = !!currentActivity.ai_scores;
               } else if (currentActivity.type === "listening_cloze") {
