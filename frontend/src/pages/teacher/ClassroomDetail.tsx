@@ -19,7 +19,7 @@ import { LessonDialog } from "@/components/LessonDialog";
 import CreateProgramDialog from "@/components/CreateProgramDialog";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
-import SentenceMakingPanel from "@/components/SentenceMakingPanel";
+import VocabularySetPanel from "@/components/VocabularySetPanel";
 import { AssignmentDialog } from "@/components/AssignmentDialog";
 import BatchGradingModal from "@/components/BatchGradingModal";
 import { StudentCompletionDashboard } from "@/components/StudentCompletionDashboard";
@@ -137,13 +137,13 @@ export default function ClassroomDetail({
   const [editorLessonId, setEditorLessonId] = useState<number | null>(null);
   const [editorContentId, setEditorContentId] = useState<number | null>(null);
 
-  // Sentence Making Editor state
-  const [showSentenceMakingEditor, setShowSentenceMakingEditor] =
+  // Vocabulary Set Editor state
+  const [showVocabularySetEditor, setShowVocabularySetEditor] =
     useState(false);
-  const [sentenceMakingLessonId, setSentenceMakingLessonId] = useState<
+  const [vocabularySetLessonId, setVocabularySetLessonId] = useState<
     number | null
   >(null);
-  const [sentenceMakingContentId, setSentenceMakingContentId] = useState<
+  const [vocabularySetContentId, setVocabularySetContentId] = useState<
     number | null
   >(null);
 
@@ -410,7 +410,7 @@ export default function ClassroomDetail({
       });
       setIsPanelOpen(true);
     } else if (contentType === "sentence_making") {
-      // For SENTENCE_MAKING type, use side panel with SentenceMakingPanel
+      // For SENTENCE_MAKING type, use side panel with VocabularySetPanel
       setSelectedContent(content);
       setEditingContent({
         id: content.id,
@@ -950,9 +950,9 @@ export default function ClassroomDetail({
       selection.type === "VOCABULARY_SET"
     ) {
       // For sentence_making/vocabulary_set, use popup for new content creation
-      setSentenceMakingLessonId(selection.lessonId);
-      setSentenceMakingContentId(null); // null for new content
-      setShowSentenceMakingEditor(true);
+      setVocabularySetLessonId(selection.lessonId);
+      setVocabularySetContentId(null); // null for new content
+      setShowVocabularySetEditor(true);
       setShowContentTypeDialog(false);
     } else {
       // For other content types, create directly
@@ -1908,8 +1908,8 @@ export default function ClassroomDetail({
                   />
                 ) : selectedContent.type?.toLowerCase() === "sentence_making" ||
                   selectedContent.type?.toLowerCase() === "vocabulary_set" ? (
-                  /* SentenceMakingPanel has its own save button */
-                  <SentenceMakingPanel
+                  /* VocabularySetPanel has its own save button */
+                  <VocabularySetPanel
                     content={selectedContent as ReadingAssessmentContent}
                     editingContent={
                       editingContent as ReadingAssessmentContent | undefined
@@ -2403,47 +2403,47 @@ export default function ClassroomDetail({
       )}
 
       {/* Sentence Making Editor */}
-      {showSentenceMakingEditor && sentenceMakingLessonId && (
+      {showVocabularySetEditor && vocabularySetLessonId && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">句子模組設定</h2>
+              <h2 className="text-2xl font-bold">{t("vocabularySet.dialogTitle")}</h2>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => {
-                  setShowSentenceMakingEditor(false);
-                  setSentenceMakingLessonId(null);
-                  setSentenceMakingContentId(null);
+                  setShowVocabularySetEditor(false);
+                  setVocabularySetLessonId(null);
+                  setVocabularySetContentId(null);
                 }}
               >
                 <X className="h-5 w-5" />
               </Button>
             </div>
             <div className="flex-1 overflow-hidden">
-              <SentenceMakingPanel
+              <VocabularySetPanel
                 content={undefined}
-                editingContent={{ id: sentenceMakingContentId ?? undefined }}
-                lessonId={sentenceMakingLessonId}
+                editingContent={{ id: vocabularySetContentId ?? undefined }}
+                lessonId={vocabularySetLessonId}
                 onUpdateContent={(updatedContent) => {
                   // Handle content update if needed
                   console.log("Content updated:", updatedContent);
                 }}
                 onSave={async () => {
-                  // SentenceMakingPanel handles save internally
+                  // VocabularySetPanel handles save internally
                   // Just close the editor on successful save
-                  setShowSentenceMakingEditor(false);
-                  setSentenceMakingLessonId(null);
-                  setSentenceMakingContentId(null);
+                  setShowVocabularySetEditor(false);
+                  setVocabularySetLessonId(null);
+                  setVocabularySetContentId(null);
                   await refreshPrograms();
                   toast.success("內容已成功儲存");
                 }}
                 onCancel={() => {
-                  setShowSentenceMakingEditor(false);
-                  setSentenceMakingLessonId(null);
-                  setSentenceMakingContentId(null);
+                  setShowVocabularySetEditor(false);
+                  setVocabularySetLessonId(null);
+                  setVocabularySetContentId(null);
                 }}
-                isCreating={!sentenceMakingContentId}
+                isCreating={!vocabularySetContentId}
               />
             </div>
           </div>

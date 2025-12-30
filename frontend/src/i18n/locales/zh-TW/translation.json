@@ -1315,6 +1315,7 @@
       "description": "為 「{{lessonName}}」 選擇要新增的內容類型",
       "processing": "處理中...",
       "recommended": "推薦",
+      "new": "最新",
       "comingSoon": "即將推出",
       "cancel": "取消",
       "types": {
@@ -3700,15 +3701,22 @@
       "speed": "語速"
     }
   },
-  "sentenceMakingPanel": {
+  "vocabularySet": {
+    "dialogTitle": "新增單字集",
+    "editTitle": "編輯單字集",
+    "defaultTitle": "單字集內容",
     "placeholders": {
       "enterEnglishWord": "輸入英文單字",
-      "enterEnglishSentence": "輸入英文例句",
-      "aiPromptExample": "例如：請生成與日常生活相關的例句"
+      "enterEnglishSentence": "輸入英文例句 (選填)",
+      "aiPromptExample": "例如：請生成與日常生活相關的例句",
+      "translation": "{{lang}}單字翻譯",
+      "exampleTranslation": "{{lang}}例句翻譯 (選填)"
     },
     "tooltips": {
       "generateExampleSentence": "AI 生成例句",
-      "batchAIGenerateExamples": "批次 AI 生成例句"
+      "batchAIGenerateExamples": "批次 AI 生成例句",
+      "generateTranslation": "生成{{lang}}翻譯",
+      "generateExampleTranslation": "生成{{lang}}例句翻譯"
     },
     "buttons": {
       "batchAIGenerateExamples": "批次AI生成例句",
@@ -3743,7 +3751,9 @@
       "willBeOverwritten": "將被覆蓋",
       "translationFieldsCleared": "翻譯欄位將被清空",
       "itemsAddedAndCreated": "已新增 {{count}} 個項目並創建內容",
-      "itemsAdded": "已新增 {{added}} 個項目（共 {{total}} 個）"
+      "itemsAdded": "已新增 {{added}} 個項目（共 {{total}} 個）",
+      "batchTranslationSuccess": "批次翻譯完成：{{total}} 個項目，{{posCount}} 個詞性",
+      "missingExampleSentencesHint": "部分單字缺少例句或例句翻譯，請使用「AI 生成例句」功能補齊後再儲存"
     }
   },
   "wordReading": {

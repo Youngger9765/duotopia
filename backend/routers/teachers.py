@@ -2437,11 +2437,34 @@ async def create_content(
             word_count = count_words(item_text)
             max_errors = calculate_max_errors(word_count)
 
+            # 準備 item_metadata（只儲存附加資訊，不重複儲存翻譯文字）
+            # - translation 欄位是翻譯的唯一來源
+            # - metadata 只存語言資訊和詞性等附加欄位
+            metadata = {}
+            if "parts_of_speech" in item_data:
+                metadata["parts_of_speech"] = item_data["parts_of_speech"]
+            if "vocabulary_translation_lang" in item_data:
+                metadata["vocabulary_translation_lang"] = item_data[
+                    "vocabulary_translation_lang"
+                ]
+            if "example_sentence_translation_lang" in item_data:
+                metadata["example_sentence_translation_lang"] = item_data[
+                    "example_sentence_translation_lang"
+                ]
+            # 英文釋義（雙語支援：當主翻譯是中文時，額外儲存英文釋義）
+            if "english_definition" in item_data and item_data["english_definition"]:
+                metadata["english_definition"] = item_data["english_definition"]
+
+            # 取得翻譯值（優先使用 definition，向後相容 translation）
+            translation_value = item_data.get("definition") or item_data.get(
+                "translation", ""
+            )
+
             content_item = ContentItem(
                 content_id=content.id,
                 order_index=idx,
                 text=item_text,
-                translation=item_data.get("translation", ""),
+                translation=translation_value,
                 audio_url=item_data.get("audio_url"),
                 example_sentence=item_data.get("example_sentence"),
                 example_sentence_translation=item_data.get(
@@ -2449,6 +2472,7 @@ async def create_content(
                 ),
                 word_count=word_count,
                 max_errors=max_errors,
+                item_metadata=metadata,
             )
             db.add(content_item)
             items_created.append(
@@ -2562,6 +2586,22 @@ async def get_content_detail(
                 )
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
+                # 新的統一翻譯欄位
+                "vocabulary_translation": item.item_metadata.get(
+                    "vocabulary_translation", ""
+                )
+                if item.item_metadata
+                else "",
+                "vocabulary_translation_lang": item.item_metadata.get(
+                    "vocabulary_translation_lang", "chinese"
+                )
+                if item.item_metadata
+                else "chinese",
+                "example_sentence_translation_lang": item.item_metadata.get(
+                    "example_sentence_translation_lang", "chinese"
+                )
+                if item.item_metadata
+                else "chinese",
                 "audio_url": item.audio_url,
                 "example_sentence": item.example_sentence,
                 "example_sentence_translation": item.example_sentence_translation,
@@ -2735,7 +2775,9 @@ async def update_content(
                 if not isinstance(item_data, dict):
                     continue
 
-                # 準備 metadata
+                # 準備 metadata（只儲存附加資訊，不重複儲存翻譯文字）
+                # - translation 欄位是翻譯的唯一來源
+                # - metadata 只存語言資訊、詞性、選項等附加欄位
                 metadata = {}
                 if "options" in item_data:
                     metadata["options"] = item_data["options"]
@@ -2743,17 +2785,22 @@ async def update_content(
                     metadata["correct_answer"] = item_data["correct_answer"]
                 if "question_type" in item_data:
                     metadata["question_type"] = item_data["question_type"]
-
-                # 處理雙語翻譯支援
-                if "definition" in item_data:
-                    metadata["chinese_translation"] = item_data["definition"]
-                if "translation" in item_data and item_data["translation"]:
-                    if item_data.get("selectedLanguage") == "english":
-                        metadata["english_definition"] = item_data["translation"]
-                if "english_definition" in item_data:
+                if "parts_of_speech" in item_data:
+                    metadata["parts_of_speech"] = item_data["parts_of_speech"]
+                if "vocabulary_translation_lang" in item_data:
+                    metadata["vocabulary_translation_lang"] = item_data[
+                        "vocabulary_translation_lang"
+                    ]
+                if "example_sentence_translation_lang" in item_data:
+                    metadata["example_sentence_translation_lang"] = item_data[
+                        "example_sentence_translation_lang"
+                    ]
+                # 英文釋義（雙語支援：當主翻譯是中文時，額外儲存英文釋義）
+                if (
+                    "english_definition" in item_data
+                    and item_data["english_definition"]
+                ):
                     metadata["english_definition"] = item_data["english_definition"]
-                if "selectedLanguage" in item_data:
-                    metadata["selected_language"] = item_data["selectedLanguage"]
 
                 translation_value = item_data.get("definition") or item_data.get(
                     "translation", ""
@@ -2886,7 +2933,7 @@ async def update_content(
             # 創建新的 ContentItem
             for idx, item_data in enumerate(update_data.items):
                 if isinstance(item_data, dict):
-                    # Store additional fields in item_metadata
+                    # 準備 metadata（只儲存附加資訊，不重複儲存翻譯文字）
                     metadata = {}
                     if "options" in item_data:
                         metadata["options"] = item_data["options"]
@@ -2894,17 +2941,22 @@ async def update_content(
                         metadata["correct_answer"] = item_data["correct_answer"]
                     if "question_type" in item_data:
                         metadata["question_type"] = item_data["question_type"]
-
-                    # 處理雙語翻譯支援
-                    if "definition" in item_data:
-                        metadata["chinese_translation"] = item_data["definition"]
-                    if "translation" in item_data and item_data["translation"]:
-                        if item_data.get("selectedLanguage") == "english":
-                            metadata["english_definition"] = item_data["translation"]
-                    if "english_definition" in item_data:
+                    if "parts_of_speech" in item_data:
+                        metadata["parts_of_speech"] = item_data["parts_of_speech"]
+                    if "vocabulary_translation_lang" in item_data:
+                        metadata["vocabulary_translation_lang"] = item_data[
+                            "vocabulary_translation_lang"
+                        ]
+                    if "example_sentence_translation_lang" in item_data:
+                        metadata["example_sentence_translation_lang"] = item_data[
+                            "example_sentence_translation_lang"
+                        ]
+                    # 英文釋義（雙語支援）
+                    if (
+                        "english_definition" in item_data
+                        and item_data["english_definition"]
+                    ):
                         metadata["english_definition"] = item_data["english_definition"]
-                    if "selectedLanguage" in item_data:
-                        metadata["selected_language"] = item_data["selectedLanguage"]
 
                     translation_value = item_data.get("definition") or item_data.get(
                         "translation", ""
@@ -2916,6 +2968,10 @@ async def update_content(
                         text=item_data.get("text", ""),
                         translation=translation_value,
                         audio_url=item_data.get("audio_url"),
+                        example_sentence=item_data.get("example_sentence"),
+                        example_sentence_translation=item_data.get(
+                            "example_sentence_translation"
+                        ),
                         item_metadata=metadata,
                     )
                     db.add(content_item)
@@ -2956,6 +3012,22 @@ async def update_content(
                 )
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
+                # 新的統一翻譯欄位
+                "vocabulary_translation": item.item_metadata.get(
+                    "vocabulary_translation", ""
+                )
+                if item.item_metadata
+                else "",
+                "vocabulary_translation_lang": item.item_metadata.get(
+                    "vocabulary_translation_lang", "chinese"
+                )
+                if item.item_metadata
+                else "chinese",
+                "example_sentence_translation_lang": item.item_metadata.get(
+                    "example_sentence_translation_lang", "chinese"
+                )
+                if item.item_metadata
+                else "chinese",
                 "audio_url": item.audio_url,
                 "example_sentence": item.example_sentence,
                 "example_sentence_translation": item.example_sentence_translation,

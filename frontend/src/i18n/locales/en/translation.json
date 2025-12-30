@@ -1310,6 +1310,7 @@
       "description": "Select the content type to add to \"{{lessonName}}\"",
       "processing": "Processing...",
       "recommended": "Recommended",
+      "new": "New",
       "comingSoon": "Coming Soon",
       "cancel": "Cancel",
       "types": {
@@ -3693,15 +3694,22 @@
       "speed": "Speed"
     }
   },
-  "sentenceMakingPanel": {
+  "vocabularySet": {
+    "dialogTitle": "Add Vocabulary Set",
+    "editTitle": "Edit Vocabulary Set",
+    "defaultTitle": "Vocabulary Set Content",
     "placeholders": {
       "enterEnglishWord": "Enter English word",
-      "enterEnglishSentence": "Enter English sentence",
-      "aiPromptExample": "e.g., Please generate sentences related to daily life"
+      "enterEnglishSentence": "Enter English sentence (optional)",
+      "aiPromptExample": "e.g., Please generate sentences related to daily life",
+      "translation": "{{lang}} word translation",
+      "exampleTranslation": "{{lang}} sentence translation (optional)"
     },
     "tooltips": {
       "generateExampleSentence": "AI Generate Example Sentence",
-      "batchAIGenerateExamples": "Batch AI Generate Examples"
+      "batchAIGenerateExamples": "Batch AI Generate Examples",
+      "generateTranslation": "Generate {{lang}} translation",
+      "generateExampleTranslation": "Generate {{lang}} sentence translation"
     },
     "buttons": {
       "batchAIGenerateExamples": "Batch AI Generate",
@@ -3736,7 +3744,9 @@
       "willBeOverwritten": "will be overwritten",
       "translationFieldsCleared": "Translation fields will be cleared",
       "itemsAddedAndCreated": "Added {{count}} items and created content",
-      "itemsAdded": "Added {{added}} items (total {{total}})"
+      "itemsAdded": "Added {{added}} items (total {{total}})",
+      "batchTranslationSuccess": "Batch translation complete: {{total}} items, {{posCount}} POS",
+      "missingExampleSentencesHint": "Some words are missing example sentences or translations. Please use 'AI Generate Examples' to fill them before saving."
     }
   },
   "wordReading": {
