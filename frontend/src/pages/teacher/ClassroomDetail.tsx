@@ -91,6 +91,7 @@ export default function ClassroomDetail({
   const [activeTab, setActiveTab] = useState(
     isTemplateMode ? "programs" : "students",
   );
+  const [hasInitializedTab, setHasInitializedTab] = useState(false);
 
   // Teacher subscription state
   const [canAssignHomework, setCanAssignHomework] = useState<boolean>(false);
@@ -178,8 +179,28 @@ export default function ClassroomDetail({
     const tab = searchParams.get("tab");
     if (tab === "assignments") {
       setActiveTab("assignments");
+      setHasInitializedTab(true);
     }
   }, [location.search]);
+
+  // Issue #150: 根據學生數量決定預設顯示的標籤頁
+  useEffect(() => {
+    // 只在非模板模式、非載入中、且尚未初始化標籤頁時執行
+    if (!isTemplateMode && !loading && !hasInitializedTab) {
+      const searchParams = new URLSearchParams(location.search);
+      const tab = searchParams.get("tab");
+      
+      // 如果 URL 沒有指定 tab，則根據學生數量決定
+      if (!tab) {
+        if (students.length > 0) {
+          setActiveTab("assignments");
+        } else {
+          setActiveTab("students");
+        }
+      }
+      setHasInitializedTab(true);
+    }
+  }, [students, loading, isTemplateMode, hasInitializedTab, location.search]);
 
   const fetchClassroomDetail = async (showLoading = true) => {
     try {
