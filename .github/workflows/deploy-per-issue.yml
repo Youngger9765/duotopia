@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'fix/issue-*'
+      - 'feat/issue-*'
       - 'feature/issue-*'
       - 'claude/issue-*'  # Support @claude created branches
     paths:
