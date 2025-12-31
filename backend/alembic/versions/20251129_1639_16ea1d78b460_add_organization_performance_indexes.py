@@ -21,9 +21,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Add missing permissions column to teacher_schools
-    # Use JSON for SQLite compatibility, JSONB for PostgreSQL
-    with op.batch_alter_table("teacher_schools", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("permissions", sa.JSON(), nullable=True))
+    # Use JSONB for PostgreSQL (better performance with GIN indexes)
+    if op.get_bind().dialect.name == "postgresql":
+        with op.batch_alter_table("teacher_schools", schema=None) as batch_op:
+            batch_op.add_column(
+                sa.Column("permissions", postgresql.JSONB(astext_type=sa.Text()), nullable=True)
+            )
+    else:
+        # Use JSON for SQLite compatibility
+        with op.batch_alter_table("teacher_schools", schema=None) as batch_op:
+            batch_op.add_column(sa.Column("permissions", sa.JSON(), nullable=True))
 
     # Create GIN indexes for JSONB columns in teacher_schools (PostgreSQL only)
     # GIN indexes are optimal for JSONB queries (containment, existence checks)
@@ -35,6 +42,7 @@ def upgrade() -> None:
             ["roles"],
             unique=False,
             postgresql_using="gin",
+            postgresql_ops={"roles": "jsonb_path_ops"},
         )
 
         op.create_index(
@@ -43,6 +51,7 @@ def upgrade() -> None:
             ["permissions"],
             unique=False,
             postgresql_using="gin",
+            postgresql_ops={"permissions": "jsonb_path_ops"},
         )
 
     # Create composite index for common query patterns
