@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { API_URL } from "@/config/api";
 
 interface School {
   id: string;
@@ -44,7 +45,7 @@ export default function SchoolDetail() {
 
   const fetchSchool = async () => {
     try {
-      const response = await fetch(`/api/schools/${schoolId}`, {
+      const response = await fetch(`${API_URL}/api/schools/${schoolId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -61,7 +62,7 @@ export default function SchoolDetail() {
   const fetchTeachers = async () => {
     try {
       setTeachersLoading(true);
-      const response = await fetch(`/api/schools/${schoolId}/teachers`, {
+      const response = await fetch(`${API_URL}/api/schools/${schoolId}/teachers`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -78,7 +79,7 @@ export default function SchoolDetail() {
   const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch(`/api/schools/${schoolId}/teachers`, {
+      const response = await fetch(`${API_URL}/api/schools/${schoolId}/teachers`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import TeacherLayout from "@/components/TeacherLayout";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { API_URL } from "@/config/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -59,7 +60,7 @@ export default function OrganizationManagement() {
         token?.substring(0, 20) + "...",
       );
 
-      const response = await fetch("/api/organizations", {
+      const response = await fetch(`${API_URL}/api/organizations`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -117,7 +118,7 @@ export default function OrganizationManagement() {
 
     setDeleting(true);
     try {
-      const response = await fetch(`/api/organizations/${orgId}`, {
+      const response = await fetch(`${API_URL}/api/organizations/${orgId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -154,7 +155,7 @@ export default function OrganizationManagement() {
     setDeleting(true);
     try {
       const deletePromises = Array.from(selectedOrgs).map((orgId) =>
-        fetch(`/api/organizations/${orgId}`, {
+        fetch(`${API_URL}/api/organizations/${orgId}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         }),
@@ -196,7 +197,7 @@ export default function OrganizationManagement() {
     e.preventDefault();
     setSaving(true);
     try {
-      const response = await fetch("/api/organizations", {
+      const response = await fetch(`${API_URL}/api/organizations`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -228,7 +229,7 @@ export default function OrganizationManagement() {
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/organizations/${editingOrg.id}`, {
+      const response = await fetch(`${API_URL}/api/organizations/${editingOrg.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

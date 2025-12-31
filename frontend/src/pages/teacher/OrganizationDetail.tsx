@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { API_URL } from "@/config/api";
 import { RolePermissionMatrix } from "@/components/organization/RolePermissionMatrix";
 import { Shield } from "lucide-react";
 
@@ -46,7 +47,7 @@ export default function OrganizationDetail() {
 
   const fetchOrganization = async () => {
     try {
-      const response = await fetch(`/api/organizations/${orgId}`, {
+      const response = await fetch(`${API_URL}/api/organizations/${orgId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -63,7 +64,7 @@ export default function OrganizationDetail() {
   const fetchTeachers = async () => {
     try {
       setTeachersLoading(true);
-      const response = await fetch(`/api/organizations/${orgId}/teachers`, {
+      const response = await fetch(`${API_URL}/api/organizations/${orgId}/teachers`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -80,7 +81,7 @@ export default function OrganizationDetail() {
   const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch(`/api/organizations/${orgId}/teachers`, {
+      const response = await fetch(`${API_URL}/api/organizations/${orgId}/teachers`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

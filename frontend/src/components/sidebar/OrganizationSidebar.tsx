@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "@/config/api";
 import {
   Accordion,
   AccordionContent,
@@ -63,7 +64,7 @@ export function OrganizationSidebar({
   const fetchSchools = useCallback(
     async (orgId: string) => {
       try {
-        const response = await fetch(`/api/schools?organization_id=${orgId}`, {
+        const response = await fetch(`${API_URL}/api/schools?organization_id=${orgId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.ok) {

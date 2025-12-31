@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { API_URL } from "@/config/api";
 
 interface School {
   id: string;
@@ -52,7 +53,7 @@ export default function SchoolManagement() {
 
   const fetchOrganizations = async () => {
     try {
-      const response = await fetch("/api/organizations", {
+      const response = await fetch(`${API_URL}/api/organizations`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -71,7 +72,7 @@ export default function SchoolManagement() {
     try {
       setLoading(true);
       const response = await fetch(
-        `/api/schools?organization_id=${organizationId}`,
+        `${API_URL}/api/schools?organization_id=${organizationId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -90,7 +91,7 @@ export default function SchoolManagement() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch("/api/schools", {
+      const response = await fetch(`${API_URL}/api/schools`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

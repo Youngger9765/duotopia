@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { API_URL } from "@/config/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -142,7 +143,7 @@ function OrganizationHubContent() {
       try {
         setIsFetchingOrgs(true);
         console.log("🔴 OrganizationHub: Fetching organizations...");
-        const response = await fetch("/api/organizations", {
+        const response = await fetch(`${API_URL}/api/organizations`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.ok) {
@@ -216,7 +217,7 @@ function OrganizationHubContent() {
       setStatsLoading(true);
 
       if (type === "organization") {
-        const schoolsRes = await fetch(`/api/schools?organization_id=${id}`, {
+        const schoolsRes = await fetch(`${API_URL}/api/schools?organization_id=${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -236,10 +237,10 @@ function OrganizationHubContent() {
     try {
       setIsLoadingSchoolDetails(true);
       const [teachersRes, classroomsRes] = await Promise.all([
-        fetch(`/api/schools/${schoolId}/teachers`, {
+        fetch(`${API_URL}/api/schools/${schoolId}/teachers`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`/api/schools/${schoolId}/classrooms`, {
+        fetch(`${API_URL}/api/schools/${schoolId}/classrooms`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
