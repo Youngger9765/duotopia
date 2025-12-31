@@ -1,7 +1,28 @@
 {
   "hooks": {
-    "UserPromptSubmit": ".claude/hooks/check-agent-rules.py",
-    "PreToolUse(Write)": ".claude/hooks/check-file-size.py",
-    "PreToolUse(Edit)": ".claude/hooks/check-file-size.py"
+    "UserPromptSubmit": [
+      {
+        "matcher": {},
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-agent-rules.py"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": {
+          "tools": ["Write", "Edit"]
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-file-size.py"
+          }
+        ]
+      }
+    ]
   }
 }
