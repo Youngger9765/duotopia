@@ -70,6 +70,8 @@ export const useTeacherAuthStore = create<TeacherAuthState>()(
         token: state.token,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        userRoles: state.userRoles,
+        rolesLoading: state.rolesLoading,
       }),
     },
   ),
