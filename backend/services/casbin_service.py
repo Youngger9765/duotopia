@@ -297,11 +297,20 @@ class CasbinService:
             )
 
         except Exception as e:
-            logger.error(
-                f"[Casbin] Failed to sync from database: {e}",
-                exc_info=True
-            )
-            raise
+            # Check if error is due to missing tables (e.g., in preview environments)
+            error_msg = str(e).lower()
+            if "does not exist" in error_msg or "no such table" in error_msg or "relation" in error_msg:
+                logger.warning(
+                    f"[Casbin] Organization tables not found in database (expected in preview/staging environments without migrations): {e}"
+                )
+                logger.info("[Casbin] Skipping database sync - application will start with policy-only permissions")
+                # Don't raise - allow application to start without organization roles
+            else:
+                logger.error(
+                    f"[Casbin] Failed to sync from database: {e}",
+                    exc_info=True
+                )
+                raise
         finally:
             if session_to_close is not None:
                 try:
