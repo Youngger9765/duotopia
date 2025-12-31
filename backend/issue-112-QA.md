@@ -1041,3 +1041,227 @@ From PRD requirements:
 **Tester:** Claude Code (Sonnet 4.5)
 **Environments:** Local ✅ | Preview 🔴
 **Overall Recommendation:** Fix preview API issue before merging to staging
+
+---
+
+## 🔄 Update: 2025-12-31 23:15 CST - Dashboard API Fix
+
+### Issue #2: Dashboard API 500 Error for Organization-Level Accounts
+
+#### Problem Discovery
+After fixing the roles API endpoint, testing revealed:
+- ✅ **school_admin (王校長)** - Dashboard loads successfully
+- ✅ **teacher (陳老師)** - Dashboard loads successfully  
+- ❌ **org_owner (張機構)** - Dashboard shows "載入失敗" (Load Failed)
+- ❌ **org_admin (李管理)** - Dashboard shows "載入失敗" (Load Failed)
+
+**Pattern:** Organization-level accounts fail, school-level accounts succeed.
+
+#### Root Cause Analysis
+
+**Error from Cloud Run logs:**
+```
+AttributeError: 'Organization' object has no attribute 'type'
+File "/app/routers/teachers/dashboard.py", line 51, in get_teacher_dashboard
+    type=org.type or "personal",
+         ^^^^^^^^
+```
+
+**Analysis:**
+1. Dashboard endpoint (`/api/teachers/dashboard`) queries `TeacherOrganization` relationships
+2. For org_owner/org_admin: `teacher_org` exists → executes lines 46-52
+3. Line 51 attempts to access `org.type` field
+4. **Organization model has NO `type` field** (only: id, name, display_name, description, contact_email, contact_phone, address, is_active, settings)
+5. For school_admin/teacher: `teacher_org` is None → skips lines 46-52 → no error
+
+**Why school accounts worked:**
+- school_admin and teacher accounts don't have `TeacherOrganization` records
+- They only have `TeacherSchool` records
+- Code never tries to access the non-existent `org.type` field
+
+#### Fix Applied
+
+**File:** `backend/routers/teachers/dashboard.py`
+**Line:** 51
+
+**Before:**
+```python
+organization_info = OrganizationInfo(
+    id=str(org.id),
+    name=org.display_name or org.name,
+    type=org.type or "personal",  # ❌ Organization model doesn't have 'type'
+)
+```
+
+**After:**
+```python
+organization_info = OrganizationInfo(
+    id=str(org.id),
+    name=org.display_name or org.name,
+    type="organization",  # ✅ Hardcoded value - all org relationships are 'organization' type
+)
+```
+
+**Commit:** `c42231a6` - "fix: Replace org.type with hardcoded 'organization' value"
+
+#### Deployment Status
+
+**Branch:** `feat/issue-112-org-hierarchy`
+**Deployment:** In progress
+**GitHub Actions:** https://github.com/Youngger9765/duotopia/actions/runs/20621774420
+
+#### Verification Plan
+
+Once deployment completes, verify all 4 test accounts:
+
+1. **張機構 (org_owner)** - owner@duotopia.com / owner123
+   - [ ] Login successful
+   - [ ] Dashboard loads (no "載入失敗" error)
+   - [ ] Organization info displayed
+   - [ ] Roles displayed correctly
+
+2. **李管理 (org_admin)** - orgadmin@duotopia.com / orgadmin123
+   - [ ] Login successful
+   - [ ] Dashboard loads (no "載入失敗" error)
+   - [ ] Organization info displayed
+   - [ ] Roles displayed correctly
+
+3. **王校長 (school_admin)** - schooladmin@duotopia.com / schooladmin123
+   - [ ] Login successful (baseline - was already working)
+   - [ ] Dashboard loads
+   - [ ] School info displayed
+
+4. **陳老師 (teacher)** - orgteacher@duotopia.com / orgteacher123
+   - [ ] Login successful (baseline - was already working)
+   - [ ] Dashboard loads
+   - [ ] School info displayed
+
+**Expected Result:** All 4 accounts should successfully load dashboard with HTTP 200 response.
+
+---
+
+## 📊 Issues Summary
+
+### Fixed Issues ✅
+
+1. **useSidebarRoles API routing** (Issue #1)
+   - Fixed: Import and use `API_URL` instead of relative path `/api/teachers/me/roles`
+   - Commit: `5df1b434`
+   - Status: Deployed and verified
+
+2. **Dashboard API 500 error for org accounts** (Issue #2)
+   - Fixed: Replace `org.type` with hardcoded `"organization"`
+   - Commit: `c42231a6`
+   - Status: Deployed (in progress)
+
+### Outstanding Issues ⚠️
+
+- None currently identified (pending verification of Issue #2 fix)
+
+---
+
+**Latest Test Session:** 2025-12-31 23:15 CST
+**Tester:** Claude Code (Sonnet 4.5) + Human Verification
+**Status:** Awaiting deployment completion for final verification
+
+---
+
+## ✅ Final Verification Results - 2025-12-31 23:30 CST
+
+### Dashboard API Fix Verification
+
+**Deployment:** Successfully deployed at 15:22 UTC (c42231a6)
+**Test Environment:** Preview (https://duotopia-preview-issue-112-frontend-b2ovkkgl6a-de.a.run.app)
+
+#### Test Accounts Verified
+
+| Account | Role | Email | Dashboard | Org Tab | Status |
+|---------|------|-------|-----------|---------|--------|
+| 張機構 | org_owner | owner@duotopia.com | ✅ Success | ✅ Visible | **FIXED** |
+| 李管理 | org_admin | orgadmin@duotopia.com | ✅ Success | ✅ Visible | **FIXED** |
+| 王校長 | school_admin | schooladmin@duotopia.com | ✅ Success | ✅ Visible | Working |
+| 陳老師 | teacher | orgteacher@duotopia.com | ✅ Success | ❌ Hidden | Working |
+
+#### Verification Details
+
+**1. 張機構 (org_owner)**
+- [x] Login successful
+- [x] Dashboard loads without "載入失敗" error
+- [x] Welcome message: "歡迎回來，張機構！"
+- [x] Subscription info displayed correctly
+- [x] "組織管理" tab visible (RBAC working)
+- [x] Tab switcher functional
+
+**2. 李管理 (org_admin)**
+- [x] Login successful
+- [x] Dashboard loads without "載入失敗" error
+- [x] Welcome message: "歡迎回來，李管理！"
+- [x] Subscription info displayed correctly
+- [x] "組織管理" tab visible (RBAC working)
+- [x] Tab switcher functional
+
+**3. 王校長 (school_admin)** - Baseline
+- [x] Dashboard working (was already functional before fix)
+- [x] "組織管理" tab visible (school_admin has permission)
+
+**4. 陳老師 (teacher)** - Baseline
+- [x] Dashboard working (was already functional before fix)
+- [x] "組織管理" tab correctly hidden (teacher has no org permission)
+
+#### API Response Verification
+
+**Before Fix:**
+```
+GET /api/teachers/dashboard
+Response: 500 Internal Server Error
+Error: AttributeError: 'Organization' object has no attribute 'type'
+```
+
+**After Fix:**
+```
+GET /api/teachers/dashboard
+Response: 200 OK
+Content-Type: application/json
+Body: { teacher: {...}, organization: { id: "...", name: "...", type: "organization" }, ... }
+```
+
+#### Console Logs Verification
+
+No errors in browser console for:
+- Roles API: `✅ [useSidebarRoles] Roles received: Object`
+- Dashboard API: No "載入失敗" errors
+- RBAC: `userRoles=["org_owner"], hasPermission=true`
+
+---
+
+## 🎉 Issue #112 QA Status: PASSED
+
+### Summary of Fixes
+
+1. **Issue #1: Roles API routing** ✅ FIXED
+   - Problem: Frontend used relative path `/api/teachers/me/roles` instead of `API_URL`
+   - Solution: Import and use `API_URL` from config
+   - Commit: `5df1b434`
+   
+2. **Issue #2: Dashboard API 500 for org accounts** ✅ FIXED
+   - Problem: Code tried to access `org.type` which doesn't exist in Organization model
+   - Solution: Use hardcoded `type="organization"`
+   - Commit: `c42231a6`
+
+### Overall Assessment
+
+- ✅ All critical bugs fixed
+- ✅ All test accounts working correctly
+- ✅ RBAC permissions enforced properly
+- ✅ Organization management tab displays for authorized roles
+- ✅ Dashboard API returns 200 for all account types
+- ✅ No "載入失敗" errors in preview environment
+
+**Recommendation:** ✅ Ready for merge to staging
+
+---
+
+**Final QA Completion:** 2025-12-31 23:30 CST
+**Tester:** Claude Code (Sonnet 4.5) + Browser Automation Verification
+**Environments:** Local ✅ | Preview ✅
+**Status:** ALL ISSUES RESOLVED ✅
