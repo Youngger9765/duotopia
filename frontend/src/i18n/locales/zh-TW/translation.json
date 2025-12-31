@@ -1251,7 +1251,8 @@
         "quotaExceeded": "配額不足，無法派發作業",
         "quotaExceededDesc": "請升級方案或等待下個計費週期",
         "missingAudio": "選擇的內容缺少音檔",
-        "missingAudioDesc": "此練習模式需要音檔，請先回到內容管理頁面產生 TTS 音檔"
+        "missingAudioDesc": "此練習模式需要音檔，請先回到內容管理頁面產生 TTS 音檔",
+        "mixedContentType": "目前只能選擇{{type}}，請先清除已選擇的內容再選擇其他類型"
       },
       "success": {
         "created": "成功創建作業，已指派給 {{count}} 位學生"
@@ -1261,10 +1262,13 @@
         "READING_ASSESSMENT": "例句集",
         "example_sentences": "例句集",
         "EXAMPLE_SENTENCES": "例句集",
+        "vocabulary_set": "單字集",
+        "VOCABULARY_SET": "單字集",
+        "sentence_making": "造句練習",
+        "SENTENCE_MAKING": "單字集",
         "speaking_practice": "口說練習",
         "speaking_scenario": "情境對話",
         "listening_cloze": "聽力填空",
-        "sentence_making": "造句練習",
         "speaking_quiz": "口說測驗"
       },
       "actions": {
@@ -1297,7 +1301,28 @@
         "playAudioNo": "否（寫作練習）",
         "scoreListening": "計分類別：聽力",
         "scoreWriting": "計分類別：寫作",
-        "scoreSpeaking": "計分類別：口說"
+        "scoreSpeaking": "計分類別：口說",
+        "wordReading": "單字朗讀",
+        "wordReadingDesc": "學生朗讀單字，系統評分發音",
+        "wordSelection": "單字選擇",
+        "wordSelectionDesc": "看單字或聽音檔，選擇正確的翻譯",
+        "targetProficiency": "達標熟悉度",
+        "targetProficiencyDesc": "學生需達到此熟悉度才算完成作業",
+        "showTranslation": "顯示翻譯",
+        "showTranslationDesc": "練習時顯示單字的翻譯",
+        "showWord": "顯示單字",
+        "showWordDesc": "練習時顯示英文單字",
+        "showImage": "顯示圖片",
+        "showImageDesc": "練習時顯示單字的圖片",
+        "playAudioOption": "播放音檔",
+        "playAudioOptionDesc": "練習時自動播放單字音檔",
+        "wordReadingInfo": "學生需朗讀每個單字，系統會使用 Azure Speech AI 評分發音",
+        "wordSelectionInfo": "學生需看單字或聽音檔選擇正確翻譯，使用艾賓浩斯記憶曲線幫助記憶",
+        "questionDisplay": "題目呈現方式",
+        "displayWord": "顯示單字",
+        "displayWordDesc": "看英文單字選翻譯",
+        "playAudioWord": "播放音檔",
+        "playAudioWordDesc": "聽音檔選翻譯"
       }
     },
     "classroomAssignDialog": {
@@ -3754,6 +3779,16 @@
       "itemsAdded": "已新增 {{added}} 個項目（共 {{total}} 個）",
       "batchTranslationSuccess": "批次翻譯完成：{{total}} 個項目，{{posCount}} 個詞性",
       "missingExampleSentencesHint": "部分單字缺少例句或例句翻譯，請使用「AI 生成例句」功能補齊後再儲存"
+    },
+    "image": {
+      "upload": "上傳圖片",
+      "uploading": "上傳中...",
+      "remove": "移除圖片",
+      "tooLarge": "圖片檔案過大，最大限制 2MB",
+      "invalidType": "不支援的圖片格式，請使用 JPG、PNG、GIF 或 WebP",
+      "uploadSuccess": "圖片上傳成功",
+      "uploadFailed": "圖片上傳失敗，請稍後再試",
+      "removed": "圖片已移除"
     }
   },
   "wordReading": {

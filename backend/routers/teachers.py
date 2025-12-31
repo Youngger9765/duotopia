@@ -2603,6 +2603,7 @@ async def get_content_detail(
                 if item.item_metadata
                 else "chinese",
                 "audio_url": item.audio_url,
+                "image_url": item.image_url,
                 "example_sentence": item.example_sentence,
                 "example_sentence_translation": item.example_sentence_translation,
                 "created_at": item.created_at.isoformat() if item.created_at else None,
@@ -2843,6 +2844,7 @@ async def update_content(
                     matched_item.text = new_text
                     matched_item.translation = translation_value
                     matched_item.audio_url = new_audio_url
+                    matched_item.image_url = item_data.get("image_url")
                     matched_item.example_sentence = item_data.get("example_sentence")
                     matched_item.example_sentence_translation = item_data.get(
                         "example_sentence_translation"
@@ -2856,6 +2858,7 @@ async def update_content(
                         text=new_text,
                         translation=translation_value,
                         audio_url=new_audio_url,
+                        image_url=item_data.get("image_url"),
                         example_sentence=item_data.get("example_sentence"),
                         example_sentence_translation=item_data.get(
                             "example_sentence_translation"
@@ -2968,6 +2971,7 @@ async def update_content(
                         text=item_data.get("text", ""),
                         translation=translation_value,
                         audio_url=item_data.get("audio_url"),
+                        image_url=item_data.get("image_url"),
                         example_sentence=item_data.get("example_sentence"),
                         example_sentence_translation=item_data.get(
                             "example_sentence_translation"
@@ -3029,6 +3033,7 @@ async def update_content(
                 if item.item_metadata
                 else "chinese",
                 "audio_url": item.audio_url,
+                "image_url": item.image_url,
                 "example_sentence": item.example_sentence,
                 "example_sentence_translation": item.example_sentence_translation,
                 "options": item.item_metadata.get("options", [])
@@ -3373,6 +3378,73 @@ async def upload_audio(
     except Exception as e:
         print(f"Audio upload error: {e}")
         raise HTTPException(status_code=500, detail="Audio upload failed")
+
+
+# ============ Image Upload Endpoints ============
+@router.post("/upload/image")
+async def upload_image(
+    file: UploadFile = File(...),
+    content_id: Optional[int] = Form(None),
+    item_index: Optional[int] = Form(None),
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """Upload image file for vocabulary set items
+
+    Args:
+        file: Image file (jpg, png, gif, webp)
+        content_id: Content ID (for tracking which vocabulary set)
+        item_index: Item index (for tracking which word)
+    """
+    try:
+        from services.image_upload import get_image_upload_service
+
+        image_service = get_image_upload_service()
+
+        # If content_id is provided, verify teacher owns this content
+        if content_id:
+            content = (
+                db.query(Content)
+                .filter(
+                    Content.id == content_id,
+                    Content.lesson.has(
+                        Lesson.program.has(Program.teacher_id == current_teacher.id)
+                    ),
+                )
+                .first()
+            )
+
+            if not content:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Content not found or access denied",
+                )
+
+            # If updating existing item, delete old image
+            if item_index is not None:
+                content_items = (
+                    db.query(ContentItem)
+                    .filter(ContentItem.content_id == content_id)
+                    .order_by(ContentItem.order_index)
+                    .all()
+                )
+
+                if content_items and item_index < len(content_items):
+                    old_image_url = content_items[item_index].image_url
+                    if old_image_url:
+                        image_service.delete_image(old_image_url)
+
+        # Upload new image
+        image_url = await image_service.upload_image(
+            file, content_id=content_id, item_index=item_index
+        )
+
+        return {"image_url": image_url}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Image upload error: {e}")
+        raise HTTPException(status_code=500, detail="Image upload failed")
 
 
 # ============ Teacher Assignment Preview API ============

@@ -1246,7 +1246,8 @@
         "quotaExceeded": "Insufficient quota, cannot assign assignment",
         "quotaExceededDesc": "Please upgrade your plan or wait for the next billing cycle",
         "missingAudio": "Selected content is missing audio",
-        "missingAudioDesc": "This practice mode requires audio. Please go to content management to generate TTS audio first"
+        "missingAudioDesc": "This practice mode requires audio. Please go to content management to generate TTS audio first",
+        "mixedContentType": "Only {{type}} can be selected. Please clear selected content before choosing a different type"
       },
       "success": {
         "created": "Assignment created successfully, assigned to {{count}} students"
@@ -1256,10 +1257,13 @@
         "READING_ASSESSMENT": "Example Sentences",
         "example_sentences": "Example Sentences",
         "EXAMPLE_SENTENCES": "Example Sentences",
+        "vocabulary_set": "Vocabulary Set",
+        "VOCABULARY_SET": "Vocabulary Set",
+        "sentence_making": "Vocabulary Set",
+        "SENTENCE_MAKING": "Vocabulary Set",
         "speaking_practice": "Speaking Practice",
         "speaking_scenario": "Speaking Scenario",
         "listening_cloze": "Listening Cloze",
-        "sentence_making": "Sentence Making",
         "speaking_quiz": "Speaking Quiz"
       },
       "actions": {
@@ -1292,7 +1296,28 @@
         "playAudioNo": "No (Writing Practice)",
         "scoreListening": "Score Category: Listening",
         "scoreWriting": "Score Category: Writing",
-        "scoreSpeaking": "Score Category: Speaking"
+        "scoreSpeaking": "Score Category: Speaking",
+        "wordReading": "Word Reading",
+        "wordReadingDesc": "Students read words aloud, system scores pronunciation",
+        "wordSelection": "Word Selection",
+        "wordSelectionDesc": "View words or listen to audio, select the correct translation",
+        "targetProficiency": "Target Proficiency",
+        "targetProficiencyDesc": "Students must reach this proficiency to complete the assignment",
+        "showTranslation": "Show Translation",
+        "showTranslationDesc": "Show word translation during practice",
+        "showWord": "Show Word",
+        "showWordDesc": "Show the word in English during practice",
+        "showImage": "Show Image",
+        "showImageDesc": "Show word image during practice",
+        "playAudioOption": "Play Audio",
+        "playAudioOptionDesc": "Auto-play word audio during practice",
+        "wordReadingInfo": "Students will read each word aloud. Azure Speech AI will score pronunciation.",
+        "wordSelectionInfo": "Students select correct translations using Ebbinghaus memory curve for retention.",
+        "questionDisplay": "Question Display",
+        "displayWord": "Display Word",
+        "displayWordDesc": "View word and select translation",
+        "playAudioWord": "Play Audio",
+        "playAudioWordDesc": "Listen to audio and select translation"
       }
     },
     "classroomAssignDialog": {
@@ -3747,6 +3772,16 @@
       "itemsAdded": "Added {{added}} items (total {{total}})",
       "batchTranslationSuccess": "Batch translation complete: {{total}} items, {{posCount}} POS",
       "missingExampleSentencesHint": "Some words are missing example sentences or translations. Please use 'AI Generate Examples' to fill them before saving."
+    },
+    "image": {
+      "upload": "Upload Image",
+      "uploading": "Uploading...",
+      "remove": "Remove Image",
+      "tooLarge": "Image file too large, maximum 2MB",
+      "invalidType": "Unsupported image format. Use JPG, PNG, GIF or WebP",
+      "uploadSuccess": "Image uploaded successfully",
+      "uploadFailed": "Image upload failed, please try again",
+      "removed": "Image removed"
     }
   },
   "wordReading": {

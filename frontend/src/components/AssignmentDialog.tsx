@@ -287,11 +287,20 @@ export function AssignmentDialog({
     due_date: undefined as Date | undefined,
     start_date: undefined as Date | undefined,
     // ===== 例句集作答模式設定 =====
-    practice_mode: "reading" as "reading" | "rearrangement", // 作答模式
-    time_limit_per_question: 30 as 0 | 10 | 20 | 30 | 40, // 每題時間限制 (0 = 不限時)
+    practice_mode: "reading" as
+      | "reading"
+      | "rearrangement"
+      | "word_reading"
+      | "word_selection", // 作答模式
+    time_limit_per_question: 20 as 0 | 10 | 20 | 30 | 40, // 每題時間限制 (0 = 不限時)
     shuffle_questions: false, // 是否打亂順序
     show_answer: false, // 答題結束後是否顯示正確答案（例句重組專用）
-    play_audio: false, // 是否播放音檔（例句重組專用）
+    play_audio: false, // 是否播放音檔（例句重組/單字集專用）
+    // ===== 單字集專用設定 =====
+    target_proficiency: 80, // 達標熟悉度 (50-100%)
+    show_translation: true, // 顯示翻譯（單字朗讀專用）
+    show_word: true, // 顯示單字（單字選擇專用）
+    show_image: true, // 顯示圖片
   });
 
   useEffect(() => {
@@ -309,10 +318,15 @@ export function AssignmentDialog({
         due_date: undefined,
         start_date: new Date(), // 預設為今天
         practice_mode: "reading", // 預設為例句朗讀模式
-        time_limit_per_question: 30 as 0 | 10 | 20 | 30 | 40,
+        time_limit_per_question: 20 as 0 | 10 | 20 | 30 | 40,
         shuffle_questions: false,
         show_answer: false,
         play_audio: false,
+        // 單字集專用設定
+        target_proficiency: 80,
+        show_translation: true,
+        show_word: true,
+        show_image: true,
       });
       setCurrentStep(1);
       setActiveTab("template");
@@ -488,6 +502,32 @@ export function AssignmentDialog({
     }
   };
 
+  // 取得目前購物車中的內容類型（正規化後）
+  const getCartContentTypeCategory = ():
+    | "example_sentences"
+    | "vocabulary_set"
+    | null => {
+    if (cartItems.length === 0) return null;
+    const firstItemType = cartItems[0].contentType;
+    if (isExampleSentencesType(firstItemType)) return "example_sentences";
+    if (isVocabularySetType(firstItemType)) return "vocabulary_set";
+    return null;
+  };
+
+  // 檢查內容是否可選（與購物車中的內容類型相容）
+  const isContentSelectable = (contentType: string): boolean => {
+    const cartCategory = getCartContentTypeCategory();
+    if (cartCategory === null) return true; // 購物車空，任何類型都可選
+
+    if (cartCategory === "example_sentences") {
+      return isExampleSentencesType(contentType);
+    }
+    if (cartCategory === "vocabulary_set") {
+      return isVocabularySetType(contentType);
+    }
+    return true;
+  };
+
   // 添加/移除內容到購物車
   const toggleContent = (
     contentId: number,
@@ -495,9 +535,26 @@ export function AssignmentDialog({
     lessonName: string,
     content: Content,
   ) => {
+    // 檢查是否已選擇（如果已選擇，可以移除）
+    const exists = cartItems.find((item) => item.contentId === contentId);
+    if (!exists && !isContentSelectable(content.type)) {
+      // 無法新增不同類型的內容
+      const cartCategory = getCartContentTypeCategory();
+      const cartTypeName =
+        cartCategory === "example_sentences"
+          ? t("dialogs.assignmentDialog.contentTypes.EXAMPLE_SENTENCES")
+          : t("dialogs.assignmentDialog.contentTypes.VOCABULARY_SET");
+      toast.warning(
+        t("dialogs.assignmentDialog.errors.mixedContentType", {
+          type: cartTypeName,
+        }),
+      );
+      return;
+    }
+
     setCartItems((prev) => {
-      const exists = prev.find((item) => item.contentId === contentId);
-      if (exists) {
+      const existsInPrev = prev.find((item) => item.contentId === contentId);
+      if (existsInPrev) {
         // 移除
         return prev.filter((item) => item.contentId !== contentId);
       } else {
@@ -556,28 +613,44 @@ export function AssignmentDialog({
   ) => {
     if (!lesson.contents) return;
 
-    // 過濾掉 VOCABULARY_SET 類型的內容
-    const filteredContents = lesson.contents.filter(
-      (c) => !isVocabularySetType(c.type),
+    // 只考慮可選擇的內容（與購物車中類型相容的）
+    const selectableContents = lesson.contents.filter((c) =>
+      isContentSelectable(c.type),
     );
-    const lessonContentIds = filteredContents.map((c) => c.id);
-    const allSelected = lessonContentIds.every((id) =>
+
+    if (selectableContents.length === 0) {
+      // 沒有可選擇的內容（都被類型限制）
+      const cartCategory = getCartContentTypeCategory();
+      const cartTypeName =
+        cartCategory === "example_sentences"
+          ? t("dialogs.assignmentDialog.contentTypes.EXAMPLE_SENTENCES")
+          : t("dialogs.assignmentDialog.contentTypes.VOCABULARY_SET");
+      toast.warning(
+        t("dialogs.assignmentDialog.errors.mixedContentType", {
+          type: cartTypeName,
+        }),
+      );
+      return;
+    }
+
+    const selectableContentIds = selectableContents.map((c) => c.id);
+    const allSelected = selectableContentIds.every((id) =>
       cartItems.some((item) => item.contentId === id),
     );
 
     if (allSelected) {
-      // 移除所有
+      // 移除所有可選擇的
       setCartItems((prev) => {
         const filtered = prev.filter(
-          (item) => !lessonContentIds.includes(item.contentId),
+          (item) => !selectableContentIds.includes(item.contentId),
         );
         return filtered.map((item, index) => ({ ...item, order: index }));
       });
     } else {
-      // 添加所有
+      // 添加所有可選擇的
       setCartItems((prev) => {
         const existingIds = new Set(prev.map((item) => item.contentId));
-        const newItems = filteredContents
+        const newItems = selectableContents
           .filter((content) => !existingIds.has(content.id))
           .map((content, idx) => ({
             contentId: content.id,
@@ -751,10 +824,15 @@ export function AssignmentDialog({
       due_date: undefined,
       start_date: undefined,
       practice_mode: "reading",
-      time_limit_per_question: 30 as 0 | 10 | 20 | 30 | 40,
+      time_limit_per_question: 20 as 0 | 10 | 20 | 30 | 40,
       shuffle_questions: false,
       show_answer: false,
       play_audio: false,
+      // 單字集專用設定
+      target_proficiency: 80,
+      show_translation: true,
+      show_word: true,
+      show_image: true,
     });
     setCartItems([]);
     setExpandedPrograms(new Set());
@@ -807,6 +885,24 @@ export function AssignmentDialog({
 
   // 處理下一步按鈕點擊
   const handleNextStep = () => {
+    // 從 step 1 移動到 step 2 時，根據內容類型設定預設練習模式
+    if (currentStep === 1) {
+      const contentCategory = getCartContentTypeCategory();
+      if (contentCategory === "vocabulary_set") {
+        // 單字集預設為單字朗讀模式
+        setFormData((prev) => ({
+          ...prev,
+          practice_mode: "word_reading",
+        }));
+      } else {
+        // 例句集預設為例句朗讀模式
+        setFormData((prev) => ({
+          ...prev,
+          practice_mode: "reading",
+        }));
+      }
+    }
+
     // 從 step 2 移動到 step 3 時，檢查音檔需求
     if (currentStep === 2) {
       if (!checkAudioRequirement()) {
@@ -1182,10 +1278,7 @@ export function AssignmentDialog({
                                               </span>
                                             )}
                                             {lesson.contents &&
-                                              lesson.contents.filter(
-                                                (c) =>
-                                                  !isVocabularySetType(c.type),
-                                              ).length > 0 &&
+                                              lesson.contents.length > 0 &&
                                               !loadingLessons[lesson.id] && (
                                                 <span
                                                   className="h-6 px-2 text-xs cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-colors inline-flex items-center"
@@ -1198,20 +1291,12 @@ export function AssignmentDialog({
                                                     );
                                                   }}
                                                 >
-                                                  {lesson.contents
-                                                    .filter(
-                                                      (c) =>
-                                                        !isVocabularySetType(
-                                                          c.type,
-                                                        ),
-                                                    )
-                                                    .every((c) =>
-                                                      cartItems.some(
-                                                        (item) =>
-                                                          item.contentId ===
-                                                          c.id,
-                                                      ),
-                                                    )
+                                                  {lesson.contents.every((c) =>
+                                                    cartItems.some(
+                                                      (item) =>
+                                                        item.contentId === c.id,
+                                                    ),
+                                                  )
                                                     ? t(
                                                         "dialogs.assignmentDialog.selectContent.deselectAll",
                                                       )
@@ -1226,19 +1311,18 @@ export function AssignmentDialog({
                                         {expandedLessons.has(lesson.id) &&
                                           lesson.contents && (
                                             <div className="ml-6 space-y-1 pb-2 bg-white">
-                                              {lesson.contents
-                                                .filter(
-                                                  (c) =>
-                                                    !isVocabularySetType(
-                                                      c.type,
-                                                    ),
-                                                )
-                                                .map((content) => {
+                                              {lesson.contents.map(
+                                                (content) => {
                                                   const isSelected =
                                                     cartItems.some(
                                                       (item) =>
                                                         item.contentId ===
                                                         content.id,
+                                                    );
+                                                  const isDisabled =
+                                                    !isSelected &&
+                                                    !isContentSelectable(
+                                                      content.type,
                                                     );
                                                   return (
                                                     <button
@@ -1251,10 +1335,16 @@ export function AssignmentDialog({
                                                           content,
                                                         )
                                                       }
+                                                      disabled={isDisabled}
                                                       className={cn(
-                                                        "w-full p-2 flex items-center gap-2 hover:bg-gray-50 rounded transition-colors text-left",
+                                                        "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
                                                         isSelected &&
                                                           "bg-blue-50 hover:bg-blue-100",
+                                                        !isSelected &&
+                                                          !isDisabled &&
+                                                          "hover:bg-gray-50",
+                                                        isDisabled &&
+                                                          "opacity-40 cursor-not-allowed",
                                                       )}
                                                     >
                                                       {isSelected ? (
@@ -1290,7 +1380,8 @@ export function AssignmentDialog({
                                                       </div>
                                                     </button>
                                                   );
-                                                })}
+                                                },
+                                              )}
                                             </div>
                                           )}
                                       </div>
@@ -1404,10 +1495,7 @@ export function AssignmentDialog({
                                               )}
                                             </span>
                                             {lesson.contents &&
-                                              lesson.contents.filter(
-                                                (c) =>
-                                                  !isVocabularySetType(c.type),
-                                              ).length > 0 &&
+                                              lesson.contents.length > 0 &&
                                               !loadingLessons[lesson.id] && (
                                                 <span
                                                   className="h-6 px-2 text-xs cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-colors inline-flex items-center"
@@ -1420,20 +1508,12 @@ export function AssignmentDialog({
                                                     );
                                                   }}
                                                 >
-                                                  {lesson.contents
-                                                    .filter(
-                                                      (c) =>
-                                                        !isVocabularySetType(
-                                                          c.type,
-                                                        ),
-                                                    )
-                                                    .every((c) =>
-                                                      cartItems.some(
-                                                        (item) =>
-                                                          item.contentId ===
-                                                          c.id,
-                                                      ),
-                                                    )
+                                                  {lesson.contents.every((c) =>
+                                                    cartItems.some(
+                                                      (item) =>
+                                                        item.contentId === c.id,
+                                                    ),
+                                                  )
                                                     ? t(
                                                         "dialogs.assignmentDialog.selectContent.deselectAll",
                                                       )
@@ -1448,19 +1528,18 @@ export function AssignmentDialog({
                                         {expandedLessons.has(lesson.id) &&
                                           lesson.contents && (
                                             <div className="ml-6 space-y-1 pb-2 bg-white">
-                                              {lesson.contents
-                                                .filter(
-                                                  (c) =>
-                                                    !isVocabularySetType(
-                                                      c.type,
-                                                    ),
-                                                )
-                                                .map((content) => {
+                                              {lesson.contents.map(
+                                                (content) => {
                                                   const isSelected =
                                                     cartItems.some(
                                                       (item) =>
                                                         item.contentId ===
                                                         content.id,
+                                                    );
+                                                  const isDisabled =
+                                                    !isSelected &&
+                                                    !isContentSelectable(
+                                                      content.type,
                                                     );
                                                   return (
                                                     <button
@@ -1473,10 +1552,16 @@ export function AssignmentDialog({
                                                           content,
                                                         )
                                                       }
+                                                      disabled={isDisabled}
                                                       className={cn(
-                                                        "w-full p-2 flex items-center gap-2 hover:bg-gray-50 rounded transition-colors text-left",
+                                                        "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
                                                         isSelected &&
                                                           "bg-blue-50 hover:bg-blue-100",
+                                                        !isSelected &&
+                                                          !isDisabled &&
+                                                          "hover:bg-gray-50",
+                                                        isDisabled &&
+                                                          "opacity-40 cursor-not-allowed",
                                                       )}
                                                     >
                                                       {isSelected ? (
@@ -1512,7 +1597,8 @@ export function AssignmentDialog({
                                                       </div>
                                                     </button>
                                                   );
-                                                })}
+                                                },
+                                              )}
                                             </div>
                                           )}
                                       </div>
@@ -1593,256 +1679,583 @@ export function AssignmentDialog({
               </div>
 
               <div className="flex-1 flex flex-col justify-center max-w-2xl mx-auto w-full">
-                {/* 作答模式選擇 */}
+                {/* 作答模式選擇 - 根據內容類型顯示不同選項 */}
                 <div className="space-y-6">
-                  <div className="flex gap-4">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          practice_mode: "reading",
-                          // Reset time limit to 30 if currently set to unlimited (0)
-                          // because unlimited is only available for rearrangement mode
-                          time_limit_per_question:
-                            prev.time_limit_per_question === 0
-                              ? 30
-                              : prev.time_limit_per_question,
-                        }))
-                      }
-                      className={`flex-1 p-6 rounded-xl border-2 transition-all ${
-                        formData.practice_mode === "reading"
-                          ? "border-blue-500 bg-blue-50 shadow-md"
-                          : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-3">
-                        <span className="text-4xl">🎙️</span>
-                        <div className="text-center">
-                          <div className="font-semibold text-lg">
-                            {t("dialogs.assignmentDialog.practiceMode.reading")}
-                          </div>
-                          <div className="text-sm text-gray-500 mt-1">
-                            {t(
-                              "dialogs.assignmentDialog.practiceMode.readingDesc",
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          practice_mode: "rearrangement",
-                        }))
-                      }
-                      className={`flex-1 p-6 rounded-xl border-2 transition-all ${
-                        formData.practice_mode === "rearrangement"
-                          ? "border-blue-500 bg-blue-50 shadow-md"
-                          : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-3">
-                        <span className="text-4xl">🔀</span>
-                        <div className="text-center">
-                          <div className="font-semibold text-lg">
-                            {t(
-                              "dialogs.assignmentDialog.practiceMode.rearrangement",
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-500 mt-1">
-                            {t(
-                              "dialogs.assignmentDialog.practiceMode.rearrangementDesc",
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-
-                  {/* 細節設定 */}
-                  <Card className="p-4 border-gray-200">
-                    <h4 className="text-sm font-medium mb-3 text-gray-700">
-                      {t(
-                        "dialogs.assignmentDialog.practiceMode.advancedSettings",
-                      )}
-                    </h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* 時間限制 */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-gray-600">
-                          {t("dialogs.assignmentDialog.practiceMode.timeLimit")}
-                        </Label>
-                        <select
-                          value={formData.time_limit_per_question}
-                          onChange={(e) =>
+                  {/* ===== 例句集練習模式 ===== */}
+                  {getCartContentTypeCategory() === "example_sentences" && (
+                    <>
+                      <div className="flex gap-4">
+                        <button
+                          type="button"
+                          onClick={() =>
                             setFormData((prev) => ({
                               ...prev,
-                              time_limit_per_question: Number(
-                                e.target.value,
-                              ) as 0 | 10 | 20 | 30 | 40,
+                              practice_mode: "reading",
+                              // Reset time limit to 30 if currently set to unlimited (0)
+                              // because unlimited is only available for rearrangement mode
+                              time_limit_per_question:
+                                prev.time_limit_per_question === 0
+                                  ? 30
+                                  : prev.time_limit_per_question,
                             }))
                           }
-                          className="w-full h-9 px-3 rounded-md border border-gray-200 text-sm"
+                          className={`flex-1 p-6 rounded-xl border-2 transition-all ${
+                            formData.practice_mode === "reading"
+                              ? "border-blue-500 bg-blue-50 shadow-md"
+                              : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                          }`}
                         >
-                          {/* Unlimited option only available for rearrangement mode */}
-                          {formData.practice_mode === "rearrangement" && (
-                            <option value={0}>
-                              {t(
-                                "dialogs.assignmentDialog.practiceMode.unlimited",
-                              )}
-                            </option>
-                          )}
-                          <option value={10}>
-                            10{" "}
-                            {t("dialogs.assignmentDialog.practiceMode.seconds")}
-                          </option>
-                          <option value={20}>
-                            20{" "}
-                            {t("dialogs.assignmentDialog.practiceMode.seconds")}
-                          </option>
-                          <option value={30}>
-                            30{" "}
-                            {t("dialogs.assignmentDialog.practiceMode.seconds")}{" "}
-                            (
-                            {t("dialogs.assignmentDialog.practiceMode.default")}
-                            )
-                          </option>
-                          <option value={40}>
-                            40{" "}
-                            {t("dialogs.assignmentDialog.practiceMode.seconds")}
-                          </option>
-                        </select>
+                          <div className="flex flex-col items-center gap-3">
+                            <span className="text-4xl">🎙️</span>
+                            <div className="text-center">
+                              <div className="font-semibold text-lg">
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.reading",
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-500 mt-1">
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.readingDesc",
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              practice_mode: "rearrangement",
+                            }))
+                          }
+                          className={`flex-1 p-6 rounded-xl border-2 transition-all ${
+                            formData.practice_mode === "rearrangement"
+                              ? "border-blue-500 bg-blue-50 shadow-md"
+                              : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                          }`}
+                        >
+                          <div className="flex flex-col items-center gap-3">
+                            <span className="text-4xl">🔀</span>
+                            <div className="text-center">
+                              <div className="font-semibold text-lg">
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.rearrangement",
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-500 mt-1">
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.rearrangementDesc",
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
                       </div>
 
-                      {/* 打亂順序 */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-gray-600">
+                      {/* 例句集細節設定 */}
+                      <Card className="p-4 border-gray-200">
+                        <h4 className="text-sm font-medium mb-3 text-gray-700">
                           {t(
-                            "dialogs.assignmentDialog.practiceMode.shuffleQuestions",
+                            "dialogs.assignmentDialog.practiceMode.advancedSettings",
                           )}
-                        </Label>
-                        <div className="flex items-center h-9">
-                          <input
-                            type="checkbox"
-                            checked={formData.shuffle_questions}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                shuffle_questions: e.target.checked,
-                              }))
-                            }
-                            className="h-4 w-4 rounded border-gray-300"
-                          />
-                          <span className="ml-2 text-sm text-gray-600">
-                            {t(
-                              "dialogs.assignmentDialog.practiceMode.shuffleQuestionsDesc",
-                            )}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* 例句重組專用選項 - 顯示答案 */}
-                      {formData.practice_mode === "rearrangement" && (
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-gray-600">
-                            {t(
-                              "dialogs.assignmentDialog.practiceMode.showAnswer",
-                            )}
-                          </Label>
-                          <div className="flex items-center h-9">
-                            <input
-                              type="checkbox"
-                              checked={formData.show_answer}
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* 時間限制 */}
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-gray-600">
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.timeLimit",
+                              )}
+                            </Label>
+                            <select
+                              value={formData.time_limit_per_question}
                               onChange={(e) =>
                                 setFormData((prev) => ({
                                   ...prev,
-                                  show_answer: e.target.checked,
+                                  time_limit_per_question: Number(
+                                    e.target.value,
+                                  ) as 0 | 10 | 20 | 30 | 40,
                                 }))
                               }
-                              className="h-4 w-4 rounded border-gray-300"
-                            />
-                            <span className="ml-2 text-sm text-gray-600">
-                              {t(
-                                "dialogs.assignmentDialog.practiceMode.showAnswerDesc",
+                              className="w-full h-9 px-3 rounded-md border border-gray-200 text-sm"
+                            >
+                              {/* Unlimited option only available for rearrangement mode */}
+                              {formData.practice_mode === "rearrangement" && (
+                                <option value={0}>
+                                  {t(
+                                    "dialogs.assignmentDialog.practiceMode.unlimited",
+                                  )}
+                                </option>
                               )}
-                            </span>
+                              <option value={10}>
+                                10{" "}
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.seconds",
+                                )}
+                              </option>
+                              <option value={20}>
+                                20{" "}
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.seconds",
+                                )}
+                              </option>
+                              <option value={30}>
+                                30{" "}
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.seconds",
+                                )}{" "}
+                                (
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.default",
+                                )}
+                                )
+                              </option>
+                              <option value={40}>
+                                40{" "}
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.seconds",
+                                )}
+                              </option>
+                            </select>
+                          </div>
+
+                          {/* 打亂順序 */}
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-gray-600">
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.shuffleQuestions",
+                              )}
+                            </Label>
+                            <div className="flex items-center h-9">
+                              <input
+                                type="checkbox"
+                                checked={formData.shuffle_questions}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    shuffle_questions: e.target.checked,
+                                  }))
+                                }
+                                className="h-4 w-4 rounded border-gray-300"
+                              />
+                              <span className="ml-2 text-sm text-gray-600">
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.shuffleQuestionsDesc",
+                                )}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* 例句重組專用選項 - 顯示答案 */}
+                          {formData.practice_mode === "rearrangement" && (
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-gray-600">
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.showAnswer",
+                                )}
+                              </Label>
+                              <div className="flex items-center h-9">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.show_answer}
+                                  onChange={(e) =>
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      show_answer: e.target.checked,
+                                    }))
+                                  }
+                                  className="h-4 w-4 rounded border-gray-300"
+                                />
+                                <span className="ml-2 text-sm text-gray-600">
+                                  {t(
+                                    "dialogs.assignmentDialog.practiceMode.showAnswerDesc",
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 例句重組專用選項 - 播放音檔 */}
+                        {formData.practice_mode === "rearrangement" && (
+                          <div className="mt-4 pt-4 border-t">
+                            <Label className="text-xs text-gray-600 mb-2 block">
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.playAudio",
+                              )}
+                            </Label>
+                            <div className="flex gap-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    play_audio: true,
+                                  }))
+                                }
+                                className={`flex-1 p-3 rounded-lg border text-sm ${
+                                  formData.play_audio
+                                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                                    : "border-gray-200 hover:border-gray-300"
+                                }`}
+                              >
+                                🔊{" "}
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.playAudioYes",
+                                )}
+                                <span className="block text-xs text-gray-500 mt-0.5">
+                                  {t(
+                                    "dialogs.assignmentDialog.practiceMode.scoreListening",
+                                  )}
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    play_audio: false,
+                                  }))
+                                }
+                                className={`flex-1 p-3 rounded-lg border text-sm ${
+                                  !formData.play_audio
+                                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                                    : "border-gray-200 hover:border-gray-300"
+                                }`}
+                              >
+                                🔇{" "}
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.playAudioNo",
+                                )}
+                                <span className="block text-xs text-gray-500 mt-0.5">
+                                  {t(
+                                    "dialogs.assignmentDialog.practiceMode.scoreWriting",
+                                  )}
+                                </span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </Card>
+                    </>
+                  )}
+
+                  {/* ===== 單字集練習模式 ===== */}
+                  {getCartContentTypeCategory() === "vocabulary_set" && (
+                    <>
+                      <div className="flex gap-4">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              practice_mode: "word_reading",
+                            }))
+                          }
+                          className={`flex-1 p-6 rounded-xl border-2 transition-all ${
+                            formData.practice_mode === "word_reading"
+                              ? "border-blue-500 bg-blue-50 shadow-md"
+                              : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                          }`}
+                        >
+                          <div className="flex flex-col items-center gap-3">
+                            <span className="text-4xl">🎙️</span>
+                            <div className="text-center">
+                              <div className="font-semibold text-lg">
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.wordReading",
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-500 mt-1">
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.wordReadingDesc",
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              practice_mode: "word_selection",
+                            }))
+                          }
+                          className={`flex-1 p-6 rounded-xl border-2 transition-all ${
+                            formData.practice_mode === "word_selection"
+                              ? "border-blue-500 bg-blue-50 shadow-md"
+                              : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                          }`}
+                        >
+                          <div className="flex flex-col items-center gap-3">
+                            <span className="text-4xl">🧠</span>
+                            <div className="text-center">
+                              <div className="font-semibold text-lg">
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.wordSelection",
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-500 mt-1">
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.wordSelectionDesc",
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+
+                      {/* 單字集細節設定 */}
+                      <Card className="p-4 border-gray-200">
+                        <h4 className="text-sm font-medium mb-3 text-gray-700">
+                          {t(
+                            "dialogs.assignmentDialog.practiceMode.advancedSettings",
+                          )}
+                        </h4>
+
+                        {/* 單字選擇專用 - 達標熟悉度 */}
+                        {formData.practice_mode === "word_selection" && (
+                          <div className="mb-4 pb-4 border-b">
+                            <div className="flex items-center justify-between mb-2">
+                              <Label className="text-xs text-gray-600">
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.targetProficiency",
+                                )}
+                              </Label>
+                              <span className="text-sm font-medium text-blue-600">
+                                {formData.target_proficiency}%
+                              </span>
+                            </div>
+                            <input
+                              type="range"
+                              min={50}
+                              max={100}
+                              step={5}
+                              value={formData.target_proficiency}
+                              onChange={(e) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  target_proficiency: Number(e.target.value),
+                                }))
+                              }
+                              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.targetProficiencyDesc",
+                              )}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* 單字選擇專用 - 題目呈現方式 (顯示單字 vs 播放音檔 二擇一) */}
+                        {formData.practice_mode === "word_selection" && (
+                          <div className="mb-4 pb-4 border-b">
+                            <Label className="text-xs text-gray-600 mb-2 block">
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.questionDisplay",
+                              )}
+                            </Label>
+                            <div className="flex gap-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    show_word: true,
+                                    play_audio: false,
+                                  }))
+                                }
+                                className={`flex-1 p-3 rounded-lg border text-sm ${
+                                  formData.show_word && !formData.play_audio
+                                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                                    : "border-gray-200 hover:border-gray-300"
+                                }`}
+                              >
+                                👁️{" "}
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.displayWord",
+                                )}
+                                <span className="block text-xs text-gray-500 mt-0.5">
+                                  {t(
+                                    "dialogs.assignmentDialog.practiceMode.displayWordDesc",
+                                  )}
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    show_word: false,
+                                    play_audio: true,
+                                  }))
+                                }
+                                className={`flex-1 p-3 rounded-lg border text-sm ${
+                                  !formData.show_word && formData.play_audio
+                                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                                    : "border-gray-200 hover:border-gray-300"
+                                }`}
+                              >
+                                🔊{" "}
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.playAudioWord",
+                                )}
+                                <span className="block text-xs text-gray-500 mt-0.5">
+                                  {t(
+                                    "dialogs.assignmentDialog.practiceMode.playAudioWordDesc",
+                                  )}
+                                </span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* 時間限制 */}
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-gray-600">
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.timeLimit",
+                              )}
+                            </Label>
+                            <select
+                              value={formData.time_limit_per_question}
+                              onChange={(e) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  time_limit_per_question: Number(
+                                    e.target.value,
+                                  ) as 0 | 10 | 20 | 30 | 40,
+                                }))
+                              }
+                              className="w-full h-9 px-3 rounded-md border border-gray-200 text-sm"
+                            >
+                              <option value={0}>
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.unlimited",
+                                )}
+                              </option>
+                              <option value={10}>
+                                10{" "}
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.seconds",
+                                )}
+                              </option>
+                              <option value={20}>
+                                20{" "}
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.seconds",
+                                )}{" "}
+                                (
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.default",
+                                )}
+                                )
+                              </option>
+                              <option value={30}>
+                                30{" "}
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.seconds",
+                                )}
+                              </option>
+                              <option value={40}>
+                                40{" "}
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.seconds",
+                                )}
+                              </option>
+                            </select>
+                          </div>
+
+                          {/* 打亂順序 */}
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-gray-600">
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.shuffleQuestions",
+                              )}
+                            </Label>
+                            <div className="flex items-center h-9">
+                              <input
+                                type="checkbox"
+                                checked={formData.shuffle_questions}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    shuffle_questions: e.target.checked,
+                                  }))
+                                }
+                                className="h-4 w-4 rounded border-gray-300"
+                              />
+                              <span className="ml-2 text-sm text-gray-600">
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.shuffleQuestionsDesc",
+                                )}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* 單字朗讀專用 - 顯示翻譯 */}
+                          {formData.practice_mode === "word_reading" && (
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-gray-600">
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.showTranslation",
+                                )}
+                              </Label>
+                              <div className="flex items-center h-9">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.show_translation}
+                                  onChange={(e) =>
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      show_translation: e.target.checked,
+                                    }))
+                                  }
+                                  className="h-4 w-4 rounded border-gray-300"
+                                />
+                                <span className="ml-2 text-sm text-gray-600">
+                                  {t(
+                                    "dialogs.assignmentDialog.practiceMode.showTranslationDesc",
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 顯示圖片 */}
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-gray-600">
+                              {t(
+                                "dialogs.assignmentDialog.practiceMode.showImage",
+                              )}
+                            </Label>
+                            <div className="flex items-center h-9">
+                              <input
+                                type="checkbox"
+                                checked={formData.show_image}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    show_image: e.target.checked,
+                                  }))
+                                }
+                                className="h-4 w-4 rounded border-gray-300"
+                              />
+                              <span className="ml-2 text-sm text-gray-600">
+                                {t(
+                                  "dialogs.assignmentDialog.practiceMode.showImageDesc",
+                                )}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      )}
-                    </div>
-
-                    {/* 例句重組專用選項 - 播放音檔 */}
-                    {formData.practice_mode === "rearrangement" && (
-                      <div className="mt-4 pt-4 border-t">
-                        <Label className="text-xs text-gray-600 mb-2 block">
-                          {t("dialogs.assignmentDialog.practiceMode.playAudio")}
-                        </Label>
-                        <div className="flex gap-3">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                play_audio: true,
-                              }))
-                            }
-                            className={`flex-1 p-3 rounded-lg border text-sm ${
-                              formData.play_audio
-                                ? "border-blue-500 bg-blue-50 text-blue-700"
-                                : "border-gray-200 hover:border-gray-300"
-                            }`}
-                          >
-                            🔊{" "}
-                            {t(
-                              "dialogs.assignmentDialog.practiceMode.playAudioYes",
-                            )}
-                            <span className="block text-xs text-gray-500 mt-0.5">
-                              {t(
-                                "dialogs.assignmentDialog.practiceMode.scoreListening",
-                              )}
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                play_audio: false,
-                              }))
-                            }
-                            className={`flex-1 p-3 rounded-lg border text-sm ${
-                              !formData.play_audio
-                                ? "border-blue-500 bg-blue-50 text-blue-700"
-                                : "border-gray-200 hover:border-gray-300"
-                            }`}
-                          >
-                            🔇{" "}
-                            {t(
-                              "dialogs.assignmentDialog.practiceMode.playAudioNo",
-                            )}
-                            <span className="block text-xs text-gray-500 mt-0.5">
-                              {t(
-                                "dialogs.assignmentDialog.practiceMode.scoreWriting",
-                              )}
-                            </span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 例句朗讀模式提示 */}
-                    {formData.practice_mode === "reading" && (
-                      <div className="mt-4 pt-4 border-t text-sm text-gray-500 bg-gray-50 p-3 rounded">
-                        ℹ️{" "}
-                        {t(
-                          "dialogs.assignmentDialog.practiceMode.scoreSpeaking",
-                        )}
-                      </div>
-                    )}
-                  </Card>
+                      </Card>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

@@ -402,6 +402,58 @@ async def generate_distractors(word: str, translation: str) -> List[str]:
    - [ ] BatchWordImport 組件（每行一個單字）
    - [ ] ImageUploader 組件（支援貼上/拖曳/點擊）
 
+### Phase 2-1.1: 作業建立 UI (AssignmentDialog 練習模式選擇)
+
+**目標**: 當選擇單字集內容時，AssignmentDialog Step 2 顯示單字集專屬的練習模式選項
+
+#### 任務清單
+
+1. **練習模式選擇 UI**
+   - [ ] 根據內容類型（例句集/單字集）顯示不同的練習模式
+   - [ ] 單字朗讀 (`word_reading`) 模式卡片
+   - [ ] 單字選擇 (`word_selection`) 模式卡片
+
+2. **單字朗讀選項**
+   - [ ] 打亂順序 (shuffle_questions) - checkbox, default: false
+   - [ ] 顯示翻譯 (show_translation) - checkbox, default: true
+   - [ ] 顯示圖片 (show_image) - checkbox, default: true
+   - [ ] 播放音檔 (play_audio) - checkbox, default: false
+
+3. **單字選擇選項**
+   - [ ] 達標熟悉度 (target_proficiency) - slider, default: 80%, range: 50-100%
+   - [ ] 打亂順序 (shuffle_questions) - checkbox, default: false
+   - [ ] 顯示單字 (show_word) - checkbox, default: true
+   - [ ] 顯示圖片 (show_image) - checkbox, default: true
+   - [ ] 播放音檔 (play_audio) - checkbox, default: false
+
+4. **表單狀態擴充**
+   - [ ] 新增 target_proficiency, show_translation, show_word, show_image 到 formData
+   - [ ] 提交作業時包含新欄位
+
+### Phase 2-1.2: 圖片上傳功能 (VocabularySetPanel)
+
+**目標**: 在單字集編輯介面中，每個單字項目可以上傳/貼上圖片
+
+#### 任務清單
+
+1. **圖片上傳方式**
+   - [ ] 點擊上傳按鈕選擇檔案
+   - [ ] Ctrl/Cmd + V 貼上截圖
+   - [ ] 拖曳圖片檔案到區域
+
+2. **UI 元件**
+   - [ ] 圖片預覽區域
+   - [ ] 上傳/移除按鈕
+   - [ ] 拖曳提示文字
+
+3. **技術規格**
+   - [ ] 最大檔案大小: 2MB
+   - [ ] 支援格式: jpg, png, gif, webp
+   - [ ] 儲存至 GCS
+
+4. **ContentRow 擴充**
+   - [ ] 新增 imageUrl, imageFile 欄位
+
 ### Phase 2-2: 單字朗讀功能
 
 **目標**: 學生可以進行單字朗讀練習

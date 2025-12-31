@@ -21,6 +21,8 @@ import {
   Square,
   RefreshCw,
   Clipboard,
+  Image as ImageIcon,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api";
@@ -104,6 +106,7 @@ interface ContentRow {
   definition: string; // 中文翻譯
   audioUrl?: string;
   audio_url?: string;
+  imageUrl?: string; // 單字圖片 URL
   translation?: string; // 英文釋義
   japanese_translation?: string; // 日文翻譯
   korean_translation?: string; // 韓文翻譯
@@ -873,6 +876,8 @@ interface SortableRowInnerProps {
   handleDuplicateRow: (index: number) => void;
   handleOpenTTSModal: (row: ContentRow) => void;
   handleRemoveAudio: (index: number) => void;
+  handleImageUpload: (index: number, file: File) => Promise<void>;
+  handleRemoveImage: (index: number) => void;
   handleGenerateSingleDefinition: (index: number) => Promise<void>;
   handleGenerateSingleDefinitionWithLang: (
     index: number,
@@ -885,6 +890,7 @@ interface SortableRowInnerProps {
   ) => Promise<void>;
   handleOpenAIGenerateModal: (index: number) => void;
   rowsLength: number;
+  imageUploading?: boolean;
 }
 
 function SortableRowInner({
@@ -895,12 +901,15 @@ function SortableRowInner({
   handleDuplicateRow,
   handleOpenTTSModal,
   handleRemoveAudio,
+  handleImageUpload,
+  handleRemoveImage,
   handleGenerateSingleDefinition,
   handleGenerateSingleDefinitionWithLang,
   handleGenerateExampleTranslation,
   handleGenerateExampleTranslationWithLang,
   handleOpenAIGenerateModal,
   rowsLength,
+  imageUploading,
 }: SortableRowInnerProps) {
   const { t } = useTranslation();
   const {
@@ -1114,6 +1123,57 @@ function SortableRowInner({
             </button>
           );
         })}
+      </div>
+
+      {/* 圖片上傳區域 */}
+      <div className="mb-3">
+        {row.imageUrl ? (
+          <div className="relative inline-block">
+            <img
+              src={row.imageUrl}
+              alt={row.text || "word image"}
+              className="h-20 w-20 object-cover rounded-lg border border-gray-300"
+            />
+            <button
+              onClick={() => handleRemoveImage(index)}
+              className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+              title={t("vocabularySet.image.remove")}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ) : (
+          <label
+            className={`inline-flex items-center gap-2 px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all ${
+              imageUploading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          >
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              className="hidden"
+              disabled={imageUploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleImageUpload(index, file);
+                }
+                // Reset input so same file can be selected again
+                e.target.value = "";
+              }}
+            />
+            {imageUploading ? (
+              <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />
+            ) : (
+              <ImageIcon className="h-4 w-4 text-gray-500" />
+            )}
+            <span className="text-sm text-gray-600">
+              {imageUploading
+                ? t("vocabularySet.image.uploading")
+                : t("vocabularySet.image.upload")}
+            </span>
+          </label>
+        )}
       </div>
 
       {/* 第三列：例句輸入（帶 AI 按鈕） */}
@@ -1477,6 +1537,7 @@ export default function VocabularySetPanel({
               japanese_translation,
               korean_translation,
               audioUrl: item.audio_url || "",
+              imageUrl: item.image_url || "",
               selectedWordLanguage,
               selectedSentenceLanguage,
               example_sentence: item.example_sentence || "",
@@ -1619,6 +1680,59 @@ export default function VocabularySetPanel({
     } else {
       toast.info(t("contentEditor.messages.audioRemoved"));
     }
+  };
+
+  // 圖片上傳狀態
+  const [imageUploading, setImageUploading] = useState(false);
+
+  // 圖片上傳處理
+  const handleImageUpload = async (index: number, file: File) => {
+    // 檢查檔案大小 (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error(t("vocabularySet.image.tooLarge"));
+      return;
+    }
+
+    // 檢查檔案類型
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      toast.error(t("vocabularySet.image.invalidType"));
+      return;
+    }
+
+    setImageUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (editingContent?.id) {
+        formData.append("content_id", editingContent.id.toString());
+        formData.append("item_index", index.toString());
+      }
+
+      const response = await apiClient.uploadImage(formData);
+      const imageUrl = response.image_url;
+
+      // 更新本地狀態
+      const newRows = [...rows];
+      newRows[index] = { ...newRows[index], imageUrl };
+      setRows(newRows);
+
+      toast.success(t("vocabularySet.image.uploadSuccess"));
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      toast.error(t("vocabularySet.image.uploadFailed"));
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  // 移除圖片
+  const handleRemoveImage = (index: number) => {
+    const newRows = [...rows];
+    newRows[index] = { ...newRows[index], imageUrl: "" };
+    setRows(newRows);
+    toast.info(t("vocabularySet.image.removed"));
   };
 
   const handleOpenTTSModal = (row: ContentRow) => {
@@ -2590,6 +2704,8 @@ export default function VocabularySetPanel({
                   handleDuplicateRow={handleCopyRow}
                   handleOpenTTSModal={handleOpenTTSModal}
                   handleRemoveAudio={handleRemoveAudio}
+                  handleImageUpload={handleImageUpload}
+                  handleRemoveImage={handleRemoveImage}
                   handleGenerateSingleDefinition={
                     handleGenerateSingleDefinition
                   }
@@ -2604,6 +2720,7 @@ export default function VocabularySetPanel({
                   }
                   handleOpenAIGenerateModal={handleOpenAIGenerateModal}
                   rowsLength={rows.length}
+                  imageUploading={imageUploading}
                 />
               );
             })}
@@ -3029,6 +3146,7 @@ export default function VocabularySetPanel({
                         ? vocabularyTranslation
                         : row.translation || "",
                     audio_url: row.audioUrl || row.audio_url || "",
+                    image_url: row.imageUrl || "",
                     example_sentence: row.example_sentence || "",
                     example_sentence_translation: exampleTranslation,
                     example_sentence_translation_lang: sentenceLang,
