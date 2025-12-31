@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { SidebarGroup } from "@/types/sidebar";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { API_URL } from "@/config/api";
 
 interface SystemConfig {
   enablePayment: boolean;
@@ -50,8 +51,8 @@ export const useSidebarRoles = (
 
       try {
         setRolesLoading(true);
-        console.log("🔍 [useSidebarRoles] Fetching roles...");
-        const response = await fetch("/api/teachers/me/roles", {
+        console.log("🔍 [useSidebarRoles] Fetching roles from:", `${API_URL}/api/teachers/me/roles`);
+        const response = await fetch(`${API_URL}/api/teachers/me/roles`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.ok) {
