@@ -286,7 +286,10 @@ class TestDatabaseSync:
         self.db.flush()
 
         teacher_org = TeacherOrganization(
-            teacher_id=teacher.id, organization_id=org.id, role="org_owner", is_active=True
+            teacher_id=teacher.id,
+            organization_id=org.id,
+            role="org_owner",
+            is_active=True,
         )
         self.db.add(teacher_org)
         self.db.commit()
@@ -319,9 +322,7 @@ class TestDatabaseSync:
         self.db.add(org)
         self.db.flush()
 
-        school = School(
-            id=uuid.uuid4(), organization_id=org.id, name="Test School"
-        )
+        school = School(id=uuid.uuid4(), organization_id=org.id, name="Test School")
         self.db.add(school)
         self.db.flush()
 
@@ -338,8 +339,12 @@ class TestDatabaseSync:
         self.casbin.sync_from_database(db=self.db)
 
         # 驗證兩個角色都已同步
-        has_admin_role = self.casbin.has_role(teacher.id, "school_admin", f"school-{school.id}")
-        has_teacher_role = self.casbin.has_role(teacher.id, "teacher", f"school-{school.id}")
+        has_admin_role = self.casbin.has_role(
+            teacher.id, "school_admin", f"school-{school.id}"
+        )
+        has_teacher_role = self.casbin.has_role(
+            teacher.id, "teacher", f"school-{school.id}"
+        )
         assert has_admin_role is True
         assert has_teacher_role is True
 
@@ -376,7 +381,12 @@ class TestDatabaseSync:
 
     def test_sync_teacher_roles(self):
         """測試同步特定教師的角色"""
-        from models.organization import Organization, School, TeacherOrganization, TeacherSchool
+        from models.organization import (
+            Organization,
+            School,
+            TeacherOrganization,
+            TeacherSchool,
+        )
         from tests.factories import TeacherFactory
         import uuid
 
@@ -394,13 +404,19 @@ class TestDatabaseSync:
 
         # 添加組織角色
         teacher_org = TeacherOrganization(
-            teacher_id=teacher.id, organization_id=org.id, role="org_owner", is_active=True
+            teacher_id=teacher.id,
+            organization_id=org.id,
+            role="org_owner",
+            is_active=True,
         )
         self.db.add(teacher_org)
 
         # 添加學校角色
         teacher_school = TeacherSchool(
-            teacher_id=teacher.id, school_id=school.id, roles=["teacher"], is_active=True
+            teacher_id=teacher.id,
+            school_id=school.id,
+            roles=["teacher"],
+            is_active=True,
         )
         self.db.add(teacher_school)
         self.db.commit()
@@ -410,7 +426,9 @@ class TestDatabaseSync:
 
         # 驗證角色已同步
         has_org_role = self.casbin.has_role(teacher.id, "org_owner", f"org-{org.id}")
-        has_school_role = self.casbin.has_role(teacher.id, "teacher", f"school-{school.id}")
+        has_school_role = self.casbin.has_role(
+            teacher.id, "teacher", f"school-{school.id}"
+        )
         assert has_org_role is True
         assert has_school_role is True
 
@@ -434,7 +452,10 @@ class TestDatabaseSync:
 
         # 在資料庫中創建新角色（不包含 old_role）
         teacher_org = TeacherOrganization(
-            teacher_id=teacher.id, organization_id=org.id, role="org_owner", is_active=True
+            teacher_id=teacher.id,
+            organization_id=org.id,
+            role="org_owner",
+            is_active=True,
         )
         self.db.add(teacher_org)
         self.db.commit()
@@ -470,15 +491,23 @@ class TestDatabaseSync:
 
         # 初始角色: teacher
         teacher_school = TeacherSchool(
-            teacher_id=teacher.id, school_id=school.id, roles=["teacher"], is_active=True
+            teacher_id=teacher.id,
+            school_id=school.id,
+            roles=["teacher"],
+            is_active=True,
         )
         self.db.add(teacher_school)
         self.db.commit()
 
         # 第一次同步
         self.casbin.sync_teacher_roles(teacher.id, db=self.db)
-        assert self.casbin.has_role(teacher.id, "teacher", f"school-{school.id}") is True
-        assert self.casbin.has_role(teacher.id, "school_admin", f"school-{school.id}") is False
+        assert (
+            self.casbin.has_role(teacher.id, "teacher", f"school-{school.id}") is True
+        )
+        assert (
+            self.casbin.has_role(teacher.id, "school_admin", f"school-{school.id}")
+            is False
+        )
 
         # 升級為 school_admin
         teacher_school.roles = ["school_admin", "teacher"]
@@ -486,8 +515,13 @@ class TestDatabaseSync:
 
         # 第二次同步
         self.casbin.sync_teacher_roles(teacher.id, db=self.db)
-        assert self.casbin.has_role(teacher.id, "teacher", f"school-{school.id}") is True
-        assert self.casbin.has_role(teacher.id, "school_admin", f"school-{school.id}") is True
+        assert (
+            self.casbin.has_role(teacher.id, "teacher", f"school-{school.id}") is True
+        )
+        assert (
+            self.casbin.has_role(teacher.id, "school_admin", f"school-{school.id}")
+            is True
+        )
 
 
 if __name__ == "__main__":

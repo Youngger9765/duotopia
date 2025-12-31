@@ -10,13 +10,20 @@ from datetime import datetime, timedelta
 from database import get_db
 from models import Teacher, Classroom, Student, Program, Lesson, Content, ContentItem
 from models import ClassroomStudent, Assignment, AssignmentContent
-from models import ProgramLevel, TeacherOrganization, TeacherSchool, Organization, School
+from models import (
+    ProgramLevel,
+    TeacherOrganization,
+    TeacherSchool,
+    Organization,
+    School,
+)
 from .dependencies import get_current_teacher
 from .validators import *
 from .utils import TEST_SUBSCRIPTION_WHITELIST, parse_birthdate
 from fastapi import UploadFile, File, Form
 
 router = APIRouter()
+
 
 @router.post("/upload/audio")
 async def upload_audio(
@@ -82,5 +89,3 @@ async def upload_audio(
     except Exception as e:
         print(f"Audio upload error: {e}")
         raise HTTPException(status_code=500, detail="Audio upload failed")
-
-

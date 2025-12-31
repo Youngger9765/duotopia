@@ -20,28 +20,29 @@ def create_demo_data(db: Session):
     Executes all stages in dependency order
     """
     print("🌱 開始建立 Demo 資料（新作業系統架構）...")
-    
+
     # Stage 1: Users and Organizations
     print("\n=== Stage 1: Users and Organizations ===")
     users_data = seed_users_and_organizations(db)
-    
+
     # Stage 2: Classrooms
     print("\n=== Stage 2: Classrooms ===")
     classrooms_data = seed_classrooms(db, users_data)
-    
+
     # Stage 3: Students
     print("\n=== Stage 3: Students ===")
     students_data = seed_students(db, classrooms_data)
-    
+
     # Stage 4: Programs
     print("\n=== Stage 4: Programs ===")
     programs_data = seed_programs(db, users_data)
-    
+
     # Stage 5: Assignments
     print("\n=== Stage 5: Assignments ===")
-    assignments_data = seed_assignments(db, users_data, classrooms_data, 
-                                       students_data, programs_data)
-    
+    assignments_data = seed_assignments(
+        db, users_data, classrooms_data, students_data, programs_data
+    )
+
     print("\n✅ 所有 Demo 資料建立完成！")
 
 
@@ -669,8 +670,6 @@ def seed_template_programs(db: Session):
     )
 
     print(f"✅ 總共建立了 {template_count} 個公版課程模板（含標籤）")
-
-
 
 
 def reset_database():

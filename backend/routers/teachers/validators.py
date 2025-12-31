@@ -215,5 +215,3 @@ class BatchTTSRequest(BaseModel):
     voice: Optional[str] = "en-US-JennyNeural"
     rate: Optional[str] = "+0%"
     volume: Optional[str] = "+0%"
-
-

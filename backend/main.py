@@ -142,7 +142,7 @@ async def startup_event():
                 # Last attempt failed - this is critical
                 logger.critical(
                     f"🚨 CRITICAL: Failed to sync Casbin roles after {MAX_RETRIES} attempts: {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
                 raise RuntimeError(
                     "Failed to initialize permission system. Cannot start application."

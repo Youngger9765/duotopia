@@ -8,7 +8,7 @@ from seed_data.utils import *
 def seed_users_and_organizations(db: Session):
     """
     Stage 1: Create all teachers, subscriptions, organizations and schools
-    
+
     Returns:
         dict: Dictionary containing created entities:
             - demo_teacher, expired_teacher, trial_teacher
@@ -665,41 +665,39 @@ def seed_users_and_organizations(db: Session):
     db.commit()
     print("✅ 設定教師與學校關係（每個學校至少一個教師）")
 
-
-    
     # Return all created entities for next stages
     return {
-        'demo_teacher': demo_teacher,
-        'expired_teacher': expired_teacher,
-        'trial_teacher': trial_teacher,
-        'org_owner_teacher': org_owner_teacher,
-        'org_admin_teacher': org_admin_teacher,
-        'school_admin_teacher': school_admin_teacher,
-        'org_teacher': org_teacher,
-        'smart_admin_teacher': smart_admin_teacher,
-        'global_admin_teacher': global_admin_teacher,
+        "demo_teacher": demo_teacher,
+        "expired_teacher": expired_teacher,
+        "trial_teacher": trial_teacher,
+        "org_owner_teacher": org_owner_teacher,
+        "org_admin_teacher": org_admin_teacher,
+        "school_admin_teacher": school_admin_teacher,
+        "org_teacher": org_teacher,
+        "smart_admin_teacher": smart_admin_teacher,
+        "global_admin_teacher": global_admin_teacher,
         # Organizations
-        'test_org': test_org,
-        'excellence_org': excellence_org,
-        'future_org': future_org,
-        'smart_edu_org': smart_edu_org,
-        'global_lang_org': global_lang_org,
+        "test_org": test_org,
+        "excellence_org": excellence_org,
+        "future_org": future_org,
+        "smart_edu_org": smart_edu_org,
+        "global_lang_org": global_lang_org,
         # Schools
-        'test_main_school': test_main_school,
-        'test_taipei_school': test_taipei_school,
-        'test_taichung_school': test_taichung_school,
-        'excellence_central_school': excellence_central_school,
-        'excellence_east_school': excellence_east_school,
-        'excellence_west_school': excellence_west_school,
-        'future_main_school': future_main_school,
-        'future_north_school': future_north_school,
-        'future_south_school': future_south_school,
-        'smart_kaohsiung_school': smart_kaohsiung_school,
-        'smart_zuoying_school': smart_zuoying_school,
-        'smart_fengshan_school': smart_fengshan_school,
-        'global_tainan_school': global_tainan_school,
-        'global_anping_school': global_anping_school,
-        'global_yongkang_school': global_yongkang_school,
+        "test_main_school": test_main_school,
+        "test_taipei_school": test_taipei_school,
+        "test_taichung_school": test_taichung_school,
+        "excellence_central_school": excellence_central_school,
+        "excellence_east_school": excellence_east_school,
+        "excellence_west_school": excellence_west_school,
+        "future_main_school": future_main_school,
+        "future_north_school": future_north_school,
+        "future_south_school": future_south_school,
+        "smart_kaohsiung_school": smart_kaohsiung_school,
+        "smart_zuoying_school": smart_zuoying_school,
+        "smart_fengshan_school": smart_fengshan_school,
+        "global_tainan_school": global_tainan_school,
+        "global_anping_school": global_anping_school,
+        "global_yongkang_school": global_yongkang_school,
         # School teachers list
-        'school_teachers': school_teachers,
+        "school_teachers": school_teachers,
     }

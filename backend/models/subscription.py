@@ -166,7 +166,9 @@ class TeacherSubscriptionTransaction(Base):
     teacher_email = Column(String(255), nullable=True, index=True)  # 直接儲存教師 email
 
     # 2. 交易基本資訊
-    transaction_type = Column(String, nullable=False)  # Use String instead of Enum for flexibility
+    transaction_type = Column(
+        String, nullable=False
+    )  # Use String instead of Enum for flexibility
     subscription_type = Column(String, nullable=True)  # 訂閱類型
     amount = Column(Numeric(10, 2), nullable=True)  # 充值金額（可為空，如試用期）
     currency = Column(String(3), nullable=True, default="TWD")  # 貨幣
@@ -281,7 +283,9 @@ class InvoiceStatusHistory(Base):
     reason = Column(Text, nullable=True)  # 變更原因
 
     # Notify 事件相關
-    is_notify = Column(Integer, nullable=False, default=0)  # 是否為 Notify 觸發 (use Integer for SQLite)
+    is_notify = Column(
+        Integer, nullable=False, default=0
+    )  # 是否為 Notify 觸發 (use Integer for SQLite)
     notify_error_code = Column(String(20), nullable=True)  # Notify 錯誤代碼
     notify_error_msg = Column(Text, nullable=True)  # Notify 錯誤訊息
 

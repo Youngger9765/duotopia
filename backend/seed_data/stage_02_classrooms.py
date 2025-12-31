@@ -8,32 +8,32 @@ from seed_data.utils import *
 def seed_classrooms(db: Session, users_data: dict):
     """
     Stage 2: Create classrooms
-    
+
     Args:
         users_data: Dictionary from Stage 1 containing teachers and schools
-        
+
     Returns:
         dict: Dictionary containing created classrooms
     """
     # Extract needed entities from previous stage
-    demo_teacher = users_data['demo_teacher']
-    expired_teacher = users_data['expired_teacher']
-    trial_teacher = users_data['trial_teacher']
-    org_owner_teacher = users_data['org_owner_teacher']
-    org_admin_teacher = users_data['org_admin_teacher']
-    school_admin_teacher = users_data['school_admin_teacher']
-    org_teacher = users_data['org_teacher']
-    smart_admin_teacher = users_data['smart_admin_teacher']
-    global_admin_teacher = users_data['global_admin_teacher']
-    miaoli_school1 = users_data['miaoli_school1']
-    miaoli_school2 = users_data['miaoli_school2']
-    taichung_school1 = users_data['taichung_school1']
-    taichung_school2 = users_data['taichung_school2']
-    smart_center1 = users_data['smart_center1']
-    smart_center2 = users_data['smart_center2']
-    global_branch1 = users_data['global_branch1']
-    global_branch2 = users_data['global_branch2']
-    
+    demo_teacher = users_data["demo_teacher"]
+    expired_teacher = users_data["expired_teacher"]
+    trial_teacher = users_data["trial_teacher"]
+    org_owner_teacher = users_data["org_owner_teacher"]
+    org_admin_teacher = users_data["org_admin_teacher"]
+    school_admin_teacher = users_data["school_admin_teacher"]
+    org_teacher = users_data["org_teacher"]
+    smart_admin_teacher = users_data["smart_admin_teacher"]
+    global_admin_teacher = users_data["global_admin_teacher"]
+    miaoli_school1 = users_data["miaoli_school1"]
+    miaoli_school2 = users_data["miaoli_school2"]
+    taichung_school1 = users_data["taichung_school1"]
+    taichung_school2 = users_data["taichung_school2"]
+    smart_center1 = users_data["smart_center1"]
+    smart_center2 = users_data["smart_center2"]
+    global_branch1 = users_data["global_branch1"]
+    global_branch2 = users_data["global_branch2"]
+
     # ============ 3. 班級資料 ============
 
     # 3.1 Demo 老師的班級（獨立，不屬於任何機構/學校）
@@ -195,19 +195,17 @@ def seed_classrooms(db: Session, users_data: dict):
     print("   - demo, trial, expired 三個帳號保持為獨立老師")
     print("   - 機構測試使用 4 個新帳號: owner, orgadmin, schooladmin, orgteacher")
 
-
-    
     # Return created classrooms
     return {
-        'demo_class': demo_class,
-        'expired_class': expired_class,
-        'trial_class': trial_class,
-        'miaoli_class1': miaoli_class1,
-        'miaoli_class2': miaoli_class2,
-        'taichung_class1': taichung_class1,
-        'taichung_class2': taichung_class2,
-        'smart_class1': smart_class1,
-        'smart_class2': smart_class2,
-        'global_class1': global_class1,
-        'global_class2': global_class2,
+        "demo_class": demo_class,
+        "expired_class": expired_class,
+        "trial_class": trial_class,
+        "miaoli_class1": miaoli_class1,
+        "miaoli_class2": miaoli_class2,
+        "taichung_class1": taichung_class1,
+        "taichung_class2": taichung_class2,
+        "smart_class1": smart_class1,
+        "smart_class2": smart_class2,
+        "global_class1": global_class1,
+        "global_class2": global_class2,
     }

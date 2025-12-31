@@ -613,7 +613,9 @@ async def add_teacher_to_school(
         import logging
 
         logger = logging.getLogger(__name__)
-        logger.error(f"Failed to sync Casbin roles for teacher {request.teacher_id}: {e}")
+        logger.error(
+            f"Failed to sync Casbin roles for teacher {request.teacher_id}: {e}"
+        )
 
     return TeacherSchoolRelationResponse.from_orm(teacher_school)
 

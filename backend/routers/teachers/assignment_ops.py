@@ -10,12 +10,19 @@ from datetime import datetime, timedelta
 from database import get_db
 from models import Teacher, Classroom, Student, Program, Lesson, Content, ContentItem
 from models import ClassroomStudent, Assignment, AssignmentContent
-from models import ProgramLevel, TeacherOrganization, TeacherSchool, Organization, School
+from models import (
+    ProgramLevel,
+    TeacherOrganization,
+    TeacherSchool,
+    Organization,
+    School,
+)
 from .dependencies import get_current_teacher
 from .validators import *
 from .utils import TEST_SUBSCRIPTION_WHITELIST, parse_birthdate
 
 router = APIRouter()
+
 
 @router.get("/assignments/{assignment_id}/preview")
 async def get_assignment_preview(
@@ -185,5 +192,3 @@ async def preview_assess_speech(
     except Exception as e:
         logger.error(f"Preview assessment failed: {e}")
         raise HTTPException(status_code=503, detail="AI 評估失敗，請稍後再試")
-
-

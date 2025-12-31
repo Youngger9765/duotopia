@@ -8,26 +8,26 @@ from seed_data.utils import *
 def seed_students(db: Session, classrooms_data: dict):
     """
     Stage 3: Create students and assign to classrooms
-    
+
     Args:
         classrooms_data: Dictionary from Stage 2 containing classrooms
-        
+
     Returns:
         dict: Dictionary containing created students
     """
     # Extract needed entities
-    demo_class = classrooms_data['demo_class']
-    expired_class = classrooms_data['expired_class']
-    trial_class = classrooms_data['trial_class']
-    miaoli_class1 = classrooms_data['miaoli_class1']
-    miaoli_class2 = classrooms_data['miaoli_class2']
-    taichung_class1 = classrooms_data['taichung_class1']
-    taichung_class2 = classrooms_data['taichung_class2']
-    smart_class1 = classrooms_data['smart_class1']
-    smart_class2 = classrooms_data['smart_class2']
-    global_class1 = classrooms_data['global_class1']
-    global_class2 = classrooms_data['global_class2']
-    
+    demo_class = classrooms_data["demo_class"]
+    expired_class = classrooms_data["expired_class"]
+    trial_class = classrooms_data["trial_class"]
+    miaoli_class1 = classrooms_data["miaoli_class1"]
+    miaoli_class2 = classrooms_data["miaoli_class2"]
+    taichung_class1 = classrooms_data["taichung_class1"]
+    taichung_class2 = classrooms_data["taichung_class2"]
+    smart_class1 = classrooms_data["smart_class1"]
+    smart_class2 = classrooms_data["smart_class2"]
+    global_class1 = classrooms_data["global_class1"]
+    global_class2 = classrooms_data["global_class2"]
+
     # ============ 4. Demo 學生（統一密碼：20120101）============
     common_birthdate = date(2012, 1, 1)
     common_password = get_password_hash("20120101")
@@ -258,18 +258,16 @@ def seed_students(db: Session, classrooms_data: dict):
     db.commit()
     print("✅ 機構學生已加入班級")
 
-
-    
-    # Return created students  
+    # Return created students
     return {
-        'xiaoming': xiaoming,
-        'xiaohong': xiaohong,
-        'xiaohua': xiaohua,
-        'xiaogang': xiaogang,
-        'xiaomei': xiaomei,
-        'xiaoqiang': xiaoqiang,
-        'miaoli_students': miaoli_students,
-        'taichung_students': taichung_students,
-        'smart_students': smart_students,
-        'global_students': global_students,
+        "xiaoming": xiaoming,
+        "xiaohong": xiaohong,
+        "xiaohua": xiaohua,
+        "xiaogang": xiaogang,
+        "xiaomei": xiaomei,
+        "xiaoqiang": xiaoqiang,
+        "miaoli_students": miaoli_students,
+        "taichung_students": taichung_students,
+        "smart_students": smart_students,
+        "global_students": global_students,
     }

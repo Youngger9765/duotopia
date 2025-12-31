@@ -10,13 +10,20 @@ from datetime import datetime, timedelta
 from database import get_db
 from models import Teacher, Classroom, Student, Program, Lesson, Content, ContentItem
 from models import ClassroomStudent, Assignment, AssignmentContent
-from models import ProgramLevel, TeacherOrganization, TeacherSchool, Organization, School
+from models import (
+    ProgramLevel,
+    TeacherOrganization,
+    TeacherSchool,
+    Organization,
+    School,
+)
 from .dependencies import get_current_teacher
 from .validators import *
 from .utils import TEST_SUBSCRIPTION_WHITELIST, parse_birthdate
 from auth import verify_password, get_password_hash, validate_password_strength
 
 router = APIRouter()
+
 
 @router.get("/me", response_model=TeacherProfile)
 async def get_teacher_profile(current_teacher: Teacher = Depends(get_current_teacher)):
@@ -154,4 +161,3 @@ async def update_teacher_password(
     db.commit()
 
     return {"message": "Password updated successfully"}
-

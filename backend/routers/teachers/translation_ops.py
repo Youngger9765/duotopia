@@ -10,13 +10,20 @@ from datetime import datetime, timedelta
 from database import get_db
 from models import Teacher, Classroom, Student, Program, Lesson, Content, ContentItem
 from models import ClassroomStudent, Assignment, AssignmentContent
-from models import ProgramLevel, TeacherOrganization, TeacherSchool, Organization, School
+from models import (
+    ProgramLevel,
+    TeacherOrganization,
+    TeacherSchool,
+    Organization,
+    School,
+)
 from .dependencies import get_current_teacher
 from .validators import *
 from .utils import TEST_SUBSCRIPTION_WHITELIST, parse_birthdate
 from services.translation import translation_service
 
 router = APIRouter()
+
 
 @router.post("/translate")
 async def translate_text(
@@ -47,4 +54,3 @@ async def batch_translate(
     except Exception as e:
         print(f"Batch translation error: {e}")
         raise HTTPException(status_code=500, detail="Translation service error")
-

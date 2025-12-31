@@ -8,15 +8,15 @@ from seed_data.utils import *
 def seed_programs(db: Session, users_data: dict):
     """
     Stage 4: Create programs, lessons, contents, and content items
-    
+
     Args:
         users_data: Dictionary from Stage 1 containing teachers
-        
+
     Returns:
         dict: Dictionary containing created programs, lessons, contents
     """
-    demo_teacher = users_data['demo_teacher']
-    
+    demo_teacher = users_data["demo_teacher"]
+
     # ============ 5. Demo 課程（三層結構）============
     # 五年級A班課程
     program_5a_basic = Program(
@@ -480,21 +480,19 @@ def seed_programs(db: Session, users_data: dict):
         db.commit()
         print(f"✅ 建立 {len(content_items)} 個 ContentItem 記錄")
 
-
-    
     # Return created programs
     return {
-        'beginner_program': beginner_program,
-        'intermediate_program': intermediate_program,
-        'advanced_program': advanced_program,
-        'lessons': {
-            'beginner': beginner_lessons,
-            'intermediate': intermediate_lessons,
-            'advanced': advanced_lessons,
+        "beginner_program": beginner_program,
+        "intermediate_program": intermediate_program,
+        "advanced_program": advanced_program,
+        "lessons": {
+            "beginner": beginner_lessons,
+            "intermediate": intermediate_lessons,
+            "advanced": advanced_lessons,
         },
-        'contents': {
-            'beginner': beginner_contents,
-            'intermediate': intermediate_contents,
-            'advanced': advanced_contents,
-        }
+        "contents": {
+            "beginner": beginner_contents,
+            "intermediate": intermediate_contents,
+            "advanced": advanced_contents,
+        },
     }

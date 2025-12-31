@@ -142,7 +142,9 @@ class CasbinService:
             # NOTE: 不儲存到檔案，因為會覆蓋 casbin_policy.csv 中的 p 規則
             # 角色分配（g 規則）應該從資料庫同步，不需要持久化到檔案
             # self.enforcer.save_policy()  # REMOVED: This would overwrite p rules in CSV
-            logger.info(f"[Casbin] Added role: {role} for teacher={teacher_id} in {domain}")
+            logger.info(
+                f"[Casbin] Added role: {role} for teacher={teacher_id} in {domain}"
+            )
 
         return success
 
@@ -164,7 +166,9 @@ class CasbinService:
         if success:
             # NOTE: 不儲存到檔案，因為會覆蓋 casbin_policy.csv 中的 p 規則
             # self.enforcer.save_policy()  # REMOVED: This would overwrite p rules in CSV
-            logger.info(f"[Casbin] Removed role: {role} for teacher={teacher_id} in {domain}")
+            logger.info(
+                f"[Casbin] Removed role: {role} for teacher={teacher_id} in {domain}"
+            )
 
         return success
 
@@ -258,7 +262,9 @@ class CasbinService:
             all_grouping = self.enforcer.get_grouping_policy()
             for g in all_grouping:
                 self.enforcer.remove_grouping_policy(*g)
-            logger.info(f"[Casbin] Cleared {len(all_grouping)} existing role assignments")
+            logger.info(
+                f"[Casbin] Cleared {len(all_grouping)} existing role assignments"
+            )
 
             # 2. 同步組織角色
             org_roles = (
@@ -299,16 +305,21 @@ class CasbinService:
         except Exception as e:
             # Check if error is due to missing tables (e.g., in preview environments)
             error_msg = str(e).lower()
-            if "does not exist" in error_msg or "no such table" in error_msg or "relation" in error_msg:
+            if (
+                "does not exist" in error_msg
+                or "no such table" in error_msg
+                or "relation" in error_msg
+            ):
                 logger.warning(
                     f"[Casbin] Organization tables not found in database (expected in preview/staging environments without migrations): {e}"
                 )
-                logger.info("[Casbin] Skipping database sync - application will start with policy-only permissions")
+                logger.info(
+                    "[Casbin] Skipping database sync - application will start with policy-only permissions"
+                )
                 # Don't raise - allow application to start without organization roles
             else:
                 logger.error(
-                    f"[Casbin] Failed to sync from database: {e}",
-                    exc_info=True
+                    f"[Casbin] Failed to sync from database: {e}", exc_info=True
                 )
                 raise
         finally:
@@ -318,7 +329,7 @@ class CasbinService:
                 except Exception as close_error:
                     logger.error(
                         f"[Casbin] Failed to close database session: {close_error}",
-                        exc_info=True
+                        exc_info=True,
                     )
 
     def sync_teacher_roles(self, teacher_id: int, db=None):
@@ -358,7 +369,9 @@ class CasbinService:
                     if self.delete_role_for_user(teacher_id, role, domain):
                         removed_count += 1
 
-            logger.info(f"[Casbin] Removed {removed_count} old roles for teacher {teacher_id}")
+            logger.info(
+                f"[Casbin] Removed {removed_count} old roles for teacher {teacher_id}"
+            )
 
             # 2. 查詢並添加組織角色
             org_roles = (
@@ -371,11 +384,11 @@ class CasbinService:
             )
 
             for tr in org_roles:
-                self.add_role_for_user(
-                    teacher_id, tr.role, f"org-{tr.organization_id}"
-                )
+                self.add_role_for_user(teacher_id, tr.role, f"org-{tr.organization_id}")
 
-            logger.info(f"[Casbin] Added {len(org_roles)} organization roles for teacher {teacher_id}")
+            logger.info(
+                f"[Casbin] Added {len(org_roles)} organization roles for teacher {teacher_id}"
+            )
 
             # 3. 查詢並添加學校角色
             school_roles = (
@@ -391,16 +404,20 @@ class CasbinService:
             for ts in school_roles:
                 if ts.roles:
                     for role in ts.roles:
-                        self.add_role_for_user(teacher_id, role, f"school-{ts.school_id}")
+                        self.add_role_for_user(
+                            teacher_id, role, f"school-{ts.school_id}"
+                        )
                         school_role_count += 1
 
-            logger.info(f"[Casbin] Added {school_role_count} school roles for teacher {teacher_id}")
+            logger.info(
+                f"[Casbin] Added {school_role_count} school roles for teacher {teacher_id}"
+            )
             logger.info(f"[Casbin] Sync complete for teacher {teacher_id}")
 
         except Exception as e:
             logger.error(
                 f"[Casbin] Failed to sync roles for teacher {teacher_id}: {e}",
-                exc_info=True
+                exc_info=True,
             )
             raise
         finally:
@@ -410,7 +427,7 @@ class CasbinService:
                 except Exception as close_error:
                     logger.error(
                         f"[Casbin] Failed to close database session: {close_error}",
-                        exc_info=True
+                        exc_info=True,
                     )
 
     # ============================================

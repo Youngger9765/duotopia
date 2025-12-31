@@ -17,6 +17,8 @@ def get_current_student(
     return current_user
 
 
-def get_student_id(current_student: Dict[str, Any] = Depends(get_current_student)) -> int:
+def get_student_id(
+    current_student: Dict[str, Any] = Depends(get_current_student)
+) -> int:
     """Extract student ID from current user."""
     return int(current_student.get("sub"))

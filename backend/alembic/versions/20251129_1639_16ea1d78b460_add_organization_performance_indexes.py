@@ -25,7 +25,11 @@ def upgrade() -> None:
     if op.get_bind().dialect.name == "postgresql":
         with op.batch_alter_table("teacher_schools", schema=None) as batch_op:
             batch_op.add_column(
-                sa.Column("permissions", postgresql.JSONB(astext_type=sa.Text()), nullable=True)
+                sa.Column(
+                    "permissions",
+                    postgresql.JSONB(astext_type=sa.Text()),
+                    nullable=True,
+                )
             )
     else:
         # Use JSON for SQLite compatibility

@@ -5,37 +5,42 @@ Creates assignments, student assignments, and activity submissions
 from seed_data.utils import *
 
 
-def seed_assignments(db: Session, users_data: dict, classrooms_data: dict, 
-                    students_data: dict, programs_data: dict):
+def seed_assignments(
+    db: Session,
+    users_data: dict,
+    classrooms_data: dict,
+    students_data: dict,
+    programs_data: dict,
+):
     """
     Stage 5: Create assignments and activities
-    
+
     Args:
         users_data: Dictionary from Stage 1
-        classrooms_data: Dictionary from Stage 2  
+        classrooms_data: Dictionary from Stage 2
         students_data: Dictionary from Stage 3
         programs_data: Dictionary from Stage 4
-        
+
     Returns:
         dict: Dictionary containing created assignments
     """
-    demo_teacher = users_data['demo_teacher']
-    demo_class = classrooms_data['demo_class']
-    xiaoming = students_data['xiaoming']
-    xiaohong = students_data['xiaohong']
-    xiaohua = students_data['xiaohua']
-    xiaogang = students_data['xiaogang']
-    xiaomei = students_data['xiaomei']
-    xiaoqiang = students_data['xiaoqiang']
-    beginner_program = programs_data['beginner_program']
-    intermediate_program = programs_data['intermediate_program']
-    advanced_program = programs_data['advanced_program']
-    
+    demo_teacher = users_data["demo_teacher"]
+    demo_class = classrooms_data["demo_class"]
+    xiaoming = students_data["xiaoming"]
+    xiaohong = students_data["xiaohong"]
+    xiaohua = students_data["xiaohua"]
+    xiaogang = students_data["xiaogang"]
+    xiaomei = students_data["xiaomei"]
+    xiaoqiang = students_data["xiaoqiang"]
+    beginner_program = programs_data["beginner_program"]
+    intermediate_program = programs_data["intermediate_program"]
+    advanced_program = programs_data["advanced_program"]
+
     # Get organization data for organization assignments
-    org_owner_teacher = users_data.get('org_owner_teacher')
-    miaoli_class1 = classrooms_data.get('miaoli_class1')
-    miaoli_students = students_data.get('miaoli_students', [])
-    
+    org_owner_teacher = users_data.get("org_owner_teacher")
+    miaoli_class1 = classrooms_data.get("miaoli_class1")
+    miaoli_students = students_data.get("miaoli_students", [])
+
     # ============ 7. 新作業系統（Assignment + StudentAssignment + StudentContentProgress）============
     print("\n📝 建立新作業系統測試資料...")
 
@@ -1190,9 +1195,7 @@ def seed_assignments(db: Session, users_data: dict, classrooms_data: dict,
     db.commit()
     print(f"✅ 為組織班級建立 {org_assignments_created} 個作業")
 
-
-    
     # Return created assignments
     return {
-        'assignments_created': True,
+        "assignments_created": True,
     }

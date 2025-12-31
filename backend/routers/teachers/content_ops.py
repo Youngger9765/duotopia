@@ -10,13 +10,20 @@ from datetime import datetime, timedelta
 from database import get_db
 from models import Teacher, Classroom, Student, Program, Lesson, Content, ContentItem
 from models import ClassroomStudent, Assignment, AssignmentContent
-from models import ProgramLevel, TeacherOrganization, TeacherSchool, Organization, School
+from models import (
+    ProgramLevel,
+    TeacherOrganization,
+    TeacherSchool,
+    Organization,
+    School,
+)
 from .dependencies import get_current_teacher
 from .validators import *
 from .utils import TEST_SUBSCRIPTION_WHITELIST, parse_birthdate
 from models import ContentType
 
 router = APIRouter()
+
 
 @router.get("/lessons/{lesson_id}/contents")
 async def get_lesson_contents(
@@ -444,5 +451,3 @@ async def delete_content(
             "note": "內容已停用但資料保留，相關作業仍可查看",
         },
     }
-
-

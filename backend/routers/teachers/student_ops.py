@@ -10,13 +10,20 @@ from datetime import datetime, timedelta
 from database import get_db
 from models import Teacher, Classroom, Student, Program, Lesson, Content, ContentItem
 from models import ClassroomStudent, Assignment, AssignmentContent
-from models import ProgramLevel, TeacherOrganization, TeacherSchool, Organization, School
+from models import (
+    ProgramLevel,
+    TeacherOrganization,
+    TeacherSchool,
+    Organization,
+    School,
+)
 from .dependencies import get_current_teacher
 from .validators import *
 from .utils import TEST_SUBSCRIPTION_WHITELIST, parse_birthdate
 from auth import get_password_hash
 
 router = APIRouter()
+
 
 @router.get("/students")
 async def get_all_students(
@@ -854,4 +861,3 @@ async def batch_import_students(
         "errors": errors,
         "created_students": created_students,
     }
-

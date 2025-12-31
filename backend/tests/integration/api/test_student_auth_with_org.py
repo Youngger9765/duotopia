@@ -134,7 +134,9 @@ def test_student_with_org(db_session: Session, test_classroom_with_org: Classroo
 
 
 @pytest.fixture
-def test_student_without_org(db_session: Session, test_classroom_without_org: Classroom):
+def test_student_without_org(
+    db_session: Session, test_classroom_without_org: Classroom
+):
     """Create a student in a classroom without organization."""
     student = Student(
         name="李小華",
@@ -251,7 +253,10 @@ def test_student_login_nonexistent_email(test_client):
 
 
 def test_student_login_inactive_classroom_school(
-    db_session: Session, test_client, test_student_with_org: Student, test_classroom_with_org: Classroom
+    db_session: Session,
+    test_client,
+    test_student_with_org: Student,
+    test_classroom_with_org: Classroom,
 ):
     """Test student login when ClassroomSchool is inactive."""
     # Mark ClassroomSchool as inactive

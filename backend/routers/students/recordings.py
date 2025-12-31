@@ -130,9 +130,7 @@ async def upload_student_recording(
         # 從 ContentItem 找到對應的 Content
         content_item_obj = db.query(ContentItem).filter_by(id=content_item_id).first()
         if not content_item_obj:
-            raise HTTPException(
-                status_code=404, detail="Content item not found"
-            )
+            raise HTTPException(status_code=404, detail="Content item not found")
 
         content_id = content_item_obj.content_id
 
