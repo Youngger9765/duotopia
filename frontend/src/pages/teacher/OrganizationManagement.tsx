@@ -28,6 +28,14 @@ interface FormData {
   address: string;
 }
 
+interface DeleteConfirmationState {
+  isOpen: boolean;
+  type: "single" | "batch";
+  orgId?: string;
+  count?: number;
+  onConfirm?: () => void;
+}
+
 export default function OrganizationManagement() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +45,11 @@ export default function OrganizationManagement() {
   const [selectedOrgs, setSelectedOrgs] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] =
+    useState<DeleteConfirmationState>({
+      isOpen: false,
+      type: "single",
+    });
   const navigate = useNavigate();
   const token = useTeacherAuthStore((state) => state.token);
 
@@ -107,72 +120,75 @@ export default function OrganizationManagement() {
     setShowEditForm(true);
   };
 
-  const handleDelete = async (orgId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this organization? This action cannot be undone.",
-      )
-    ) {
-      return;
-    }
+  const handleDelete = (orgId: string) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      type: "single",
+      orgId,
+      onConfirm: async () => {
+        setDeleting(true);
+        try {
+          const response = await fetch(
+            `${API_URL}/api/organizations/${orgId}`,
+            {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            },
+          );
 
-    setDeleting(true);
-    try {
-      const response = await fetch(`${API_URL}/api/organizations/${orgId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        toast.success("Organization deleted successfully");
-        setOrganizations(organizations.filter((org) => org.id !== orgId));
-      } else {
-        const error = await response.text();
-        toast.error(`Failed to delete: ${error}`);
-      }
-    } catch (error) {
-      console.error("Delete failed:", error);
-      toast.error("Error deleting organization");
-    } finally {
-      setDeleting(false);
-    }
+          if (response.ok) {
+            toast.success("Organization deleted successfully");
+            setOrganizations(organizations.filter((org) => org.id !== orgId));
+          } else {
+            const error = await response.text();
+            toast.error(`Failed to delete: ${error}`);
+          }
+        } catch (error) {
+          console.error("Delete failed:", error);
+          toast.error("Error deleting organization");
+        } finally {
+          setDeleting(false);
+          setDeleteConfirmation({ isOpen: false, type: "single" });
+        }
+      },
+    });
   };
 
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
     if (selectedOrgs.size === 0) {
       toast.info("Please select organizations to delete");
       return;
     }
 
-    if (
-      !confirm(
-        `Delete ${selectedOrgs.size} selected organization(s)? This action cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    setDeleteConfirmation({
+      isOpen: true,
+      type: "batch",
+      count: selectedOrgs.size,
+      onConfirm: async () => {
+        setDeleting(true);
+        try {
+          const deletePromises = Array.from(selectedOrgs).map((orgId) =>
+            fetch(`${API_URL}/api/organizations/${orgId}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            }),
+          );
 
-    setDeleting(true);
-    try {
-      const deletePromises = Array.from(selectedOrgs).map((orgId) =>
-        fetch(`${API_URL}/api/organizations/${orgId}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      );
-
-      await Promise.all(deletePromises);
-      toast.success(`Deleted ${selectedOrgs.size} organization(s)`);
-      setOrganizations(
-        organizations.filter((org) => !selectedOrgs.has(org.id)),
-      );
-      setSelectedOrgs(new Set());
-    } catch (error) {
-      console.error("Batch delete failed:", error);
-      toast.error("Error deleting organizations");
-    } finally {
-      setDeleting(false);
-    }
+          await Promise.all(deletePromises);
+          toast.success(`Deleted ${selectedOrgs.size} organization(s)`);
+          setOrganizations(
+            organizations.filter((org) => !selectedOrgs.has(org.id)),
+          );
+          setSelectedOrgs(new Set());
+        } catch (error) {
+          console.error("Batch delete failed:", error);
+          toast.error("Error deleting organizations");
+        } finally {
+          setDeleting(false);
+          setDeleteConfirmation({ isOpen: false, type: "single" });
+        }
+      },
+    });
   };
 
   const toggleOrgSelection = (orgId: string) => {
@@ -229,14 +245,17 @@ export default function OrganizationManagement() {
 
     setSaving(true);
     try {
-      const response = await fetch(`${API_URL}/api/organizations/${editingOrg.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        `${API_URL}/api/organizations/${editingOrg.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(formData),
         },
-        body: JSON.stringify(formData),
-      });
+      );
 
       if (response.ok) {
         toast.success("Organization updated successfully");
@@ -371,6 +390,79 @@ export default function OrganizationManagement() {
     </div>
   );
 
+  const DeleteConfirmationModal = () => {
+    if (!deleteConfirmation.isOpen) return null;
+
+    const isLoading = deleting;
+    const isBatch = deleteConfirmation.type === "batch";
+    const count = deleteConfirmation.count || 0;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-red-600 dark:text-red-400">
+              確認刪除
+            </h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+                setDeleteConfirmation({ isOpen: false, type: "single" })
+              }
+              disabled={isLoading}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="mb-6">
+            <p className="text-gray-700 dark:text-gray-300">
+              {isBatch
+                ? `確定要刪除選中的 ${count} 個機構嗎？此操作無法復原。`
+                : "確定要刪除此機構嗎？此操作無法復原。"}
+            </p>
+          </div>
+
+          <div className="flex gap-2 justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                setDeleteConfirmation({ isOpen: false, type: "single" })
+              }
+              disabled={isLoading}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (deleteConfirmation.onConfirm) {
+                  deleteConfirmation.onConfirm();
+                }
+              }}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  刪除中...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  刪除
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <TeacherLayout>
       <div className="p-8 max-w-7xl mx-auto">
@@ -449,6 +541,9 @@ export default function OrganizationManagement() {
             }}
           />
         )}
+
+        {/* Delete Confirmation Modal */}
+        <DeleteConfirmationModal />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {organizations.map((org) => {
