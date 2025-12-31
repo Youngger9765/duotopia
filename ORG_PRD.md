@@ -2,7 +2,7 @@
 
 > **文件類型**：Product Requirements Document (PRD)
 > **目標**：實作完整的機構/學校管理功能，同時保持向下相容
-> **最後更新**：2025-12-13
+> **最後更新**：2026-01-01
 > **分支**：feat/issue-112-org-hierarchy
 
 ---
@@ -40,11 +40,18 @@
 
 ## 📊 Implementation Status
 
-**Last Updated**: 2025-12-13 (Updated after critical fixes)
+**Last Updated**: 2026-01-01 (Comprehensive QA and CRUD updates)
 **Branch**: `feat/issue-112-org-hierarchy`
-**Overall Completion**: 80-85% ✅
+**Overall Completion**: 85-90% ✅
 
-**Latest Commits**:
+**Latest Commits (2026-01-01)**:
+- School Update/Delete endpoints implemented ✅
+- Frontend fixes: API routing, Zustand persistence, custom modals ✅
+- Organization CRUD fully functional (3/4 operations)
+- School CRUD fully functional (4/4 operations)
+- Comprehensive QA testing completed
+
+**Previous Commits**:
 - `ebc1320` - Fix critical permission system issues + student API extension
 - `0be6deb` - Rename to ORG_PRD and add implementation details
 - `c72f118` - Sync .gitignore with main branch
@@ -180,6 +187,331 @@
 - Permission Decorators (nice to have, can refactor later)
 - Teacher Transfer (can implement on-demand when first customer requests)
 - Comprehensive Testing (should do post-MVP)
+
+---
+
+## 🔧 Complete CRUD Functionality Matrix
+
+### Organization CRUD
+
+| Operation | Endpoint | Method | Status | Notes |
+|-----------|----------|--------|--------|-------|
+| **Create** | `/api/organizations` | POST | ✅ Implemented | Creates org, auto-assigns org_owner role |
+| **Read** | `/api/organizations` | GET | ✅ Implemented | Lists all orgs user has access to |
+| **Read Single** | `/api/organizations/{id}` | GET | ✅ Implemented | Returns detailed org info |
+| **Update** | `/api/organizations/{id}` | PUT | ❌ NOT Implemented | **Backend TODO** - 405 Method Not Allowed |
+| **Delete** | `/api/organizations/{id}` | DELETE | ✅ Implemented | Soft delete (is_active=False) |
+
+**Implementation Status**: **75%** (3/4 operations working)
+
+**Create Organization Details**:
+- Auto-creates UUID primary key
+- Sets creator as `org_owner` automatically
+- Adds Casbin role: `org_owner` in domain `org-{uuid}`
+- Returns organization object with `owner_id`
+
+**Update Organization (Missing)**:
+- **Expected Behavior**: Update display_name, description, contact_email, contact_phone, address
+- **Current State**: Frontend has edit form, backend returns 405
+- **Priority**: Medium (non-blocking for basic usage)
+- **Estimated Effort**: 2-4 hours
+
+**Delete Organization Details**:
+- Soft delete: Sets `is_active = False`
+- Does NOT cascade delete schools (prevents data loss)
+- Removes org from lists but keeps in database
+- Frontend uses custom `DeleteConfirmationModal` (automation-compatible)
+
+---
+
+### School CRUD
+
+| Operation | Endpoint | Method | Status | Notes |
+|-----------|----------|--------|--------|-------|
+| **Create** | `/api/organizations/{org_id}/schools` | POST | ✅ Implemented | Creates school under organization |
+| **Read** | `/api/organizations/{org_id}/schools` | GET | ✅ Implemented | Lists schools in organization |
+| **Read Single** | `/api/schools/{id}` | GET | ✅ Implemented | Returns detailed school info |
+| **Update** | `/api/schools/{id}` | PUT | ✅ Implemented | **2026-01-01 NEW** - Updates school details |
+| **Delete** | `/api/schools/{id}` | DELETE | ✅ Implemented | **2026-01-01 NEW** - Soft delete school |
+
+**Implementation Status**: **100%** (5/5 operations working) ✅
+
+**Create School Details**:
+- Requires `organization_id` (foreign key)
+- Auto-creates UUID primary key
+- Fields: name, display_name, description, address, contact_email, contact_phone
+- Returns school object with timestamps
+
+**Update School Details** (NEW 2026-01-01):
+- Endpoint: `PUT /api/schools/{school_id}`
+- Updateable fields: display_name, description, contact_email, contact_phone, address
+- Permission check: org_owner, org_admin, or school_admin of this school
+- Frontend: Edit form modal with pre-filled data
+
+**Delete School Details** (NEW 2026-01-01):
+- Endpoint: `DELETE /api/schools/{school_id}`
+- Soft delete: Sets `is_active = False`
+- Permission check: org_owner or org_admin only
+- Frontend: Custom `DeleteConfirmationModal` (NOT window.confirm)
+- Does NOT cascade delete classrooms (prevents data loss)
+
+---
+
+### Teacher Assignment CRUD
+
+#### Organization Level
+
+| Operation | Endpoint | Method | Status | Notes |
+|-----------|----------|--------|--------|-------|
+| **Assign to Org** | `/api/organizations/{id}/teachers` | POST | ✅ Implemented | Assigns teacher with single role |
+| **List Org Teachers** | `/api/organizations/{id}/teachers` | GET | ✅ Implemented | Lists all teachers in org |
+| **Update Role** | `/api/organizations/{id}/teachers/{teacher_id}` | PUT | ✅ Implemented | Changes teacher's org role |
+| **Remove from Org** | `/api/organizations/{id}/teachers/{teacher_id}` | DELETE | ✅ Implemented | Soft delete assignment |
+
+**Roles at Organization Level**:
+- `org_owner` - Full control (only 1 per organization)
+- `org_admin` - Management permissions (multiple allowed)
+- `teacher` - Read-only access (multiple allowed)
+
+#### School Level
+
+| Operation | Endpoint | Method | Status | Notes |
+|-----------|----------|--------|--------|-------|
+| **Assign to School** | `/api/schools/{id}/teachers` | POST | ✅ Implemented | Assigns teacher with role array |
+| **List School Teachers** | `/api/schools/{id}/teachers` | GET | ✅ Implemented | Lists all teachers in school |
+| **Update Roles** | `/api/schools/{id}/teachers/{teacher_id}` | PUT | ✅ Implemented | Updates teacher's school roles |
+| **Remove from School** | `/api/schools/{id}/teachers/{teacher_id}` | DELETE | ❌ NOT Implemented | **Frontend TODO** - Shows toast message |
+
+**Roles at School Level** (JSONB array):
+- `school_admin` - Can manage this specific school
+- `teacher` - Can access classrooms in this school
+- Multiple roles allowed: `["school_admin", "teacher"]`
+
+**Frontend Improvements (2026-01-01)**:
+- ✅ Dropdown selection for teachers (NOT manual ID entry)
+- ✅ Pre-filters already-assigned teachers
+- ✅ Role checkboxes (school_admin, teacher, or both)
+- ✅ Toast notifications (NOT window.alert)
+- ❌ Remove teacher button shows "移除功能需實作" toast
+
+---
+
+### Student-School Linking
+
+| Operation | Endpoint | Method | Status | Notes |
+|-----------|----------|--------|--------|-------|
+| **Link to School** | `/api/students/{id}/school` | POST | ✅ Implemented | Sets student.school_id |
+| **Get School Students** | `/api/schools/{id}/students` | GET | ✅ Implemented | Lists students in school |
+| **Get Org Students** | `/api/organizations/{id}/students` | GET | ✅ Implemented | Aggregates students from all schools |
+
+**Student API Extension** (2026-01-01):
+- Login response includes: `organization_name`, `school_name`, `classroom_name`
+- Breadcrumb displays: "組織 > 學校 > 班級"
+- Handles partial hierarchy gracefully (e.g., no school → "組織 > 班級")
+- No changes to student-facing features (除了麵包屑導航)
+
+---
+
+## 🔐 Complete RBAC Permission Matrix
+
+### Access Control by Role
+
+| Resource / Operation | org_owner | org_admin | school_admin | teacher | Notes |
+|---------------------|-----------|-----------|--------------|---------|-------|
+| **Organizations** |
+| View Organizations List | ✅ | ✅ | ❌ | ❌ | Only org members see orgs |
+| Create Organization | ✅ | ❌ | ❌ | ❌ | Only org creators |
+| Edit Organization | ✅ | ✅ | ❌ | ❌ | org_owner or org_admin |
+| Delete Organization | ✅ | ❌ | ❌ | ❌ | Only org_owner |
+| Manage Subscription | ✅ | ❌ | ❌ | ❌ | Only org_owner |
+| **Schools** |
+| View Schools List | ✅ | ✅ | ✅ | ✅ | All can see schools |
+| Create School | ✅ | ✅ | ❌ | ❌ | org_owner or org_admin |
+| Edit School (Any) | ✅ | ✅ | ❌ | ❌ | org_owner or org_admin |
+| Edit School (Own) | ✅ | ✅ | ✅ | ❌ | school_admin can edit own school |
+| Delete School | ✅ | ✅ | ❌ | ❌ | org_owner or org_admin only |
+| View School Details | ✅ | ✅ | ✅ | ✅ | All can view assigned schools |
+| **Teacher Management** |
+| Assign Teacher to Org | ✅ | ✅ | ❌ | ❌ | org_owner or org_admin |
+| Remove Teacher from Org | ✅ | ✅ | ❌ | ❌ | org_owner or org_admin |
+| Assign Teacher to School | ✅ | ✅ | ✅ | ❌ | school_admin can assign to own school |
+| Remove Teacher from School | ✅ | ✅ | ✅ | ❌ | **NOT IMPLEMENTED** |
+| Update Teacher Roles | ✅ | ✅ | ✅ | ❌ | Within scope of authority |
+| **Classrooms** |
+| View Classrooms | ✅ | ✅ | ✅ | ✅ | All can view assigned classrooms |
+| Create Classroom | ✅ | ✅ | ✅ | ❌ | school_admin or higher |
+| Edit Classroom | ✅ | ✅ | ✅ | ❌ | school_admin or higher |
+| Delete Classroom | ✅ | ✅ | ✅ | ❌ | school_admin or higher |
+| **Students** |
+| View Students (Org-wide) | ✅ | ✅ | ❌ | ❌ | org-level roles only |
+| View Students (School) | ✅ | ✅ | ✅ | ❌ | school_admin can see school students |
+| View Students (Classroom) | ✅ | ✅ | ✅ | ✅ | teacher can see own classroom students |
+| Manage Student Data | ✅ | ✅ | ✅ | ✅ | Within scope of access |
+| **Analytics & Reports** |
+| Org Dashboard | ✅ | ✅ | ❌ | ❌ | **NOT IMPLEMENTED** |
+| School Dashboard | ✅ | ✅ | ✅ | ❌ | **NOT IMPLEMENTED** |
+| Classroom Reports | ✅ | ✅ | ✅ | ✅ | Within assigned classrooms |
+
+### Permission Enforcement Mechanism
+
+**Backend (Casbin)**:
+- Role-based policies defined in `backend/config/casbin_model.conf`
+- Policies stored in `backend/config/casbin_policy.csv`
+- Database sync on startup (with 3 retry attempts)
+- Domain isolation: `org-{uuid}` and `school-{uuid}` domains
+- Auto-sync on role changes via `teacher_organizations` and `teacher_schools` tables
+
+**Frontend (React)**:
+- `useSidebarRoles()` hook fetches user roles from `/api/teachers/me/roles`
+- Sidebar menu items filtered by role permissions
+- Tab switcher shows "組織管理" only for org_owner/org_admin/school_admin
+- Action buttons (Create, Edit, Delete) hidden based on permissions
+- API calls return 403 Forbidden if unauthorized
+
+**Permission Verification Flow**:
+1. User logs in → JWT token issued
+2. Frontend calls `GET /api/teachers/me/roles`
+3. Backend queries Casbin for all user roles across orgs/schools
+4. Frontend stores roles in Zustand store (with persistence)
+5. UI dynamically shows/hides features based on roles
+6. API endpoints double-check permissions using Casbin enforcer
+7. Return 403 if unauthorized, 200 if allowed
+
+---
+
+## 🎨 UI/UX Consistency Standards
+
+### Sidebar Navigation (All Pages)
+
+**Requirement**: Sidebar MUST be visible on all teacher pages
+
+**Implementation**:
+- ✅ `/teacher/organizations` - Has sidebar
+- ✅ `/teacher/schools` - Has sidebar
+- ✅ `/teacher/schools/{id}` - Has sidebar (2026-01-01 fixed)
+- ✅ `/teacher/dashboard` - Has sidebar
+- ✅ All teaching management pages - Have sidebar
+
+**Exception**: Login, public pages, student pages (no sidebar needed)
+
+---
+
+### Toast Notifications (NO Blocking Dialogs)
+
+**CRITICAL RULE**: NEVER use `window.alert()` or `window.confirm()`
+
+**Why**: Native browser dialogs block all browser events, preventing automation tools (Claude in Chrome, Playwright, Selenium) from interacting with the page.
+
+**Correct Pattern**:
+```typescript
+// ❌ WRONG - Blocks browser automation
+if (!confirm("Are you sure?")) {
+  return;
+}
+
+// ✅ CORRECT - Custom modal component
+<DeleteConfirmationModal
+  isOpen={deleteConfirmation.isOpen}
+  onConfirm={handleConfirmDelete}
+  onCancel={() => setDeleteConfirmation({ isOpen: false })}
+  message="確定要刪除此機構嗎？此操作無法復原。"
+/>
+```
+
+**Toast Usage**:
+- Success: `toast.success("操作成功")`
+- Error: `toast.error("操作失敗：" + error.message)`
+- Info: `toast.info("請注意...")`
+- Loading: Use modal loading state (`isLoading` flag)
+
+**Implementation Status**:
+- ✅ All organization management pages use custom modals
+- ✅ All school management pages use custom modals
+- ✅ DeleteConfirmationModal component created (2026-01-01)
+- ✅ FormModal pattern for Create/Edit operations
+- ✅ No `window.alert/confirm` in entire codebase
+
+---
+
+### Responsive Web Design (RWD)
+
+**Target Devices**:
+- Mobile: 375px - 767px (iPhone SE, iPhone 12/13/14)
+- Tablet: 768px - 1023px (iPad, Android tablets)
+- Desktop: 1024px+ (MacBook, Windows laptops, monitors)
+
+**Tailwind Breakpoints**:
+```typescript
+// Mobile-first approach
+<div className="flex flex-col md:flex-row lg:grid lg:grid-cols-3">
+  {/* Stacks vertically on mobile, row on tablet, grid on desktop */}
+</div>
+```
+
+**Testing Checklist**:
+- [ ] Test at 375px width (mobile)
+- [ ] Test at 768px width (tablet)
+- [ ] Test at 1024px width (small laptop)
+- [ ] Test at 1920px width (desktop monitor)
+- [ ] No horizontal scrolling on any breakpoint
+- [ ] Sidebar collapses to hamburger menu on mobile
+- [ ] Modals are scrollable on mobile
+
+---
+
+## 🛡️ Backwards Compatibility Guarantees
+
+### Existing Teacher Workflows (100% Preserved)
+
+**Independent Teachers (demo/trial/expired accounts)**:
+- ✅ Login flow unchanged
+- ✅ Dashboard displays correctly
+- ✅ Classroom management works as before
+- ✅ Student management works as before
+- ✅ Assignment creation unchanged
+- ✅ Content library access unchanged
+- ✅ **NO organization features visible** (tab switcher hidden)
+
+**Teachers in Organizations**:
+- ✅ All teaching features still work
+- ✅ Can create classrooms as before
+- ✅ Can manage students as before
+- ✅ **NEW**: See "組織管理" tab (if org_owner/org_admin/school_admin)
+- ✅ **NEW**: Breadcrumb shows org/school hierarchy
+
+### Student Experience (No Breaking Changes)
+
+**Student Login**:
+- ✅ Authentication flow unchanged
+- ✅ Classroom access unchanged
+- ✅ Learning content delivery unchanged
+- ✅ Progress tracking unchanged
+- ✅ **NEW**: Breadcrumb shows "組織 > 學校 > 班級" (cosmetic only)
+
+**What Students DON'T See**:
+- ❌ No organization management UI
+- ❌ No school management UI
+- ❌ No teacher assignment UI
+- ❌ No permission system exposure
+
+### Database Schema (Backwards Compatible)
+
+**New Tables** (Additive only):
+- `organizations` - New table, no impact on existing data
+- `schools` - New table, no impact on existing data
+- `teacher_organizations` - New table, links teachers to orgs
+- `teacher_schools` - New table, links teachers to schools
+- `classroom_schools` - New table, links classrooms to schools
+
+**Modified Tables** (Non-breaking):
+- `students.school_id` - New column, nullable, defaults to NULL
+- Existing students have `school_id = NULL` (still work)
+
+**No Destructive Changes**:
+- ❌ No columns dropped
+- ❌ No tables dropped
+- ❌ No data migrations required
+- ❌ No foreign key constraints that break existing records
 
 ---
 
