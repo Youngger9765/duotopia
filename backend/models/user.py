@@ -28,9 +28,9 @@ class Teacher(Base):
     name = Column(String(100), nullable=False)
     phone = Column(String(20))
     avatar_url = Column(String(500))
-    is_active = Column(Boolean, default=True)
-    is_demo = Column(Boolean, default=False)  # 標記 demo 帳號
-    is_admin = Column(Boolean, default=False)  # Admin 權限
+    is_active = Column(Boolean, default=True, nullable=False)
+    is_demo = Column(Boolean, default=False, nullable=False)  # 標記 demo 帳號
+    is_admin = Column(Boolean, default=False, nullable=False)  # Admin 權限
 
     # Email 驗證字段
     email_verified = Column(Boolean, default=False)  # email 是否已驗證
