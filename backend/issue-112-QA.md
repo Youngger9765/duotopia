@@ -3855,3 +3855,56 @@ All School CRUD operations now working correctly! 🎉
 *Tester: Claude + User oversight*
 *Environment: Local development (http://localhost:5173)*
 
+
+---
+
+## 🐛 Critical Bug Found & Fixed (2026-01-01)
+
+### Bug #1: Dashboard API 500 Internal Server Error
+**Severity**: P0 - Blocking  
+**Discovered**: 2026-01-01 02:40 during Chrome UI testing preparation  
+**Root Cause**: NULL values in `is_demo` and `is_admin` database columns, but Pydantic model expected non-null booleans
+
+**Error Message**:
+```
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for TeacherProfile
+is_demo: Input should be a valid boolean [type=bool_type, input_value=None]
+is_admin: Input should be a valid boolean [type=bool_type, input_value=None]
+```
+
+**Impact**:
+- Dashboard API returned 500 error for ALL users
+- Frontend showed "載入失敗" error message
+- Completely blocked UI testing
+
+**Fix Applied**:
+1. Created migration `20260101_0257_ed63e979dc1c` to:
+   - Update all NULL values to FALSE
+   - Add NOT NULL constraints
+   - Set DEFAULT FALSE
+2. Updated SQLAlchemy model with explicit `nullable=False, default=False`
+3. Verified all 4 test accounts work correctly
+
+**API Testing Results** (2026-01-01 03:08):
+| Account | Login | Dashboard | is_demo | is_admin | Roles | Organization |
+|---------|-------|-----------|---------|----------|-------|--------------|
+| owner@duotopia.com | 200 OK | 200 OK | false (bool) | false (bool) | ['org_owner'] | 智慧教育機構 |
+| orgadmin@duotopia.com | 200 OK | 200 OK | false (bool) | false (bool) | ['org_admin'] | 智慧教育機構 |
+| schooladmin@duotopia.com | 200 OK | 200 OK | false (bool) | false (bool) | ['school_admin'] | None |
+| orgteacher@duotopia.com | 200 OK | 200 OK | false (bool) | false (bool) | ['teacher'] | None |
+
+**Files Changed**:
+- `backend/models/user.py`: Add `nullable=False` to boolean fields
+- `backend/alembic/versions/20260101_0257_ed63e979dc1c_*.py`: New migration
+- `backend/BUGFIX-dashboard-500-error.md`: Complete bug documentation
+- `frontend/src/pages/teacher/SchoolManagement.tsx`: Fix PUT→PATCH
+
+**Commits**:
+- 6349e53a: fix: Fix Dashboard 500 error caused by NULL boolean fields
+- 3f682a2a: fix: Correct migration parent reference (288ad5a75206)
+
+**Status**: ✅ RESOLVED
+
+**Chrome UI Testing**: Ready to proceed with comprehensive UI testing using checklist: `/tmp/chrome-ui-test-checklist.md`
+
+---
