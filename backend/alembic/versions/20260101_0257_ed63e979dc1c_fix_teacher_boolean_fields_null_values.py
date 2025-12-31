@@ -1,7 +1,7 @@
 """fix_teacher_boolean_fields_null_values
 
 Revision ID: ed63e979dc1c
-Revises: d53270395a47
+Revises: 288ad5a75206
 Create Date: 2026-01-01 02:57:24.355594
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'ed63e979dc1c'
-down_revision: Union[str, None] = 'd53270395a47'
+down_revision: Union[str, None] = '288ad5a75206'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
