@@ -201,7 +201,7 @@ export default function SchoolManagement() {
       const response = await fetch(
         `${API_URL}/api/schools/${editingSchool.id}`,
         {
-          method: "PUT",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
