@@ -64,9 +64,12 @@ export default function OrganizationDetail() {
   const fetchTeachers = async () => {
     try {
       setTeachersLoading(true);
-      const response = await fetch(`${API_URL}/api/organizations/${orgId}/teachers`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetch(
+        `${API_URL}/api/organizations/${orgId}/teachers`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       if (response.ok) {
         const data = await response.json();
         setTeachers(data);
@@ -81,17 +84,20 @@ export default function OrganizationDetail() {
   const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${API_URL}/api/organizations/${orgId}/teachers`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        `${API_URL}/api/organizations/${orgId}/teachers`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            teacher_id: parseInt(teacherId),
+            role: role,
+          }),
         },
-        body: JSON.stringify({
-          teacher_id: parseInt(teacherId),
-          role: role,
-        }),
-      });
+      );
 
       if (response.ok) {
         setShowAddTeacher(false);

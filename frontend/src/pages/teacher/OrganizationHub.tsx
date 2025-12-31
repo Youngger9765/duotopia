@@ -217,9 +217,12 @@ function OrganizationHubContent() {
       setStatsLoading(true);
 
       if (type === "organization") {
-        const schoolsRes = await fetch(`${API_URL}/api/schools?organization_id=${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const schoolsRes = await fetch(
+          `${API_URL}/api/schools?organization_id=${id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
 
         if (schoolsRes.ok) {
           const schoolsData = await schoolsRes.json();

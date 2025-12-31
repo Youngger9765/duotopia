@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { API_URL } from "@/config/api";
+import toast from "react-hot-toast";
+import { Edit2, Trash2 } from "lucide-react";
 
 interface School {
   id: string;
@@ -20,6 +22,12 @@ interface Organization {
   display_name?: string;
 }
 
+interface DeleteConfirmationState {
+  isOpen: boolean;
+  schoolId?: string;
+  schoolName?: string;
+}
+
 export default function SchoolManagement() {
   const { orgId } = useParams<{ orgId: string }>();
   const token = useTeacherAuthStore((state) => state.token);
@@ -28,6 +36,13 @@ export default function SchoolManagement() {
   const [selectedOrgId, setSelectedOrgId] = useState<string>(orgId || "");
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingSchool, setEditingSchool] = useState<School | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] =
+    useState<DeleteConfirmationState>({
+      isOpen: false,
+    });
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -88,6 +103,69 @@ export default function SchoolManagement() {
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      organization_id: selectedOrgId,
+      name: "",
+      display_name: "",
+      description: "",
+      contact_email: "",
+      contact_phone: "",
+      address: "",
+    });
+  };
+
+  const handleEdit = (school: School) => {
+    setEditingSchool(school);
+    setFormData({
+      organization_id: school.organization_id,
+      name: school.name,
+      display_name: school.display_name || "",
+      description: school.description || "",
+      contact_email: school.contact_email || "",
+      contact_phone: "",
+      address: "",
+    });
+    setShowEditForm(true);
+  };
+
+  const handleDelete = (school: School) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      schoolId: school.id,
+      schoolName: school.display_name || school.name,
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmation.schoolId) return;
+
+    setDeleting(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/api/schools/${deleteConfirmation.schoolId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (response.ok) {
+        toast.success("學校已成功刪除");
+        setSchools(schools.filter((s) => s.id !== deleteConfirmation.schoolId));
+        setDeleteConfirmation({ isOpen: false });
+      } else {
+        const error = await response.json();
+        toast.error(`刪除失敗: ${error.detail}`);
+      }
+    } catch (error) {
+      console.error("Delete failed:", error);
+      toast.error("刪除學校時發生錯誤");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -101,24 +179,50 @@ export default function SchoolManagement() {
       });
 
       if (response.ok) {
+        toast.success("學校已成功創建");
         setShowCreateForm(false);
-        setFormData({
-          organization_id: selectedOrgId,
-          name: "",
-          display_name: "",
-          description: "",
-          contact_email: "",
-          contact_phone: "",
-          address: "",
-        });
+        resetForm();
         fetchSchools(selectedOrgId);
       } else {
         const error = await response.json();
-        alert(`Failed to create school: ${error.detail}`);
+        toast.error(`創建失敗: ${error.detail}`);
       }
     } catch (error) {
       console.error("Create failed:", error);
-      alert("Error creating school");
+      toast.error("創建學校時發生錯誤");
+    }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSchool) return;
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/schools/${editingSchool.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(formData),
+        },
+      );
+
+      if (response.ok) {
+        toast.success("學校已成功更新");
+        setShowEditForm(false);
+        setEditingSchool(null);
+        resetForm();
+        fetchSchools(selectedOrgId);
+      } else {
+        const error = await response.json();
+        toast.error(`更新失敗: ${error.detail}`);
+      }
+    } catch (error) {
+      console.error("Update failed:", error);
+      toast.error("更新學校時發生錯誤");
     }
   };
 
@@ -166,6 +270,7 @@ export default function SchoolManagement() {
         )}
       </div>
 
+      {/* Create Modal */}
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -230,7 +335,10 @@ export default function SchoolManagement() {
               <div className="flex gap-2 justify-end">
                 <button
                   type="button"
-                  onClick={() => setShowCreateForm(false)}
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    resetForm();
+                  }}
                   className="px-4 py-2 border rounded hover:bg-gray-100"
                 >
                   取消
@@ -247,6 +355,123 @@ export default function SchoolManagement() {
         </div>
       )}
 
+      {/* Edit Modal */}
+      {showEditForm && editingSchool && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">編輯學校</h2>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <div>
+                <label className="block mb-2">學校名稱 *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block mb-2">顯示名稱</label>
+                <input
+                  type="text"
+                  value={formData.display_name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, display_name: e.target.value })
+                  }
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block mb-2">描述</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  className="w-full border rounded px-3 py-2"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block mb-2">聯絡電郵</label>
+                <input
+                  type="email"
+                  value={formData.contact_email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, contact_email: e.target.value })
+                  }
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block mb-2">聯絡電話</label>
+                <input
+                  type="tel"
+                  value={formData.contact_phone}
+                  onChange={(e) =>
+                    setFormData({ ...formData, contact_phone: e.target.value })
+                  }
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditForm(false);
+                    setEditingSchool(null);
+                    resetForm();
+                  }}
+                  className="px-4 py-2 border rounded hover:bg-gray-100"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  更新
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmation.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full">
+            <h2 className="text-xl font-bold text-red-600 mb-4">確認刪除</h2>
+            <p className="text-gray-700 mb-6">
+              確定要刪除學校「{deleteConfirmation.schoolName}
+              」嗎？此操作無法復原。
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmation({ isOpen: false })}
+                disabled={deleting}
+                className="px-4 py-2 border rounded hover:bg-gray-100 disabled:opacity-50"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? "刪除中..." : "刪除"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="text-center py-12">載入中...</div>
       ) : (
@@ -255,20 +480,52 @@ export default function SchoolManagement() {
             {schools.map((school) => (
               <div
                 key={school.id}
-                className="border rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => navigate(`/teacher/schools/${school.id}`)}
+                className="border rounded-lg p-6 hover:shadow-lg transition-shadow"
               >
-                <h3 className="text-xl font-semibold mb-2">
-                  {school.display_name || school.name}
-                </h3>
-                {school.description && (
-                  <p className="text-gray-600 mb-4">{school.description}</p>
-                )}
-                <div className="text-sm text-gray-500">
-                  {school.contact_email && <div>📧 {school.contact_email}</div>}
-                  <div>
-                    創建時間: {new Date(school.created_at).toLocaleDateString()}
+                <div
+                  className="cursor-pointer"
+                  onClick={() => navigate(`/teacher/schools/${school.id}`)}
+                >
+                  <h3 className="text-xl font-semibold mb-2">
+                    {school.display_name || school.name}
+                  </h3>
+                  {school.description && (
+                    <p className="text-gray-600 mb-4">{school.description}</p>
+                  )}
+                  <div className="text-sm text-gray-500">
+                    {school.contact_email && (
+                      <div>📧 {school.contact_email}</div>
+                    )}
+                    <div>
+                      創建時間:{" "}
+                      {new Date(school.created_at).toLocaleDateString()}
+                    </div>
                   </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex gap-2 mt-4 pt-4 border-t">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(school);
+                    }}
+                    className="flex-1 px-3 py-2 border rounded hover:bg-gray-100 flex items-center justify-center gap-2"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                    編輯
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(school);
+                    }}
+                    disabled={deleting}
+                    className="flex-1 px-3 py-2 border border-red-300 text-red-600 rounded hover:bg-red-50 flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    刪除
+                  </button>
                 </div>
               </div>
             ))}

@@ -64,9 +64,12 @@ export function OrganizationSidebar({
   const fetchSchools = useCallback(
     async (orgId: string) => {
       try {
-        const response = await fetch(`${API_URL}/api/schools?organization_id=${orgId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetch(
+          `${API_URL}/api/schools?organization_id=${orgId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         if (response.ok) {
           const data = await response.json();
           setSchools((prev) => ({ ...prev, [orgId]: data }));
