@@ -2466,6 +2466,7 @@ async def create_content(
                 text=item_text,
                 translation=translation_value,
                 audio_url=item_data.get("audio_url"),
+                image_url=item_data.get("image_url"),
                 example_sentence=item_data.get("example_sentence"),
                 example_sentence_translation=item_data.get(
                     "example_sentence_translation"
