@@ -138,8 +138,7 @@ export default function ClassroomDetail({
   const [editorContentId, setEditorContentId] = useState<number | null>(null);
 
   // Vocabulary Set Editor state
-  const [showVocabularySetEditor, setShowVocabularySetEditor] =
-    useState(false);
+  const [showVocabularySetEditor, setShowVocabularySetEditor] = useState(false);
   const [vocabularySetLessonId, setVocabularySetLessonId] = useState<
     number | null
   >(null);
@@ -2407,7 +2406,9 @@ export default function ClassroomDetail({
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">{t("vocabularySet.dialogTitle")}</h2>
+              <h2 className="text-2xl font-bold">
+                {t("vocabularySet.dialogTitle")}
+              </h2>
               <Button
                 variant="ghost"
                 size="icon"

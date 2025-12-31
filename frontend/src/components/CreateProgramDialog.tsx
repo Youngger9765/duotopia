@@ -442,7 +442,9 @@ export default function CreateProgramDialog({
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder={t("createProgramDialog.template.searchPlaceholder")}
+                  placeholder={t(
+                    "createProgramDialog.template.searchPlaceholder",
+                  )}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -530,7 +532,9 @@ export default function CreateProgramDialog({
                           {template.level && getLevelBadge(template.level)}
                           {template.estimated_hours && (
                             <span className="text-xs text-gray-500">
-                              {t("createProgramDialog.common.hours", { hours: template.estimated_hours })}
+                              {t("createProgramDialog.common.hours", {
+                                hours: template.estimated_hours,
+                              })}
                             </span>
                           )}
                           {template.lesson_count && (
@@ -740,7 +744,12 @@ export default function CreateProgramDialog({
                                           getLevelBadge(program.level)}
                                         {program.estimated_hours && (
                                           <span className="text-xs text-gray-500">
-                                            {t("createProgramDialog.common.hours", { hours: program.estimated_hours })}
+                                            {t(
+                                              "createProgramDialog.common.hours",
+                                              {
+                                                hours: program.estimated_hours,
+                                              },
+                                            )}
                                           </span>
                                         )}
                                         {program.lesson_count && (
