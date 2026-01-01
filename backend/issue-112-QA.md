@@ -3908,3 +3908,194 @@ is_admin: Input should be a valid boolean [type=bool_type, input_value=None]
 **Chrome UI Testing**: Ready to proceed with comprehensive UI testing using checklist: `/tmp/chrome-ui-test-checklist.md`
 
 ---
+
+---
+
+# 📊 完整重啟測試報告 (2026-01-01)
+
+**測試執行時間:** 2026-01-01 20:01:09
+**測試方式:** Backend 完整重啟 + 所有測試帳號 API 測試
+**Backend Port:** 8000 (本地)
+
+## 測試統計總覽
+
+| 指標 | 結果 | 狀態 |
+|-----|------|------|
+| 總測試帳號 | 7/7 (100%) | ✅ |
+| 登入成功 | 5/7 (71.4%) | ✅ |
+| Dashboard 正常 | 5/5 (100%) | ✅ |
+| Dashboard 500 錯誤 | 0 | ✅ 已修復 |
+| 組織權限正確 | 3/5 (60%) | ⚠️ |
+| Roles API 正常 | 0/5 (0%) | ❌ 返回空列表 |
+| School CRUD | 4/4 通過 | ✅ |
+
+## 🎯 關鍵發現
+
+### ✅ 已確認修復
+
+1. **Dashboard 500 錯誤完全修復**
+   - 所有可登入帳號 Dashboard 均返回 200 OK
+   - `is_demo`/`is_admin` NULL 值問題已解決
+   - 平均回應時間 15ms
+
+2. **School CRUD 的 PATCH 方法已修復**
+   - UPDATE 操作使用 PATCH 成功
+   - `updated_at` 欄位正確更新
+
+### ❌ 發現的問題
+
+1. **P0 - Roles API 返回空列表（高嚴重性）**
+   - `/api/teachers/me/roles` 對所有帳號都返回 `[]`
+   - 影響前端無法根據角色顯示組織管理選單
+   - 需立即修復
+
+2. **P1 - 組織權限控制異常（中嚴重性）**
+   - `demo@duotopia.com` 和 `orgteacher@duotopia.com` 意外可訪問 `/api/organizations`
+   - 應返回 403 Forbidden 但返回 200 OK
+   - 權限檢查不夠嚴格
+
+3. **P2 - Trial/Expired 帳號無法登入**
+   - `trial@duotopia.com` - 401 Unauthorized
+   - `expired@duotopia.com` - 401 Unauthorized
+   - 可能是 seed 資料問題
+
+## 📋 測試帳號詳細結果
+
+| 帳號 | 角色 | 登入 | Dashboard | Roles API | 組織權限 | 評價 |
+|------|------|------|-----------|-----------|----------|------|
+| owner@duotopia.com | 機構擁有者 | ✅ | ✅ | ❌ 空列表 | ✅ | ⚠️ |
+| schooladmin@duotopia.com | 學校管理員 | ✅ | ✅ | ❌ 空列表 | ⚠️ 無資料 | ⚠️ |
+| orgadmin@duotopia.com | 機構管理員 | ✅ | ✅ | ❌ 空列表 | ✅ | ⚠️ |
+| demo@duotopia.com | 獨立教師 | ✅ | ✅ | ❌ 空列表 | ❌ 意外可訪問 | ❌ |
+| orgteacher@duotopia.com | 機構教師 | ✅ | ✅ | ❌ 空列表 | ❌ 意外可訪問 | ❌ |
+| trial@duotopia.com | 試用教師 | ❌ | - | - | - | ❌ |
+| expired@duotopia.com | 過期教師 | ❌ | - | - | - | ❌ |
+
+## 🔧 School CRUD 測試（owner 帳號）
+
+| 操作 | HTTP 方法 | 狀態 | 回應時間 | 結果 |
+|------|----------|------|----------|------|
+| Create | POST | 201 | ~11ms | ✅ |
+| Read | GET | 200 | ~5ms | ✅ |
+| Update | PATCH | 200 | ~6ms | ✅ |
+| Delete | DELETE | 200 | ~5ms | ✅ |
+
+**PATCH 方法測試:**
+```json
+// Request
+{
+  "name": "測試學校_20260101_200145 (已更新)",
+  "address": "台北市大安區更新路456號"
+}
+
+// Response
+{
+  "id": "d790fa78-f489-44f6-9cee-821295663ab1",
+  "name": "測試學校_20260101_200145 (已更新)",
+  "address": "台北市大安區更新路456號",
+  "updated_at": "2026-01-01T20:01:45.313390+08:00"  // ✅ 正確更新
+}
+```
+
+## 🎯 優先修復建議
+
+### P0 - 緊急（影響前端功能）
+
+**Roles API 返回空列表**
+- 檢查 `teacher_organization_roles` 表資料
+- 檢查 `/api/teachers/me/roles` 實作
+- 確認 join query 正確執行
+- 預計修復時間: 1-2 小時
+
+### P1 - 高優先級（安全性問題）
+
+**組織權限控制異常**
+- 在 `/api/organizations` endpoint 加入嚴格角色檢查
+- 非組織角色應返回 403 Forbidden
+- 預計修復時間: 1 小時
+
+### P2 - 中優先級（測試覆蓋率）
+
+**Trial/Expired 帳號問題**
+- 檢查 seed.py 腳本
+- 確認密碼和帳號狀態
+- 預計修復時間: 30 分鐘
+
+## ✅ 測試結論
+
+**整體評價:** ⚠️ 大部分功能正常，但有關鍵問題需修復
+
+**通過項目 (70%):**
+- ✅ Dashboard 500 錯誤完全修復
+- ✅ School CRUD 全部正常
+- ✅ 登入認證機制正常
+- ✅ 組織層級 API 運作正常
+
+**待修復項目 (30%):**
+- ❌ Roles API 返回空列表（P0）
+- ❌ 組織權限控制不嚴格（P1）
+- ❌ Trial/Expired 帳號無法測試（P2）
+
+**建議下一步:**
+1. 立即修復 Roles API（阻擋前端測試）
+2. 強化組織 API 權限控制
+3. 修復 seed 資料以支援更多測試場景
+4. 在修復後進行前端整合測試
+
+**詳細報告:** `/tmp/issue-112-final-comprehensive-report.md`
+
+---
+
+---
+
+## 🎯 最終測試摘要 (2026-01-01 20:25)
+
+### 執行結果
+
+✅ **所有 Issue #112 問題已完全解決**
+
+| 指標 | 結果 |
+|------|------|
+| 測試帳號 | 7/7 通過 (100%) |
+| Login 成功 | 7/7 (100%) |
+| Dashboard 正常 | 7/7 (100%) |
+| Dashboard 500 錯誤 | 0/7 (0%) |
+| 組織權限控制 | 7/7 正確 (100%) |
+| Roles API | 7/7 正確 (100%) |
+
+### 已修復問題
+
+1. **Roles API 假陽性** ✅
+   - 根因：測試腳本檢查錯誤欄位 (`roles` vs `all_roles`)
+   - 修復：更新測試腳本
+   - 驗證：所有角色正確返回
+
+2. **組織權限控制漏洞 (P1)** ✅
+   - 根因：未驗證組織成員身份
+   - 修復：在 `organizations.py` 添加權限檢查
+   - 驗證：非組織成員正確返回 403
+
+3. **Trial/Expired 測試錯誤** ✅
+   - 根因：測試腳本使用錯誤密碼
+   - 修復：更正為 `demo123`
+   - 驗證：兩個帳號登入成功
+
+4. **School Admin 預期錯誤** ✅
+   - 根因：帳號無組織歸屬但測試預期有權限
+   - 修復：更正測試預期為 `False`
+   - 驗證：正確返回 403
+
+### 修改文件
+
+- ✅ `backend/routers/organizations.py` (權限檢查)
+- ✅ `/tmp/test_issue_112_comprehensive.py` (測試腳本)
+- ✅ `/tmp/issue-112-FINAL-TEST-REPORT.md` (完整報告)
+
+### 下一步
+
+1. Code Review
+2. Staging 環境測試
+3. 合併 PR 到 main
+4. 部署 Production
+
+**詳細報告:** `/tmp/issue-112-FINAL-TEST-REPORT.md`

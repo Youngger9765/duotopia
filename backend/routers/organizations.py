@@ -205,6 +205,8 @@ async def list_organizations(
 ):
     """
     List all organizations that the current teacher has access to.
+
+    Security: Returns 403 if teacher has no organization access.
     """
     # Get all teacher-organization relationships
     teacher_orgs = (
@@ -215,6 +217,13 @@ async def list_organizations(
         )
         .all()
     )
+
+    # ✅ SECURITY FIX: Reject if no organization access
+    if not teacher_orgs:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="此功能僅限組織成員使用。您目前不屬於任何組織。",
+        )
 
     org_ids = [to.organization_id for to in teacher_orgs]
 
