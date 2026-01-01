@@ -130,7 +130,7 @@ export default function OrganizationsListPage() {
                   <TableRow key={org.id}>
                     <TableCell className="font-medium">
                       <button
-                        onClick={() => navigate(`/organization/${org.id}/edit`)}
+                        onClick={() => navigate(`/organization/${org.id}`)}
                         className="text-blue-600 hover:text-blue-800 hover:underline text-left"
                       >
                         {org.name}

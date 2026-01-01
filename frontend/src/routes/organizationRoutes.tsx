@@ -29,8 +29,8 @@ export const organizationRoutes = (
     {/* All organizations list page */}
     <Route path="all" element={<OrganizationsListPage />} />
 
-    {/* Organization edit page */}
-    <Route path=":orgId/edit" element={<OrganizationEditPage />} />
+    {/* Organization detail page */}
+    <Route path=":orgId" element={<OrganizationEditPage />} />
 
     {/* Schools management under specific organization */}
     <Route path=":orgId/schools" element={<SchoolsPage />} />

@@ -158,11 +158,11 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
                 <OrganizationTree
                   onNodeSelect={(type, data) => {
                     if (type === "organization") {
-                      // 點擊組織 → 導航到組織詳情/編輯頁面
-                      navigate(`/organization/${data.id}/edit`);
+                      // 點擊組織 → 導航到組織詳情頁面
+                      navigate(`/organization/${data.id}`);
                     } else if (type === "school") {
-                      // 點擊學校 → 導航到學校詳情/編輯頁面
-                      navigate(`/organization/schools/${data.id}/edit`);
+                      // 點擊學校 → 導航到學校詳情頁面
+                      navigate(`/organization/schools/${data.id}`);
                     }
                   }}
                   className="text-sm"
