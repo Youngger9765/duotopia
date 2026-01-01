@@ -11,6 +11,8 @@ from models import (
     ClassroomSchool,
     School,
     Organization,
+    TeacherOrganization,
+    TeacherSchool,
 )
 from auth import (
     verify_password,
@@ -90,6 +92,40 @@ async def teacher_login(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive"
             )
 
+    # Query organization role
+    teacher_org = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher.id,
+            TeacherOrganization.is_active == True,
+        )
+        .first()
+    )
+
+    # Query school role
+    teacher_school = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == teacher.id,
+            TeacherSchool.is_active == True,
+        )
+        .first()
+    )
+
+    # Determine role (priority: org > school > teacher)
+    role = "teacher"  # default
+    organization_id = None
+    school_id = None
+
+    if teacher_org:
+        role = teacher_org.role  # org_owner, org_admin, etc.
+        organization_id = str(teacher_org.organization_id)
+    elif teacher_school:
+        # TeacherSchool uses 'roles' array, get the first one or 'teacher' as default
+        if teacher_school.roles and len(teacher_school.roles) > 0:
+            role = teacher_school.roles[0]  # school_admin or teacher
+        school_id = str(teacher_school.school_id)
+
     # Create token
     access_token = create_access_token(
         data={
@@ -97,6 +133,7 @@ async def teacher_login(
             "email": teacher.email,
             "type": "teacher",
             "name": teacher.name,
+            "role": role,
         },
         expires_delta=timedelta(hours=24),  # 24 hours for development
     )
@@ -111,6 +148,9 @@ async def teacher_login(
             "phone": teacher.phone,
             "is_demo": teacher.is_demo,
             "is_admin": teacher.is_admin,
+            "role": role,
+            "organization_id": organization_id,
+            "school_id": school_id,
         },
     }
 
