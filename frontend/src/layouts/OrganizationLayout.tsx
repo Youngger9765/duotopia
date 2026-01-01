@@ -22,7 +22,7 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { token, logout: storeLogout } = useTeacherAuthStore();
+  const { token, logout: storeLogout, user } = useTeacherAuthStore();
   const { setOrganizations, setIsFetchingOrgs } = useOrganization();
 
   // Fetch organizations on mount
@@ -143,17 +143,19 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
                   <div className="text-xs font-semibold text-gray-500 uppercase">
                     組織架構
                   </div>
-                  <button
-                    onClick={() => navigate("/organization/all")}
-                    className={cn(
-                      "text-xs hover:underline transition-colors",
-                      location.pathname === "/organization/all"
-                        ? "text-blue-800 font-semibold"
-                        : "text-blue-600 hover:text-blue-800"
-                    )}
-                  >
-                    所有機構
-                  </button>
+                  {user?.is_admin && (
+                    <button
+                      onClick={() => navigate("/organization/all")}
+                      className={cn(
+                        "text-xs hover:underline transition-colors",
+                        location.pathname === "/organization/all"
+                          ? "text-blue-800 font-semibold"
+                          : "text-blue-600 hover:text-blue-800"
+                      )}
+                    >
+                      所有機構
+                    </button>
+                  )}
                 </div>
                 <OrganizationTree
                   onNodeSelect={(type, data) => {

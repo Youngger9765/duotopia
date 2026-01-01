@@ -26,8 +26,15 @@ export const organizationRoutes = (
     {/* Dashboard - Organization structure overview */}
     <Route path="dashboard" element={<OrganizationDashboard />} />
 
-    {/* All organizations list page */}
-    <Route path="all" element={<OrganizationsListPage />} />
+    {/* All organizations list page - Admin only */}
+    <Route
+      path="all"
+      element={
+        <ProtectedRoute requireAdmin={true}>
+          <OrganizationsListPage />
+        </ProtectedRoute>
+      }
+    />
 
     {/* Organization detail page */}
     <Route path=":orgId" element={<OrganizationEditPage />} />
