@@ -112,7 +112,7 @@ async def teacher_login(
         db.query(TeacherOrganization)
         .filter(
             TeacherOrganization.teacher_id == teacher.id,
-            TeacherOrganization.is_active == True,
+            TeacherOrganization.is_active.is_(True),
         )
         .first()
     )
@@ -122,7 +122,7 @@ async def teacher_login(
         db.query(TeacherSchool)
         .filter(
             TeacherSchool.teacher_id == teacher.id,
-            TeacherSchool.is_active == True,
+            TeacherSchool.is_active.is_(True),
         )
         .first()
     )
