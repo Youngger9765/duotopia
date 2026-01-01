@@ -1,7 +1,6 @@
 import { ReactNode, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import {
   LogOut,
   ChevronLeft,
@@ -10,7 +9,6 @@ import {
   Crown,
   User,
   CreditCard,
-  Building2,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { useState, useEffect } from "react";
@@ -20,8 +18,6 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { getSidebarGroups } from "@/config/sidebarConfig";
 import { useSidebarRoles } from "@/hooks/useSidebarRoles";
 import { SidebarGroup } from "@/components/sidebar/SidebarGroup";
-import { OrganizationProvider } from "@/contexts/OrganizationContext";
-import { OrganizationSidebar } from "@/components/sidebar/OrganizationSidebar";
 
 interface TeacherProfile {
   id: number;
@@ -60,36 +56,11 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
     teacherProfile,
   );
 
-  // Sidebar Tab state - 組織管理 / 教學管理
-  const [sidebarTab, setSidebarTab] = useState<"organization" | "teaching">(
-    "teaching",
-  );
-
-  // 根據路由自動切換 sidebar tab
-  useEffect(() => {
-    if (location.pathname.includes("/organizations-hub")) {
-      setSidebarTab("organization");
-    } else {
-      setSidebarTab("teaching");
-    }
-  }, [location.pathname]);
-
-  // 檢查是否有管理權限（是否可以看到組織管理 tab）
-  const hasManagementPermission = useMemo(
-    () => visibleGroups.some((group) => group.id === "organization-hub"),
-    [visibleGroups],
-  );
-
-  // 根據選中的 Tab 過濾 groups
+  // ✅ Phase 4: 移除組織管理功能 - 只保留純教學功能
+  // 過濾掉所有組織相關的 sidebar groups
   const filteredGroups = useMemo(() => {
-    return visibleGroups.filter((group) => {
-      if (sidebarTab === "organization") {
-        return group.id === "organization-hub";
-      } else {
-        return group.id !== "organization-hub";
-      }
-    });
-  }, [visibleGroups, sidebarTab]);
+    return visibleGroups.filter((group) => group.id !== "organization-hub");
+  }, [visibleGroups]);
 
   const handleLogout = useCallback(() => {
     apiClient.logout();
@@ -143,38 +114,17 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
         <>
           {/* Header */}
           <div className="p-4 border-b dark:border-gray-700">
-            <div className="flex items-start justify-between mb-3">
+            <div className="flex items-start justify-between">
               {!sidebarCollapsed ? (
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                      {t("teacherLayout.title")}
-                    </h1>
-                    {/* TODO: Add organization_id to TeacherProfile type */}
-                    {Boolean(
-                      (teacherProfile as unknown as Record<string, unknown>)
-                        ?.organization_id,
-                    ) && (
-                      <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs">
-                        <Building2 className="h-3 w-3" />
-                        <span>Org</span>
-                      </div>
-                    )}
-                  </div>
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                    {t("teacherLayout.title")}
+                  </h1>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {t("teacherLayout.subtitle")}
                   </p>
                 </div>
-              ) : (
-                <div className="flex-1 flex justify-center">
-                  {Boolean(
-                    (teacherProfile as unknown as Record<string, unknown>)
-                      ?.organization_id,
-                  ) && (
-                    <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  )}
-                </div>
-              )}
+              ) : null}
               <Button
                 variant="ghost"
                 size="sm"
@@ -188,56 +138,21 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
                 )}
               </Button>
             </div>
-
-            {/* Tab Switcher - 只在未收合且有管理權限時顯示 */}
-            {!sidebarCollapsed && hasManagementPermission && (
-              <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                <button
-                  onClick={() => setSidebarTab("teaching")}
-                  className={cn(
-                    "flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
-                    sidebarTab === "teaching"
-                      ? "bg-blue-600 dark:bg-blue-600 text-white shadow-md"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600",
-                  )}
-                >
-                  {t("teacherLayout.tabs.teaching")}
-                </button>
-                <button
-                  onClick={() => setSidebarTab("organization")}
-                  className={cn(
-                    "flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
-                    sidebarTab === "organization"
-                      ? "bg-blue-600 dark:bg-blue-600 text-white shadow-md"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600",
-                  )}
-                >
-                  {t("teacherLayout.tabs.organization")}
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Navigation */}
           <nav className="flex-1 p-4 overflow-y-auto">
-            {sidebarTab === "organization" ? (
-              <OrganizationSidebar
-                isCollapsed={sidebarCollapsed}
-                onNavigate={onNavigate}
-              />
-            ) : (
-              <ul className="space-y-1">
-                {filteredGroups.map((group) => (
-                  <SidebarGroup
-                    key={group.id}
-                    group={group}
-                    isCollapsed={sidebarCollapsed}
-                    isActive={isActive}
-                    onNavigate={onNavigate}
-                  />
-                ))}
-              </ul>
-            )}
+            <ul className="space-y-1">
+              {filteredGroups.map((group) => (
+                <SidebarGroup
+                  key={group.id}
+                  group={group}
+                  isCollapsed={sidebarCollapsed}
+                  isActive={isActive}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </ul>
           </nav>
 
           {/* User Info & Logout */}
@@ -350,9 +265,6 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
       sidebarCollapsed,
       t,
       setSidebarCollapsed,
-      hasManagementPermission,
-      sidebarTab,
-      setSidebarTab,
       filteredGroups,
       isActive,
       teacherProfile,
@@ -362,53 +274,51 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
   );
 
   return (
-    <OrganizationProvider>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        {/* Mobile Header */}
-        <div className="md:hidden bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-50">
-          <div className="flex items-center justify-between p-4">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                {t("teacherLayout.title")}
-              </h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {t("teacherLayout.subtitle")}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <LanguageSwitcher />
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-12 min-h-12 w-12"
-                  >
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-64 p-0">
-                  <div className="flex flex-col h-full bg-white dark:bg-gray-800">
-                    <SidebarContent onNavigate={() => {}} />
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      {/* Mobile Header */}
+      <div className="md:hidden bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-50">
+        <div className="flex items-center justify-between p-4">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              {t("teacherLayout.title")}
+            </h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {t("teacherLayout.subtitle")}
+            </p>
           </div>
-        </div>
-
-        <div className="flex">
-          {/* Desktop Sidebar */}
-          <div
-            className={`hidden md:flex bg-white dark:bg-gray-800 shadow-lg transition-all duration-300 ${sidebarCollapsed ? "w-16" : "w-64"} flex-col h-screen sticky top-0`}
-          >
-            <SidebarContent />
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-12 min-h-12 w-12"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 p-0">
+                <div className="flex flex-col h-full bg-white dark:bg-gray-800">
+                  <SidebarContent onNavigate={() => {}} />
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
-
-          {/* Main Content */}
-          <div className="flex-1 p-4 md:p-6 overflow-auto">{children}</div>
         </div>
       </div>
-    </OrganizationProvider>
+
+      <div className="flex">
+        {/* Desktop Sidebar */}
+        <div
+          className={`hidden md:flex bg-white dark:bg-gray-800 shadow-lg transition-all duration-300 ${sidebarCollapsed ? "w-16" : "w-64"} flex-col h-screen sticky top-0`}
+        >
+          <SidebarContent />
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 p-4 md:p-6 overflow-auto">{children}</div>
+      </div>
+    </div>
   );
 }
