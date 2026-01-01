@@ -117,21 +117,10 @@ export const useSidebarRoles = (
           const hasPermission = group.requiredRoles.some((role) =>
             userRoles.includes(role),
           );
-          console.log(
-            `🔐 [useSidebarRoles] Group "${group.label}": requiredRoles=${group.requiredRoles}, userRoles=${JSON.stringify(userRoles)}, hasPermission=${hasPermission}`,
-          );
           return hasPermission;
         }
         return true;
       });
-
-    console.log(
-      `📋 [useSidebarRoles] Total groups: ${sidebarGroups.length}, Visible groups: ${filtered.length}`,
-    );
-    console.log(
-      `📋 [useSidebarRoles] Visible group labels:`,
-      filtered.map((g) => g.label),
-    );
 
     return filtered;
   }, [sidebarGroups, userRoles, config, teacherProfile]); // 只在这些依赖变化时重新计算

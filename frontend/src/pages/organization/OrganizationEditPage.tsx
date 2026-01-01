@@ -21,7 +21,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit2, Plus, Building2, School as SchoolIcon, UserPlus, Users } from "lucide-react";
+import {
+  Edit2,
+  Plus,
+  Building2,
+  School as SchoolIcon,
+  UserPlus,
+  Users,
+} from "lucide-react";
 
 interface Organization {
   id: string;
@@ -73,7 +80,8 @@ export default function OrganizationEditPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [createSchoolDialogOpen, setCreateSchoolDialogOpen] = useState(false);
   const [editSchoolDialogOpen, setEditSchoolDialogOpen] = useState(false);
-  const [assignPrincipalDialogOpen, setAssignPrincipalDialogOpen] = useState(false);
+  const [assignPrincipalDialogOpen, setAssignPrincipalDialogOpen] =
+    useState(false);
   const [inviteTeacherDialogOpen, setInviteTeacherDialogOpen] = useState(false);
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
 
@@ -123,7 +131,7 @@ export default function OrganizationEditPage() {
         `${API_URL}/api/schools?organization_id=${orgId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (response.ok) {
@@ -137,13 +145,13 @@ export default function OrganizationEditPage() {
                 `${API_URL}/api/schools/${school.id}/teachers`,
                 {
                   headers: { Authorization: `Bearer ${token}` },
-                }
+                },
               );
 
               if (teachersResponse.ok) {
                 const teachers = await teachersResponse.json();
                 const principal = teachers.find((t: any) =>
-                  t.roles?.includes("school_admin")
+                  t.roles?.includes("school_admin"),
                 );
 
                 return {
@@ -153,10 +161,13 @@ export default function OrganizationEditPage() {
                 };
               }
             } catch (error) {
-              console.error(`Failed to fetch principal for school ${school.id}:`, error);
+              console.error(
+                `Failed to fetch principal for school ${school.id}:`,
+                error,
+              );
             }
             return school;
-          })
+          }),
         );
 
         setSchools(schoolsWithPrincipals);
@@ -172,7 +183,7 @@ export default function OrganizationEditPage() {
         `${API_URL}/api/organizations/${orgId}/teachers`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (response.ok) {
@@ -291,15 +302,24 @@ export default function OrganizationEditPage() {
                     {organization.is_active ? "啟用" : "停用"}
                   </span>
                   <span className="text-sm text-gray-500">
-                    建立時間：{new Date(organization.created_at).toLocaleDateString("zh-TW")}
+                    建立時間：
+                    {new Date(organization.created_at).toLocaleDateString(
+                      "zh-TW",
+                    )}
                   </span>
                 </div>
                 {organization.description && (
-                  <p className="text-sm text-gray-600">{organization.description}</p>
+                  <p className="text-sm text-gray-600">
+                    {organization.description}
+                  </p>
                 )}
               </div>
             </div>
-            <Button onClick={() => setEditDialogOpen(true)} size="sm" className="gap-2 ml-4">
+            <Button
+              onClick={() => setEditDialogOpen(true)}
+              size="sm"
+              className="gap-2 ml-4"
+            >
               <Edit2 className="h-4 w-4" />
               編輯機構
             </Button>
@@ -328,7 +348,6 @@ export default function OrganizationEditPage() {
               </div>
             )}
 
-
             {/* Contact Email */}
             {organization.contact_email && (
               <div>
@@ -352,13 +371,10 @@ export default function OrganizationEditPage() {
             {/* Address */}
             {organization.address && (
               <div className="col-span-2">
-                <h4 className="text-sm font-medium text-gray-500 mb-1">
-                  地址
-                </h4>
+                <h4 className="text-sm font-medium text-gray-500 mb-1">地址</h4>
                 <p className="text-gray-900">{organization.address}</p>
               </div>
             )}
-
           </div>
         </CardContent>
       </Card>
@@ -416,7 +432,7 @@ export default function OrganizationEditPage() {
                     <TableCell>
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(
-                          teacher.role
+                          teacher.role,
                         )}`}
                       >
                         {getRoleLabel(teacher.role)}

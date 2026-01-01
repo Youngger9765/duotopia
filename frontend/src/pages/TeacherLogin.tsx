@@ -56,9 +56,12 @@ export default function TeacherLogin() {
       });
 
       // 登入成功後，根據角色重定向
-      const hasOrgRole = ["org_owner", "org_admin", "school_admin"].includes(
-        result.user.role || "",
-      );
+      const hasOrgRole = [
+        "org_owner",
+        "org_admin",
+        "school_admin",
+        "school_director",
+      ].includes(result.user.role || "");
       if (hasOrgRole) {
         navigate("/organization/dashboard");
       } else {
@@ -97,9 +100,12 @@ export default function TeacherLogin() {
       });
 
       // 快速登入成功後，根據角色重定向
-      const hasOrgRole = ["org_owner", "org_admin", "school_admin"].includes(
-        result.user.role || "",
-      );
+      const hasOrgRole = [
+        "org_owner",
+        "org_admin",
+        "school_admin",
+        "school_director",
+      ].includes(result.user.role || "");
       if (hasOrgRole) {
         navigate("/organization/dashboard");
       } else {
@@ -363,25 +369,67 @@ export default function TeacherLogin() {
                     </div>
                   </Button>
 
-                  {/* 機構教師 */}
+                  {/* 校長 - 劉明華 */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-14 min-h-14 py-3"
+                    onClick={() => handleQuickLogin("liu@dd.com", "12345678")}
+                    disabled={isLoading}
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-purple-600 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">劉明華（校長）</div>
+                      <div className="text-xs text-gray-500">liu@dd.com</div>
+                    </div>
+                  </Button>
+
+                  {/* 主任 - 柯建國 */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-14 min-h-14 py-3"
+                    onClick={() => handleQuickLogin("kk@kk.com", "12345678")}
+                    disabled={isLoading}
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-amber-600 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">柯建國（主任）</div>
+                      <div className="text-xs text-gray-500">kk@kk.com</div>
+                    </div>
+                  </Button>
+
+                  {/* 機構教師 - 陳美玲 */}
                   <Button
                     type="button"
                     variant="outline"
                     className="w-full justify-start h-14 min-h-14 py-3"
                     onClick={() =>
-                      handleQuickLogin(
-                        "orgteacher@duotopia.com",
-                        "orgteacher123",
-                      )
+                      handleQuickLogin("orgteacher@duotopia.com", "12345678")
                     }
                     disabled={isLoading}
                   >
                     <Zap className="mr-2 h-4 w-4 text-teal-600 flex-shrink-0" />
                     <div className="flex-1 text-left">
-                      <div className="font-medium">陳老師（機構教師）</div>
+                      <div className="font-medium">陳美玲（教師）</div>
                       <div className="text-xs text-gray-500">
                         orgteacher@duotopia.com
                       </div>
+                    </div>
+                  </Button>
+
+                  {/* 教師 - 楊婷婷 */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start h-14 min-h-14 py-3"
+                    onClick={() => handleQuickLogin("ytttt@dd.com", "12345678")}
+                    disabled={isLoading}
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-gray-600 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">楊婷婷（教師）</div>
+                      <div className="text-xs text-gray-500">ytttt@dd.com</div>
                     </div>
                   </Button>
                 </div>
@@ -430,7 +478,10 @@ export default function TeacherLogin() {
                 <div>💜 owner@duotopia.com - owner123</div>
                 <div>💙 orgadmin@duotopia.com - orgadmin123</div>
                 <div>🧡 schooladmin@duotopia.com - schooladmin123</div>
-                <div>💚 orgteacher@duotopia.com - orgteacher123</div>
+                <div>💜 劉明華 liu@dd.com - 12345678（校長）</div>
+                <div>🧡 柯建國 kk@kk.com - 12345678（主任）</div>
+                <div>💚 陳美玲 orgteacher@duotopia.com - 12345678（教師）</div>
+                <div>💚 楊婷婷 ytttt@dd.com - 12345678（教師）</div>
               </div>
             </div>
           </div>

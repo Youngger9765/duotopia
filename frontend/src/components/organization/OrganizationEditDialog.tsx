@@ -88,7 +88,7 @@ export function OrganizationEditDialog({
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(formData),
-        }
+        },
       );
 
       if (response.ok) {
@@ -113,9 +113,7 @@ export function OrganizationEditDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>編輯機構</DialogTitle>
-          <DialogDescription>
-            修改機構的基本資訊和聯絡方式
-          </DialogDescription>
+          <DialogDescription>修改機構的基本資訊和聯絡方式</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -151,7 +149,6 @@ export function OrganizationEditDialog({
               placeholder="輸入機構名稱"
             />
           </div>
-
 
           {/* 描述 */}
           <div className="space-y-2">

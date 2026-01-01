@@ -63,7 +63,7 @@ export function InviteTeacherDialog({
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(formData),
-        }
+        },
       );
 
       if (response.ok) {
@@ -88,9 +88,7 @@ export function InviteTeacherDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>新增工作人員</DialogTitle>
-          <DialogDescription>
-            邀請新的工作人員加入組織
-          </DialogDescription>
+          <DialogDescription>邀請新的工作人員加入組織</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -85,9 +85,7 @@ export function SchoolCreateDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>新增學校</DialogTitle>
-          <DialogDescription>
-            在此機構下新增一所學校
-          </DialogDescription>
+          <DialogDescription>在此機構下新增一所學校</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

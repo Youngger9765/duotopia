@@ -531,6 +531,7 @@ async def list_school_teachers(
             roles = ts.roles if ts.roles else []
             if isinstance(roles, str):
                 import json
+
                 try:
                     roles = json.loads(roles)
                 except:
@@ -614,7 +615,9 @@ async def add_teacher_to_school(
         teacher_school = existing_inactive
     else:
         # Verify teacher exists
-        target_teacher = db.query(Teacher).filter(Teacher.id == request.teacher_id).first()
+        target_teacher = (
+            db.query(Teacher).filter(Teacher.id == request.teacher_id).first()
+        )
         if not target_teacher:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"

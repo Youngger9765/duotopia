@@ -54,7 +54,8 @@ export function InviteTeacherToSchoolDialog({
   // For existing teacher selection
   const [orgTeachers, setOrgTeachers] = useState<Teacher[]>([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
-  const [selectedRoleExisting, setSelectedRoleExisting] = useState<string>("teacher");
+  const [selectedRoleExisting, setSelectedRoleExisting] =
+    useState<string>("teacher");
 
   // For new teacher invitation
   const [newTeacherData, setNewTeacherData] = useState({
@@ -81,7 +82,7 @@ export function InviteTeacherToSchoolDialog({
         `${API_URL}/api/organizations/${organizationId}/teachers`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (response.ok) {
@@ -118,7 +119,7 @@ export function InviteTeacherToSchoolDialog({
             teacher_id: parseInt(selectedTeacherId),
             roles: [selectedRoleExisting],
           }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -162,7 +163,7 @@ export function InviteTeacherToSchoolDialog({
             name: newTeacherData.name,
             role: "teacher",
           }),
-        }
+        },
       );
 
       if (!orgResponse.ok) {
@@ -185,7 +186,7 @@ export function InviteTeacherToSchoolDialog({
           `${API_URL}/api/organizations/${organizationId}/teachers`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         );
 
         if (!teachersResponse.ok) {
@@ -196,7 +197,7 @@ export function InviteTeacherToSchoolDialog({
 
         const teachers = await teachersResponse.json();
         const existingTeacher = teachers.find(
-          (t: any) => t.email === newTeacherData.email
+          (t: any) => t.email === newTeacherData.email,
         );
 
         if (!existingTeacher) {
@@ -221,7 +222,7 @@ export function InviteTeacherToSchoolDialog({
             teacher_id: teacherId,
             roles: [newTeacherData.role],
           }),
-        }
+        },
       );
 
       if (schoolResponse.ok) {
@@ -251,7 +252,10 @@ export function InviteTeacherToSchoolDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "existing" | "new")}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as "existing" | "new")}
+        >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="existing">從組織選擇</TabsTrigger>
             <TabsTrigger value="new">獨立邀請</TabsTrigger>
@@ -319,10 +323,7 @@ export function InviteTeacherToSchoolDialog({
                 >
                   取消
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={loading || !selectedTeacherId}
-                >
+                <Button type="submit" disabled={loading || !selectedTeacherId}>
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -347,7 +348,10 @@ export function InviteTeacherToSchoolDialog({
                   id="new-name"
                   value={newTeacherData.name}
                   onChange={(e) =>
-                    setNewTeacherData({ ...newTeacherData, name: e.target.value })
+                    setNewTeacherData({
+                      ...newTeacherData,
+                      name: e.target.value,
+                    })
                   }
                   required
                   placeholder="輸入姓名"
@@ -363,7 +367,10 @@ export function InviteTeacherToSchoolDialog({
                   type="email"
                   value={newTeacherData.email}
                   onChange={(e) =>
-                    setNewTeacherData({ ...newTeacherData, email: e.target.value })
+                    setNewTeacherData({
+                      ...newTeacherData,
+                      email: e.target.value,
+                    })
                   }
                   required
                   placeholder="example@email.com"

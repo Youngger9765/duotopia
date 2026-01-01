@@ -450,28 +450,22 @@ async def invite_teacher_to_organization(
     Invite a teacher to organization by email.
     If teacher exists, adds them to org.
     If teacher doesn't exist, creates account and adds to org.
-    Only org_owner can invite teachers.
+    Requires manage_teachers permission.
     """
     casbin_service = get_casbin_service()
 
-    # Check permission (only org_owner can invite teachers)
+    # Check permission (org_owner or org_admin can invite teachers)
     check_org_permission(teacher.id, org_id, db)
 
-    teacher_org_check = (
-        db.query(TeacherOrganization)
-        .filter(
-            TeacherOrganization.teacher_id == teacher.id,
-            TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.role == "org_owner",
-            TeacherOrganization.is_active.is_(True),
-        )
-        .first()
+    # Use Casbin to check manage_teachers permission
+    has_permission = casbin_service.enforcer.enforce(
+        str(teacher.id), f"org-{org_id}", "manage_teachers", "write"
     )
 
-    if not teacher_org_check:
+    if not has_permission:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only org_owner can invite teachers to organization",
+            detail="You don't have permission to invite teachers to this organization",
         )
 
     # Check if teacher already exists by email
@@ -577,29 +571,23 @@ async def add_teacher_to_organization(
 ):
     """
     Add a teacher to organization with specified role.
-    Only org_owner can do this.
+    Requires manage_teachers permission.
     Role can be org_owner or org_admin.
     """
     casbin_service = get_casbin_service()
 
-    # Check permission (only org_owner can add teachers)
+    # Check permission (org_owner or org_admin can add teachers)
     check_org_permission(teacher.id, org_id, db)
 
-    teacher_org_check = (
-        db.query(TeacherOrganization)
-        .filter(
-            TeacherOrganization.teacher_id == teacher.id,
-            TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.role == "org_owner",
-            TeacherOrganization.is_active.is_(True),
-        )
-        .first()
+    # Use Casbin to check manage_teachers permission
+    has_permission = casbin_service.enforcer.enforce(
+        str(teacher.id), f"org-{org_id}", "manage_teachers", "write"
     )
 
-    if not teacher_org_check:
+    if not has_permission:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only org_owner can add teachers to organization",
+            detail="You don't have permission to add teachers to this organization",
         )
 
     # Check if adding org_owner and limit to 1
@@ -679,28 +667,22 @@ async def remove_teacher_from_organization(
 ):
     """
     Remove a teacher from organization (soft delete).
-    Only org_owner can do this.
+    Requires manage_teachers permission.
     """
     casbin_service = get_casbin_service()
 
     # Check permission
     check_org_permission(teacher.id, org_id, db)
 
-    teacher_org_check = (
-        db.query(TeacherOrganization)
-        .filter(
-            TeacherOrganization.teacher_id == teacher.id,
-            TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.role == "org_owner",
-            TeacherOrganization.is_active.is_(True),
-        )
-        .first()
+    # Use Casbin to check manage_teachers permission
+    has_permission = casbin_service.enforcer.enforce(
+        str(teacher.id), f"org-{org_id}", "manage_teachers", "write"
     )
 
-    if not teacher_org_check:
+    if not has_permission:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only org_owner can remove teachers from organization",
+            detail="You don't have permission to remove teachers from this organization",
         )
 
     # Find relationship
@@ -774,28 +756,24 @@ async def update_teacher_permissions(
 ):
     """
     Update teacher's custom permissions within schools of this organization.
-    Only org_owner can set custom permissions.
+    Requires manage_teachers permission.
 
     Permissions are stored in teacher_schools.permissions (JSONB) and override default role permissions.
     """
-    # Check if current teacher is org_owner
+    casbin_service = get_casbin_service()
+
+    # Check if current teacher has manage_teachers permission
     check_org_permission(teacher.id, org_id, db)
 
-    teacher_org_check = (
-        db.query(TeacherOrganization)
-        .filter(
-            TeacherOrganization.teacher_id == teacher.id,
-            TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.role == "org_owner",
-            TeacherOrganization.is_active.is_(True),
-        )
-        .first()
+    # Use Casbin to check manage_teachers permission
+    has_permission = casbin_service.enforcer.enforce(
+        str(teacher.id), f"org-{org_id}", "manage_teachers", "write"
     )
 
-    if not teacher_org_check:
+    if not has_permission:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only org_owner can manage teacher permissions",
+            detail="You don't have permission to manage teacher permissions in this organization",
         )
 
     # Get teacher_school relationships with JOIN on schools (performance optimization)

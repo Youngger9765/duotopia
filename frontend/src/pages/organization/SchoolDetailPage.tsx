@@ -124,7 +124,7 @@ export default function SchoolDetailPage() {
         `${API_URL}/api/schools/${schoolId}/teachers`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (response.ok) {
@@ -190,10 +190,7 @@ export default function SchoolDetailPage() {
   if (error || !school) {
     return (
       <div className="space-y-6">
-        <ErrorMessage
-          message={error || "找不到學校"}
-          onRetry={fetchSchool}
-        />
+        <ErrorMessage message={error || "找不到學校"} onRetry={fetchSchool} />
       </div>
     );
   }
@@ -237,7 +234,8 @@ export default function SchoolDetailPage() {
                     {school.is_active ? "啟用" : "停用"}
                   </span>
                   <span className="text-sm text-gray-500">
-                    建立時間：{new Date(school.created_at).toLocaleDateString("zh-TW")}
+                    建立時間：
+                    {new Date(school.created_at).toLocaleDateString("zh-TW")}
                   </span>
                   {(() => {
                     const principal = getPrincipal();
@@ -253,7 +251,11 @@ export default function SchoolDetailPage() {
                 )}
               </div>
             </div>
-            <Button onClick={() => setEditDialogOpen(true)} size="sm" className="gap-2 ml-4">
+            <Button
+              onClick={() => setEditDialogOpen(true)}
+              size="sm"
+              className="gap-2 ml-4"
+            >
               <Edit2 className="h-4 w-4" />
               編輯學校
             </Button>
@@ -297,9 +299,7 @@ export default function SchoolDetailPage() {
 
             {school.address && (
               <div className="col-span-2 p-2 bg-gray-50 rounded-lg">
-                <h4 className="text-xs font-medium text-gray-500 mb-1">
-                  地址
-                </h4>
+                <h4 className="text-xs font-medium text-gray-500 mb-1">地址</h4>
                 <p className="text-sm text-gray-900">{school.address}</p>
               </div>
             )}
@@ -346,12 +346,14 @@ export default function SchoolDetailPage() {
               <TableBody>
                 {teachers.map((teacher) => (
                   <TableRow key={teacher.id}>
-                    <TableCell className="font-medium">{teacher.name}</TableCell>
+                    <TableCell className="font-medium">
+                      {teacher.name}
+                    </TableCell>
                     <TableCell>{teacher.email}</TableCell>
                     <TableCell>
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(
-                          teacher.roles
+                          teacher.roles,
                         )}`}
                       >
                         {getRoleLabel(teacher.roles)}

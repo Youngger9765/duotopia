@@ -2,15 +2,13 @@ import { ReactNode, useState, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  Building2,
-} from "lucide-react";
+import { LogOut, ChevronLeft, ChevronRight, Building2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
-import { OrganizationProvider, useOrganization } from "@/contexts/OrganizationContext";
+import {
+  OrganizationProvider,
+  useOrganization,
+} from "@/contexts/OrganizationContext";
 import { OrganizationTree } from "@/components/organization/OrganizationTree";
 import { API_URL } from "@/config/api";
 
@@ -30,13 +28,10 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
     const fetchOrganizations = async () => {
       try {
         setIsFetchingOrgs(true);
-        // Only fetch organizations where user is owner (for sidebar tree)
-        const response = await fetch(
-          `${API_URL}/api/organizations?owner_only=true`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        // Fetch organizations where user has access (owner, admin, or school staff)
+        const response = await fetch(`${API_URL}/api/organizations`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (response.ok) {
           const data = await response.json();
@@ -110,138 +105,138 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
 
   return (
     <div className="flex h-screen bg-gray-50">
-        {/* Sidebar */}
-        <aside
-          className={cn(
-            "flex flex-col border-r bg-white transition-all duration-300",
-            sidebarCollapsed ? "w-16" : "w-64",
-          )}
-        >
-          {/* Sidebar Header */}
-          <div className="flex h-16 items-center justify-between border-b px-4">
-            {!sidebarCollapsed && (
-              <div className="flex items-center gap-2">
-                <Building2 className="h-6 w-6 text-primary" />
-                <span className="font-semibold">組織管理</span>
-              </div>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="ml-auto"
-            >
-              {sidebarCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-
-          {/* Sidebar Navigation - Organization Tree */}
-          <nav className="flex-1 overflow-y-auto p-4">
-            {!sidebarCollapsed ? (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-xs font-semibold text-gray-500 uppercase">
-                    組織架構
-                  </div>
-                  {user?.is_admin && (
-                    <button
-                      onClick={() => navigate("/organization/all")}
-                      className={cn(
-                        "text-xs hover:underline transition-colors",
-                        location.pathname === "/organization/all"
-                          ? "text-blue-800 font-semibold"
-                          : "text-blue-600 hover:text-blue-800"
-                      )}
-                    >
-                      所有機構
-                    </button>
-                  )}
-                </div>
-                <OrganizationTree
-                  onNodeSelect={(type, data) => {
-                    if (type === "organization") {
-                      // 點擊組織 → 導航到組織詳情頁面
-                      navigate(`/organization/${data.id}`);
-                    } else if (type === "school") {
-                      // 點擊學校 → 導航到學校詳情頁面
-                      navigate(`/organization/schools/${data.id}`);
-                    }
-                  }}
-                  className="text-sm"
-                />
-              </>
-            ) : (
-              // Sidebar 收合時顯示簡化圖標
-              <div className="flex flex-col items-center space-y-4">
-                <Building2 className="h-5 w-5 text-gray-500" />
-              </div>
-            )}
-          </nav>
-
-          {/* Sidebar Footer */}
-          <div className="border-t p-4">
-            <Button
-              variant="ghost"
-              className={cn(
-                "w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50",
-                sidebarCollapsed && "justify-center px-2",
-              )}
-              onClick={handleLogout}
-            >
-              <LogOut className="h-4 w-4" />
-              {!sidebarCollapsed && <span className="ml-2">登出</span>}
-            </Button>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {/* Top Bar */}
-          <header className="flex h-16 items-center justify-between border-b bg-white px-6">
-            <div className="flex items-center gap-4">
-              <h1 className="text-xl font-semibold">組織管理後台</h1>
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "flex flex-col border-r bg-white transition-all duration-300",
+          sidebarCollapsed ? "w-16" : "w-64",
+        )}
+      >
+        {/* Sidebar Header */}
+        <div className="flex h-16 items-center justify-between border-b px-4">
+          {!sidebarCollapsed && (
+            <div className="flex items-center gap-2">
+              <Building2 className="h-6 w-6 text-primary" />
+              <span className="font-semibold">組織管理</span>
             </div>
-            <div className="flex items-center gap-4">
-              {/* Current User Info */}
-              {user && (
-                <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg text-sm">
-                  <div className="text-gray-600">
-                    <span className="font-medium">{user.name}</span>
-                    <span className="mx-2 text-gray-300">|</span>
-                    <span>{user.email}</span>
-                    <span className="mx-2 text-gray-300">|</span>
-                    <span className="text-blue-600">
-                      {user.role === "org_owner"
-                        ? "機構擁有者"
-                        : user.role === "org_admin"
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="ml-auto"
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+
+        {/* Sidebar Navigation - Organization Tree */}
+        <nav className="flex-1 overflow-y-auto p-4">
+          {!sidebarCollapsed ? (
+            <>
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-xs font-semibold text-gray-500 uppercase">
+                  組織架構
+                </div>
+                {user?.is_admin && (
+                  <button
+                    onClick={() => navigate("/organization/all")}
+                    className={cn(
+                      "text-xs hover:underline transition-colors",
+                      location.pathname === "/organization/all"
+                        ? "text-blue-800 font-semibold"
+                        : "text-blue-600 hover:text-blue-800",
+                    )}
+                  >
+                    所有機構
+                  </button>
+                )}
+              </div>
+              <OrganizationTree
+                onNodeSelect={(type, data) => {
+                  if (type === "organization") {
+                    // 點擊組織 → 導航到組織詳情頁面
+                    navigate(`/organization/${data.id}`);
+                  } else if (type === "school") {
+                    // 點擊學校 → 導航到學校詳情頁面
+                    navigate(`/organization/schools/${data.id}`);
+                  }
+                }}
+                className="text-sm"
+              />
+            </>
+          ) : (
+            // Sidebar 收合時顯示簡化圖標
+            <div className="flex flex-col items-center space-y-4">
+              <Building2 className="h-5 w-5 text-gray-500" />
+            </div>
+          )}
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div className="border-t p-4">
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50",
+              sidebarCollapsed && "justify-center px-2",
+            )}
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4" />
+            {!sidebarCollapsed && <span className="ml-2">登出</span>}
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Top Bar */}
+        <header className="flex h-16 items-center justify-between border-b bg-white px-6">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-semibold">組織管理後台</h1>
+          </div>
+          <div className="flex items-center gap-4">
+            {/* Current User Info */}
+            {user && (
+              <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg text-sm">
+                <div className="text-gray-600">
+                  <span className="font-medium">{user.name}</span>
+                  <span className="mx-2 text-gray-300">|</span>
+                  <span>{user.email}</span>
+                  <span className="mx-2 text-gray-300">|</span>
+                  <span className="text-blue-600">
+                    {user.role === "org_owner"
+                      ? "機構擁有者"
+                      : user.role === "org_admin"
                         ? "機構管理員"
                         : user.role === "school_admin"
-                        ? "學校管理員"
-                        : "教師"}
-                    </span>
-                  </div>
+                          ? "學校管理員"
+                          : "教師"}
+                  </span>
                 </div>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/teacher/dashboard")}
-              >
-                切換到教師後台
-              </Button>
-            </div>
-          </header>
+              </div>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/teacher/dashboard")}
+            >
+              切換到教師後台
+            </Button>
+          </div>
+        </header>
 
-          {/* Content Area */}
-          <main className="flex-1 overflow-y-auto p-6">
-            {children || <Outlet />}
-          </main>
-        </div>
+        {/* Content Area */}
+        <main className="flex-1 overflow-y-auto p-6">
+          {children || <Outlet />}
+        </main>
       </div>
+    </div>
   );
 }
 

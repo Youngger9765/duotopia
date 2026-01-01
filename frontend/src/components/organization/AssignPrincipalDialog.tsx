@@ -64,7 +64,7 @@ export function AssignPrincipalDialog({
         `${API_URL}/api/organizations/${organizationId}/teachers`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (response.ok) {
@@ -96,7 +96,7 @@ export function AssignPrincipalDialog({
         `${API_URL}/api/schools/${schoolId}/teachers`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       let existingPrincipal = null;
@@ -105,10 +105,10 @@ export function AssignPrincipalDialog({
       if (teachersResponse.ok) {
         const schoolTeachers = await teachersResponse.json();
         existingPrincipal = schoolTeachers.find((t: any) =>
-          t.roles?.includes("school_admin")
+          t.roles?.includes("school_admin"),
         );
         selectedTeacherInSchool = schoolTeachers.find(
-          (t: any) => t.id === parseInt(selectedTeacherId)
+          (t: any) => t.id === parseInt(selectedTeacherId),
         );
       }
 
@@ -132,7 +132,7 @@ export function AssignPrincipalDialog({
                 Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({ roles: newRoles }),
-            }
+            },
           );
         } else {
           // No other roles, remove from school entirely
@@ -141,7 +141,7 @@ export function AssignPrincipalDialog({
             {
               method: "DELETE",
               headers: { Authorization: `Bearer ${token}` },
-            }
+            },
           );
         }
       }
@@ -152,9 +152,7 @@ export function AssignPrincipalDialog({
       if (selectedTeacherInSchool) {
         // Teacher already in school - update roles
         const currentRoles = selectedTeacherInSchool.roles || [];
-        const newRoles = Array.from(
-          new Set([...currentRoles, "school_admin"])
-        );
+        const newRoles = Array.from(new Set([...currentRoles, "school_admin"]));
 
         response = await fetch(
           `${API_URL}/api/schools/${schoolId}/teachers/${selectedTeacherId}`,
@@ -165,7 +163,7 @@ export function AssignPrincipalDialog({
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({ roles: newRoles }),
-          }
+          },
         );
       } else {
         // Teacher not in school - add them
@@ -227,10 +225,7 @@ export function AssignPrincipalDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {teachers.map((teacher) => (
-                    <SelectItem
-                      key={teacher.id}
-                      value={teacher.id.toString()}
-                    >
+                    <SelectItem key={teacher.id} value={teacher.id.toString()}>
                       {teacher.name} ({teacher.email})
                     </SelectItem>
                   ))}
@@ -253,10 +248,7 @@ export function AssignPrincipalDialog({
             >
               取消
             </Button>
-            <Button
-              type="submit"
-              disabled={loading || !selectedTeacherId}
-            >
+            <Button type="submit" disabled={loading || !selectedTeacherId}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

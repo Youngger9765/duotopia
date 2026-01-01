@@ -9,7 +9,9 @@ import {
   Crown,
   User,
   CreditCard,
+  Building2,
 } from "lucide-react";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { apiClient } from "@/lib/api";
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -47,6 +49,31 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
     null,
   );
   const [config, setConfig] = useState<SystemConfig | null>(null);
+
+  // Get user role and roles from auth store
+  const user = useTeacherAuthStore((state) => state.user);
+  const userRoles = useTeacherAuthStore((state) => state.userRoles);
+
+  // Check if user has organization management role
+  const hasOrgRole = useMemo(() => {
+    const managementRoles = [
+      "org_owner",
+      "org_admin",
+      "school_admin",
+      "school_director",
+    ];
+
+    // Check if user has any management role in their roles array
+    const hasRole = userRoles.some((role) => managementRoles.includes(role));
+
+    // Debug logging
+    console.log("🔍 TeacherLayout Debug:");
+    console.log("  userRoles:", userRoles);
+    console.log("  hasOrgRole:", hasRole);
+    console.log("  user.role (single):", user?.role);
+
+    return hasRole;
+  }, [userRoles, user?.role]);
 
   // 使用 hook 獲取 sidebar 配置和角色過濾
   const sidebarGroups = useMemo(() => getSidebarGroups(t), [t]);
@@ -247,6 +274,22 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
                 </Button>
               </Link>
             )}
+            {hasOrgRole && (
+              <Link
+                to="/organization/dashboard"
+                className="block mb-2"
+                onClick={onNavigate}
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`w-full justify-start h-12 min-h-12 ${sidebarCollapsed ? "px-3" : "px-4"}`}
+                >
+                  <Building2 className="h-4 w-4 text-blue-600" />
+                  {!sidebarCollapsed && <span className="ml-2">組織管理</span>}
+                </Button>
+              </Link>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -269,6 +312,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
       isActive,
       teacherProfile,
       config,
+      hasOrgRole,
       handleLogout,
     ],
   );

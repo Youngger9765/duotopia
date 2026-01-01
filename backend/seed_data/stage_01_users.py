@@ -608,9 +608,17 @@ def seed_users_and_organizations(db: Session):
         (school_teachers[1], test_main_school, ["school_director"]),  # 測試補習班-總校 主任
         (school_teachers[2], test_taipei_school, ["school_admin"]),
         (school_teachers[3], test_taichung_school, ["school_admin"]),
-        (school_teachers[4], test_taichung_school, ["school_director"]),  # 測試補習班-台中分校 主任
+        (
+            school_teachers[4],
+            test_taichung_school,
+            ["school_director"],
+        ),  # 測試補習班-台中分校 主任
         (school_teachers[5], excellence_central_school, ["school_admin"]),
-        (school_teachers[6], excellence_central_school, ["school_director"]),  # 卓越教育-中央校區 主任
+        (
+            school_teachers[6],
+            excellence_central_school,
+            ["school_director"],
+        ),  # 卓越教育-中央校區 主任
         (school_teachers[7], excellence_east_school, ["school_admin"]),
         (school_teachers[8], excellence_west_school, ["school_admin"]),
         (school_teachers[9], future_main_school, ["school_admin"]),

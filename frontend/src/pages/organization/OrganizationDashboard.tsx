@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { OrganizationTree } from "@/components/organization/OrganizationTree";
@@ -39,7 +40,9 @@ interface SchoolData {
  * Shows organization hierarchy tree and statistics
  */
 export default function OrganizationDashboard() {
+  const navigate = useNavigate();
   const token = useTeacherAuthStore((state) => state.token);
+  const userRoles = useTeacherAuthStore((state) => state.userRoles);
   const { organizations, setOrganizations, selectedNode, setIsFetchingOrgs } =
     useOrganization();
   const [stats, setStats] = useState<OrganizationStats>({
@@ -50,6 +53,7 @@ export default function OrganizationDashboard() {
   });
   const [loadingStats, setLoadingStats] = useState(true);
   const hasFetchedRef = useRef(false);
+  const hasRedirectedRef = useRef(false);
 
   // Fetch organizations on mount
   useEffect(() => {
@@ -81,6 +85,78 @@ export default function OrganizationDashboard() {
 
     fetchOrganizations();
   }, [token, organizations.length, setOrganizations, setIsFetchingOrgs]);
+
+  // Auto-redirect based on user role
+  useEffect(() => {
+    const checkAndRedirect = async () => {
+      if (
+        !token ||
+        !userRoles ||
+        userRoles.length === 0 ||
+        hasRedirectedRef.current
+      ) {
+        return;
+      }
+
+      // Wait for organizations to be fetched first
+      if (hasFetchedRef.current === false) {
+        return;
+      }
+
+      const hasOrgOwner = userRoles.includes("org_owner");
+      const hasOrgAdmin = userRoles.includes("org_admin");
+      const hasSchoolAdmin = userRoles.includes("school_admin");
+      const hasSchoolDirector = userRoles.includes("school_director");
+
+      // org_owner can stay on dashboard (see all organizations)
+      if (hasOrgOwner) {
+        console.log("🏢 org_owner: staying on dashboard");
+        return;
+      }
+
+      hasRedirectedRef.current = true;
+
+      // org_admin should go to their first accessible organization
+      if (hasOrgAdmin) {
+        if (organizations.length > 0) {
+          console.log(
+            "🏢 org_admin: redirecting to first organization",
+            organizations[0].id,
+          );
+          navigate(`/organization/${organizations[0].id}`);
+        } else {
+          console.warn("⚠️ org_admin but no organizations found");
+        }
+        return;
+      }
+
+      // school-level users should go to their first school
+      if (hasSchoolAdmin || hasSchoolDirector) {
+        try {
+          console.log("🏫 school-level user: fetching schools for redirect");
+          const response = await fetch(`${API_URL}/api/schools`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (response.ok) {
+            const schools = await response.json();
+            if (schools.length > 0) {
+              console.log("🏫 Redirecting to first school", schools[0].id);
+              navigate(`/organization/schools/${schools[0].id}`);
+            } else {
+              console.warn("⚠️ school-level user but no schools found");
+            }
+          } else {
+            console.error("❌ Failed to fetch schools:", response.status);
+          }
+        } catch (error) {
+          console.error("❌ Error fetching schools for redirect:", error);
+        }
+      }
+    };
+
+    checkAndRedirect();
+  }, [token, userRoles, organizations, navigate]);
 
   // Fetch statistics
   useEffect(() => {

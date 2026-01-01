@@ -49,6 +49,7 @@ export function OrganizationTree({
   className,
 }: OrganizationTreeProps) {
   const token = useTeacherAuthStore((state) => state.token);
+  const user = useTeacherAuthStore((state) => state.user);
   const {
     selectedNode,
     setSelectedNode,
@@ -59,6 +60,10 @@ export function OrganizationTree({
     setExpandedOrgs,
     isFetchingOrgs,
   } = useOrganization();
+
+  // Check if user is school-level only (cannot click organization nodes)
+  const isSchoolLevelUser =
+    user?.role === "school_admin" || user?.role === "school_director";
 
   const fetchSchools = useCallback(
     async (orgId: string) => {
@@ -93,6 +98,11 @@ export function OrganizationTree({
     type: "organization" | "school",
     data: Organization | SchoolData,
   ) => {
+    // School-level users cannot click organization nodes
+    if (type === "organization" && isSchoolLevelUser) {
+      return;
+    }
+
     setSelectedNode({ type, id: data.id, data });
     onNodeSelect?.(type, data);
   };
@@ -131,8 +141,12 @@ export function OrganizationTree({
           >
             <AccordionTrigger
               className={cn(
-                "hover:no-underline hover:bg-blue-50 rounded-t-lg px-4 py-3 transition-colors",
-                selectedNode?.type === "organization" &&
+                "hover:no-underline rounded-t-lg px-4 py-3 transition-colors",
+                isSchoolLevelUser
+                  ? "cursor-default opacity-60"
+                  : "hover:bg-blue-50 cursor-pointer",
+                !isSchoolLevelUser &&
+                  selectedNode?.type === "organization" &&
                   selectedNode.id === org.id &&
                   "bg-blue-100 text-blue-900",
               )}

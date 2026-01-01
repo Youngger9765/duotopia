@@ -27,9 +27,11 @@ export function RoleBasedRedirect() {
         const currentUser = useTeacherAuthStore.getState().user;
         if (currentUser?.role) {
           // Already have role info, directly determine redirect
-          const hasOrgRole = ["org_owner", "org_admin", "school_admin"].includes(
-            currentUser.role,
-          );
+          const hasOrgRole = [
+            "org_owner",
+            "org_admin",
+            "school_admin",
+          ].includes(currentUser.role);
           setRedirectPath(
             hasOrgRole ? "/organization/dashboard" : "/teacher/dashboard",
           );

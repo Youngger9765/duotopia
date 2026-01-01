@@ -92,6 +92,21 @@ async def teacher_login(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive"
             )
 
+    # Sync Casbin roles on login
+    try:
+        from services.casbin_service import get_casbin_service
+
+        casbin_service = get_casbin_service()
+        casbin_service.sync_teacher_roles(teacher.id)
+    except Exception as e:
+        # Log error but don't fail login
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(
+            f"Failed to sync Casbin roles for teacher {teacher.id} on login: {e}"
+        )
+
     # Query organization role
     teacher_org = (
         db.query(TeacherOrganization)
