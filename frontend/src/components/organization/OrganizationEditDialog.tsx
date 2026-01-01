@@ -25,6 +25,8 @@ interface Organization {
   contact_phone?: string;
   address?: string;
   is_active: boolean;
+  owner_name?: string;
+  owner_email?: string;
 }
 
 interface OrganizationEditDialogProps {
@@ -117,6 +119,23 @@ export function OrganizationEditDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Owner Email (只讀) */}
+          {organization?.owner_email && (
+            <div className="space-y-2 p-3 bg-blue-50 rounded-lg">
+              <Label className="text-sm font-medium text-blue-900">
+                機構 Owner
+              </Label>
+              <div className="text-sm">
+                <div className="text-blue-800 font-medium">
+                  {organization.owner_name || "未命名"}
+                </div>
+                <div className="text-blue-600 mt-1">
+                  {organization.owner_email}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 機構名稱 */}
           <div className="space-y-2">
             <Label htmlFor="name">
