@@ -55,7 +55,15 @@ export default function TeacherLogin() {
         is_admin: result.user.is_admin,
       });
 
-      navigate("/teacher/dashboard");
+      // 登入成功後，根據角色重定向
+      const hasOrgRole = ["org_owner", "org_admin", "school_admin"].includes(
+        result.user.role || "",
+      );
+      if (hasOrgRole) {
+        navigate("/organization/dashboard");
+      } else {
+        navigate("/teacher/dashboard");
+      }
     } catch (err) {
       console.error("🔑 [ERROR] 登入失敗:", err);
       setError(t("teacherLogin.errors.loginFailed"));
@@ -88,7 +96,15 @@ export default function TeacherLogin() {
         is_admin: result.user.is_admin,
       });
 
-      navigate("/teacher/dashboard");
+      // 快速登入成功後，根據角色重定向
+      const hasOrgRole = ["org_owner", "org_admin", "school_admin"].includes(
+        result.user.role || "",
+      );
+      if (hasOrgRole) {
+        navigate("/organization/dashboard");
+      } else {
+        navigate("/teacher/dashboard");
+      }
     } catch (err) {
       console.error("🔑 [ERROR] 快速登入失敗:", err);
       setError(t("teacherLogin.errors.quickLoginFailed", { email }));
