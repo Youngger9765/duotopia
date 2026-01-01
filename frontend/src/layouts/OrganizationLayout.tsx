@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -10,19 +10,47 @@ import {
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
-import { OrganizationProvider } from "@/contexts/OrganizationContext";
+import { OrganizationProvider, useOrganization } from "@/contexts/OrganizationContext";
 import { OrganizationTree } from "@/components/organization/OrganizationTree";
+import { API_URL } from "@/config/api";
 
 interface OrganizationLayoutProps {
   children?: ReactNode;
 }
 
-export default function OrganizationLayout({
-  children,
-}: OrganizationLayoutProps) {
+function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { token, logout: storeLogout } = useTeacherAuthStore();
+  const { setOrganizations, setIsFetchingOrgs } = useOrganization();
+
+  // Fetch organizations on mount
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        setIsFetchingOrgs(true);
+        const response = await fetch(`${API_URL}/api/organizations`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setOrganizations(data);
+        } else {
+          console.error("Failed to fetch organizations:", response.status);
+        }
+      } catch (error) {
+        console.error("Failed to fetch organizations:", error);
+      } finally {
+        setIsFetchingOrgs(false);
+      }
+    };
+
+    if (token) {
+      fetchOrganizations();
+    }
+  }, [token, setOrganizations, setIsFetchingOrgs]);
 
   // Check permissions on mount
   useEffect(() => {
@@ -77,8 +105,7 @@ export default function OrganizationLayout({
   };
 
   return (
-    <OrganizationProvider>
-      <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50">
         {/* Sidebar */}
         <aside
           className={cn(
@@ -112,8 +139,21 @@ export default function OrganizationLayout({
           <nav className="flex-1 overflow-y-auto p-4">
             {!sidebarCollapsed ? (
               <>
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-3">
-                  組織架構
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-semibold text-gray-500 uppercase">
+                    組織架構
+                  </div>
+                  <button
+                    onClick={() => navigate("/organization/all")}
+                    className={cn(
+                      "text-xs hover:underline transition-colors",
+                      location.pathname === "/organization/all"
+                        ? "text-blue-800 font-semibold"
+                        : "text-blue-600 hover:text-blue-800"
+                    )}
+                  >
+                    所有機構
+                  </button>
                 </div>
                 <OrganizationTree
                   onNodeSelect={(type, data) => {
@@ -176,6 +216,13 @@ export default function OrganizationLayout({
           </main>
         </div>
       </div>
+  );
+}
+
+export default function OrganizationLayout(props: OrganizationLayoutProps) {
+  return (
+    <OrganizationProvider>
+      <OrganizationLayoutContent {...props} />
     </OrganizationProvider>
   );
 }

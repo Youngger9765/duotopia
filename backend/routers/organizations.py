@@ -91,12 +91,14 @@ class OrganizationResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: Optional[datetime]
+    owner_name: Optional[str] = None
+    owner_email: Optional[str] = None
 
     class Config:
         from_attributes = True
 
     @classmethod
-    def from_orm(cls, org: Organization):
+    def from_orm(cls, org: Organization, owner: Optional[Teacher] = None):
         """Convert Organization model to response"""
         return cls(
             id=str(org.id),
@@ -109,6 +111,8 @@ class OrganizationResponse(BaseModel):
             is_active=org.is_active,
             created_at=org.created_at,
             updated_at=org.updated_at,
+            owner_name=owner.name if owner else None,
+            owner_email=owner.email if owner else None,
         )
 
 
@@ -207,6 +211,7 @@ async def list_organizations(
     List all organizations that the current teacher has access to.
 
     Security: Returns 403 if teacher has no organization access.
+    Performance: Fetches owners with joinedload to avoid N+1 queries.
     """
     # Get all teacher-organization relationships
     teacher_orgs = (
@@ -234,7 +239,25 @@ async def list_organizations(
         .all()
     )
 
-    return [OrganizationResponse.from_orm(org) for org in organizations]
+    # Build response with owner information
+    result = []
+    for org in organizations:
+        # Get org_owner for this organization
+        owner_rel = (
+            db.query(TeacherOrganization)
+            .options(joinedload(TeacherOrganization.teacher))
+            .filter(
+                TeacherOrganization.organization_id == org.id,
+                TeacherOrganization.role == "org_owner",
+                TeacherOrganization.is_active.is_(True),
+            )
+            .first()
+        )
+
+        owner = owner_rel.teacher if owner_rel else None
+        result.append(OrganizationResponse.from_orm(org, owner))
+
+    return result
 
 
 @router.get("/{org_id}", response_model=OrganizationResponse)

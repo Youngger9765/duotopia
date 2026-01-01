@@ -6,6 +6,7 @@ import SchoolsPage from "@/pages/organization/SchoolsPage";
 import TeachersPage from "@/pages/organization/TeachersPage";
 import OrganizationEditPage from "@/pages/organization/OrganizationEditPage";
 import SchoolEditPage from "@/pages/organization/SchoolEditPage";
+import OrganizationsListPage from "@/pages/organization/OrganizationsListPage";
 
 /**
  * Organization Routes - Accessible only to users with organization roles
@@ -24,6 +25,9 @@ export const organizationRoutes = (
   >
     {/* Dashboard - Organization structure overview */}
     <Route path="dashboard" element={<OrganizationDashboard />} />
+
+    {/* All organizations list page */}
+    <Route path="all" element={<OrganizationsListPage />} />
 
     {/* Organization edit page */}
     <Route path=":orgId/edit" element={<OrganizationEditPage />} />
