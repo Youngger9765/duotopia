@@ -30,9 +30,13 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
     const fetchOrganizations = async () => {
       try {
         setIsFetchingOrgs(true);
-        const response = await fetch(`${API_URL}/api/organizations`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // Only fetch organizations where user is owner (for sidebar tree)
+        const response = await fetch(
+          `${API_URL}/api/organizations?owner_only=true`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
         if (response.ok) {
           const data = await response.json();

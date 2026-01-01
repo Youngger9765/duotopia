@@ -204,24 +204,30 @@ async def create_organization(
 
 @router.get("", response_model=List[OrganizationResponse])
 async def list_organizations(
+    owner_only: bool = False,
     teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
     """
     List all organizations that the current teacher has access to.
 
+    Args:
+        owner_only: If True, only return organizations where teacher is org_owner
+
     Security: Returns 403 if teacher has no organization access.
     Performance: Fetches owners with joinedload to avoid N+1 queries.
     """
     # Get all teacher-organization relationships
-    teacher_orgs = (
-        db.query(TeacherOrganization)
-        .filter(
-            TeacherOrganization.teacher_id == teacher.id,
-            TeacherOrganization.is_active.is_(True),
-        )
-        .all()
+    query = db.query(TeacherOrganization).filter(
+        TeacherOrganization.teacher_id == teacher.id,
+        TeacherOrganization.is_active.is_(True),
     )
+
+    # Filter by owner role if requested
+    if owner_only:
+        query = query.filter(TeacherOrganization.role == "org_owner")
+
+    teacher_orgs = query.all()
 
     # ✅ SECURITY FIX: Reject if no organization access
     if not teacher_orgs:
