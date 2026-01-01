@@ -5,6 +5,7 @@ import { API_URL } from "@/config/api";
 import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
+import { OrganizationEditDialog } from "@/components/organization/OrganizationEditDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +36,8 @@ export default function OrganizationsListPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchOrganizations();
@@ -61,6 +64,15 @@ export default function OrganizationsListPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditClick = (org: Organization) => {
+    setEditingOrg(org);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    fetchOrganizations(); // Refresh list after successful edit
   };
 
   return (
@@ -148,7 +160,7 @@ export default function OrganizationsListPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => navigate(`/organization/${org.id}/edit`)}
+                        onClick={() => handleEditClick(org)}
                       >
                         <Edit2 className="h-4 w-4" />
                         編輯
@@ -161,6 +173,14 @@ export default function OrganizationsListPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <OrganizationEditDialog
+        organization={editingOrg}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
 }
