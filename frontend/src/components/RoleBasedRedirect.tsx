@@ -23,6 +23,21 @@ export function RoleBasedRedirect() {
       }
 
       try {
+        // Priority: Use user.role if available (from login response)
+        const currentUser = useTeacherAuthStore.getState().user;
+        if (currentUser?.role) {
+          // Already have role info, directly determine redirect
+          const hasOrgRole = ["org_owner", "org_admin", "school_admin"].includes(
+            currentUser.role,
+          );
+          setRedirectPath(
+            hasOrgRole ? "/organization/dashboard" : "/teacher/dashboard",
+          );
+          setIsLoading(false);
+          return;
+        }
+
+        // Fallback: Fetch roles if not in user object (legacy login)
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/teachers/me/roles`,
           {

@@ -28,6 +28,15 @@ export function ProtectedRoute({
     }
 
     const checkRoles = async () => {
+      // Priority: Use user.role if available (from login response)
+      if (user?.role) {
+        const hasRole = requiredRoles.includes(user.role);
+        setHasRequiredRole(hasRole);
+        setIsLoading(false);
+        return;
+      }
+
+      // Fallback: Fetch roles if not in user object (legacy login)
       try {
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/teachers/me/roles`,
@@ -57,7 +66,7 @@ export function ProtectedRoute({
     if (isAuthenticated && token) {
       checkRoles();
     }
-  }, [requiredRoles, isAuthenticated, token]);
+  }, [requiredRoles, isAuthenticated, token, user]);
 
   // Not authenticated - redirect to login
   if (!isAuthenticated) {

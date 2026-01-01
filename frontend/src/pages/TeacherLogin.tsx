@@ -48,6 +48,9 @@ export default function TeacherLogin() {
         id: result.user.id,
         name: result.user.name,
         email: result.user.email,
+        role: result.user.role,
+        organization_id: result.user.organization_id,
+        school_id: result.user.school_id,
         is_demo: result.user.is_demo,
         is_admin: result.user.is_admin,
       });
@@ -78,6 +81,9 @@ export default function TeacherLogin() {
         id: result.user.id,
         name: result.user.name,
         email: result.user.email,
+        role: result.user.role,
+        organization_id: result.user.organization_id,
+        school_id: result.user.school_id,
         is_demo: result.user.is_demo,
         is_admin: result.user.is_admin,
       });

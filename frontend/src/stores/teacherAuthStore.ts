@@ -5,6 +5,9 @@ export interface TeacherUser {
   id: number;
   name: string;
   email: string;
+  role?: string;
+  organization_id?: string | null;
+  school_id?: string | null;
   is_demo?: boolean;
   is_admin?: boolean;
   phone?: string;

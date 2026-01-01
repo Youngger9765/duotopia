@@ -29,6 +29,20 @@ export default function OrganizationLayout({
   // Check permissions on mount
   useEffect(() => {
     const checkPermissions = async () => {
+      const currentUser = useTeacherAuthStore.getState().user;
+
+      // Priority: Use user.role if available (from login response)
+      if (currentUser?.role) {
+        const hasOrgRole = ["org_owner", "org_admin", "school_admin"].includes(
+          currentUser.role,
+        );
+        if (!hasOrgRole) {
+          navigate("/teacher/dashboard", { replace: true });
+        }
+        return;
+      }
+
+      // Fallback: Fetch roles if not in user object (legacy login)
       try {
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/teachers/me/roles`,
