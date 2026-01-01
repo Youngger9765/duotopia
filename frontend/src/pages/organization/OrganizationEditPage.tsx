@@ -47,6 +47,7 @@ interface School {
 export default function OrganizationEditPage() {
   const { orgId } = useParams<{ orgId: string }>();
   const token = useTeacherAuthStore((state) => state.token);
+  const user = useTeacherAuthStore((state) => state.user);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,11 +141,6 @@ export default function OrganizationEditPage() {
             </div>
             <div>
               <CardTitle className="text-2xl">{organization.name}</CardTitle>
-              {organization.display_name && (
-                <p className="text-sm text-gray-500 mt-1">
-                  {organization.display_name}
-                </p>
-              )}
             </div>
           </div>
           <Button onClick={() => setEditDialogOpen(true)} className="gap-2">
@@ -309,6 +305,39 @@ export default function OrganizationEditPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Current User Info */}
+      {user && (
+        <Card className="bg-gray-50">
+          <CardHeader>
+            <CardTitle className="text-base">當前帳號資訊</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-gray-500">帳號：</span>
+                <span className="ml-2 text-gray-900">{user.email}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-500">姓名：</span>
+                <span className="ml-2 text-gray-900">{user.name}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-500">身份：</span>
+                <span className="ml-2 text-gray-900">
+                  {user.role === "org_owner"
+                    ? "機構擁有者"
+                    : user.role === "org_admin"
+                    ? "機構管理員"
+                    : user.role === "school_admin"
+                    ? "學校管理員"
+                    : "教師"}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Edit Organization Dialog */}
       <OrganizationEditDialog
