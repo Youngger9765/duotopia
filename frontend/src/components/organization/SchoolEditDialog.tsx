@@ -16,8 +16,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 
-interface Organization {
+interface School {
   id: string;
+  organization_id: string;
   name: string;
   display_name?: string;
   description?: string;
@@ -25,29 +26,27 @@ interface Organization {
   contact_phone?: string;
   address?: string;
   is_active: boolean;
-  owner_name?: string;
-  owner_email?: string;
+  created_at: string;
 }
 
-interface OrganizationEditDialogProps {
-  organization: Organization | null;
+interface SchoolEditDialogProps {
+  school: School | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 }
 
-export function OrganizationEditDialog({
-  organization,
+export function SchoolEditDialog({
+  school,
   open,
   onOpenChange,
   onSuccess,
-}: OrganizationEditDialogProps) {
+}: SchoolEditDialogProps) {
   const token = useTeacherAuthStore((state) => state.token);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
-    display_name: "",
     description: "",
     contact_email: "",
     contact_phone: "",
@@ -55,41 +54,37 @@ export function OrganizationEditDialog({
     is_active: true,
   });
 
-  // Reset form when organization changes
+  // Reset form when school changes
   useEffect(() => {
-    if (organization) {
+    if (school) {
       setFormData({
-        name: organization.name || "",
-        display_name: organization.display_name || "",
-        description: organization.description || "",
-        contact_email: organization.contact_email || "",
-        contact_phone: organization.contact_phone || "",
-        address: organization.address || "",
-        is_active: organization.is_active,
+        name: school.name || "",
+        description: school.description || "",
+        contact_email: school.contact_email || "",
+        contact_phone: school.contact_phone || "",
+        address: school.address || "",
+        is_active: school.is_active,
       });
       setError(null);
     }
-  }, [organization]);
+  }, [school]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!organization) return;
+    if (!school) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(
-        `${API_URL}/api/organizations/${organization.id}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      const response = await fetch(`${API_URL}/api/schools/${school.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
 
       if (response.ok) {
         onSuccess();
@@ -99,47 +94,28 @@ export function OrganizationEditDialog({
         setError(data.detail || "更新失敗");
       }
     } catch (error) {
-      console.error("Failed to update organization:", error);
+      console.error("Failed to update school:", error);
       setError("網路連線錯誤");
     } finally {
       setLoading(false);
     }
   };
 
-  if (!organization) return null;
+  if (!school) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>編輯機構</DialogTitle>
-          <DialogDescription>
-            修改機構的基本資訊和聯絡方式
-          </DialogDescription>
+          <DialogTitle>編輯學校</DialogTitle>
+          <DialogDescription>修改學校的基本資訊和聯絡方式</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Owner Email (只讀) */}
-          {organization?.owner_email && (
-            <div className="space-y-2 p-3 bg-blue-50 rounded-lg">
-              <Label className="text-sm font-medium text-blue-900">
-                機構 Owner
-              </Label>
-              <div className="text-sm">
-                <div className="text-blue-800 font-medium">
-                  {organization.owner_name || "未命名"}
-                </div>
-                <div className="text-blue-600 mt-1">
-                  {organization.owner_email}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 機構名稱 */}
+          {/* 學校名稱 */}
           <div className="space-y-2">
             <Label htmlFor="name">
-              機構名稱 <span className="text-red-500">*</span>
+              學校名稱 <span className="text-red-500">*</span>
             </Label>
             <Input
               id="name"
@@ -148,10 +124,9 @@ export function OrganizationEditDialog({
                 setFormData({ ...formData, name: e.target.value })
               }
               required
-              placeholder="輸入機構名稱"
+              placeholder="輸入學校名稱"
             />
           </div>
-
 
           {/* 描述 */}
           <div className="space-y-2">
@@ -162,7 +137,7 @@ export function OrganizationEditDialog({
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
               }
-              placeholder="輸入機構描述（選填）"
+              placeholder="輸入學校描述（選填）"
               rows={3}
             />
           </div>
@@ -204,7 +179,7 @@ export function OrganizationEditDialog({
               onChange={(e) =>
                 setFormData({ ...formData, address: e.target.value })
               }
-              placeholder="輸入機構地址（選填）"
+              placeholder="輸入學校地址（選填）"
               rows={2}
             />
           </div>

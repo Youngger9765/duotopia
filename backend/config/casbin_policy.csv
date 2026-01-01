@@ -24,6 +24,12 @@ p, school_admin, *, manage_students, write
 p, school_admin, *, manage_classrooms, write
 p, school_admin, *, view_school_analytics, read
 
+# school_director permissions (same as school_admin, assists in school management)
+p, school_director, *, manage_teachers, write
+p, school_director, *, manage_students, write
+p, school_director, *, manage_classrooms, write
+p, school_director, *, view_school_analytics, read
+
 # teacher permissions (can only manage own classrooms)
 p, teacher, *, manage_own_classrooms, write
 p, teacher, *, manage_students, read

@@ -14,8 +14,9 @@ import uuid
 
 from database import get_db
 from models import Teacher, Organization, TeacherOrganization, TeacherSchool, School
-from auth import verify_token
+from auth import verify_token, get_password_hash
 from services.casbin_service import get_casbin_service
+import secrets
 
 
 router = APIRouter(prefix="/api/organizations", tags=["organizations"])
@@ -344,6 +345,14 @@ class AddTeacherRequest(BaseModel):
     role: str = Field(..., pattern="^(org_owner|org_admin)$")
 
 
+class InviteTeacherRequest(BaseModel):
+    """Request model for inviting teacher to organization"""
+
+    email: str = Field(..., max_length=200)
+    name: str = Field(..., min_length=1, max_length=100)
+    role: str = Field(default="teacher", pattern="^(org_admin|teacher)$")
+
+
 class TeacherRelationResponse(BaseModel):
     """Response model for teacher-organization relationship"""
 
@@ -424,6 +433,135 @@ async def list_organization_teachers(
             )
 
     return result
+
+
+@router.post(
+    "/{org_id}/teachers/invite",
+    status_code=status.HTTP_201_CREATED,
+    response_model=TeacherRelationResponse,
+)
+async def invite_teacher_to_organization(
+    org_id: uuid.UUID,
+    request: InviteTeacherRequest,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Invite a teacher to organization by email.
+    If teacher exists, adds them to org.
+    If teacher doesn't exist, creates account and adds to org.
+    Only org_owner can invite teachers.
+    """
+    casbin_service = get_casbin_service()
+
+    # Check permission (only org_owner can invite teachers)
+    check_org_permission(teacher.id, org_id, db)
+
+    teacher_org_check = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher.id,
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.role == "org_owner",
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not teacher_org_check:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only org_owner can invite teachers to organization",
+        )
+
+    # Check if teacher already exists by email
+    existing_teacher = db.query(Teacher).filter(Teacher.email == request.email).first()
+
+    if existing_teacher:
+        # Teacher exists - check if already in org
+        existing_rel = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == existing_teacher.id,
+                TeacherOrganization.organization_id == org_id,
+                TeacherOrganization.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if existing_rel:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="此教師已在組織中",
+            )
+
+        # Add existing teacher to organization
+        teacher_org = TeacherOrganization(
+            teacher_id=existing_teacher.id,
+            organization_id=org_id,
+            role=request.role,
+            is_active=True,
+        )
+        db.add(teacher_org)
+        db.commit()
+        db.refresh(teacher_org)
+
+        # Sync Casbin roles
+        try:
+            casbin_service.sync_teacher_roles(existing_teacher.id)
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(
+                f"Failed to sync Casbin roles for teacher {existing_teacher.id}: {e}"
+            )
+
+        return TeacherRelationResponse.from_orm(teacher_org)
+
+    else:
+        # Teacher doesn't exist - create new account
+        # Generate random password (user should reset via "forgot password")
+        random_password = secrets.token_urlsafe(16)
+
+        new_teacher = Teacher(
+            email=request.email,
+            password_hash=get_password_hash(random_password),
+            name=request.name,
+            is_active=True,  # Active immediately for org invites
+            is_demo=False,
+            email_verified=True,  # Org invites are trusted, allow password reset
+        )
+        db.add(new_teacher)
+        db.commit()
+        db.refresh(new_teacher)
+
+        # Add to organization
+        teacher_org = TeacherOrganization(
+            teacher_id=new_teacher.id,
+            organization_id=org_id,
+            role=request.role,
+            is_active=True,
+        )
+        db.add(teacher_org)
+        db.commit()
+        db.refresh(teacher_org)
+
+        # Sync Casbin roles
+        try:
+            casbin_service.sync_teacher_roles(new_teacher.id)
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(
+                f"Failed to sync Casbin roles for teacher {new_teacher.id}: {e}"
+            )
+
+        # TODO: Send invitation email with password reset link
+        # For now, just create the account
+
+        return TeacherRelationResponse.from_orm(teacher_org)
 
 
 @router.post(

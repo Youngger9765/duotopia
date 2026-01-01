@@ -527,12 +527,21 @@ async def list_school_teachers(
     for ts in teacher_schools:
         t = db.query(Teacher).filter(Teacher.id == ts.teacher_id).first()
         if t:
+            # Ensure roles is a list (handle both JSON string and list)
+            roles = ts.roles if ts.roles else []
+            if isinstance(roles, str):
+                import json
+                try:
+                    roles = json.loads(roles)
+                except:
+                    roles = []
+
             result.append(
                 SchoolTeacherInfo(
                     id=t.id,
                     email=t.email,
                     name=t.name,
-                    roles=ts.roles if ts.roles else [],
+                    roles=roles,
                     is_active=ts.is_active,
                     created_at=ts.created_at,
                 )
@@ -562,7 +571,7 @@ async def add_teacher_to_school(
     check_school_permission(teacher.id, school_id, db)
 
     # Validate roles
-    valid_roles = ["school_admin", "teacher"]
+    valid_roles = ["school_admin", "school_director", "teacher"]
     for role in request.roles:
         if role not in valid_roles:
             raise HTTPException(
@@ -570,8 +579,8 @@ async def add_teacher_to_school(
                 detail=f"Invalid role: {role}. Must be one of {valid_roles}",
             )
 
-    # Check if teacher already has relationship
-    existing = (
+    # Check if teacher already has active relationship
+    existing_active = (
         db.query(TeacherSchool)
         .filter(
             TeacherSchool.teacher_id == request.teacher_id,
@@ -581,27 +590,45 @@ async def add_teacher_to_school(
         .first()
     )
 
-    if existing:
+    if existing_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Teacher already belongs to this school",
         )
 
-    # Verify teacher exists
-    target_teacher = db.query(Teacher).filter(Teacher.id == request.teacher_id).first()
-    if not target_teacher:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
+    # Check if teacher has inactive relationship (soft-deleted)
+    existing_inactive = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == request.teacher_id,
+            TeacherSchool.school_id == school_id,
+            TeacherSchool.is_active.is_(False),
         )
-
-    # Create relationship
-    teacher_school = TeacherSchool(
-        teacher_id=request.teacher_id,
-        school_id=school_id,
-        roles=request.roles,
-        is_active=True,
+        .first()
     )
-    db.add(teacher_school)
+
+    if existing_inactive:
+        # Reactivate and update roles
+        existing_inactive.is_active = True
+        existing_inactive.roles = request.roles
+        teacher_school = existing_inactive
+    else:
+        # Verify teacher exists
+        target_teacher = db.query(Teacher).filter(Teacher.id == request.teacher_id).first()
+        if not target_teacher:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
+            )
+
+        # Create new relationship
+        teacher_school = TeacherSchool(
+            teacher_id=request.teacher_id,
+            school_id=school_id,
+            roles=request.roles,
+            is_active=True,
+        )
+        db.add(teacher_school)
+
     db.commit()
     db.refresh(teacher_school)
 
@@ -640,7 +667,7 @@ async def update_teacher_school_roles(
     check_school_permission(teacher.id, school_id, db)
 
     # Validate roles
-    valid_roles = ["school_admin", "teacher"]
+    valid_roles = ["school_admin", "school_director", "teacher"]
     for role in request.roles:
         if role not in valid_roles:
             raise HTTPException(

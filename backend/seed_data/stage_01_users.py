@@ -531,9 +531,12 @@ def seed_users_and_organizations(db: Session):
     school_teachers = []
     teacher_names = [
         ("test_main", "林主任", "林主任"),
+        ("test_main_director", "王主任", "王主任"),  # 測試補習班-總校 主任
         ("test_taipei", "陳老師", "陳老師"),
         ("test_taichung", "黃老師", "黃老師"),
+        ("test_taichung_director", "趙主任", "趙主任"),  # 測試補習班-台中分校 主任
         ("excellence_central", "劉教授", "劉教授"),
+        ("excellence_central_director", "孫主任", "孫主任"),  # 卓越教育-中央校區 主任
         ("excellence_east", "張老師", "張老師"),
         ("excellence_west", "吳老師", "吳老師"),
         ("future_main", "蔡老師", "蔡老師"),
@@ -602,38 +605,41 @@ def seed_users_and_organizations(db: Session):
     # 2.7 設定教師與學校關係
     school_teacher_mappings = [
         (school_teachers[0], test_main_school, ["school_admin"]),
-        (school_teachers[1], test_taipei_school, ["school_admin"]),
-        (school_teachers[2], test_taichung_school, ["school_admin"]),
-        (school_teachers[3], excellence_central_school, ["school_admin"]),
-        (school_teachers[4], excellence_east_school, ["school_admin"]),
-        (school_teachers[5], excellence_west_school, ["school_admin"]),
-        (school_teachers[6], future_main_school, ["school_admin"]),
-        (school_teachers[7], future_north_school, ["school_admin"]),
-        (school_teachers[8], future_south_school, ["school_admin"]),
+        (school_teachers[1], test_main_school, ["school_director"]),  # 測試補習班-總校 主任
+        (school_teachers[2], test_taipei_school, ["school_admin"]),
+        (school_teachers[3], test_taichung_school, ["school_admin"]),
+        (school_teachers[4], test_taichung_school, ["school_director"]),  # 測試補習班-台中分校 主任
+        (school_teachers[5], excellence_central_school, ["school_admin"]),
+        (school_teachers[6], excellence_central_school, ["school_director"]),  # 卓越教育-中央校區 主任
+        (school_teachers[7], excellence_east_school, ["school_admin"]),
+        (school_teachers[8], excellence_west_school, ["school_admin"]),
+        (school_teachers[9], future_main_school, ["school_admin"]),
+        (school_teachers[10], future_north_school, ["school_admin"]),
+        (school_teachers[11], future_south_school, ["school_admin"]),
         # 智慧教育中心 - 高雄校區
-        (school_teachers[9], smart_kaohsiung_school, ["school_admin"]),
-        (school_teachers[10], smart_kaohsiung_school, ["teacher"]),
-        (school_teachers[11], smart_kaohsiung_school, ["teacher"]),
+        (school_teachers[12], smart_kaohsiung_school, ["school_admin"]),
+        (school_teachers[13], smart_kaohsiung_school, ["teacher"]),
+        (school_teachers[14], smart_kaohsiung_school, ["teacher"]),
         # 智慧教育中心 - 左營校區
-        (school_teachers[12], smart_zuoying_school, ["school_admin"]),
-        (school_teachers[13], smart_zuoying_school, ["teacher"]),
-        (school_teachers[14], smart_zuoying_school, ["teacher"]),
+        (school_teachers[15], smart_zuoying_school, ["school_admin"]),
+        (school_teachers[16], smart_zuoying_school, ["teacher"]),
+        (school_teachers[17], smart_zuoying_school, ["teacher"]),
         # 智慧教育中心 - 鳳山校區
-        (school_teachers[15], smart_fengshan_school, ["school_admin"]),
-        (school_teachers[16], smart_fengshan_school, ["teacher"]),
-        (school_teachers[17], smart_fengshan_school, ["teacher"]),
+        (school_teachers[18], smart_fengshan_school, ["school_admin"]),
+        (school_teachers[19], smart_fengshan_school, ["teacher"]),
+        (school_teachers[20], smart_fengshan_school, ["teacher"]),
         # 全球語言學院 - 台南校區
-        (school_teachers[18], global_tainan_school, ["school_admin"]),
-        (school_teachers[19], global_tainan_school, ["teacher"]),
-        (school_teachers[20], global_tainan_school, ["teacher"]),
+        (school_teachers[21], global_tainan_school, ["school_admin"]),
+        (school_teachers[22], global_tainan_school, ["teacher"]),
+        (school_teachers[23], global_tainan_school, ["teacher"]),
         # 全球語言學院 - 安平校區
-        (school_teachers[21], global_anping_school, ["school_admin"]),
-        (school_teachers[22], global_anping_school, ["teacher"]),
-        (school_teachers[23], global_anping_school, ["teacher"]),
+        (school_teachers[24], global_anping_school, ["school_admin"]),
+        (school_teachers[25], global_anping_school, ["teacher"]),
+        (school_teachers[26], global_anping_school, ["teacher"]),
         # 全球語言學院 - 永康校區
-        (school_teachers[24], global_yongkang_school, ["school_admin"]),
-        (school_teachers[25], global_yongkang_school, ["teacher"]),
-        (school_teachers[26], global_yongkang_school, ["teacher"]),
+        (school_teachers[27], global_yongkang_school, ["school_admin"]),
+        (school_teachers[28], global_yongkang_school, ["teacher"]),
+        (school_teachers[29], global_yongkang_school, ["teacher"]),
     ]
 
     for teacher, school, roles in school_teacher_mappings:

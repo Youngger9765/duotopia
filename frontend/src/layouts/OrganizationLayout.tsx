@@ -206,6 +206,26 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
               <h1 className="text-xl font-semibold">組織管理後台</h1>
             </div>
             <div className="flex items-center gap-4">
+              {/* Current User Info */}
+              {user && (
+                <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg text-sm">
+                  <div className="text-gray-600">
+                    <span className="font-medium">{user.name}</span>
+                    <span className="mx-2 text-gray-300">|</span>
+                    <span>{user.email}</span>
+                    <span className="mx-2 text-gray-300">|</span>
+                    <span className="text-blue-600">
+                      {user.role === "org_owner"
+                        ? "機構擁有者"
+                        : user.role === "org_admin"
+                        ? "機構管理員"
+                        : user.role === "school_admin"
+                        ? "學校管理員"
+                        : "教師"}
+                    </span>
+                  </div>
+                </div>
+              )}
               <Button
                 variant="outline"
                 size="sm"

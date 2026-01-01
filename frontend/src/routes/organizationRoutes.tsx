@@ -5,7 +5,7 @@ import OrganizationDashboard from "@/pages/organization/OrganizationDashboard";
 import SchoolsPage from "@/pages/organization/SchoolsPage";
 import TeachersPage from "@/pages/organization/TeachersPage";
 import OrganizationEditPage from "@/pages/organization/OrganizationEditPage";
-import SchoolEditPage from "@/pages/organization/SchoolEditPage";
+import SchoolDetailPage from "@/pages/organization/SchoolDetailPage";
 import OrganizationsListPage from "@/pages/organization/OrganizationsListPage";
 
 /**
@@ -45,8 +45,8 @@ export const organizationRoutes = (
     {/* Teachers management under specific organization */}
     <Route path=":orgId/teachers" element={<TeachersPage />} />
 
-    {/* School edit page */}
-    <Route path="schools/:schoolId/edit" element={<SchoolEditPage />} />
+    {/* School detail page */}
+    <Route path="schools/:schoolId" element={<SchoolDetailPage />} />
 
     {/* Default schools/teachers pages (use selected org from context) */}
     <Route path="schools" element={<SchoolsPage />} />
