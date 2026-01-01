@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect } from "react";
-import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -7,12 +7,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Building2,
-  School,
-  Users,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
+import { OrganizationTree } from "@/components/organization/OrganizationTree";
 
 interface OrganizationLayoutProps {
   children?: ReactNode;
@@ -22,7 +21,6 @@ export default function OrganizationLayout({
   children,
 }: OrganizationLayoutProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { token, logout: storeLogout } = useTeacherAuthStore();
 
@@ -110,59 +108,32 @@ export default function OrganizationLayout({
             </Button>
           </div>
 
-          {/* Sidebar Navigation */}
+          {/* Sidebar Navigation - Organization Tree */}
           <nav className="flex-1 overflow-y-auto p-4">
-            <div className="space-y-2">
-              <Button
-                variant={
-                  location.pathname === "/organization/dashboard"
-                    ? "default"
-                    : "ghost"
-                }
-                className={cn(
-                  "w-full justify-start",
-                  sidebarCollapsed && "justify-center px-2",
-                )}
-                onClick={() => navigate("/organization/dashboard")}
-              >
-                <Building2 className="h-4 w-4" />
-                {!sidebarCollapsed && <span className="ml-2">組織架構</span>}
-              </Button>
-
-              <Button
-                variant={
-                  location.pathname.includes("/organization/schools") ||
-                  location.pathname.includes("/schools")
-                    ? "default"
-                    : "ghost"
-                }
-                className={cn(
-                  "w-full justify-start",
-                  sidebarCollapsed && "justify-center px-2",
-                )}
-                onClick={() => navigate("/organization/schools")}
-              >
-                <School className="h-4 w-4" />
-                {!sidebarCollapsed && <span className="ml-2">學校管理</span>}
-              </Button>
-
-              <Button
-                variant={
-                  location.pathname.includes("/organization/teachers") ||
-                  location.pathname.includes("/teachers")
-                    ? "default"
-                    : "ghost"
-                }
-                className={cn(
-                  "w-full justify-start",
-                  sidebarCollapsed && "justify-center px-2",
-                )}
-                onClick={() => navigate("/organization/teachers")}
-              >
-                <Users className="h-4 w-4" />
-                {!sidebarCollapsed && <span className="ml-2">教師管理</span>}
-              </Button>
-            </div>
+            {!sidebarCollapsed ? (
+              <>
+                <div className="text-xs font-semibold text-gray-500 uppercase mb-3">
+                  組織架構
+                </div>
+                <OrganizationTree
+                  onNodeSelect={(type, data) => {
+                    if (type === "organization") {
+                      // 點擊組織 → 導航到組織詳情/編輯頁面
+                      navigate(`/organization/${data.id}/edit`);
+                    } else if (type === "school") {
+                      // 點擊學校 → 導航到學校詳情/編輯頁面
+                      navigate(`/organization/schools/${data.id}/edit`);
+                    }
+                  }}
+                  className="text-sm"
+                />
+              </>
+            ) : (
+              // Sidebar 收合時顯示簡化圖標
+              <div className="flex flex-col items-center space-y-4">
+                <Building2 className="h-5 w-5 text-gray-500" />
+              </div>
+            )}
           </nav>
 
           {/* Sidebar Footer */}
