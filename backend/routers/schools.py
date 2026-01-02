@@ -8,7 +8,7 @@ Only org_owner and org_admin can manage schools.
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
@@ -249,9 +249,13 @@ async def list_schools(
 ):
     """
     List all schools that the current teacher has access to.
+    Returns schools where teacher has:
+    - org_owner or org_admin role (organization level)
+    - school_admin or school_director role (school level)
+
     If organization_id is provided, filter by that organization.
     """
-    # Get all organizations where teacher is org_owner or org_admin
+    # 1. Get all organizations where teacher is org_owner or org_admin
     teacher_orgs = (
         db.query(TeacherOrganization)
         .filter(
@@ -264,10 +268,55 @@ async def list_schools(
 
     org_ids = [to.organization_id for to in teacher_orgs]
 
-    # Build query
-    query = db.query(School).filter(
-        School.organization_id.in_(org_ids), School.is_active.is_(True)
+    # 2. Get schools where teacher has school-level roles (school_admin, school_director)
+    # Note: roles is a JSONB array in PostgreSQL, we need to check if it contains any of the roles
+    teacher_schools = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == teacher.id,
+            or_(
+                TeacherSchool.roles.op("@>")(["school_admin"]),  # JSONB contains operator
+                TeacherSchool.roles.op("@>")(["school_director"])
+            ),
+            TeacherSchool.is_active.is_(True),
+        )
+        .all()
     )
+    school_ids_from_roles = [ts.school_id for ts in teacher_schools]
+
+    # 3. Build query combining both organization-level and school-level access
+    if org_ids and school_ids_from_roles:
+        # User has both org-level and school-level access
+        query = db.query(School).filter(
+            or_(
+                School.organization_id.in_(org_ids),
+                School.id.in_(school_ids_from_roles)
+            ),
+            School.is_active.is_(True)
+        )
+    elif org_ids:
+        # Only org-level access (org_owner, org_admin)
+        query = db.query(School).filter(
+            School.organization_id.in_(org_ids),
+            School.is_active.is_(True)
+        )
+    elif school_ids_from_roles:
+        # Only school-level access (school_admin, school_director)
+        query = db.query(School).filter(
+            School.id.in_(school_ids_from_roles),
+            School.is_active.is_(True)
+        )
+    else:
+        # No access - return empty list
+        schools = []
+        school_ids = []
+        # Skip to stats calculation with empty lists
+        classroom_counts = {}
+        teacher_counts = {}
+        student_counts = {}
+        # Jump to result building
+        result = []
+        return result
 
     # Apply organization filter if provided
     if organization_id:

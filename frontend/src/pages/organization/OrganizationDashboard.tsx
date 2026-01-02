@@ -114,15 +114,11 @@ export default function OrganizationDashboard() {
         return;
       }
 
-      hasRedirectedRef.current = true;
-
       // org_admin should go to their first accessible organization
       if (hasOrgAdmin) {
         if (organizations.length > 0) {
-          console.log(
-            "🏢 org_admin: redirecting to first organization",
-            organizations[0].id,
-          );
+          console.log("🏢 org_admin: redirecting to first organization");
+          hasRedirectedRef.current = true;
           navigate(`/organization/${organizations[0].id}`);
         } else {
           console.warn("⚠️ org_admin but no organizations found");
@@ -142,6 +138,7 @@ export default function OrganizationDashboard() {
             const schools = await response.json();
             if (schools.length > 0) {
               console.log("🏫 Redirecting to first school", schools[0].id);
+              hasRedirectedRef.current = true;
               navigate(`/organization/schools/${schools[0].id}`);
             } else {
               console.warn("⚠️ school-level user but no schools found");
