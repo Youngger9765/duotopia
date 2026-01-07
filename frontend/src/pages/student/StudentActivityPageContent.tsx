@@ -2154,6 +2154,11 @@ export default function StudentActivityPageContent({
                             isExampleSentencesType(activity.type) &&
                             practiceMode !== "rearrangement";
 
+                          // 🎯 Issue #147: 判斷是否為單字選擇模式（禁止跳題）
+                          const isWordSelectionMode = isVocabularySetType(
+                            activity.type,
+                          );
+
                           // 🎯 Issue #118: 檢查當前題目是否已分析（用於顯示狀態）
                           const hasAssessment = !!item?.ai_assessment;
 
@@ -2161,6 +2166,8 @@ export default function StudentActivityPageContent({
                             <button
                               key={itemIndex}
                               onClick={async () => {
+                                // 🔒 單字選擇模式禁止跳題
+                                if (isWordSelectionMode) return;
                                 // 🔒 分析中或錄音中禁止切換
                                 if (
                                   isAnalyzing ||
@@ -2175,35 +2182,45 @@ export default function StudentActivityPageContent({
                                 );
                               }}
                               disabled={
-                                isAnalyzing || isAutoAnalyzing || isRecording
-                              } // 🔒 分析中或錄音中禁用
+                                isWordSelectionMode ||
+                                isAnalyzing ||
+                                isAutoAnalyzing ||
+                                isRecording
+                              } // 🔒 單字選擇模式、分析中或錄音中禁用
                               className={cn(
                                 "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
                                 "flex items-center justify-center text-sm sm:text-xs font-medium",
                                 "min-w-[32px] sm:min-w-[32px]",
                                 // 保持學生原本的完成狀態樣式
-                                // 🎯 Issue #118: 例句朗讀模式顯示分析狀態（綠色=已分析）
-                                isReadingMode
-                                  ? hasAssessment
-                                    ? "bg-green-100 text-green-800 border-green-400 hover:border-blue-400"
-                                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
-                                  : isCompleted
-                                    ? "bg-green-100 text-green-800 border-green-400"
-                                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
+                                // 🎯 Issue #147: 單字選擇模式只顯示狀態，不能點擊
+                                isWordSelectionMode
+                                  ? isCompleted
+                                    ? "bg-green-100 text-green-800 border-green-400 cursor-default"
+                                    : "bg-white text-gray-600 border-gray-300 cursor-default"
+                                  : // 🎯 Issue #118: 例句朗讀模式顯示分析狀態（綠色=已分析）
+                                    isReadingMode
+                                    ? hasAssessment
+                                      ? "bg-green-100 text-green-800 border-green-400 hover:border-blue-400"
+                                      : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                                    : isCompleted
+                                      ? "bg-green-100 text-green-800 border-green-400"
+                                      : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
                                 isActiveItem && "border-2 border-blue-600",
                               )}
                               title={
-                                isReadingMode
-                                  ? hasAssessment
-                                    ? `第 ${itemIndex + 1} 題 (已分析)`
-                                    : `第 ${itemIndex + 1} 題 (未分析)`
-                                  : needsCorrection
-                                    ? "老師要求訂正"
-                                    : isTeacherPassed
-                                      ? "老師已通過"
-                                      : isCompleted
-                                        ? "已完成"
-                                        : "未完成"
+                                isWordSelectionMode
+                                  ? `第 ${itemIndex + 1} 題`
+                                  : isReadingMode
+                                    ? hasAssessment
+                                      ? `第 ${itemIndex + 1} 題 (已分析)`
+                                      : `第 ${itemIndex + 1} 題 (未分析)`
+                                    : needsCorrection
+                                      ? "老師要求訂正"
+                                      : isTeacherPassed
+                                        ? "老師已通過"
+                                        : isCompleted
+                                          ? "已完成"
+                                          : "未完成"
                               }
                             >
                               {itemIndex + 1}
