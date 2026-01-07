@@ -168,14 +168,12 @@ export default function WordSelectionActivity({
       const data = await response.json();
       setProficiency(data);
 
-      // Check if achieved target
-      if (data.achieved && !showAchievementDialog) {
-        setShowAchievementDialog(true);
-      }
+      // Note: Achievement check moved to round completed view
+      // Dialog will only show after clicking "完成本輪", not during practice
     } catch (error) {
       console.error("Error fetching proficiency:", error);
     }
-  }, [assignmentId, token, showAchievementDialog]);
+  }, [assignmentId, token]);
 
   useEffect(() => {
     startPractice();
