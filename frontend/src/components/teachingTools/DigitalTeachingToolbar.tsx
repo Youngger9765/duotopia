@@ -28,7 +28,7 @@ const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({
   const [timerScale, setTimerScale] = useState(1);
   const [timerPos, setTimerPos] = useState({ x: 40, y: 80 });
 
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasInitializedTimerPos = useRef(false);
 
@@ -626,6 +626,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({
     e: React.MouseEvent | React.TouchEvent,
     setScale: (scale: number) => void,
     currentScale: number,
+    direction: number = 1, // use -1 for left handles so pulling outward increases size
   ) => {
     e.stopPropagation();
     const clientX = (e as React.TouchEvent).touches
@@ -642,7 +643,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({
       const moveX = (moveEvent as TouchEvent).touches
         ? (moveEvent as TouchEvent).touches[0].clientX
         : (moveEvent as MouseEvent).clientX;
-      const delta = (moveX - startX) * 0.005;
+      const delta = (moveX - startX) * 0.005 * direction;
 
       if (frameId) cancelAnimationFrame(frameId);
       frameId = requestAnimationFrame(() => {
