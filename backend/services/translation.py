@@ -525,13 +525,14 @@ Where translation is in {lang_name}."""
             prompt = f"""為單字 "{word}"（正確翻譯: {translation}）生成 {count} 個干擾項。
 {pos_hint}
 
-要求:
+嚴格要求:
 - 必須是繁體中文翻譯
-- 語義相近但不同義（例如都是水果類、都是動物類、都是動詞等）
 - 同詞性（名詞配名詞、動詞配動詞）
-- 不能是同義詞
-- 不能是正確答案 "{translation}"
-- 每個干擾項應該是常見、易混淆的詞彙
+- 干擾項必須與正確答案有明顯區別，不能是近義詞或相似詞
+- 干擾項之間也要有明顯區別，不能互為近義詞
+- 選擇同類別但意義完全不同的詞（例如水果類：蘋果的干擾項用香蕉、西瓜，而非紅蘋果、青蘋果）
+- 不能是正確答案 "{translation}" 的同義詞或變體
+- 每個干擾項應該是常見詞彙，讓學生容易辨別
 
 請以 JSON 陣列格式回覆，只包含 {count} 個干擾項翻譯：
 ["干擾項1", "干擾項2", "干擾項3"]
@@ -544,14 +545,16 @@ Where translation is in {lang_name}."""
                     {
                         "role": "system",
                         "content": (
-                            "You are a vocabulary quiz generator. Generate plausible "
-                            "but incorrect translation options for language learners. "
+                            "You are a vocabulary quiz generator. Generate clearly "
+                            "different but plausible wrong answer options. "
+                            "IMPORTANT: Options must be distinctly different from each other "
+                            "and from the correct answer - avoid synonyms or similar meanings. "
                             "Always respond with valid JSON array only."
                         ),
                     },
                     {"role": "user", "content": prompt},
                 ],
-                temperature=0.7,  # Higher temperature for variety
+                temperature=1.0,  # Higher temperature for more variety and distinction
                 max_tokens=200,
             )
 
@@ -613,12 +616,14 @@ Where translation is in {lang_name}."""
 單字列表:
 {words_json}
 
-要求:
+嚴格要求:
 - 所有干擾項必須是繁體中文
-- 語義相近但不同義
-- 同詞性
-- 不能是同義詞
-- 不能與正確答案相同
+- 同詞性（名詞配名詞、動詞配動詞）
+- 干擾項必須與正確答案有明顯區別，不能是近義詞或相似詞
+- 干擾項之間也要有明顯區別，不能互為近義詞
+- 選擇同類別但意義完全不同的詞（例如水果類：蘋果的干擾項用香蕉、西瓜，而非紅蘋果、青蘋果）
+- 不能是正確答案的同義詞或變體
+- 每個干擾項應該是常見詞彙，讓學生容易辨別
 
 請以 JSON 陣列格式回覆，每個元素是一個包含 {count} 個干擾項的陣列：
 [["干擾項1", "干擾項2", "干擾項3"], ["干擾項1", "干擾項2", "干擾項3"], ...]
@@ -631,14 +636,16 @@ Where translation is in {lang_name}."""
                     {
                         "role": "system",
                         "content": (
-                            "You are a vocabulary quiz generator. Generate plausible "
-                            "but incorrect translation options for language learners. "
+                            "You are a vocabulary quiz generator. Generate clearly "
+                            "different but plausible wrong answer options. "
+                            "IMPORTANT: Options must be distinctly different from each other "
+                            "and from the correct answer - avoid synonyms or similar meanings. "
                             "Always respond with valid JSON array only."
                         ),
                     },
                     {"role": "user", "content": prompt},
                 ],
-                temperature=0.7,
+                temperature=1.0,  # Higher temperature for more variety and distinction
                 max_tokens=1000,
             )
 

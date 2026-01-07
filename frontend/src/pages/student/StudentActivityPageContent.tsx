@@ -1578,7 +1578,7 @@ export default function StudentActivityPageContent({
     if (isVocabularySetType(type)) {
       return (
         <Badge variant="outline">
-          {t("studentActivityPage.activityTypes.sentence")}
+          {t("studentActivityPage.activityTypes.vocabulary")}
         </Badge>
       );
     }

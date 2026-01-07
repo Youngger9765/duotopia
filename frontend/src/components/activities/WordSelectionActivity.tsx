@@ -485,8 +485,8 @@ export default function WordSelectionActivity({
             </div>
           )}
 
-          {/* Word Text */}
-          {showWord && (
+          {/* Word Text - hide when in audio mode */}
+          {!playAudio && (
             <div className="text-center">
               <h2 className="text-3xl font-bold text-gray-800">
                 {currentWord.text}

@@ -756,7 +756,10 @@
       "listening": "Listening Practice",
       "speaking": "Speaking Practice",
       "sentence": "Sentence Making",
-      "rearrangement": "Example Sentence Rearrangement"
+      "rearrangement": "Example Sentence Rearrangement",
+      "vocabulary": "Vocabulary Practice",
+      "wordReading": "Word Reading",
+      "wordSelection": "Word Selection"
     },
     "stats": {
       "minutes": "minutes",

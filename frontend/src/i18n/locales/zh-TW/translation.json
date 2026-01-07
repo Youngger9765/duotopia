@@ -753,7 +753,10 @@
     },
     "activityTypes": {
       "reading": "例句朗讀",
-      "rearrangement": "例句重組"
+      "rearrangement": "例句重組",
+      "vocabulary": "單字練習",
+      "wordReading": "單字朗讀",
+      "wordSelection": "單字選擇"
     },
     "stats": {
       "minutes": "分鐘",
