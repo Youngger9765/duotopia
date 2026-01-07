@@ -286,26 +286,30 @@ export default function StudentAssignmentList() {
         </CardHeader>
 
         <CardContent className="p-4 sm:p-5 pt-0 space-y-4">
-          {/* Progress */}
-          {assignment.status !== "NOT_STARTED" && (
-            <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                <span className="text-sm sm:text-base text-gray-600 font-medium">
-                  {t("studentAssignmentList.progress.title")}
-                </span>
-                <span className="text-sm sm:text-base font-semibold text-gray-900">
-                  {t("studentAssignmentList.progress.activities", {
-                    completed: assignment.completed_count || 0,
-                    total: assignment.content_count || 1,
-                  })}
-                </span>
+          {/* Progress - 單字選擇已完成時不顯示（熟悉度已在下方顯示） */}
+          {assignment.status !== "NOT_STARTED" &&
+            !(
+              assignment.practice_mode === "word_selection" &&
+              assignment.status === "GRADED"
+            ) && (
+              <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                  <span className="text-sm sm:text-base text-gray-600 font-medium">
+                    {t("studentAssignmentList.progress.title")}
+                  </span>
+                  <span className="text-sm sm:text-base font-semibold text-gray-900">
+                    {t("studentAssignmentList.progress.activities", {
+                      completed: assignment.completed_count || 0,
+                      total: assignment.content_count || 1,
+                    })}
+                  </span>
+                </div>
+                <Progress
+                  value={assignment.progress_percentage || 0}
+                  className="h-2.5 bg-gray-200"
+                />
               </div>
-              <Progress
-                value={assignment.progress_percentage || 0}
-                className="h-2.5 bg-gray-200"
-              />
-            </div>
-          )}
+            )}
 
           {/* Details */}
           <div className="flex flex-col sm:flex-row flex-wrap gap-3">
