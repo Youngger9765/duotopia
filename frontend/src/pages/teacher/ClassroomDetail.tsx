@@ -1407,17 +1407,27 @@ export default function ClassroomDetail({
                                 assignment.content_type?.toUpperCase();
                               const practiceMode = assignment.practice_mode;
 
-                              // VOCABULARY_SET 或 SENTENCE_MAKING → 單字集
+                              // VOCABULARY_SET 或 SENTENCE_MAKING → 根據 practice_mode
                               if (
                                 contentType === "VOCABULARY_SET" ||
                                 contentType === "SENTENCE_MAKING"
                               ) {
+                                if (practiceMode === "word_selection") {
+                                  return {
+                                    label: t(
+                                      "classroomDetail.contentTypes.WORD_SELECTION",
+                                    ),
+                                    color:
+                                      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                  };
+                                }
+                                // default: word_reading
                                 return {
                                   label: t(
-                                    "classroomDetail.contentTypes.VOCABULARY_SET",
+                                    "classroomDetail.contentTypes.WORD_READING",
                                   ),
                                   color:
-                                    "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
                                 };
                               }
 
@@ -1508,29 +1518,31 @@ export default function ClassroomDetail({
                                       {typeInfo.label}
                                     </span>
                                   </div>
-                                  {/* 🆕 rearrangement 模式不顯示 AI 批改按鈕（提交後直接完成） */}
+                                  {/* 🆕 rearrangement / word_selection 模式不顯示 AI 批改按鈕 */}
                                   {assignment.practice_mode !==
-                                    "rearrangement" && (
-                                    <Button
-                                      variant="default"
-                                      size="sm"
-                                      className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-3 flex-shrink-0 gap-1.5"
-                                      onClick={() => {
-                                        setBatchGradingModal({
-                                          open: true,
-                                          assignmentId: assignment.id,
-                                          classroomId: Number(id),
-                                        });
-                                      }}
-                                    >
-                                      <Sparkles className="w-5 h-5" />
-                                      <span className="text-sm font-medium">
-                                        {t(
-                                          "assignmentDetail.buttons.batchGrade",
-                                        )}
-                                      </span>
-                                    </Button>
-                                  )}
+                                    "rearrangement" &&
+                                    assignment.practice_mode !==
+                                      "word_selection" && (
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-3 flex-shrink-0 gap-1.5"
+                                        onClick={() => {
+                                          setBatchGradingModal({
+                                            open: true,
+                                            assignmentId: assignment.id,
+                                            classroomId: Number(id),
+                                          });
+                                        }}
+                                      >
+                                        <Sparkles className="w-5 h-5" />
+                                        <span className="text-sm font-medium">
+                                          {t(
+                                            "assignmentDetail.buttons.batchGrade",
+                                          )}
+                                        </span>
+                                      </Button>
+                                    )}
                                 </div>
 
                                 {/* Description */}
@@ -1656,17 +1668,27 @@ export default function ClassroomDetail({
                                     assignment.content_type?.toUpperCase();
                                   const practiceMode = assignment.practice_mode;
 
-                                  // VOCABULARY_SET 或 SENTENCE_MAKING → 單字集
+                                  // VOCABULARY_SET 或 SENTENCE_MAKING → 根據 practice_mode
                                   if (
                                     contentType === "VOCABULARY_SET" ||
                                     contentType === "SENTENCE_MAKING"
                                   ) {
+                                    if (practiceMode === "word_selection") {
+                                      return {
+                                        label: t(
+                                          "classroomDetail.contentTypes.WORD_SELECTION",
+                                        ),
+                                        color:
+                                          "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                      };
+                                    }
+                                    // default: word_reading
                                     return {
                                       label: t(
-                                        "classroomDetail.contentTypes.VOCABULARY_SET",
+                                        "classroomDetail.contentTypes.WORD_READING",
                                       ),
                                       color:
-                                        "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
                                     };
                                   }
 
@@ -1822,27 +1844,29 @@ export default function ClassroomDetail({
                                             "classroomDetail.buttons.previewDemo",
                                           )}
                                         </Button>
-                                        {/* 🆕 rearrangement 模式不顯示 AI 批改按鈕 */}
+                                        {/* 🆕 rearrangement / word_selection 模式不顯示 AI 批改按鈕 */}
                                         {assignment.practice_mode !==
-                                          "rearrangement" && (
-                                          <Button
-                                            variant="default"
-                                            size="sm"
-                                            className="bg-purple-600 hover:bg-purple-700 text-white h-10 min-h-10"
-                                            onClick={() => {
-                                              setBatchGradingModal({
-                                                open: true,
-                                                assignmentId: assignment.id,
-                                                classroomId: Number(id),
-                                              });
-                                            }}
-                                          >
-                                            <Sparkles className="w-4 h-4 mr-1" />
-                                            {t(
-                                              "assignmentDetail.buttons.batchGrade",
-                                            )}
-                                          </Button>
-                                        )}
+                                          "rearrangement" &&
+                                          assignment.practice_mode !==
+                                            "word_selection" && (
+                                            <Button
+                                              variant="default"
+                                              size="sm"
+                                              className="bg-purple-600 hover:bg-purple-700 text-white h-10 min-h-10"
+                                              onClick={() => {
+                                                setBatchGradingModal({
+                                                  open: true,
+                                                  assignmentId: assignment.id,
+                                                  classroomId: Number(id),
+                                                });
+                                              }}
+                                            >
+                                              <Sparkles className="w-4 h-4 mr-1" />
+                                              {t(
+                                                "assignmentDetail.buttons.batchGrade",
+                                              )}
+                                            </Button>
+                                          )}
                                       </div>
                                     </td>
                                   </tr>

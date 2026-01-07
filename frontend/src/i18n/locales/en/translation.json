@@ -619,6 +619,9 @@
     "score": {
       "label": "Score: {{score}}"
     },
+    "proficiency": {
+      "label": "Proficiency: {{proficiency}}%"
+    },
     "buttons": {
       "start": "Start Assignment",
       "continue": "Continue Assignment",
@@ -756,7 +759,10 @@
       "listening": "Listening Practice",
       "speaking": "Speaking Practice",
       "sentence": "Sentence Making",
-      "rearrangement": "Example Sentence Rearrangement"
+      "rearrangement": "Example Sentence Rearrangement",
+      "vocabulary": "Vocabulary Practice",
+      "wordReading": "Word Reading",
+      "wordSelection": "Word Selection"
     },
     "stats": {
       "minutes": "minutes",
@@ -2237,6 +2243,8 @@
       "VOCABULARY_SET": "Vocabulary Set",
       "SPEAKING": "Sentence Reading",
       "REARRANGEMENT": "Sentence Rearrangement",
+      "WORD_SELECTION": "Word Selection",
+      "WORD_READING": "Word Reading",
       "speakingPractice": "Speaking Practice",
       "speaking_practice": "Speaking Practice",
       "SPEAKING_PRACTICE": "Speaking Practice",
@@ -2403,6 +2411,7 @@
       "resubmitted": "Resubmitted",
       "graded": "Graded",
       "score": "Score",
+      "proficiency": "Proficiency",
       "actions": "Actions",
       "searchPlaceholder": "Search student name...",
       "allStatuses": "All Statuses",
@@ -2430,6 +2439,8 @@
       "sentenceMaking": "Vocabulary Set",
       "sentence_making": "Vocabulary Set",
       "SENTENCE_MAKING": "Vocabulary Set",
+      "vocabularySet": "Vocabulary Set",
+      "vocabulary_set": "Vocabulary Set",
       "VOCABULARY_SET": "Vocabulary Set",
       "speakingQuiz": "Speaking Quiz",
       "speaking_quiz": "Speaking Quiz",
@@ -2502,7 +2513,8 @@
       "previewMode": "Preview Mode"
     },
     "info": {
-      "description": "This is preview mode. You see exactly what students see. All operations (including recording) work normally, but nothing is saved to the database."
+      "description": "This is preview mode. You see exactly what students see. All operations (including recording) work normally, but nothing is saved to the database.",
+      "suffix": " - You see exactly what students see. All operations (including recording) work normally, but nothing is saved to the database."
     }
   },
   "teacherClassrooms": {
@@ -3723,6 +3735,7 @@
     "dialogTitle": "Add Vocabulary Set",
     "editTitle": "Edit Vocabulary Set",
     "defaultTitle": "Vocabulary Set Content",
+    "saving": "Saving...",
     "placeholders": {
       "enterEnglishWord": "Enter English word",
       "enterEnglishSentence": "Enter English sentence (optional)",
@@ -3838,11 +3851,15 @@
     "noItems": "No vocabulary items found",
     "wordSelection": "Word Selection",
     "itemProgress": "Item {{current}} / {{total}}",
+    "questionNumber": "Question {{number}}",
+    "questionProgress": "Q{{current}}/{{total}}",
     "proficiency": "Proficiency",
     "currentProficiency": "Current Proficiency",
     "playAudio": "Play Audio",
     "selectTranslation": "Select the correct translation:",
     "selectTranslationAudio": "Listen and select the correct translation:",
+    "seconds": "s",
+    "timeUp": "Time's up!",
     "correct": "Correct!",
     "incorrect": "Incorrect",
     "correctAnswerIs": "Correct answer:",

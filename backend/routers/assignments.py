@@ -759,6 +759,9 @@ async def create_assignment(
                     text=original_item.text,
                     translation=original_item.translation,
                     audio_url=original_item.audio_url,  # 複製音檔 URL
+                    image_url=original_item.image_url,  # 複製圖片 URL
+                    part_of_speech=original_item.part_of_speech,  # 複製詞性
+                    distractors=original_item.distractors,  # 複製預生成的干擾選項
                     item_metadata=original_item.item_metadata.copy()
                     if original_item.item_metadata
                     else {},

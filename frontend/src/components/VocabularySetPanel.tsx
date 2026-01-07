@@ -23,6 +23,7 @@ import {
   Clipboard,
   Image as ImageIcon,
   X,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api";
@@ -1319,6 +1320,7 @@ export default function VocabularySetPanel({
   const [selectedRow, setSelectedRow] = useState<ContentRow | null>(null);
   const [ttsModalOpen, setTtsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [batchPasteDialogOpen, setBatchPasteDialogOpen] = useState(false);
   const [batchPasteText, setBatchPasteText] = useState("");
   const [batchPasteAutoTTS, setBatchPasteAutoTTS] = useState(true);
@@ -1451,6 +1453,7 @@ export default function VocabularySetPanel({
               japanese_translation?: string;
               korean_translation?: string;
               audio_url?: string;
+              image_url?: string;
               selectedWordLanguage?: WordTranslationLanguage;
               selectedSentenceLanguage?: SentenceTranslationLanguage;
               example_sentence?: string;
@@ -3027,6 +3030,7 @@ export default function VocabularySetPanel({
           <Button
             size="lg"
             className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+            disabled={isSaving}
             onClick={async () => {
               // 過濾掉空白項目
               let validRows = rows.filter((row) => row.text && row.text.trim());
@@ -3041,174 +3045,193 @@ export default function VocabularySetPanel({
                 return;
               }
 
-              // ========== Step 1: 自動生成缺少的翻譯 ==========
-              console.log(
-                "[Save] Before translation - validRows:",
-                validRows.map((r) => ({
-                  text: r.text,
-                  definition: r.definition,
-                  audioUrl: r.audioUrl,
-                })),
-              );
-              const translationResult =
-                await autoGenerateTranslationsSilently(validRows);
-              if (!translationResult.success) {
-                // 錯誤 toast 已在函數內顯示
-                return;
-              }
-              validRows = translationResult.updatedRows;
-              console.log(
-                "[Save] After translation - validRows:",
-                validRows.map((r) => ({
-                  text: r.text,
-                  definition: r.definition,
-                  audioUrl: r.audioUrl,
-                })),
-              );
+              // 開始儲存流程（翻譯 → 音檔 → 儲存 → 干擾選項生成）
+              setIsSaving(true);
 
-              // ========== Step 2: 自動生成缺少的音檔 ==========
-              const audioResult = await autoGenerateAudioSilently(validRows);
-              if (!audioResult.success) {
-                // 錯誤 toast 已在函數內顯示
-                return;
-              }
-              validRows = audioResult.updatedRows;
-              console.log(
-                "[Save] After audio - validRows:",
-                validRows.map((r) => ({
-                  text: r.text,
-                  definition: r.definition,
-                  audioUrl: r.audioUrl,
-                })),
-              );
-
-              // 更新 rows state（讓 UI 顯示生成的內容）
-              setRows(
-                rows.map((row) => {
-                  const updated = validRows.find((v) => v.id === row.id);
-                  return updated || row;
-                }),
-              );
-
-              // ========== Step 3: 準備並儲存資料 ==========
-              // 注意：例句為選填，不檢查是否缺少
-              console.log(
-                "[Save] Creating saveData from validRows:",
-                validRows.map((r) => ({
-                  id: r.id,
-                  text: r.text,
-                  definition: r.definition,
-                  selectedWordLanguage: r.selectedWordLanguage,
-                  audioUrl: r.audioUrl,
-                })),
-              );
-              const saveData = {
-                title: title,
-                items: validRows.map((row) => {
-                  // 根據選擇的語言取得對應的單字翻譯
-                  const wordLang = row.selectedWordLanguage || "chinese";
-                  let vocabularyTranslation = "";
-                  if (wordLang === "chinese") {
-                    vocabularyTranslation = row.definition || "";
-                  } else if (wordLang === "english") {
-                    vocabularyTranslation = row.translation || "";
-                  } else if (wordLang === "japanese") {
-                    vocabularyTranslation = row.japanese_translation || "";
-                  } else if (wordLang === "korean") {
-                    vocabularyTranslation = row.korean_translation || "";
-                  }
-                  console.log(
-                    `[Save] Row ${row.text}: wordLang=${wordLang}, definition=${row.definition}, vocabularyTranslation=${vocabularyTranslation}`,
-                  );
-
-                  // 根據選擇的語言取得對應的例句翻譯
-                  const sentenceLang =
-                    row.selectedSentenceLanguage || "chinese";
-                  let exampleTranslation = "";
-                  if (sentenceLang === "chinese") {
-                    exampleTranslation = row.example_sentence_translation || "";
-                  } else if (sentenceLang === "japanese") {
-                    exampleTranslation = row.example_sentence_japanese || "";
-                  } else if (sentenceLang === "korean") {
-                    exampleTranslation = row.example_sentence_korean || "";
-                  }
-
-                  return {
-                    text: row.text.trim(),
-                    // 統一翻譯欄位（新格式）
-                    vocabulary_translation: vocabularyTranslation,
-                    vocabulary_translation_lang: wordLang,
-                    // 向後相容欄位（讓學生 API 能讀到 ContentItem.translation）
-                    definition: vocabularyTranslation,
-                    // 英文釋義向後相容
-                    english_definition:
-                      wordLang === "english"
-                        ? vocabularyTranslation
-                        : row.translation || "",
-                    audio_url: row.audioUrl || row.audio_url || "",
-                    image_url: row.imageUrl || "",
-                    example_sentence: row.example_sentence || "",
-                    example_sentence_translation: exampleTranslation,
-                    example_sentence_translation_lang: sentenceLang,
-                    parts_of_speech: row.partsOfSpeech || [],
-                  };
-                }),
-                target_wpm: 60,
-                target_accuracy: 0.8,
-                time_limit_seconds: 180,
-              };
-
-              console.log("Saving data:", saveData);
-
-              const existingContentId = editingContent?.id || content?.id;
-
-              if (existingContentId) {
-                // 編輯模式：更新現有內容
-                try {
-                  await apiClient.updateContent(existingContentId, saveData);
-
-                  toast.success(t("contentEditor.messages.savingSuccess"));
-
-                  if (onSave) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    await (onSave as (content?: any) => void | Promise<void>)({
-                      id: existingContentId,
-                      title: saveData.title,
-                      items: saveData.items,
-                    });
-                  }
-                } catch (error) {
-                  console.error("Failed to update content:", error);
-                  toast.error(t("contentEditor.messages.savingFailed"));
+              try {
+                // ========== Step 1: 自動生成缺少的翻譯 ==========
+                console.log(
+                  "[Save] Before translation - validRows:",
+                  validRows.map((r) => ({
+                    text: r.text,
+                    definition: r.definition,
+                    audioUrl: r.audioUrl,
+                  })),
+                );
+                const translationResult =
+                  await autoGenerateTranslationsSilently(validRows);
+                if (!translationResult.success) {
+                  // 錯誤 toast 已在函數內顯示
+                  setIsSaving(false);
+                  return;
                 }
-              } else if (isCreating && lessonId) {
-                // 創建模式：新增內容
-                try {
-                  const newContent = await apiClient.createContent(lessonId, {
-                    type: "VOCABULARY_SET",
-                    ...saveData,
-                  });
+                validRows = translationResult.updatedRows;
+                console.log(
+                  "[Save] After translation - validRows:",
+                  validRows.map((r) => ({
+                    text: r.text,
+                    definition: r.definition,
+                    audioUrl: r.audioUrl,
+                  })),
+                );
 
-                  toast.success(
-                    t("contentEditor.messages.contentCreatedSuccess"),
-                  );
+                // ========== Step 2: 自動生成缺少的音檔 ==========
+                const audioResult = await autoGenerateAudioSilently(validRows);
+                if (!audioResult.success) {
+                  // 錯誤 toast 已在函數內顯示
+                  setIsSaving(false);
+                  return;
+                }
+                validRows = audioResult.updatedRows;
+                console.log(
+                  "[Save] After audio - validRows:",
+                  validRows.map((r) => ({
+                    text: r.text,
+                    definition: r.definition,
+                    audioUrl: r.audioUrl,
+                  })),
+                );
 
-                  if (onSave) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    await (onSave as (content?: any) => void | Promise<void>)(
-                      newContent,
+                // 更新 rows state（讓 UI 顯示生成的內容）
+                setRows(
+                  rows.map((row) => {
+                    const updated = validRows.find((v) => v.id === row.id);
+                    return updated || row;
+                  }),
+                );
+
+                // ========== Step 3: 準備並儲存資料 ==========
+                // 注意：例句為選填，不檢查是否缺少
+                console.log(
+                  "[Save] Creating saveData from validRows:",
+                  validRows.map((r) => ({
+                    id: r.id,
+                    text: r.text,
+                    definition: r.definition,
+                    selectedWordLanguage: r.selectedWordLanguage,
+                    audioUrl: r.audioUrl,
+                  })),
+                );
+                const saveData = {
+                  title: title,
+                  items: validRows.map((row) => {
+                    // 根據選擇的語言取得對應的單字翻譯
+                    const wordLang = row.selectedWordLanguage || "chinese";
+                    let vocabularyTranslation = "";
+                    if (wordLang === "chinese") {
+                      vocabularyTranslation = row.definition || "";
+                    } else if (wordLang === "english") {
+                      vocabularyTranslation = row.translation || "";
+                    } else if (wordLang === "japanese") {
+                      vocabularyTranslation = row.japanese_translation || "";
+                    } else if (wordLang === "korean") {
+                      vocabularyTranslation = row.korean_translation || "";
+                    }
+                    console.log(
+                      `[Save] Row ${row.text}: wordLang=${wordLang}, definition=${row.definition}, vocabularyTranslation=${vocabularyTranslation}`,
+                    );
+
+                    // 根據選擇的語言取得對應的例句翻譯
+                    const sentenceLang =
+                      row.selectedSentenceLanguage || "chinese";
+                    let exampleTranslation = "";
+                    if (sentenceLang === "chinese") {
+                      exampleTranslation =
+                        row.example_sentence_translation || "";
+                    } else if (sentenceLang === "japanese") {
+                      exampleTranslation = row.example_sentence_japanese || "";
+                    } else if (sentenceLang === "korean") {
+                      exampleTranslation = row.example_sentence_korean || "";
+                    }
+
+                    return {
+                      text: row.text.trim(),
+                      // 統一翻譯欄位（新格式）
+                      vocabulary_translation: vocabularyTranslation,
+                      vocabulary_translation_lang: wordLang,
+                      // 向後相容欄位（讓學生 API 能讀到 ContentItem.translation）
+                      definition: vocabularyTranslation,
+                      // 英文釋義向後相容
+                      english_definition:
+                        wordLang === "english"
+                          ? vocabularyTranslation
+                          : row.translation || "",
+                      audio_url: row.audioUrl || row.audio_url || "",
+                      image_url: row.imageUrl || "",
+                      example_sentence: row.example_sentence || "",
+                      example_sentence_translation: exampleTranslation,
+                      example_sentence_translation_lang: sentenceLang,
+                      parts_of_speech: row.partsOfSpeech || [],
+                    };
+                  }),
+                  target_wpm: 60,
+                  target_accuracy: 0.8,
+                  time_limit_seconds: 180,
+                };
+
+                console.log("Saving data:", saveData);
+
+                const existingContentId = editingContent?.id || content?.id;
+
+                if (existingContentId) {
+                  // 編輯模式：更新現有內容
+                  try {
+                    await apiClient.updateContent(existingContentId, saveData);
+
+                    toast.success(t("contentEditor.messages.savingSuccess"));
+
+                    if (onSave) {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      await (onSave as (content?: any) => void | Promise<void>)(
+                        {
+                          id: existingContentId,
+                          title: saveData.title,
+                          items: saveData.items,
+                        },
+                      );
+                    }
+                  } catch (error) {
+                    console.error("Failed to update content:", error);
+                    toast.error(t("contentEditor.messages.savingFailed"));
+                  }
+                } else if (isCreating && lessonId) {
+                  // 創建模式：新增內容
+                  try {
+                    const newContent = await apiClient.createContent(lessonId, {
+                      type: "VOCABULARY_SET",
+                      ...saveData,
+                    });
+
+                    toast.success(
+                      t("contentEditor.messages.contentCreatedSuccess"),
+                    );
+
+                    if (onSave) {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      await (onSave as (content?: any) => void | Promise<void>)(
+                        newContent,
+                      );
+                    }
+                  } catch (error) {
+                    console.error("Failed to create content:", error);
+                    toast.error(
+                      t("contentEditor.messages.creatingContentFailed"),
                     );
                   }
-                } catch (error) {
-                  console.error("Failed to create content:", error);
-                  toast.error(
-                    t("contentEditor.messages.creatingContentFailed"),
-                  );
                 }
+              } finally {
+                setIsSaving(false);
               }
             }}
           >
-            {t("contentEditor.buttons.save")}
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {t("vocabularySet.saving") || "儲存中..."}
+              </>
+            ) : (
+              t("contentEditor.buttons.save")
+            )}
           </Button>
         </div>
       )}

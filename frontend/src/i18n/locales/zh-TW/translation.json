@@ -619,6 +619,9 @@
     "score": {
       "label": "分數: {{score}}"
     },
+    "proficiency": {
+      "label": "熟悉度：{{proficiency}}%"
+    },
     "buttons": {
       "start": "開始作業",
       "continue": "繼續作業",
@@ -753,7 +756,10 @@
     },
     "activityTypes": {
       "reading": "例句朗讀",
-      "rearrangement": "例句重組"
+      "rearrangement": "例句重組",
+      "vocabulary": "單字練習",
+      "wordReading": "單字朗讀",
+      "wordSelection": "單字選擇"
     },
     "stats": {
       "minutes": "分鐘",
@@ -2243,6 +2249,8 @@
       "VOCABULARY_SET": "單字集",
       "SPEAKING": "例句朗讀",
       "REARRANGEMENT": "例句重組",
+      "WORD_SELECTION": "單字選擇",
+      "WORD_READING": "單字朗讀",
       "speakingPractice": "口說練習",
       "speaking_practice": "口說練習",
       "SPEAKING_PRACTICE": "口說練習",
@@ -2409,6 +2417,7 @@
       "resubmitted": "已訂正",
       "graded": "已完成",
       "score": "分數",
+      "proficiency": "熟練度",
       "actions": "操作",
       "searchPlaceholder": "搜尋學生姓名...",
       "allStatuses": "全部狀態",
@@ -2437,6 +2446,8 @@
       "sentenceMaking": "單字集",
       "sentence_making": "單字集",
       "SENTENCE_MAKING": "單字集",
+      "vocabularySet": "單字集",
+      "vocabulary_set": "單字集",
       "VOCABULARY_SET": "單字集",
       "speakingQuiz": "口說測驗",
       "speaking_quiz": "口說測驗",
@@ -2509,7 +2520,8 @@
       "previewMode": "預覽示範模式"
     },
     "info": {
-      "description": "這是預覽示範模式，您看到的畫面與學生完全相同。所有操作（包括錄音）都可正常使用，但不會儲存到資料庫。"
+      "description": "這是預覽示範模式，您看到的畫面與學生完全相同。所有操作（包括錄音）都可正常使用，但不會儲存到資料庫。",
+      "suffix": "：您看到的畫面與學生完全相同。所有操作（包括錄音）都可正常使用，但不會儲存到資料庫。"
     }
   },
   "teacherClassrooms": {
@@ -3730,6 +3742,7 @@
     "dialogTitle": "新增單字集",
     "editTitle": "編輯單字集",
     "defaultTitle": "單字集內容",
+    "saving": "儲存中...",
     "placeholders": {
       "enterEnglishWord": "輸入英文單字",
       "enterEnglishSentence": "輸入英文例句 (選填)",
@@ -3845,11 +3858,15 @@
     "noItems": "找不到單字項目",
     "wordSelection": "單字選擇",
     "itemProgress": "第 {{current}} / {{total}} 題",
+    "questionNumber": "第 {{number}} 題",
+    "questionProgress": "第 {{current}}/{{total}} 題",
     "proficiency": "熟悉度",
     "currentProficiency": "目前熟悉度",
     "playAudio": "播放發音",
     "selectTranslation": "請選擇正確的翻譯：",
     "selectTranslationAudio": "聽音檔後選擇正確的翻譯：",
+    "seconds": "秒",
+    "timeUp": "時間到！",
     "correct": "正確！",
     "incorrect": "答錯了",
     "correctAnswerIs": "正確答案是：",

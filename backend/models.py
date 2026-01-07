@@ -1000,6 +1000,10 @@ class ContentItem(Base):
     # 詞性（n., v., adj., adv., prep., conj., etc.）
     part_of_speech = Column(String(20), nullable=True)
 
+    # 預生成的干擾選項（單字選擇練習用）
+    # 儲存格式: ["干擾項1", "干擾項2", "干擾項3"]
+    distractors = Column(JSON, nullable=True)
+
     item_metadata = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
