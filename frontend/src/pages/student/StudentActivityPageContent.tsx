@@ -2311,6 +2311,11 @@ export default function StudentActivityPageContent({
 
             {/* Navigation buttons */}
             {(() => {
+              // 🎯 單字選擇模式：WordSelectionActivity 自帶導航，不顯示外部導航按鈕
+              if (practiceMode === "word_selection") {
+                return null;
+              }
+
               let isAssessed = false;
 
               if (currentActivity.items && currentActivity.items.length > 0) {

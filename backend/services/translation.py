@@ -507,7 +507,7 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                temperature=0.7,  # 稍高一點讓例句更有變化
+                temperature=0.8,  # 稍高一點讓例句更有變化
                 max_tokens=2000,
             )
 
@@ -570,19 +570,24 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
         try:
             pos_hint = f"詞性: {part_of_speech}" if part_of_speech else ""
 
-            prompt = f"""為單字 "{word}"（正確翻譯: {translation}）生成 {count} 個干擾項。
+            prompt = f"""為單字 "{word}"（正確翻譯: {translation}）生成 {count} 個干擾項（錯誤選項）。
 {pos_hint}
 
-嚴格要求:
-- 必須是繁體中文翻譯
-- 同詞性（名詞配名詞、動詞配動詞）
-- 干擾項必須與正確答案有明顯區別，不能是近義詞或相似詞
-- 干擾項之間也要有明顯區別，不能互為近義詞
-- 選擇同類別但意義完全不同的詞（例如水果類：蘋果的干擾項用香蕉、西瓜，而非紅蘋果、青蘋果）
-- 不能是正確答案 "{translation}" 的同義詞或變體
-- 每個干擾項應該是常見詞彙，讓學生容易辨別
+## 嚴格要求（必須遵守）
 
-請以 JSON 陣列格式回覆，只包含 {count} 個干擾項翻譯：
+1. **繁體中文**：所有干擾項必須是繁體中文
+2. **同詞性**：名詞配名詞、動詞配動詞、形容詞配形容詞
+3. **不同意思但同領域**：
+   - ❌ 錯誤（近義詞）：change=改變 → 不可用「交換、變換、轉變」
+   - ❌ 錯誤（太離譜）：assignment=作業 → 不可用「海豚、太陽、香蕉」
+   - ✅ 正確：assignment=作業 → 可用「考試、報告、課本」（同為學校相關詞）
+   - ✅ 正確：apple=蘋果 → 可用「香蕉、橘子、西瓜」（同為水果）
+
+4. **干擾項之間也不能是近義詞**
+5. **常見詞彙**：使用小學生都認識的常見詞
+
+## 輸出格式
+JSON 陣列，只包含 {count} 個干擾項：
 ["干擾項1", "干擾項2", "干擾項3"]
 
 只回覆 JSON 陣列，不要其他文字。"""
@@ -593,17 +598,18 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
                     {
                         "role": "system",
                         "content": (
-                            "You are a vocabulary quiz generator. Generate clearly "
-                            "different but plausible wrong answer options. "
-                            "IMPORTANT: Options must be distinctly different from each other "
-                            "and from the correct answer - avoid synonyms or similar meanings. "
-                            "CRITICAL: All Chinese output MUST be in Traditional Chinese (繁體中文), "
-                            "NOT Simplified Chinese. Always respond with valid JSON array only."
+                            "You are a vocabulary quiz generator for language learners. "
+                            "Your task is to generate WRONG answer options (distractors). "
+                            "RULES: 1) NO synonyms or similar meanings (改變→不可用交換/變換) "
+                            "2) Stay in the same category/domain (assignment=作業→用考試/報告, apple=蘋果→用香蕉/橘子) "
+                            "3) Distractors should be plausible, not random words. "
+                            "All Chinese MUST be Traditional Chinese (繁體中文). "
+                            "Respond with valid JSON array only."
                         ),
                     },
                     {"role": "user", "content": prompt},
                 ],
-                temperature=1.0,  # Higher temperature for more variety and distinction
+                temperature=0.8,  # Balanced: variety while following instructions
                 max_tokens=200,
             )
 
@@ -667,22 +673,28 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
                 ensure_ascii=False,
             )
 
-            prompt = f"""為以下單字列表生成干擾項。每個單字需要 {count} 個干擾項。
+            prompt = f"""為以下單字列表生成干擾項（錯誤選項）。每個單字需要 {count} 個干擾項。
 
 單字列表:
 {words_json}
 
-嚴格要求:
-- 所有干擾項必須是繁體中文
-- 同詞性（名詞配名詞、動詞配動詞）
-- 干擾項必須與正確答案有明顯區別，不能是近義詞或相似詞
-- 干擾項之間也要有明顯區別，不能互為近義詞
-- 選擇同類別但意義完全不同的詞（例如水果類：蘋果的干擾項用香蕉、西瓜，而非紅蘋果、青蘋果）
-- 不能是正確答案的同義詞或變體
-- 每個干擾項應該是常見詞彙，讓學生容易辨別
+## 嚴格要求（必須遵守）
 
-請以 JSON 陣列格式回覆，每個元素是一個包含 {count} 個干擾項的陣列：
-[["干擾項1", "干擾項2", "干擾項3"], ["干擾項1", "干擾項2", "干擾項3"], ...]
+1. **繁體中文**：所有干擾項必須是繁體中文
+2. **同詞性**：名詞配名詞、動詞配動詞、形容詞配形容詞
+3. **不同意思但同領域**：
+   - ❌ 錯誤範例（近義詞）：change=改變 → 不可用「交換、變換、轉變」
+   - ❌ 錯誤範例（太離譜）：assignment=作業 → 不可用「海豚、太陽、香蕉」
+   - ✅ 正確範例：assignment=作業 → 可用「考試、報告、課本」（同為學校相關詞）
+   - ✅ 正確範例：apple=蘋果 → 可用「香蕉、橘子、西瓜」（同為水果）
+   - ✅ 正確範例：happy=快樂 → 可用「悲傷、憤怒、害怕」（同為情緒詞）
+
+4. **干擾項之間也要完全不同**：三個干擾項彼此也不能是近義詞
+5. **常見詞彙**：使用小學生都認識的常見詞
+
+## 輸出格式
+JSON 陣列，每個元素是一個包含 {count} 個干擾項的陣列：
+[["干擾項1", "干擾項2", "干擾項3"], ...]
 
 只回覆 JSON 陣列，不要其他文字。"""
 
@@ -692,17 +704,18 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
                     {
                         "role": "system",
                         "content": (
-                            "You are a vocabulary quiz generator. Generate clearly "
-                            "different but plausible wrong answer options. "
-                            "IMPORTANT: Options must be distinctly different from each other "
-                            "and from the correct answer - avoid synonyms or similar meanings. "
-                            "CRITICAL: All Chinese output MUST be in Traditional Chinese (繁體中文), "
-                            "NOT Simplified Chinese. Always respond with valid JSON array only."
+                            "You are a vocabulary quiz generator for language learners. "
+                            "Your task is to generate WRONG answer options (distractors). "
+                            "RULES: 1) NO synonyms or similar meanings (改變→不可用交換/變換) "
+                            "2) Stay in the same category/domain (assignment=作業→用考試/報告, apple=蘋果→用香蕉/橘子) "
+                            "3) Distractors should be plausible, not random words. "
+                            "All Chinese MUST be Traditional Chinese (繁體中文). "
+                            "Respond with valid JSON array only."
                         ),
                     },
                     {"role": "user", "content": prompt},
                 ],
-                temperature=1.0,  # Higher temperature for more variety and distinction
+                temperature=0.8,  # Balanced: variety while following instructions
                 max_tokens=1000,
             )
 
