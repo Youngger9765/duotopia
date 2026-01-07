@@ -467,21 +467,6 @@ export default function WordSelectionActivity({
         </div>
       </div>
 
-      {/* Proficiency Progress Bar */}
-      <div className="relative">
-        <Progress
-          value={proficiency.current_mastery}
-          max={100}
-          className="h-3"
-        />
-        {/* Target marker */}
-        <div
-          className="absolute top-0 h-3 w-0.5 bg-green-600"
-          style={{ left: `${proficiency.target_mastery}%` }}
-          title={`Target: ${proficiency.target_mastery}%`}
-        />
-      </div>
-
       {/* Word Card */}
       <Card className="p-6">
         <CardContent className="space-y-6">
