@@ -619,6 +619,9 @@
     "score": {
       "label": "Score: {{score}}"
     },
+    "proficiency": {
+      "label": "Proficiency: {{proficiency}}%"
+    },
     "buttons": {
       "start": "Start Assignment",
       "continue": "Continue Assignment",

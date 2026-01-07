@@ -619,6 +619,9 @@
     "score": {
       "label": "分數: {{score}}"
     },
+    "proficiency": {
+      "label": "熟悉度：{{proficiency}}%"
+    },
     "buttons": {
       "start": "開始作業",
       "continue": "繼續作業",

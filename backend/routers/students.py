@@ -3440,10 +3440,11 @@ async def submit_word_selection_answer(
 
         # 根據熟悉度同步狀態
         if achieved:
+            # 每次達標時都更新 score，確保反映最新熟悉度
+            student_assignment.score = min(100.0, current_mastery * 100)
             if student_assignment.status != AssignmentStatus.GRADED:
                 student_assignment.status = AssignmentStatus.GRADED
                 student_assignment.submitted_at = datetime.now(timezone.utc)
-                student_assignment.score = min(100.0, current_mastery * 100)
         else:
             # 如果之前是 GRADED 但現在未達標，改回 IN_PROGRESS
             if student_assignment.status == AssignmentStatus.GRADED:

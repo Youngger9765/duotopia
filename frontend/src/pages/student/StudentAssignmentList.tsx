@@ -362,14 +362,18 @@ export default function StudentAssignmentList() {
             )}
           </div>
 
-          {/* Score */}
+          {/* Score / Proficiency */}
           {assignment.score !== undefined && assignment.status === "GRADED" && (
             <div className="flex items-center gap-2 pt-2">
               <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
               <span className="text-sm sm:text-base font-medium text-green-600">
-                {t("studentAssignmentList.score.label", {
-                  score: assignment.score,
-                })}
+                {assignment.practice_mode === "word_selection"
+                  ? t("studentAssignmentList.proficiency.label", {
+                      proficiency: assignment.score.toFixed(1),
+                    })
+                  : t("studentAssignmentList.score.label", {
+                      score: assignment.score,
+                    })}
               </span>
             </div>
           )}
