@@ -1981,47 +1981,47 @@ export default function StudentActivityPageContent({
 
       {/* Header with progress */}
       <div className="sticky top-0 bg-white border-b z-10">
-        {/* 🎯 單字選擇模式：使用 max-w-7xl px-4 對齊預覽頁的藍色提示條 */}
+        {/* 🎯 單字選擇預覽模式：使用 max-w-7xl px-4 對齊預覽頁的藍色提示條 */}
         <div
           className={
-            practiceMode === "word_selection"
+            practiceMode === "word_selection" && isPreviewMode
               ? "max-w-7xl mx-auto px-4 py-2"
               : "max-w-6xl mx-auto px-2 sm:px-4 py-2"
           }
         >
           {/* Mobile header layout */}
           <div className="flex flex-row items-center justify-between gap-2 mb-2">
-            {/* 🎯 單字選擇模式：只顯示標題，靠左對齊 */}
-              {practiceMode === "word_selection" ? (
+            {/* 🎯 單字選擇預覽模式：只顯示標題（外層已有返回按鈕）；學生端保留返回按鈕 */}
+            {practiceMode === "word_selection" && isPreviewMode ? (
+              <h1 className="text-sm sm:text-base font-semibold truncate min-w-0">
+                {assignmentTitle}
+              </h1>
+            ) : (
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                {onBack && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onBack}
+                    className="flex-shrink-0 px-2 sm:px-3"
+                  >
+                    <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                    <span className="hidden sm:inline">
+                      {t("studentActivityPage.buttons.back")}
+                    </span>
+                    <span className="sm:hidden">
+                      {t("studentActivityPage.buttons.backShort")}
+                    </span>
+                  </Button>
+                )}
+                {onBack && (
+                  <div className="h-4 sm:h-6 w-px bg-gray-300 flex-shrink-0" />
+                )}
                 <h1 className="text-sm sm:text-base font-semibold truncate min-w-0">
                   {assignmentTitle}
                 </h1>
-              ) : (
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                  {onBack && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={onBack}
-                      className="flex-shrink-0 px-2 sm:px-3"
-                    >
-                      <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                      <span className="hidden sm:inline">
-                        {t("studentActivityPage.buttons.back")}
-                      </span>
-                      <span className="sm:hidden">
-                        {t("studentActivityPage.buttons.backShort")}
-                      </span>
-                    </Button>
-                  )}
-                  {onBack && (
-                    <div className="h-4 sm:h-6 w-px bg-gray-300 flex-shrink-0" />
-                  )}
-                  <h1 className="text-sm sm:text-base font-semibold truncate min-w-0">
-                    {assignmentTitle}
-                  </h1>
-                </div>
-              )}
+              </div>
+            )}
 
             <div className="flex items-center gap-2 sm:gap-3 justify-end flex-shrink-0">
               {saving && (
@@ -2035,10 +2035,12 @@ export default function StudentActivityPageContent({
                   </span>
                 </div>
               )}
-              {/* Issue #110: 例句重組模式不在 header 顯示提交按鈕（避免誤觸） */}
+              {/* Issue #110: 例句重組模式不在 header 顯示提交按鈕（避免誤觸）
+                  單字選擇模式也不需要（自動根據熟悉度完成） */}
               {!isReadOnly &&
                 !isPreviewMode &&
-                practiceMode !== "rearrangement" && (
+                practiceMode !== "rearrangement" &&
+                practiceMode !== "word_selection" && (
                   <Button
                     onClick={handleSubmit}
                     disabled={submitting}
