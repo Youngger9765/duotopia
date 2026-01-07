@@ -35,8 +35,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { cn } from "@/lib/utils";
+import { apiClient } from "@/lib/api";
 
 interface WordOption {
   content_item_id: number;
@@ -68,7 +68,7 @@ export default function WordSelectionActivity({
   onComplete,
 }: WordSelectionActivityProps) {
   const { t } = useTranslation();
-  const { token } = useStudentAuthStore();
+  // Note: Using apiClient which auto-detects token (student or teacher)
 
   // State
   const [loading, setLoading] = useState(true);
@@ -110,22 +110,24 @@ export default function WordSelectionActivity({
   const startPractice = useCallback(async () => {
     try {
       setLoading(true);
-      const apiUrl = import.meta.env.VITE_API_URL || "";
 
-      const response = await fetch(
-        `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/selection/start`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      // 根據是否為預覽模式選擇不同的 API
+      const apiEndpoint = isPreviewMode
+        ? `/api/teachers/assignments/${assignmentId}/preview/word-selection-start`
+        : `/api/students/assignments/${assignmentId}/vocabulary/selection/start`;
 
-      if (!response.ok) {
-        throw new Error(`Failed to start practice: ${response.status}`);
-      }
+      const data = await apiClient.get<{
+        session_id: number | null;
+        words: WordOption[];
+        total_words: number;
+        current_proficiency: number;
+        target_proficiency: number;
+        show_word: boolean;
+        show_image: boolean;
+        play_audio: boolean;
+        time_limit_per_question: number | null;
+      }>(apiEndpoint);
 
-      const data = await response.json();
       setWords(data.words || []);
       setSessionId(data.session_id);
       setShowWord(data.show_word ?? true);
@@ -152,27 +154,17 @@ export default function WordSelectionActivity({
     } finally {
       setLoading(false);
     }
-  }, [assignmentId, token, t]);
+  }, [assignmentId, isPreviewMode, t]);
 
   // Fetch current proficiency
   const fetchProficiency = useCallback(async () => {
+    // Skip in preview mode - no proficiency tracking
+    if (isPreviewMode) return;
+
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "";
-
-      const response = await fetch(
-        `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/selection/proficiency`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+      const data = await apiClient.get<ProficiencyStatus>(
+        `/api/students/assignments/${assignmentId}/vocabulary/selection/proficiency`,
       );
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch proficiency: ${response.status}`);
-      }
-
-      const data = await response.json();
       setProficiency(data);
 
       // Note: Achievement check moved to round completed view
@@ -180,7 +172,7 @@ export default function WordSelectionActivity({
     } catch (error) {
       console.error("Error fetching proficiency:", error);
     }
-  }, [assignmentId, token]);
+  }, [assignmentId, isPreviewMode]);
 
   useEffect(() => {
     startPractice();
@@ -283,28 +275,15 @@ export default function WordSelectionActivity({
     }
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "";
-
-      const response = await fetch(
-        `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/selection/answer`,
+      await apiClient.post(
+        `/api/students/assignments/${assignmentId}/vocabulary/selection/answer`,
         {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            content_item_id: currentWord.content_item_id,
-            selected_answer: "", // Empty answer for timeout
-            is_correct: false,
-            time_spent_seconds: timeLimit || 0,
-          }),
+          content_item_id: currentWord.content_item_id,
+          selected_answer: "", // Empty answer for timeout
+          is_correct: false,
+          time_spent_seconds: timeLimit || 0,
         },
       );
-
-      if (!response.ok) {
-        throw new Error(`Failed to submit timeout: ${response.status}`);
-      }
 
       // Fetch updated proficiency
       await fetchProficiency();
@@ -334,28 +313,15 @@ export default function WordSelectionActivity({
     }
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "";
-
-      const response = await fetch(
-        `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/selection/answer`,
+      await apiClient.post(
+        `/api/students/assignments/${assignmentId}/vocabulary/selection/answer`,
         {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            content_item_id: currentWord.content_item_id,
-            selected_answer: answer,
-            is_correct: correct,
-            time_spent_seconds: 0,
-          }),
+          content_item_id: currentWord.content_item_id,
+          selected_answer: answer,
+          is_correct: correct,
+          time_spent_seconds: 0,
         },
       );
-
-      if (!response.ok) {
-        throw new Error(`Failed to submit answer: ${response.status}`);
-      }
 
       // Fetch updated proficiency
       await fetchProficiency();

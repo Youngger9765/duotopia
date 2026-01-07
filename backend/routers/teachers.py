@@ -4149,3 +4149,201 @@ async def get_quota_usage_analytics(
     )
 
     return analytics
+
+
+# ============ Word Selection Preview API ============
+
+
+@router.get("/assignments/{assignment_id}/preview/word-selection-start")
+async def preview_word_selection_start(
+    assignment_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    預覽模式專用：取得單字選擇練習資料
+
+    - 供老師預覽示範用
+    - 不需要 StudentAssignment，直接從 Assignment 讀取
+    - 使用預生成的干擾選項（如果有的話）
+    """
+    from services.translation import translation_service
+
+    # 取得作業（確認老師有權限）
+    assignment = (
+        db.query(Assignment)
+        .join(Classroom)
+        .filter(
+            Assignment.id == assignment_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 確認是單字選擇模式
+    if assignment.practice_mode != "word_selection":
+        raise HTTPException(
+            status_code=400, detail="This assignment is not in word_selection mode"
+        )
+
+    # 取得所有內容項目
+    content_items = (
+        db.query(ContentItem)
+        .join(Content)
+        .join(AssignmentContent)
+        .filter(AssignmentContent.assignment_id == assignment.id)
+        .order_by(ContentItem.order_index)
+        .all()
+    )
+
+    if not content_items:
+        raise HTTPException(
+            status_code=404, detail="No vocabulary items found for this assignment"
+        )
+
+    # 如果需要打亂順序
+    if assignment.shuffle_questions:
+        random.shuffle(content_items)
+
+    # 限制為 10 個單字（與學生端一致）
+    content_items = content_items[:10]
+
+    # 收集需要生成干擾選項的項目
+    items_needing_generation = [item for item in content_items if not item.distractors]
+
+    # 如果有需要生成的，批量生成
+    if items_needing_generation:
+        words_for_distractors = [
+            {"word": item.text, "translation": item.translation or ""}
+            for item in items_needing_generation
+        ]
+        try:
+            generated = await translation_service.batch_generate_distractors(
+                words_for_distractors, count=3
+            )
+            for i, item in enumerate(items_needing_generation):
+                if i < len(generated):
+                    item._generated_distractors = generated[i]
+        except Exception as e:
+            logger.error(f"Failed to generate distractors for preview: {e}")
+            for item in items_needing_generation:
+                item._generated_distractors = ["選項A", "選項B", "選項C"]
+
+    # 建立回應資料
+    words_with_options = []
+    for item in content_items:
+        correct_answer = item.translation or ""
+
+        # 使用預生成的或剛生成的干擾選項
+        if item.distractors:
+            distractors = item.distractors
+        elif hasattr(item, "_generated_distractors"):
+            distractors = item._generated_distractors
+        else:
+            distractors = ["選項A", "選項B", "選項C"]
+
+        # 過濾重複和正確答案
+        unique_distractors = []
+        seen = {correct_answer.lower().strip()}
+        for d in distractors:
+            d_normalized = d.lower().strip()
+            if d_normalized not in seen and d.strip():
+                seen.add(d_normalized)
+                unique_distractors.append(d)
+            if len(unique_distractors) >= 3:
+                break
+
+        # 確保有 3 個干擾選項
+        fallback_options = ["選項A", "選項B", "選項C", "選項D", "選項E"]
+        fallback_idx = 0
+        while len(unique_distractors) < 3:
+            fallback = fallback_options[fallback_idx]
+            if fallback.lower() not in seen:
+                unique_distractors.append(fallback)
+                seen.add(fallback.lower())
+            fallback_idx += 1
+
+        # 建立選項陣列並打亂
+        options = [correct_answer] + unique_distractors[:3]
+        random.shuffle(options)
+
+        words_with_options.append(
+            {
+                "content_item_id": item.id,
+                "text": item.text,
+                "translation": correct_answer,
+                "audio_url": item.audio_url,
+                "image_url": item.image_url,
+                "memory_strength": 0,
+                "options": options,
+            }
+        )
+
+    return {
+        "session_id": None,  # 預覽模式不建立 session
+        "words": words_with_options,
+        "total_words": len(words_with_options),
+        "current_proficiency": 0,
+        "target_proficiency": assignment.target_proficiency or 80,
+        "show_word": assignment.show_word if assignment.show_word is not None else True,
+        "show_image": (
+            assignment.show_image if assignment.show_image is not None else True
+        ),
+        "play_audio": assignment.play_audio or False,
+        "time_limit_per_question": assignment.time_limit_per_question,
+    }
+
+
+@router.post("/assignments/{assignment_id}/preview/word-selection-answer")
+async def preview_word_selection_answer(
+    assignment_id: int,
+    request: dict,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    預覽模式專用：提交單字選擇答案（不儲存）
+
+    - 只驗證答案是否正確
+    - 不更新任何資料庫記錄
+    - 回傳模擬的結果
+    """
+    # 取得作業（確認老師有權限）
+    assignment = (
+        db.query(Assignment)
+        .join(Classroom)
+        .filter(
+            Assignment.id == assignment_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    content_item_id = request.get("content_item_id")
+    selected_answer = request.get("selected_answer")
+
+    # 取得 content item 驗證答案
+    content_item = (
+        db.query(ContentItem).filter(ContentItem.id == content_item_id).first()
+    )
+
+    if not content_item:
+        raise HTTPException(status_code=404, detail="Content item not found")
+
+    is_correct = selected_answer == content_item.translation
+
+    # 回傳模擬結果（預覽模式不更新 memory_strength）
+    return {
+        "is_correct": is_correct,
+        "correct_answer": content_item.translation,
+        "new_memory_strength": 0.5 if is_correct else 0,  # 模擬值
+        "current_mastery": 50.0,  # 模擬值
+        "target_mastery": assignment.target_proficiency or 80,
+        "achieved": False,
+    }
