@@ -374,50 +374,55 @@ export default function StudentAssignmentList() {
             </div>
           )}
 
-          {/* Action Button */}
-          <div className="pt-4 mt-3 border-t border-gray-100">
-            <Button
-              onClick={() => handleStartAssignment(assignment.id)}
-              disabled={
-                !canStart &&
-                assignment.status !== "GRADED" &&
-                assignment.status !== "SUBMITTED" &&
-                assignment.status !== "RETURNED" &&
-                assignment.status !== "RESUBMITTED"
-              }
-              className={`w-full py-2.5 sm:py-3 text-sm sm:text-base font-medium transition-all ${
-                canStart || assignment.status === "RETURNED"
-                  ? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white shadow-sm hover:shadow-md"
-                  : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-              }`}
-              data-testid="assignment-action-button"
-            >
-              {assignment.status === "NOT_STARTED" && (
-                <>
-                  {t("studentAssignmentList.buttons.start")}{" "}
-                  <ChevronRight className="ml-1 h-4 w-4 inline" />
-                </>
-              )}
-              {assignment.status === "IN_PROGRESS" && (
-                <>
-                  {t("studentAssignmentList.buttons.continue")}{" "}
-                  <ChevronRight className="ml-1 h-4 w-4 inline" />
-                </>
-              )}
-              {assignment.status === "SUBMITTED" &&
-                t("studentAssignmentList.buttons.view")}
-              {assignment.status === "GRADED" &&
-                t("studentAssignmentList.buttons.viewResults")}
-              {assignment.status === "RETURNED" && (
-                <>
-                  {t("studentAssignmentList.buttons.resubmit")}{" "}
-                  <AlertCircle className="ml-1 h-4 w-4 inline" />
-                </>
-              )}
-              {assignment.status === "RESUBMITTED" &&
-                t("studentAssignmentList.buttons.view")}
-            </Button>
-          </div>
+          {/* Action Button - 單字選擇已完成時不顯示按鈕 */}
+          {!(
+            assignment.status === "GRADED" &&
+            assignment.practice_mode === "word_selection"
+          ) && (
+            <div className="pt-4 mt-3 border-t border-gray-100">
+              <Button
+                onClick={() => handleStartAssignment(assignment.id)}
+                disabled={
+                  !canStart &&
+                  assignment.status !== "GRADED" &&
+                  assignment.status !== "SUBMITTED" &&
+                  assignment.status !== "RETURNED" &&
+                  assignment.status !== "RESUBMITTED"
+                }
+                className={`w-full py-2.5 sm:py-3 text-sm sm:text-base font-medium transition-all ${
+                  canStart || assignment.status === "RETURNED"
+                    ? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white shadow-sm hover:shadow-md"
+                    : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                }`}
+                data-testid="assignment-action-button"
+              >
+                {assignment.status === "NOT_STARTED" && (
+                  <>
+                    {t("studentAssignmentList.buttons.start")}{" "}
+                    <ChevronRight className="ml-1 h-4 w-4 inline" />
+                  </>
+                )}
+                {assignment.status === "IN_PROGRESS" && (
+                  <>
+                    {t("studentAssignmentList.buttons.continue")}{" "}
+                    <ChevronRight className="ml-1 h-4 w-4 inline" />
+                  </>
+                )}
+                {assignment.status === "SUBMITTED" &&
+                  t("studentAssignmentList.buttons.view")}
+                {assignment.status === "GRADED" &&
+                  t("studentAssignmentList.buttons.viewResults")}
+                {assignment.status === "RETURNED" && (
+                  <>
+                    {t("studentAssignmentList.buttons.resubmit")}{" "}
+                    <AlertCircle className="ml-1 h-4 w-4 inline" />
+                  </>
+                )}
+                {assignment.status === "RESUBMITTED" &&
+                  t("studentAssignmentList.buttons.view")}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
