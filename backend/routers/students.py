@@ -3213,19 +3213,63 @@ async def start_word_selection_practice(
                 }
             )
 
-    # Generate distractors for each word using AI
-    words_for_distractors = [
-        {"word": w["text"], "translation": w["translation"]} for w in words_data
+    # 🔥 Phase 2 優化：優先使用預生成的干擾選項
+    # 先檢查 content_items 是否有預生成的 distractors
+    content_item_ids = [w["content_item_id"] for w in words_data]
+    items_with_distractors = (
+        db.query(ContentItem).filter(ContentItem.id.in_(content_item_ids)).all()
+    )
+    distractors_map = {item.id: item.distractors for item in items_with_distractors}
+
+    # 檢查有多少 items 有預生成的 distractors
+    items_needing_generation = [
+        w for w in words_data if not distractors_map.get(w["content_item_id"])
     ]
 
-    try:
-        all_distractors = await translation_service.batch_generate_distractors(
-            words_for_distractors, count=3
+    if not items_needing_generation:
+        # 所有 items 都有預生成的 distractors，直接使用
+        all_distractors = [
+            distractors_map.get(w["content_item_id"], []) for w in words_data
+        ]
+        logger.info(
+            f"Using pre-generated distractors for {len(words_data)} items "
+            f"in assignment {assignment_id}"
         )
-    except Exception as e:
-        logger.error(f"Failed to generate distractors: {e}")
-        # Fallback: use generic distractors
-        all_distractors = [["選項A", "選項B", "選項C"] for _ in words_data]
+    else:
+        # 有些 items 需要即時生成（相容舊資料）
+        logger.info(
+            f"Generating distractors for {len(items_needing_generation)} items "
+            f"({len(words_data) - len(items_needing_generation)} pre-generated) "
+            f"in assignment {assignment_id}"
+        )
+
+        words_for_distractors = [
+            {"word": w["text"], "translation": w["translation"]}
+            for w in items_needing_generation
+        ]
+
+        try:
+            generated_distractors = (
+                await translation_service.batch_generate_distractors(
+                    words_for_distractors, count=3
+                )
+            )
+        except Exception as e:
+            logger.error(f"Failed to generate distractors: {e}")
+            # Fallback: use generic distractors
+            generated_distractors = [
+                ["選項A", "選項B", "選項C"] for _ in items_needing_generation
+            ]
+
+        # 合併預生成和即時生成的 distractors
+        generated_idx = 0
+        all_distractors = []
+        for w in words_data:
+            if distractors_map.get(w["content_item_id"]):
+                all_distractors.append(distractors_map[w["content_item_id"]])
+            else:
+                all_distractors.append(generated_distractors[generated_idx])
+                generated_idx += 1
 
     # Create practice session
     practice_session = PracticeSession(
@@ -3245,13 +3289,34 @@ async def start_word_selection_practice(
     import random
 
     for i, word in enumerate(words_data):
-        distractors = (
-            all_distractors[i] if i < len(all_distractors) else ["選項A", "選項B", "選項C"]
-        )
+        distractors = all_distractors[i] if i < len(all_distractors) else []
         correct_answer = word["translation"]
 
-        # Create options array with correct answer and distractors
-        options = [correct_answer] + distractors[:3]
+        # Filter out duplicates and correct answer from distractors
+        unique_distractors = []
+        seen = {
+            correct_answer.lower().strip()
+        }  # Include correct answer to avoid duplicates
+        for d in distractors:
+            d_normalized = d.lower().strip()
+            if d_normalized not in seen and d.strip():
+                seen.add(d_normalized)
+                unique_distractors.append(d)
+            if len(unique_distractors) >= 3:
+                break
+
+        # Ensure we have exactly 3 distractors with fallbacks
+        fallback_options = ["選項A", "選項B", "選項C", "選項D", "選項E"]
+        fallback_idx = 0
+        while len(unique_distractors) < 3:
+            fallback = fallback_options[fallback_idx]
+            if fallback.lower() not in seen:
+                unique_distractors.append(fallback)
+                seen.add(fallback.lower())
+            fallback_idx += 1
+
+        # Create options array with correct answer and exactly 3 distractors = 4 total
+        options = [correct_answer] + unique_distractors[:3]
         # Shuffle options
         random.shuffle(options)
 
@@ -3286,6 +3351,9 @@ async def start_word_selection_practice(
         "show_word": assignment.show_word if assignment else True,
         "show_image": assignment.show_image if assignment else True,
         "play_audio": assignment.play_audio if assignment else False,
+        "time_limit_per_question": (
+            assignment.time_limit_per_question if assignment else None
+        ),
     }
 
 
@@ -3357,9 +3425,33 @@ async def submit_word_selection_answer(
         },
     ).fetchone()
 
-    db.commit()
-
     new_memory_strength = float(result.memory_strength) if result else 0
+
+    # 🔥 每次作答後同步作業狀態 - 狀態永遠反映當前熟悉度
+    mastery_result = db.execute(
+        text("SELECT * FROM calculate_assignment_mastery(:sa_id)"),
+        {"sa_id": assignment_id},
+    ).fetchone()
+
+    if mastery_result:
+        current_mastery = float(mastery_result.current_mastery)
+        target_mastery = float(mastery_result.target_mastery)
+        achieved = current_mastery >= target_mastery
+
+        # 根據熟悉度同步狀態
+        if achieved:
+            if student_assignment.status != AssignmentStatus.GRADED:
+                student_assignment.status = AssignmentStatus.GRADED
+                student_assignment.submitted_at = datetime.now(timezone.utc)
+                student_assignment.score = min(100.0, current_mastery * 100)
+        else:
+            # 如果之前是 GRADED 但現在未達標，改回 IN_PROGRESS
+            if student_assignment.status == AssignmentStatus.GRADED:
+                student_assignment.status = AssignmentStatus.IN_PROGRESS
+                student_assignment.submitted_at = None
+                student_assignment.score = None
+
+    db.commit()
 
     return {
         "success": True,

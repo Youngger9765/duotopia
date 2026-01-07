@@ -63,7 +63,9 @@ class TranslationService:
                         "role": "system",
                         "content": (
                             "You are a professional translator. Only provide the "
-                            "translation without any explanation."
+                            "translation without any explanation. "
+                            "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
+                            "NOT Simplified Chinese."
                         ),
                     },
                     {"role": "user", "content": prompt},
@@ -99,14 +101,21 @@ class TranslationService:
             if target_lang == "zh-TW":
                 prompt = f"""請分析以下英文單字，提供：
 1. 繁體中文翻譯
-2. 詞性（可能有多個）
+2. 詞性（必須列出所有常見用法的詞性）
 
 單字: {text}
 
-請以 JSON 格式回覆，格式如下：
-{{"translation": "中文翻譯", "parts_of_speech": ["n.", "v."]}}
+重要提示：
+- 許多英文單字有多種詞性，請列出所有常見的用法
+- 例如：顏色詞（red, blue, green）通常既是形容詞也是名詞
+- 例如：動作詞（run, walk, dance）通常既是動詞也是名詞
+- 例如：材料詞（gold, silver, plastic）通常既是名詞也是形容詞
+- 請勿遺漏任何常見詞性
 
-詞性請使用以下縮寫：n. (名詞), v. (動詞), adj. (形容詞), adv. (副詞),
+請以 JSON 格式回覆，格式如下：
+{{"translation": "中文翻譯", "parts_of_speech": ["n.", "adj."]}}
+
+詞性縮寫：n. (名詞), v. (動詞), adj. (形容詞), adv. (副詞),
 pron. (代名詞), prep. (介系詞), conj. (連接詞), interj. (感嘆詞),
 det. (限定詞), aux. (助動詞)
 
@@ -114,16 +123,22 @@ det. (限定詞), aux. (助動詞)
             else:
                 prompt = f"""Analyze the following English word and provide:
 1. English definition
-2. Parts of speech (may have multiple)
+2. Parts of speech (MUST list ALL common usages)
 
 Word: {text}
 
-Reply in JSON format:
-{{"translation": "definition", "parts_of_speech": ["n.", "v."]}}
+IMPORTANT:
+- Many English words have multiple parts of speech - list ALL common usages
+- Colors (red, blue, green) are typically both adjectives AND nouns
+- Action words (run, walk, dance) are typically both verbs AND nouns
+- Material words (gold, silver, plastic) are typically both nouns AND adjectives
+- Do NOT omit any common part of speech
 
-Use these abbreviations for parts of speech:
-n. (noun), v. (verb), adj. (adjective), adv. (adverb), pron. (pronoun),
-prep. (preposition), conj. (conjunction), interj. (interjection),
+Reply in JSON format:
+{{"translation": "definition", "parts_of_speech": ["n.", "adj."]}}
+
+POS abbreviations: n. (noun), v. (verb), adj. (adjective), adv. (adverb),
+pron. (pronoun), prep. (preposition), conj. (conjunction), interj. (interjection),
 det. (determiner), aux. (auxiliary)
 
 Only reply with JSON, no other text."""
@@ -133,11 +148,17 @@ Only reply with JSON, no other text."""
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a professional linguist. Always respond with valid JSON only.",
+                        "content": (
+                            "You are a professional linguist specializing in English grammar. "
+                            "When identifying parts of speech, you MUST list ALL common usages - "
+                            "many English words function as multiple parts of speech. "
+                            "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
+                            "NOT Simplified Chinese. Always respond with valid JSON only."
+                        ),
                     },
                     {"role": "user", "content": prompt},
                 ],
-                temperature=0.3,
+                temperature=0.2,  # Lower temperature for more consistent POS detection
                 max_tokens=200,
             )
 
@@ -219,7 +240,9 @@ Required: Return format must be ["translation1", "translation2", ...]"""
                         "content": (
                             "You are a professional translator. Always return results "
                             "as a valid JSON array with the exact same number of items as input. "
-                            "Return ONLY the JSON array, no markdown, no explanation."
+                            "Return ONLY the JSON array, no markdown, no explanation. "
+                            "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
+                            "NOT Simplified Chinese."
                         ),
                     },
                     {"role": "user", "content": prompt},
@@ -312,14 +335,21 @@ Required: Return format must be ["translation1", "translation2", ...]"""
             if target_lang == "zh-TW":
                 prompt = f"""請分析以下英文單字列表，為每個單字提供：
 1. 繁體中文翻譯
-2. 詞性（可能有多個）
+2. 詞性（必須列出所有常見用法的詞性）
 
 單字列表: {texts_json}
 
-請以 JSON 陣列格式回覆，格式如下：
-[{{"translation": "翻譯1", "parts_of_speech": ["n.", "v."]}}, {{"translation": "翻譯2", "parts_of_speech": ["adj."]}}]
+重要提示：
+- 許多英文單字有多種詞性，請列出所有常見的用法
+- 例如：顏色詞（red, blue, green）通常既是形容詞也是名詞
+- 例如：動作詞（run, walk, dance）通常既是動詞也是名詞
+- 例如：材料詞（gold, silver, plastic）通常既是名詞也是形容詞
+- 請勿遺漏任何常見詞性
 
-詞性請使用以下縮寫：n. (名詞), v. (動詞), adj. (形容詞), adv. (副詞),
+請以 JSON 陣列格式回覆，格式如下：
+[{{"translation": "翻譯1", "parts_of_speech": ["n.", "adj."]}}, {{"translation": "翻譯2", "parts_of_speech": ["v.", "n."]}}]
+
+詞性縮寫：n. (名詞), v. (動詞), adj. (形容詞), adv. (副詞),
 pron. (代名詞), prep. (介系詞), conj. (連接詞), interj. (感嘆詞),
 det. (限定詞), aux. (助動詞)
 
@@ -327,17 +357,23 @@ det. (限定詞), aux. (助動詞)
             else:
                 prompt = f"""Analyze the following English words and provide for each:
 1. English definition
-2. Parts of speech (may have multiple)
+2. Parts of speech (MUST list ALL common usages)
 
 Words: {texts_json}
 
-Reply as JSON array:
-[{{"translation": "definition1", "parts_of_speech": ["n.", "v."]}}, \
-{{"translation": "definition2", "parts_of_speech": ["adj."]}}]
+IMPORTANT:
+- Many English words have multiple parts of speech - list ALL common usages
+- Colors (red, blue, green) are typically both adjectives AND nouns
+- Action words (run, walk, dance) are typically both verbs AND nouns
+- Material words (gold, silver, plastic) are typically both nouns AND adjectives
+- Do NOT omit any common part of speech
 
-Use these abbreviations:
-n. (noun), v. (verb), adj. (adjective), adv. (adverb), pron. (pronoun),
-prep. (preposition), conj. (conjunction), interj. (interjection),
+Reply as JSON array:
+[{{"translation": "definition1", "parts_of_speech": ["n.", "adj."]}}, \
+{{"translation": "definition2", "parts_of_speech": ["v.", "n."]}}]
+
+POS abbreviations: n. (noun), v. (verb), adj. (adjective), adv. (adverb),
+pron. (pronoun), prep. (preposition), conj. (conjunction), interj. (interjection),
 det. (determiner), aux. (auxiliary)
 
 Only reply with JSON array, no other text."""
@@ -347,11 +383,17 @@ Only reply with JSON array, no other text."""
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a professional linguist. Always respond with valid JSON array only.",
+                        "content": (
+                            "You are a professional linguist specializing in English grammar. "
+                            "When identifying parts of speech, you MUST list ALL common usages - "
+                            "many English words function as multiple parts of speech. "
+                            "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
+                            "NOT Simplified Chinese. Always respond with valid JSON array only."
+                        ),
                     },
                     {"role": "user", "content": prompt},
                 ],
-                temperature=0.3,
+                temperature=0.2,  # Lower temperature for more consistent POS detection
                 max_tokens=2000,
             )
 
@@ -422,6 +464,10 @@ Only reply with JSON array, no other text."""
 Generate ONE example sentence for each word at CEFR level {level}.
 The sentences should be natural, educational, and appropriate for the difficulty level.
 
+CRITICAL REQUIREMENTS:
+1. Each sentence MUST contain the exact target word (the word being learned). Do NOT use synonyms or derivatives.
+2. If translating to Chinese, you MUST use Traditional Chinese (繁體中文), NOT Simplified Chinese.
+
 Level guidelines:
 - A1: Simple present/past, basic vocabulary, short sentences (5-8 words)
 - A2: Simple sentences with common phrases, everyday topics (8-12 words)
@@ -440,13 +486,15 @@ Level guidelines:
 
             if translate_to:
                 lang_name = {
-                    "zh-TW": "Traditional Chinese",
+                    "zh-TW": "Traditional Chinese (繁體中文)",
                     "ja": "Japanese",
                     "ko": "Korean",
                 }.get(translate_to, translate_to)
                 user_prompt += f"""Return as JSON array with this format:
 [{{"sentence": "...", "translation": "..."}}]
-Where translation is in {lang_name}."""
+Where translation is in {lang_name}.
+IMPORTANT: Each English sentence MUST contain the exact target word.
+Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplified Chinese."""
             else:
                 user_prompt += """Return as JSON array with this format:
 [{"sentence": "..."}]"""
@@ -549,7 +597,8 @@ Where translation is in {lang_name}."""
                             "different but plausible wrong answer options. "
                             "IMPORTANT: Options must be distinctly different from each other "
                             "and from the correct answer - avoid synonyms or similar meanings. "
-                            "Always respond with valid JSON array only."
+                            "CRITICAL: All Chinese output MUST be in Traditional Chinese (繁體中文), "
+                            "NOT Simplified Chinese. Always respond with valid JSON array only."
                         ),
                     },
                     {"role": "user", "content": prompt},
@@ -569,8 +618,15 @@ Where translation is in {lang_name}."""
 
             distractors = json.loads(content)
 
-            # Ensure we have the right count and no duplicates with correct answer
-            distractors = [d for d in distractors if d != translation][:count]
+            # Filter: remove duplicates (case-insensitive) and correct answer
+            seen = {translation.lower().strip()}
+            unique_distractors = []
+            for d in distractors:
+                d_normalized = d.lower().strip()
+                if d_normalized not in seen and d.strip():
+                    seen.add(d_normalized)
+                    unique_distractors.append(d)
+            distractors = unique_distractors[:count]
 
             # Ensure we have enough distractors
             if len(distractors) < count:
@@ -640,7 +696,8 @@ Where translation is in {lang_name}."""
                             "different but plausible wrong answer options. "
                             "IMPORTANT: Options must be distinctly different from each other "
                             "and from the correct answer - avoid synonyms or similar meanings. "
-                            "Always respond with valid JSON array only."
+                            "CRITICAL: All Chinese output MUST be in Traditional Chinese (繁體中文), "
+                            "NOT Simplified Chinese. Always respond with valid JSON array only."
                         ),
                     },
                     {"role": "user", "content": prompt},
@@ -677,12 +734,19 @@ Where translation is in {lang_name}."""
                 ]
                 return await asyncio.gather(*tasks)
 
-            # Filter out correct answers from each distractor list
+            # Filter out correct answers and duplicates from each distractor list
             result = []
             for i, distractors in enumerate(all_distractors):
                 correct = words[i]["translation"]
-                filtered = [d for d in distractors if d != correct][:count]
-                result.append(filtered)
+                # Case-insensitive dedup and correct answer removal
+                seen = {correct.lower().strip()}
+                unique = []
+                for d in distractors:
+                    d_normalized = d.lower().strip()
+                    if d_normalized not in seen and d.strip():
+                        seen.add(d_normalized)
+                        unique.append(d)
+                result.append(unique[:count])
 
             return result
 

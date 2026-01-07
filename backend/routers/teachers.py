@@ -1,4 +1,5 @@
 import random
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, selectinload
@@ -32,6 +33,8 @@ from typing import List, Optional, Dict, Any  # noqa: F401
 from datetime import date, datetime, timedelta, timezone  # noqa: F401
 from services.translation import translation_service
 from services.quota_analytics_service import QuotaAnalyticsService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/teachers", tags=["teachers"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
@@ -2487,6 +2490,49 @@ async def create_content(
                 }
             )
 
+    # 🔥 Phase 2: 單字集建立時預先生成干擾選項
+    if content_type == ContentType.VOCABULARY_SET and content_data.items:
+        # Flush to ensure content items have IDs
+        db.flush()
+
+        # Fetch all content items with translations
+        items_for_distractors = (
+            db.query(ContentItem)
+            .filter(ContentItem.content_id == content.id)
+            .filter(ContentItem.translation.isnot(None))
+            .filter(ContentItem.translation != "")
+            .order_by(ContentItem.order_index)
+            .all()
+        )
+
+        if items_for_distractors:
+            # Prepare words data for batch generation
+            words_data = [
+                {"word": item.text, "translation": item.translation}
+                for item in items_for_distractors
+            ]
+
+            try:
+                # Generate distractors in batch using OpenAI
+                all_distractors = await translation_service.batch_generate_distractors(
+                    words_data, count=3
+                )
+
+                # Update each content item with its distractors
+                for i, item in enumerate(items_for_distractors):
+                    if i < len(all_distractors):
+                        item.distractors = all_distractors[i]
+
+                logger.info(
+                    f"Generated distractors for {len(items_for_distractors)} vocabulary items "
+                    f"in new content {content.id}"
+                )
+            except Exception as e:
+                logger.error(
+                    f"Failed to generate distractors for new content {content.id}: {e}"
+                )
+                # Continue without distractors - students.py will fallback to runtime generation
+
     db.commit()
 
     return {
@@ -2992,6 +3038,50 @@ async def update_content(
         content.level = update_data.level
     if update_data.tags is not None:
         content.tags = update_data.tags
+
+    # 🔥 Phase 2: 單字集儲存時預先生成干擾選項
+    # 這樣學生作答時就不需要等待 OpenAI API (2-8 秒)
+    if content.type == ContentType.VOCABULARY_SET and update_data.items is not None:
+        # Flush to ensure content items have IDs
+        db.flush()
+
+        # Fetch all content items with translations
+        items_for_distractors = (
+            db.query(ContentItem)
+            .filter(ContentItem.content_id == content.id)
+            .filter(ContentItem.translation.isnot(None))
+            .filter(ContentItem.translation != "")
+            .order_by(ContentItem.order_index)
+            .all()
+        )
+
+        if items_for_distractors:
+            # Prepare words data for batch generation
+            words_data = [
+                {"word": item.text, "translation": item.translation}
+                for item in items_for_distractors
+            ]
+
+            try:
+                # Generate distractors in batch using OpenAI
+                all_distractors = await translation_service.batch_generate_distractors(
+                    words_data, count=3
+                )
+
+                # Update each content item with its distractors
+                for i, item in enumerate(items_for_distractors):
+                    if i < len(all_distractors):
+                        item.distractors = all_distractors[i]
+
+                logger.info(
+                    f"Generated distractors for {len(items_for_distractors)} vocabulary items "
+                    f"in content {content.id}"
+                )
+            except Exception as e:
+                logger.error(
+                    f"Failed to generate distractors for content {content.id}: {e}"
+                )
+                # Continue without distractors - students.py will fallback to runtime generation
 
     db.commit()
     db.refresh(content)
