@@ -29,8 +29,13 @@ Table organizations {
   contact_phone varchar(50) [null, note: "機構聯絡電話"]
   address text [null, note: "機構地址"]
   
-  // 統一編號 (QA 新增需求: 2026-01-05)
-  tax_id varchar(20) [unique, null, note: "統一編號，唯一值，待定義是否必填"]
+  // 統一編號
+  tax_id varchar(20) [unique, not null, note: "統一編號，唯一值，必填"]
+  
+  // 機構擁有人資訊
+  owner_name varchar(100) [not null, note: "機構擁有人姓名"]
+  owner_email varchar(200) [not null, note: "機構擁有人 Email（無法更改）"]
+  owner_phone varchar(50) [not null, note: "機構擁有人手機號碼"]
   
   // 狀態
   is_active boolean [not null, default: true, note: "機構是否啟用"]
