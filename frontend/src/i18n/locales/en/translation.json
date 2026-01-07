@@ -3832,6 +3832,11 @@
     "timeUpDescription": "Recording time has ended. You can retry or skip this word.",
     "retry": "Retry",
     "skip": "Skip",
+    "studentAnswer": "Student Answer",
+    "pleaseRecord": "Please record first",
+    "clickToAssess": "Click button above to assess",
+    "startRecordOrUpload": "Start recording or upload",
+    "noTeacherFeedback": "No teacher feedback yet",
     "toast": {
       "loadFailed": "Failed to load vocabulary",
       "recordedPreview": "Recording saved (preview mode)",
@@ -3843,7 +3848,8 @@
       "submitted": "Assignment submitted",
       "submitFailed": "Submit failed",
       "completed": "Assignment completed!",
-      "missingData": "Please record first"
+      "missingData": "Please record first",
+      "recordingTooLong": "Recording too long, maximum 10 seconds"
     }
   },
   "wordSelection": {

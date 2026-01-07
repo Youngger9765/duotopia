@@ -3839,6 +3839,11 @@
     "timeUpDescription": "錄音時間已結束，您可以選擇重試或跳過此題。",
     "retry": "重試",
     "skip": "跳過",
+    "studentAnswer": "學生作答",
+    "pleaseRecord": "請先錄音",
+    "clickToAssess": "點擊上方按鈕開始評估",
+    "startRecordOrUpload": "開始錄音或上傳",
+    "noTeacherFeedback": "尚無老師評語",
     "toast": {
       "loadFailed": "載入單字失敗",
       "recordedPreview": "錄音已儲存（預覽模式）",
@@ -3850,7 +3855,8 @@
       "submitted": "作業已提交",
       "submitFailed": "提交失敗",
       "completed": "作業已完成！",
-      "missingData": "請先錄音"
+      "missingData": "請先錄音",
+      "recordingTooLong": "錄音時間過長，限制最長 10 秒"
     }
   },
   "wordSelection": {
