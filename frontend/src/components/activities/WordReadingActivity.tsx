@@ -74,6 +74,7 @@ export default function WordReadingActivity({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [timeLimitPerQuestion, setTimeLimitPerQuestion] = useState(0); // 0 = 不限時
 
   // Load vocabulary items from backend
   const loadItems = useCallback(async () => {
@@ -96,6 +97,7 @@ export default function WordReadingActivity({
 
       const data = await response.json();
       setItems(data.items || []);
+      setTimeLimitPerQuestion(data.time_limit_per_question || 0);
 
       // Find first incomplete item
       const firstIncomplete = (data.items || []).findIndex(
@@ -419,7 +421,7 @@ export default function WordReadingActivity({
         onRecordingComplete={handleRecordingComplete}
         progressId={currentItem.progress_id}
         readOnly={false}
-        timeLimit={5}
+        timeLimit={timeLimitPerQuestion}
         onSkip={handleSkip}
         onAssessmentComplete={handleAssessmentComplete}
       />

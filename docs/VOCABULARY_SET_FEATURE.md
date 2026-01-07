@@ -3,7 +3,7 @@
 > **文件更新日期**: 2026-01-08
 > **分支**: `claude/issue-147`
 > **Issue**: #147
-> **狀態**: Phase 2 開發中
+> **狀態**: Phase 2 完成（單字朗讀 + 單字選擇）
 
 ---
 
@@ -86,6 +86,11 @@
 | 顯示翻譯 | `show_translation` | true | 是否顯示中文翻譯 |
 | 顯示圖片 | `show_image` | true | 是否顯示單字圖片 |
 | 播放音檔 | `play_audio` | false | 是否自動播放音檔 |
+| 單題答題時間限制 | `time_limit_per_question` | 0（不限時） | 可設定 20/30/40 秒 |
+
+**錄音限制**:
+- 錄音長度上限：10 秒（上傳時檢查）
+- 錄音過長會顯示錯誤提示
 
 ### 3.3 單字選擇作業設定
 
@@ -165,20 +170,114 @@
 
 ---
 
-## 5. 老師端預覽示範
+## 5. 單字朗讀學生端作答
 
-### 5.1 預覽入口
+### 5.1 作答流程
+
+```
+進入作業 → 自動播放題目音檔 → 顯示單字（+詞性+翻譯+圖片）
+    ↓
+學生錄音或上傳音檔（最長 10 秒）
+    ↓
+點擊「上傳並分析」→ Azure Speech AI 評分
+    ↓
+顯示 AI 評估結果（準確度/流暢度/完整度/發音）
+    ↓
+下一題 / 提交作業
+    ↓
+等待老師批改 → 老師批改通過 → 作業完成
+```
+
+### 5.2 UI 元件
+
+**作答畫面佈局**（仿造例句朗讀）:
+- 手機版：垂直堆疊佈局
+- 桌面版：兩欄式佈局（左：題目/圖片/作答/評語，右：AI 評估）
+
+**左欄包含**:
+- 題目區塊：播放音檔按鈕 + 單字文字 + 詞性 Badge + 倍速選擇
+- 翻譯區塊（若啟用 `show_translation`）
+- 圖片區塊（若啟用 `show_image` 且有圖片）
+- 學生作答區塊：錄音按鈕 + 上傳按鈕 / 播放控制 + 刪除按鈕
+- 老師評語區塊：顯示老師批改結果
+
+**右欄包含**:
+- AI 評估結果：綜合評分 + 四項細項分數
+- 「上傳並分析」按鈕（錄音後顯示）
+- AI 分析中動畫
+
+### 5.3 錄音功能
+
+| 項目 | 說明 |
+|------|------|
+| 錄音長度上限 | 10 秒（上傳時檢查） |
+| 支援格式 | webm, mp4, wav, m4a, ogg, aac |
+| 錄音按鈕 | 紅色圓形，點擊開始/停止錄音 |
+| 上傳按鈕 | 綠色圓形，支援本地音檔上傳 |
+| 刪除按鈕 | 垃圾桶圖示，清除錄音和評估結果 |
+
+### 5.4 AI 發音評估
+
+**Azure Speech SDK 評分項目**:
+
+| 項目 | 說明 |
+|------|------|
+| 準確度 (Accuracy) | 發音的準確程度 |
+| 流暢度 (Fluency) | 語句流暢程度 |
+| 完整度 (Completeness) | 發音完整性 |
+| 發音 (Pronunciation) | 綜合發音評分 |
+
+**評分等級顏色**:
+- 80 分以上：綠色
+- 60-79 分：黃色
+- 60 分以下：紅色
+
+### 5.5 時間限制
+
+| 設定值 | 說明 |
+|--------|------|
+| 0（預設） | 不限時 |
+| 20 | 20 秒倒數 |
+| 30 | 30 秒倒數 |
+| 40 | 40 秒倒數 |
+
+**時間限制行為**:
+- 有設定時間時，右上角顯示倒數計時器
+- 倒數到 0 時彈出超時對話框
+- 可選擇「重試」或「跳過」
+
+### 5.6 readOnly 模式
+
+提交作業後進入檢視模式：
+- 錄音和上傳按鈕禁用
+- 刪除按鈕隱藏
+- 可播放已錄製的音檔
+- 顯示 AI 評估結果和老師評語
+
+### 5.7 相關檔案
+
+| 檔案 | 用途 |
+|------|------|
+| `frontend/src/components/activities/WordReadingTemplate.tsx` | 單字朗讀作答模板 |
+| `frontend/src/components/activities/WordReadingActivity.tsx` | 單字朗讀作答元件 |
+| `frontend/src/hooks/useAzurePronunciation.ts` | Azure Speech SDK Hook |
+
+---
+
+## 6. 老師端預覽示範
+
+### 6.1 預覽入口
 
 **位置**: 老師端 → 班級 → 作業管理 → 點擊作業 → 「預覽示範」按鈕
 
-### 5.2 預覽頁面
+### 6.2 預覽頁面
 
 - 重用 `StudentActivityPageContent` 元件
 - 傳入 `isPreviewMode={true}`
 - 不儲存任何進度、不呼叫作答 API
 - 顯示藍色預覽模式提示 Banner
 
-### 5.3 預覽模式與學生模式差異
+### 6.3 預覽模式與學生模式差異
 
 | 項目 | 預覽模式 | 學生模式 |
 |------|---------|---------|
@@ -187,7 +286,7 @@
 | 熟悉度追蹤 | ❌ 不追蹤 | ✅ 追蹤 |
 | Header 顯示 | 外層有返回作業列表按鈕 | 內層有返回按鈕 |
 
-### 5.4 相關檔案
+### 6.4 相關檔案
 
 | 檔案 | 用途 |
 |------|------|
@@ -196,9 +295,9 @@
 
 ---
 
-## 6. 單字選擇相關列表修改
+## 7. 單字選擇相關列表修改
 
-### 6.1 老師端 - 班級作業列表
+### 7.1 老師端 - 班級作業列表
 
 **檔案**: `frontend/src/pages/teacher/ClassroomDetail.tsx`
 
@@ -211,7 +310,7 @@
 - 單字選擇 (`word_selection`) → indigo 色
 - 單字朗讀 (`word_reading`) → purple 色
 
-### 6.2 學生端 - 作業列表
+### 7.2 學生端 - 作業列表
 
 **檔案**: `frontend/src/pages/student/StudentAssignmentList.tsx`
 
@@ -221,7 +320,7 @@
 | 分數顯示 | 單字選擇顯示「熟悉度：xx.x%」而非「分數：xxxx」 |
 | 進度區塊 | 單字選擇已完成作業隱藏「完成進度」灰色區塊 |
 
-### 6.3 翻譯 Key
+### 7.3 翻譯 Key
 
 **新增的翻譯 Key**:
 
@@ -244,9 +343,9 @@
 
 ---
 
-## 7. 資料庫結構
+## 8. 資料庫結構
 
-### 7.1 ContentItem 擴充欄位
+### 8.1 ContentItem 擴充欄位
 
 | 欄位 | 類型 | 說明 |
 |------|------|------|
@@ -254,7 +353,7 @@
 | `part_of_speech` | VARCHAR(20) | 詞性 (n., v., adj., etc.) |
 | `distractors` | JSONB | 預生成的干擾選項 `["選項1", "選項2", "選項3"]` |
 
-### 7.2 Assignment 擴充欄位
+### 8.2 Assignment 擴充欄位
 
 | 欄位 | 類型 | 預設值 | 說明 |
 |------|------|--------|------|
@@ -263,7 +362,7 @@
 | `show_word` | BOOLEAN | true | 是否顯示單字（單字選擇） |
 | `show_image` | BOOLEAN | true | 是否顯示圖片 |
 
-### 7.3 UserWordProgress（記憶強度追蹤）
+### 8.3 UserWordProgress（記憶強度追蹤）
 
 ```sql
 CREATE TABLE user_word_progress (
@@ -283,9 +382,9 @@ CREATE TABLE user_word_progress (
 
 ---
 
-## 8. API 端點
+## 9. API 端點
 
-### 8.1 學生端 API
+### 9.1 學生端 API
 
 | 端點 | 方法 | 用途 |
 |------|------|------|
@@ -293,7 +392,7 @@ CREATE TABLE user_word_progress (
 | `/api/students/assignments/{id}/vocabulary/selection/answer` | POST | 提交選擇答案 |
 | `/api/students/assignments/{id}/vocabulary/selection/proficiency` | GET | 取得熟悉度狀態 |
 
-### 8.2 老師端 API
+### 9.2 老師端 API
 
 | 端點 | 方法 | 用途 |
 |------|------|------|
@@ -302,9 +401,9 @@ CREATE TABLE user_word_progress (
 
 ---
 
-## 9. claude/issue-147 分支修改記錄
+## 10. claude/issue-147 分支修改記錄
 
-### 9.1 主要功能提交
+### 10.1 主要功能提交
 
 | Commit | 說明 |
 |--------|------|
@@ -313,7 +412,7 @@ CREATE TABLE user_word_progress (
 | `6921381` | 支援老師端預覽模式 |
 | `2c8100b` | 圖片上傳與作業設定改進 |
 
-### 9.2 修復提交
+### 10.2 修復提交
 
 | Commit | 說明 |
 |--------|------|
@@ -322,7 +421,7 @@ CREATE TABLE user_word_progress (
 | `23bbefc` | 改進干擾選項 prompt 避免生成近義詞 |
 | `0d9d401` | 修正單字選擇模式的三個問題 |
 
-### 9.3 UI 優化提交
+### 10.3 UI 優化提交
 
 | Commit | 說明 |
 |--------|------|
@@ -334,16 +433,19 @@ CREATE TABLE user_word_progress (
 
 ---
 
-## 10. 待開發功能
+## 11. 待開發功能
 
-### 10.1 單字朗讀（Phase 2-2）
+### 11.1 單字朗讀（Phase 2-2）✅ 已完成
 
-- [ ] WordReadingTemplate 元件
-- [ ] 錄音功能（max 5s, min 0.01s）
-- [ ] Azure Speech AI 評分整合
-- [ ] 老師批改介面
+- [x] WordReadingTemplate 元件
+- [x] 錄音功能（max 10s）
+- [x] Azure Speech AI 評分整合
+- [x] 老師批改介面
+- [x] 時間限制設定（不限時/20/30/40 秒）
+- [x] 自動播放音檔功能
+- [x] readOnly 模式（提交後不可刪除錄音和評估）
 
-### 10.2 未來考量
+### 11.2 未來考量
 
 - 跨班級單字熟悉度（需考慮帳號合併問題）
 - 更多干擾選項生成策略
@@ -351,7 +453,7 @@ CREATE TABLE user_word_progress (
 
 ---
 
-## 11. 參考文件
+## 12. 參考文件
 
 - [CONTENT_TYPES.md](./CONTENT_TYPES.md) - 內容類型系統架構
 - [VOCABULARY_SET_UI_PLAN.md](./VOCABULARY_SET_UI_PLAN.md) - UI 規劃文件

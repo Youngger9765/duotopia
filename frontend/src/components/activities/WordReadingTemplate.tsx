@@ -5,8 +5,8 @@
  *
  * 功能:
  * - 顯示單字卡片（圖片、單字、翻譯）
- * - 播放例句音檔
- * - 錄音（max 5s, min 0.01s）
+ * - 播放單字音檔
+ * - 錄音或上傳音檔
  * - Azure Speech AI 評分
  * - 老師批改後完成
  *
@@ -17,18 +17,22 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import {
   Brain,
-  Star,
   Clock,
   RotateCcw,
   SkipForward,
   Volume2,
-  Image as ImageIcon,
+  Mic,
+  Square,
+  Play,
+  Pause,
+  Upload,
+  MessageSquare,
+  Languages,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import AudioRecorder from "@/components/shared/AudioRecorder";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useAzurePronunciation } from "@/hooks/useAzurePronunciation";
@@ -68,6 +72,7 @@ interface WordItem {
   teacher_feedback?: string;
   teacher_passed?: boolean;
   teacher_review_score?: number;
+  teacher_reviewed_at?: string;
 }
 
 interface WordReadingTemplateProps {
@@ -88,7 +93,7 @@ interface WordReadingTemplateProps {
   progressId?: number;
   readOnly?: boolean;
 
-  // Time limit (max 5 seconds for word reading)
+  // Time limit (0 = unlimited)
   timeLimit?: number;
 
   // Callbacks
@@ -100,15 +105,15 @@ interface WordReadingTemplateProps {
 
 export default function WordReadingTemplate({
   currentItem,
-  currentIndex,
-  totalItems,
+  currentIndex: _currentIndex,
+  totalItems: _totalItems,
   showTranslation = true,
   showImage = true,
   existingAudioUrl,
   onRecordingComplete,
   progressId: _progressId,
   readOnly = false,
-  timeLimit = 5, // Default 5 seconds for word reading
+  timeLimit = 0, // Default unlimited
   onTimeout,
   onRetry,
   onSkip,
@@ -122,7 +127,24 @@ export default function WordReadingTemplate({
   const [isAssessing, setIsAssessing] = useState(false);
   const [assessmentResult, setAssessmentResult] =
     useState<AssessmentResult | null>(null);
-  const exampleAudioRef = useRef<HTMLAudioElement>(null);
+  const exampleAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  // Playback state for recorded audio
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const recordedAudioRef = useRef<HTMLAudioElement | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Playback rate
+  const [playbackRate, setPlaybackRate] = useState(1.0);
 
   // Azure Speech Service hook for direct API calls
   const { analyzePronunciation } = useAzurePronunciation();
@@ -167,7 +189,9 @@ export default function WordReadingTemplate({
   const resetTimer = useCallback(() => {
     setTimeRemaining(timeLimit);
     setShowTimeoutDialog(false);
-    startTimer();
+    if (timeLimit > 0) {
+      startTimer();
+    }
   }, [timeLimit, startTimer]);
 
   // Initialize timer when component mounts or item changes
@@ -190,15 +214,19 @@ export default function WordReadingTemplate({
     }
   }, [audioUrl]);
 
-  // Reset state when item changes
+  // Reset state when item changes (only triggered by currentItem.id change)
   useEffect(() => {
     setAudioUrl(existingAudioUrl || undefined);
     setAssessmentResult(null);
     setTimeRemaining(timeLimit);
     setImageError(false);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
 
-    // Load existing assessment if available
-    if (currentItem.ai_assessment) {
+    // Load existing assessment if available AND there's a saved recording
+    // (Only load if existingAudioUrl exists - meaning this is a saved recording, not a new one)
+    if (currentItem.ai_assessment && existingAudioUrl) {
       const ai = currentItem.ai_assessment;
       setAssessmentResult({
         overallScore: ai.pronunciation_score || 0,
@@ -209,7 +237,41 @@ export default function WordReadingTemplate({
         feedback: "",
       });
     }
-  }, [currentItem.id, existingAudioUrl, timeLimit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentItem.id]); // Only run when item changes, not when existingAudioUrl/timeLimit changes
+
+  // Auto-play example audio when entering a new question
+  useEffect(() => {
+    // Clean up previous audio
+    if (exampleAudioRef.current) {
+      exampleAudioRef.current.pause();
+      exampleAudioRef.current = null;
+    }
+
+    // Auto-play if audio exists
+    if (currentItem.audio_url) {
+      const audio = new Audio(currentItem.audio_url);
+      audio.playbackRate = playbackRate;
+      exampleAudioRef.current = audio;
+
+      audio.addEventListener("ended", () => {
+        setIsPlayingExample(false);
+      });
+
+      setIsPlayingExample(true);
+      audio.play().catch(() => {
+        // Browser autoplay policy blocked, user interaction required
+        setIsPlayingExample(false);
+      });
+    }
+
+    return () => {
+      if (exampleAudioRef.current) {
+        exampleAudioRef.current.pause();
+        exampleAudioRef.current = null;
+      }
+    };
+  }, [currentItem.id, currentItem.audio_url, playbackRate]);
 
   // Handle retry
   const handleRetry = () => {
@@ -226,18 +288,162 @@ export default function WordReadingTemplate({
     onSkip?.();
   };
 
-  const isLowTime = timeRemaining <= 2 && timeRemaining > 0;
+  const isLowTime = timeRemaining <= 5 && timeRemaining > 0;
 
   // Play example audio
   const handlePlayExample = () => {
-    if (!exampleAudioRef.current || !currentItem.audio_url) return;
+    if (!currentItem.audio_url) return;
 
-    if (isPlayingExample) {
+    if (isPlayingExample && exampleAudioRef.current) {
       exampleAudioRef.current.pause();
+      setIsPlayingExample(false);
     } else {
+      // Create new audio if not exists, or reuse existing
+      if (!exampleAudioRef.current) {
+        const audio = new Audio(currentItem.audio_url);
+        audio.addEventListener("ended", () => {
+          setIsPlayingExample(false);
+        });
+        exampleAudioRef.current = audio;
+      }
+      exampleAudioRef.current.playbackRate = playbackRate;
+      exampleAudioRef.current.currentTime = 0;
       exampleAudioRef.current.play();
+      setIsPlayingExample(true);
     }
-    setIsPlayingExample(!isPlayingExample);
+  };
+
+  // Update playback rate
+  const updatePlaybackRate = (newRate: number) => {
+    setPlaybackRate(newRate);
+    if (exampleAudioRef.current && isPlayingExample) {
+      exampleAudioRef.current.playbackRate = newRate;
+    }
+    if (recordedAudioRef.current && isPlaying) {
+      recordedAudioRef.current.playbackRate = newRate;
+    }
+  };
+
+  // Start recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/webm",
+        });
+        const url = URL.createObjectURL(audioBlob);
+        setAudioUrl(url);
+        onRecordingComplete?.(audioBlob, url);
+
+        // Stop all tracks
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      // Start recording timer
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast.error("無法啟動錄音，請檢查麥克風權限");
+    }
+  };
+
+  // Stop recording
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+    }
+  };
+
+  // Handle file upload
+  const handleFileUpload = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setAudioUrl(url);
+
+    // Convert file to blob for callback
+    file.arrayBuffer().then((buffer) => {
+      const blob = new Blob([buffer], { type: file.type });
+      onRecordingComplete?.(blob, url);
+    });
+
+    toast.success("音檔已上傳");
+  };
+
+  // Toggle recorded audio playback
+  const togglePlayback = () => {
+    if (!audioUrl) return;
+
+    if (isPlaying && recordedAudioRef.current) {
+      recordedAudioRef.current.pause();
+      setIsPlaying(false);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    } else {
+      if (recordedAudioRef.current) {
+        recordedAudioRef.current.pause();
+      }
+
+      const audio = new Audio(audioUrl);
+      recordedAudioRef.current = audio;
+
+      audio.addEventListener("loadedmetadata", () => {
+        const dur = audio.duration;
+        if (dur && isFinite(dur) && !isNaN(dur)) {
+          setDuration(dur);
+        }
+      });
+
+      audio.addEventListener("ended", () => {
+        setIsPlaying(false);
+        setCurrentTime(0);
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+        }
+      });
+
+      audio.playbackRate = playbackRate;
+      audio.play();
+      setIsPlaying(true);
+
+      progressIntervalRef.current = setInterval(() => {
+        if (recordedAudioRef.current) {
+          setCurrentTime(recordedAudioRef.current.currentTime);
+        }
+      }, 100);
+    }
+  };
+
+  // Clear recording
+  const clearRecording = () => {
+    if (recordedAudioRef.current) {
+      recordedAudioRef.current.pause();
+    }
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setAudioUrl(undefined);
+    setAssessmentResult(null);
   };
 
   // Upload analysis in background
@@ -304,6 +510,22 @@ export default function WordReadingTemplate({
       const response = await fetch(audioUrl);
       const audioBlob = await response.blob();
 
+      // Check recording duration (max 10 seconds)
+      const audioContext = new AudioContext();
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      const audioDuration = audioBuffer.duration;
+      audioContext.close();
+
+      if (audioDuration > 10) {
+        toast.error(
+          t("wordReading.toast.recordingTooLong") ||
+            "錄音時間過長，限制最長 10 秒",
+        );
+        setIsAssessing(false);
+        return;
+      }
+
       // Use Azure Speech Service for analysis
       const azureResult = await analyzePronunciation(
         audioBlob,
@@ -354,271 +576,507 @@ export default function WordReadingTemplate({
     return "destructive";
   };
 
+  // Format audio time
+  const formatAudioTime = (seconds: number) => {
+    if (!seconds || !isFinite(seconds) || isNaN(seconds)) {
+      return "0:00";
+    }
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   return (
     <>
-      <div className="flex flex-col lg:flex-row items-start gap-6 lg:gap-8 min-h-[400px]">
-        {/* Left Side - Word Card with Image */}
-        <div className="flex-shrink-0 w-full lg:w-auto">
-          <Card className="p-4 lg:p-6 bg-gradient-to-br from-blue-50 to-purple-50">
-            {/* Image Area */}
-            {showImage && (
-              <div className="w-full lg:w-64 h-48 lg:h-56 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden mb-4">
-                {currentItem.image_url && !imageError ? (
-                  <img
-                    src={currentItem.image_url}
-                    alt={currentItem.text}
-                    className="w-full h-full object-cover"
-                    onError={() => setImageError(true)}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center text-gray-400">
-                    <ImageIcon className="w-16 h-16" />
-                    <span className="text-sm mt-2">
-                      {t("wordReading.noImage") || "No Image"}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Word Display */}
-            <div className="text-center space-y-2">
-              {/* Part of Speech */}
-              {currentItem.part_of_speech && (
-                <Badge variant="outline" className="text-xs">
-                  {currentItem.part_of_speech}
-                </Badge>
-              )}
-
-              {/* The Word */}
-              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">
-                {currentItem.text}
-              </h2>
-
-              {/* Translation */}
-              {showTranslation && currentItem.translation && (
-                <p className="text-lg text-gray-600">
-                  {currentItem.translation}
-                </p>
-              )}
-
-              {/* Example Audio Button */}
-              {currentItem.audio_url && (
-                <Button
-                  variant="outline"
-                  size="sm"
+      <div className="w-full">
+        {/* 響應式佈局 - 手機垂直堆疊，桌面兩欄式 */}
+        <div className="flex flex-col sm:grid sm:grid-cols-12 gap-3 sm:gap-4 w-full">
+          {/* 左欄 - 題目、圖片、學生作答、老師評語 */}
+          <div className="w-full sm:col-span-6 space-y-3">
+            {/* 題目區域 */}
+            <div className="bg-white rounded-lg border border-gray-200 p-3">
+              {/* 題目文字與音檔 */}
+              <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                <button
                   onClick={handlePlayExample}
-                  className="mt-2"
+                  disabled={!currentItem.audio_url}
+                  className={cn(
+                    "p-1.5 rounded-full transition-colors flex-shrink-0",
+                    currentItem.audio_url
+                      ? "bg-green-100 hover:bg-green-200 text-green-600 cursor-pointer"
+                      : "bg-gray-100 text-gray-400 cursor-not-allowed",
+                  )}
+                  title={currentItem.audio_url ? "播放參考音檔" : "無參考音檔"}
                 >
-                  <Volume2
-                    className={cn(
-                      "w-4 h-4 mr-2",
-                      isPlayingExample && "text-blue-600 animate-pulse",
-                    )}
-                  />
-                  {isPlayingExample
-                    ? t("wordReading.stopAudio") || "Stop"
-                    : t("wordReading.playAudio") || "Play Audio"}
-                </Button>
-              )}
-            </div>
+                  <Volume2 className="w-4 h-4" />
+                </button>
 
-            {/* Progress Indicator */}
-            <div className="mt-4 text-center text-sm text-gray-500">
-              {t("wordReading.progress", {
-                current: currentIndex + 1,
-                total: totalItems,
-              }) || `${currentIndex + 1} / ${totalItems}`}
-            </div>
-          </Card>
-        </div>
-
-        {/* Right Side - Recording Area */}
-        <div className="flex-1 space-y-4 w-full">
-          {/* Timer Display */}
-          {!readOnly && timeLimit > 0 && !audioUrl && (
-            <div className="flex justify-end">
-              <div
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium",
-                  isLowTime
-                    ? "bg-red-100 text-red-700 animate-pulse"
-                    : "bg-gray-100 text-gray-700",
-                )}
-              >
-                <Clock className="h-4 w-4" />
-                <span>{formatTime(timeRemaining)}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Recording Time Limit Notice */}
-          <div className="text-center text-sm text-gray-500">
-            <p>
-              {t("wordReading.recordingLimit") ||
-                "Recording limit: max 5 seconds"}
-            </p>
-          </div>
-
-          {/* Audio Recorder */}
-          <AudioRecorder
-            existingAudioUrl={audioUrl}
-            onRecordingComplete={(blob, url) => {
-              setAudioUrl(url);
-              onRecordingComplete?.(blob, url);
-            }}
-            readOnly={readOnly}
-            autoStop={timeLimit}
-            variant="default"
-            showProgress={true}
-            showTimer={true}
-          />
-
-          {/* Assessment Button */}
-          <div className="flex justify-center pt-4">
-            {audioUrl && !readOnly && !assessmentResult && (
-              <Button
-                onClick={handleAssessment}
-                disabled={isAssessing}
-                className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 text-white"
-              >
-                {isAssessing ? (
-                  <>
-                    <Brain className="h-4 w-4 mr-2 animate-spin" />
-                    {t("wordReading.analyzing") || "AI Analyzing..."}
-                  </>
-                ) : (
-                  <>
-                    <Brain className="h-4 w-4 mr-2" />
-                    {t("wordReading.uploadAndAssess") || "Upload & Assess"}
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-
-          {/* Assessment Results */}
-          {assessmentResult && (
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg p-6 space-y-6">
-              <div className="text-center">
-                <h4 className="text-xl font-bold text-blue-900 mb-4 flex items-center justify-center gap-2">
-                  <Brain className="h-6 w-6" />
-                  {t("wordReading.aiResult") || "AI Assessment Result"}
-                </h4>
-
-                {/* Overall Score */}
-                <div className="bg-white rounded-lg p-6 shadow-sm mb-4">
-                  <div className="text-4xl font-bold text-blue-600 mb-2">
-                    {assessmentResult.overallScore}
-                    {t("wordReading.points") || " Points"}
-                  </div>
-                  <Badge
-                    variant={getScoreBadgeVariant(
-                      assessmentResult.overallScore,
-                    )}
-                    className="text-sm px-3 py-1"
-                  >
-                    {t("wordReading.overallScore") || "Overall Score"}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Detailed Scores */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white rounded-lg p-3 text-center">
-                  <div className="text-xs text-gray-500 mb-1">
-                    {t("wordReading.accuracy") || "Accuracy"}
-                  </div>
-                  <div
-                    className={`text-lg font-bold ${getScoreColor(assessmentResult.accuracyScore)}`}
-                  >
-                    {assessmentResult.accuracyScore}
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg p-3 text-center">
-                  <div className="text-xs text-gray-500 mb-1">
-                    {t("wordReading.fluency") || "Fluency"}
-                  </div>
-                  <div
-                    className={`text-lg font-bold ${getScoreColor(assessmentResult.fluencyScore)}`}
-                  >
-                    {assessmentResult.fluencyScore}
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg p-3 text-center">
-                  <div className="text-xs text-gray-500 mb-1">
-                    {t("wordReading.completeness") || "Completeness"}
-                  </div>
-                  <div
-                    className={`text-lg font-bold ${getScoreColor(assessmentResult.completenessScore)}`}
-                  >
-                    {assessmentResult.completenessScore}
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg p-3 text-center">
-                  <div className="text-xs text-gray-500 mb-1">
-                    {t("wordReading.pronunciation") || "Pronunciation"}
-                  </div>
-                  <div
-                    className={`text-lg font-bold ${getScoreColor(assessmentResult.pronunciationScore)}`}
-                  >
-                    {assessmentResult.pronunciationScore}
-                  </div>
-                </div>
-              </div>
-
-              {/* Teacher Feedback (if available) */}
-              {currentItem.teacher_feedback && (
-                <div className="bg-white rounded-lg p-4">
-                  <h5 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
-                    <Star className="h-4 w-4" />
-                    {t("wordReading.teacherFeedback") || "Teacher Feedback"}
-                  </h5>
-                  <p className="text-gray-700 text-sm leading-relaxed">
-                    {currentItem.teacher_feedback}
-                  </p>
-                  {currentItem.teacher_passed !== undefined && (
-                    <Badge
-                      variant={
-                        currentItem.teacher_passed ? "default" : "destructive"
-                      }
-                      className="mt-2"
-                    >
-                      {currentItem.teacher_passed
-                        ? t("wordReading.passed") || "Passed"
-                        : t("wordReading.needsCorrection") ||
-                          "Needs Correction"}
+                {/* 單字文字 */}
+                <div className="text-lg sm:text-xl font-bold text-gray-800 flex-1">
+                  {currentItem.text}
+                  {currentItem.part_of_speech && (
+                    <Badge variant="outline" className="text-xs ml-2">
+                      {currentItem.part_of_speech}
                     </Badge>
                   )}
                 </div>
-              )}
 
-              {/* Re-assess Button */}
-              {!readOnly && (
-                <div className="text-center">
-                  <Button
-                    onClick={() => setAssessmentResult(null)}
-                    variant="outline"
-                    size="sm"
-                    className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                {/* 倍速控制 */}
+                <select
+                  value={playbackRate}
+                  onChange={(e) =>
+                    updatePlaybackRate(parseFloat(e.target.value))
+                  }
+                  className="text-xs border border-gray-300 rounded px-1 py-0.5 bg-white"
+                  title="播放速度"
+                >
+                  <option value={0.5}>0.5x</option>
+                  <option value={0.75}>0.75x</option>
+                  <option value={1.0}>1.0x</option>
+                  <option value={1.25}>1.25x</option>
+                  <option value={1.5}>1.5x</option>
+                  <option value={2.0}>2.0x</option>
+                </select>
+
+                {/* Timer Display */}
+                {!readOnly && timeLimit > 0 && !audioUrl && (
+                  <div
+                    className={cn(
+                      "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                      isLowTime
+                        ? "bg-red-100 text-red-700 animate-pulse"
+                        : "bg-gray-100 text-gray-700",
+                    )}
                   >
-                    {t("wordReading.reassess") || "Re-assess"}
-                  </Button>
+                    <Clock className="h-3 w-3" />
+                    <span>{formatTime(timeRemaining)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 翻譯 */}
+              {showTranslation && currentItem.translation && (
+                <div className="flex items-center gap-2 text-sm sm:text-base text-purple-600 bg-purple-50 rounded px-2 sm:px-3 py-1.5 sm:py-2">
+                  <Languages className="w-4 h-4" />
+                  <span>{currentItem.translation}</span>
                 </div>
               )}
             </div>
-          )}
+
+            {/* 圖片區塊（可選） */}
+            {showImage && currentItem.image_url && !imageError && (
+              <div className="bg-white rounded-lg border border-gray-200 p-3">
+                <div className="flex justify-center">
+                  <img
+                    src={currentItem.image_url}
+                    alt={currentItem.text}
+                    className="max-h-48 object-contain rounded-lg"
+                    onError={() => setImageError(true)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* 學生錄音區 */}
+            <div className="bg-white rounded-lg border border-gray-200 p-3">
+              <div className="text-sm sm:text-base font-medium text-gray-700 mb-2">
+                {t("wordReading.studentAnswer") || "學生作答"}
+              </div>
+
+              {/* 錄音控制 */}
+              <div className="flex items-center gap-2">
+                {!isRecording ? (
+                  <>
+                    {/* 錄音按鈕或播放控制 */}
+                    {audioUrl ? (
+                      <>
+                        {/* 播放控制 */}
+                        <button
+                          onClick={togglePlayback}
+                          className="w-8 h-8 bg-green-600 hover:bg-green-700 rounded-full flex items-center justify-center text-white flex-shrink-0"
+                        >
+                          {isPlaying ? (
+                            <Pause className="w-3 h-3" fill="currentColor" />
+                          ) : (
+                            <Play
+                              className="w-3 h-3 ml-0.5"
+                              fill="currentColor"
+                            />
+                          )}
+                        </button>
+
+                        {/* 時間軸 */}
+                        <div className="flex-1">
+                          <div className="h-1.5 bg-green-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-green-500 rounded-full transition-all duration-100"
+                              style={{
+                                width:
+                                  duration > 0
+                                    ? `${(currentTime / duration) * 100}%`
+                                    : "0%",
+                              }}
+                            />
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {formatAudioTime(duration)}
+                          </div>
+                        </div>
+
+                        {/* 清除錄音按鈕 - 只在非 readOnly 模式顯示 */}
+                        {!readOnly && (
+                          <button
+                            onClick={clearRecording}
+                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                            title="清除錄音"
+                          >
+                            <svg
+                              className="w-3.5 h-3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          className="w-12 h-12 sm:w-16 sm:h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all"
+                          disabled={readOnly}
+                          onClick={() => {
+                            setAssessmentResult(null);
+                            startRecording();
+                          }}
+                          title={readOnly ? "檢視模式" : "開始錄音"}
+                        >
+                          <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
+                        </button>
+                        <button
+                          className="w-12 h-12 sm:w-16 sm:h-16 bg-green-600 hover:bg-green-700 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all"
+                          disabled={readOnly}
+                          onClick={() => {
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.accept =
+                              "audio/*,.mp3,.m4a,.mp4,.wav,.webm,.ogg,.aac";
+                            input.onchange = (e) => {
+                              const file = (e.target as HTMLInputElement)
+                                .files?.[0];
+                              if (file) handleFileUpload(file);
+                            };
+                            input.click();
+                          }}
+                          title={readOnly ? "檢視模式" : "上傳音檔"}
+                        >
+                          <Upload className="w-5 h-5 sm:w-6 sm:h-6" />
+                        </button>
+                        <span className="text-sm sm:text-base text-gray-600">
+                          {readOnly
+                            ? "檢視模式"
+                            : t("wordReading.startRecordOrUpload") ||
+                              "開始錄音或上傳"}
+                        </span>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* 錄音中狀態 */}
+                    <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                    <span className="text-base font-medium text-red-600">
+                      {formatTime(recordingTime)}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={stopRecording}
+                      className="border-red-600 text-red-600 hover:bg-red-50 h-7 px-2 text-xs"
+                    >
+                      <Square className="w-3 h-3 mr-1" />
+                      停止
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* 老師評語 */}
+            <div
+              className={cn(
+                "rounded-lg border-2 p-3",
+                currentItem.teacher_feedback
+                  ? currentItem.teacher_passed === true
+                    ? "border-green-400 bg-green-50"
+                    : currentItem.teacher_passed === false
+                      ? "border-red-400 bg-red-50"
+                      : "border-blue-400 bg-blue-50"
+                  : "border-gray-200 bg-gray-50 opacity-50",
+              )}
+            >
+              <div
+                className={cn(
+                  "text-sm sm:text-base font-medium mb-1 flex items-center gap-1",
+                  currentItem.teacher_feedback
+                    ? currentItem.teacher_passed === true
+                      ? "text-green-600"
+                      : currentItem.teacher_passed === false
+                        ? "text-red-600"
+                        : "text-blue-600"
+                    : "text-gray-400",
+                )}
+              >
+                <MessageSquare className="w-4 h-4" />
+                {t("wordReading.teacherFeedback") || "老師評語"}
+                {currentItem.teacher_feedback &&
+                  currentItem.teacher_passed !== null &&
+                  currentItem.teacher_passed !== undefined && (
+                    <span
+                      className={
+                        currentItem.teacher_passed
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }
+                    >
+                      {currentItem.teacher_passed ? "（通過）" : "（未通過）"}
+                    </span>
+                  )}
+              </div>
+              <div className="text-sm sm:text-base text-gray-700">
+                {currentItem.teacher_feedback || (
+                  <span className="text-gray-400">
+                    {t("wordReading.noTeacherFeedback") || "尚無老師評語"}
+                  </span>
+                )}
+              </div>
+              {currentItem.teacher_reviewed_at && (
+                <div className="text-sm text-gray-500 mt-1">
+                  {new Date(currentItem.teacher_reviewed_at).toLocaleString(
+                    "zh-TW",
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 右欄 - AI 評估結果 */}
+          <div className="w-full sm:col-span-6 space-y-4">
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              {audioUrl && !assessmentResult ? (
+                <div className="flex justify-center mb-4 py-6">
+                  <Button
+                    size="lg"
+                    onClick={handleAssessment}
+                    disabled={isAssessing}
+                    className="relative bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white h-16 px-10 text-xl font-bold rounded-2xl shadow-2xl hover:shadow-purple-500/50 transition-all"
+                    style={{
+                      animation: isAssessing
+                        ? "none"
+                        : "pulse-scale 1.5s ease-in-out infinite",
+                    }}
+                  >
+                    {isAssessing ? (
+                      <>
+                        <Loader2 className="w-7 h-7 mr-3 animate-spin" />
+                        {t("wordReading.analyzing") || "上傳並分析中"}
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="w-7 h-7 mr-3 animate-pulse" />
+                        {t("wordReading.uploadAndAssess") || "上傳並分析"}
+                      </>
+                    )}
+                  </Button>
+                  <style
+                    dangerouslySetInnerHTML={{
+                      __html: `
+                      @keyframes pulse-scale {
+                        0%, 100% {
+                          transform: scale(1);
+                        }
+                        50% {
+                          transform: scale(1.08);
+                        }
+                      }
+                    `,
+                    }}
+                  />
+                </div>
+              ) : null}
+              {assessmentResult ? (
+                <div className="relative">
+                  {/* 評估結果 */}
+                  <div
+                    className={cn(
+                      "transition-all duration-300",
+                      isAssessing && "blur-sm opacity-30",
+                    )}
+                  >
+                    {!readOnly && (
+                      <button
+                        onClick={clearRecording}
+                        className="absolute top-0 right-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors z-10"
+                        title="清除錄音和評估結果"
+                        disabled={isAssessing}
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    )}
+
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg p-6 space-y-6">
+                      <div className="text-center">
+                        <h4 className="text-xl font-bold text-blue-900 mb-4 flex items-center justify-center gap-2">
+                          <Brain className="h-6 w-6" />
+                          {t("wordReading.aiResult") || "AI 評估結果"}
+                        </h4>
+
+                        {/* Overall Score */}
+                        <div className="bg-white rounded-lg p-6 shadow-sm mb-4">
+                          <div className="text-4xl font-bold text-blue-600 mb-2">
+                            {assessmentResult.overallScore}
+                            {t("wordReading.points") || " 分"}
+                          </div>
+                          <Badge
+                            variant={getScoreBadgeVariant(
+                              assessmentResult.overallScore,
+                            )}
+                            className="text-sm px-3 py-1"
+                          >
+                            {t("wordReading.overallScore") || "綜合評分"}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Detailed Scores */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white rounded-lg p-3 text-center">
+                          <div className="text-xs text-gray-500 mb-1">
+                            {t("wordReading.accuracy") || "準確度"}
+                          </div>
+                          <div
+                            className={`text-lg font-bold ${getScoreColor(assessmentResult.accuracyScore)}`}
+                          >
+                            {assessmentResult.accuracyScore}
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 text-center">
+                          <div className="text-xs text-gray-500 mb-1">
+                            {t("wordReading.fluency") || "流暢度"}
+                          </div>
+                          <div
+                            className={`text-lg font-bold ${getScoreColor(assessmentResult.fluencyScore)}`}
+                          >
+                            {assessmentResult.fluencyScore}
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 text-center">
+                          <div className="text-xs text-gray-500 mb-1">
+                            {t("wordReading.completeness") || "完整度"}
+                          </div>
+                          <div
+                            className={`text-lg font-bold ${getScoreColor(assessmentResult.completenessScore)}`}
+                          >
+                            {assessmentResult.completenessScore}
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 text-center">
+                          <div className="text-xs text-gray-500 mb-1">
+                            {t("wordReading.pronunciation") || "發音"}
+                          </div>
+                          <div
+                            className={`text-lg font-bold ${getScoreColor(assessmentResult.pronunciationScore)}`}
+                          >
+                            {assessmentResult.pronunciationScore}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Re-assess Button */}
+                      {!readOnly && (
+                        <div className="text-center">
+                          <Button
+                            onClick={() => setAssessmentResult(null)}
+                            variant="outline"
+                            size="sm"
+                            className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                          >
+                            {t("wordReading.reassess") || "重新評估"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 思考動畫覆蓋層 */}
+                  {isAssessing && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-20 rounded-lg">
+                      <div className="text-center text-purple-500">
+                        <div className="relative w-16 h-16 mx-auto mb-4">
+                          <div className="absolute inset-0 rounded-full bg-purple-100 animate-ping opacity-75"></div>
+                          <div className="absolute inset-2 rounded-full bg-purple-200 animate-pulse"></div>
+                          <Brain
+                            className="w-16 h-16 absolute inset-0 animate-spin"
+                            style={{ animationDuration: "3s" }}
+                          />
+                        </div>
+                        <p className="text-base font-medium text-purple-600 animate-pulse">
+                          AI 正在分析中...
+                        </p>
+                        <p className="text-xs text-purple-400 mt-1">
+                          請稍候片刻
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : isAssessing ? (
+                <div className="text-center text-purple-500 py-8">
+                  <div className="relative w-16 h-16 mx-auto mb-4">
+                    <div className="absolute inset-0 rounded-full bg-purple-100 animate-ping opacity-75"></div>
+                    <div className="absolute inset-2 rounded-full bg-purple-200 animate-pulse"></div>
+                    <Brain
+                      className="w-16 h-16 absolute inset-0 animate-spin"
+                      style={{ animationDuration: "3s" }}
+                    />
+                  </div>
+                  <p className="text-base font-medium text-purple-600 animate-pulse">
+                    AI 正在分析中...
+                  </p>
+                  <p className="text-xs text-purple-400 mt-1">請稍候片刻</p>
+                </div>
+              ) : (
+                <div className="text-center text-gray-400 py-8">
+                  <Brain className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">
+                    {audioUrl
+                      ? t("wordReading.clickToAssess") || "點擊上方按鈕開始評估"
+                      : t("wordReading.pleaseRecord") || "請先錄音"}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Hidden Audio Element for Example Audio */}
-      {currentItem.audio_url && (
-        <audio
-          ref={exampleAudioRef}
-          src={currentItem.audio_url}
-          onEnded={() => setIsPlayingExample(false)}
-        />
-      )}
 
       {/* Timeout Dialog */}
       <Dialog open={showTimeoutDialog} onOpenChange={setShowTimeoutDialog}>
@@ -626,11 +1084,11 @@ export default function WordReadingTemplate({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-orange-600">
               <Clock className="h-5 w-5" />
-              {t("wordReading.timeUp") || "Time's Up!"}
+              {t("wordReading.timeUp") || "時間到！"}
             </DialogTitle>
             <DialogDescription>
               {t("wordReading.timeUpDescription") ||
-                "Recording time has ended. You can retry or skip to the next word."}
+                "錄音時間已結束，您可以選擇重試或跳過此題。"}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2 sm:gap-0">
@@ -640,12 +1098,12 @@ export default function WordReadingTemplate({
               className="flex items-center gap-2"
             >
               <RotateCcw className="h-4 w-4" />
-              {t("wordReading.retry") || "Retry"}
+              {t("wordReading.retry") || "重試"}
             </Button>
             {onSkip && (
               <Button onClick={handleSkip} className="flex items-center gap-2">
                 <SkipForward className="h-4 w-4" />
-                {t("wordReading.skip") || "Skip"}
+                {t("wordReading.skip") || "跳過"}
               </Button>
             )}
           </DialogFooter>

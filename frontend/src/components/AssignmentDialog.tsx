@@ -824,7 +824,7 @@ export function AssignmentDialog({
       due_date: undefined,
       start_date: undefined,
       practice_mode: "reading",
-      time_limit_per_question: 20 as 0 | 10 | 20 | 30 | 40,
+      time_limit_per_question: 20 as 0 | 20 | 30 | 40,
       shuffle_questions: false,
       show_answer: false,
       play_audio: false,
@@ -889,10 +889,11 @@ export function AssignmentDialog({
     if (currentStep === 1) {
       const contentCategory = getCartContentTypeCategory();
       if (contentCategory === "vocabulary_set") {
-        // 單字集預設為單字朗讀模式
+        // 單字集預設為單字朗讀模式，不限時
         setFormData((prev) => ({
           ...prev,
           practice_mode: "word_reading",
+          time_limit_per_question: 0, // 單字朗讀預設不限時
         }));
       } else {
         // 例句集預設為例句朗讀模式
@@ -1951,6 +1952,7 @@ export function AssignmentDialog({
                             setFormData((prev) => ({
                               ...prev,
                               practice_mode: "word_reading",
+                              time_limit_per_question: 0, // 單字朗讀預設不限時
                             }))
                           }
                           className={`flex-1 p-6 rounded-xl border-2 transition-all ${
@@ -1981,6 +1983,7 @@ export function AssignmentDialog({
                             setFormData((prev) => ({
                               ...prev,
                               practice_mode: "word_selection",
+                              time_limit_per_question: 30, // 單字選擇預設 30 秒
                             }))
                           }
                           className={`flex-1 p-6 rounded-xl border-2 transition-all ${
@@ -2128,7 +2131,7 @@ export function AssignmentDialog({
                                   ...prev,
                                   time_limit_per_question: Number(
                                     e.target.value,
-                                  ) as 0 | 10 | 20 | 30 | 40,
+                                  ) as 0 | 20 | 30 | 40,
                                 }))
                               }
                               className="w-full h-9 px-3 rounded-md border border-gray-200 text-sm"
@@ -2137,29 +2140,22 @@ export function AssignmentDialog({
                                 {t(
                                   "dialogs.assignmentDialog.practiceMode.unlimited",
                                 )}
-                              </option>
-                              <option value={10}>
-                                10{" "}
-                                {t(
-                                  "dialogs.assignmentDialog.practiceMode.seconds",
-                                )}
+                                {formData.practice_mode === "word_reading" &&
+                                  ` (${t("dialogs.assignmentDialog.practiceMode.default")})`}
                               </option>
                               <option value={20}>
                                 20{" "}
                                 {t(
                                   "dialogs.assignmentDialog.practiceMode.seconds",
-                                )}{" "}
-                                (
-                                {t(
-                                  "dialogs.assignmentDialog.practiceMode.default",
                                 )}
-                                )
                               </option>
                               <option value={30}>
                                 30{" "}
                                 {t(
                                   "dialogs.assignmentDialog.practiceMode.seconds",
                                 )}
+                                {formData.practice_mode === "word_selection" &&
+                                  ` (${t("dialogs.assignmentDialog.practiceMode.default")})`}
                               </option>
                               <option value={40}>
                                 40{" "}
