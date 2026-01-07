@@ -8,9 +8,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, Info } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
@@ -97,7 +96,7 @@ export default function TeacherAssignmentPreviewPage() {
       {/* Preview Mode Header */}
       <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <Button
               variant="ghost"
               size="sm"
@@ -109,21 +108,14 @@ export default function TeacherAssignmentPreviewPage() {
               <ArrowLeft className="h-4 w-4" />
               {t("previewPage.buttons.backToList")}
             </Button>
-
-            <Badge
-              variant="outline"
-              className="gap-2 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700 px-4 py-2"
-            >
-              <Eye className="h-4 w-4" />
-              {t("previewPage.badge.previewMode")}
-            </Badge>
           </div>
 
           {/* Info Banner */}
           <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-start gap-2">
             <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              {t("previewPage.info.description")}
+              <strong>{t("previewPage.badge.previewMode")}</strong>
+              {t("previewPage.info.suffix")}
             </p>
           </div>
         </div>

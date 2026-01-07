@@ -2508,7 +2508,8 @@
       "previewMode": "Preview Mode"
     },
     "info": {
-      "description": "This is preview mode. You see exactly what students see. All operations (including recording) work normally, but nothing is saved to the database."
+      "description": "This is preview mode. You see exactly what students see. All operations (including recording) work normally, but nothing is saved to the database.",
+      "suffix": " - You see exactly what students see. All operations (including recording) work normally, but nothing is saved to the database."
     }
   },
   "teacherClassrooms": {
