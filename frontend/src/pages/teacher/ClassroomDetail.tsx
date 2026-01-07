@@ -1407,17 +1407,27 @@ export default function ClassroomDetail({
                                 assignment.content_type?.toUpperCase();
                               const practiceMode = assignment.practice_mode;
 
-                              // VOCABULARY_SET 或 SENTENCE_MAKING → 單字集
+                              // VOCABULARY_SET 或 SENTENCE_MAKING → 根據 practice_mode
                               if (
                                 contentType === "VOCABULARY_SET" ||
                                 contentType === "SENTENCE_MAKING"
                               ) {
+                                if (practiceMode === "word_selection") {
+                                  return {
+                                    label: t(
+                                      "classroomDetail.contentTypes.WORD_SELECTION",
+                                    ),
+                                    color:
+                                      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                  };
+                                }
+                                // default: word_reading
                                 return {
                                   label: t(
-                                    "classroomDetail.contentTypes.VOCABULARY_SET",
+                                    "classroomDetail.contentTypes.WORD_READING",
                                   ),
                                   color:
-                                    "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
                                 };
                               }
 
@@ -1658,17 +1668,27 @@ export default function ClassroomDetail({
                                     assignment.content_type?.toUpperCase();
                                   const practiceMode = assignment.practice_mode;
 
-                                  // VOCABULARY_SET 或 SENTENCE_MAKING → 單字集
+                                  // VOCABULARY_SET 或 SENTENCE_MAKING → 根據 practice_mode
                                   if (
                                     contentType === "VOCABULARY_SET" ||
                                     contentType === "SENTENCE_MAKING"
                                   ) {
+                                    if (practiceMode === "word_selection") {
+                                      return {
+                                        label: t(
+                                          "classroomDetail.contentTypes.WORD_SELECTION",
+                                        ),
+                                        color:
+                                          "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                      };
+                                    }
+                                    // default: word_reading
                                     return {
                                       label: t(
-                                        "classroomDetail.contentTypes.VOCABULARY_SET",
+                                        "classroomDetail.contentTypes.WORD_READING",
                                       ),
                                       color:
-                                        "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
                                     };
                                   }
 
