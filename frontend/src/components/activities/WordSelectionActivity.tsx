@@ -194,11 +194,24 @@ export default function WordSelectionActivity({
   }, [words, currentIndex]);
 
   // Auto-play audio when word changes if play_audio is enabled
+  // Don't play when round is completed (to avoid extra playback on "Finish Round")
   useEffect(() => {
-    if (playAudio && words[currentIndex]?.audio_url && !showResult) {
+    if (
+      playAudio &&
+      words[currentIndex]?.audio_url &&
+      !showResult &&
+      !roundCompleted
+    ) {
       playWordAudio();
     }
-  }, [currentIndex, playAudio, playWordAudio, words, showResult]);
+  }, [
+    currentIndex,
+    playAudio,
+    playWordAudio,
+    words,
+    showResult,
+    roundCompleted,
+  ]);
 
   // Handle answer selection
   const handleSelectAnswer = async (answer: string) => {
@@ -622,10 +635,11 @@ export default function WordSelectionActivity({
                   </span>
                 </p>
                 <p>
-                  {t("wordSelection.wordsMastered") || "Words Mastered"}:{" "}
-                  <span className="font-bold">
-                    {proficiency.words_mastered} / {proficiency.total_words}
-                  </span>
+                  {t("wordSelection.wordsMastered", {
+                    mastered: proficiency.words_mastered,
+                    total: proficiency.total_words,
+                  }) ||
+                    `Words Mastered: ${proficiency.words_mastered} / ${proficiency.total_words}`}
                 </p>
               </div>
             </DialogDescription>
