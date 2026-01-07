@@ -237,7 +237,6 @@ export default function WordReadingTemplate({
         feedback: "",
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentItem.id]); // Only run when item changes, not when existingAudioUrl/timeLimit changes
 
   // Auto-play example audio when entering a new question
