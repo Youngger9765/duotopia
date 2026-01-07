@@ -1508,29 +1508,31 @@ export default function ClassroomDetail({
                                       {typeInfo.label}
                                     </span>
                                   </div>
-                                  {/* 🆕 rearrangement 模式不顯示 AI 批改按鈕（提交後直接完成） */}
+                                  {/* 🆕 rearrangement / word_selection 模式不顯示 AI 批改按鈕 */}
                                   {assignment.practice_mode !==
-                                    "rearrangement" && (
-                                    <Button
-                                      variant="default"
-                                      size="sm"
-                                      className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-3 flex-shrink-0 gap-1.5"
-                                      onClick={() => {
-                                        setBatchGradingModal({
-                                          open: true,
-                                          assignmentId: assignment.id,
-                                          classroomId: Number(id),
-                                        });
-                                      }}
-                                    >
-                                      <Sparkles className="w-5 h-5" />
-                                      <span className="text-sm font-medium">
-                                        {t(
-                                          "assignmentDetail.buttons.batchGrade",
-                                        )}
-                                      </span>
-                                    </Button>
-                                  )}
+                                    "rearrangement" &&
+                                    assignment.practice_mode !==
+                                      "word_selection" && (
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-3 flex-shrink-0 gap-1.5"
+                                        onClick={() => {
+                                          setBatchGradingModal({
+                                            open: true,
+                                            assignmentId: assignment.id,
+                                            classroomId: Number(id),
+                                          });
+                                        }}
+                                      >
+                                        <Sparkles className="w-5 h-5" />
+                                        <span className="text-sm font-medium">
+                                          {t(
+                                            "assignmentDetail.buttons.batchGrade",
+                                          )}
+                                        </span>
+                                      </Button>
+                                    )}
                                 </div>
 
                                 {/* Description */}
@@ -1822,27 +1824,29 @@ export default function ClassroomDetail({
                                             "classroomDetail.buttons.previewDemo",
                                           )}
                                         </Button>
-                                        {/* 🆕 rearrangement 模式不顯示 AI 批改按鈕 */}
+                                        {/* 🆕 rearrangement / word_selection 模式不顯示 AI 批改按鈕 */}
                                         {assignment.practice_mode !==
-                                          "rearrangement" && (
-                                          <Button
-                                            variant="default"
-                                            size="sm"
-                                            className="bg-purple-600 hover:bg-purple-700 text-white h-10 min-h-10"
-                                            onClick={() => {
-                                              setBatchGradingModal({
-                                                open: true,
-                                                assignmentId: assignment.id,
-                                                classroomId: Number(id),
-                                              });
-                                            }}
-                                          >
-                                            <Sparkles className="w-4 h-4 mr-1" />
-                                            {t(
-                                              "assignmentDetail.buttons.batchGrade",
-                                            )}
-                                          </Button>
-                                        )}
+                                          "rearrangement" &&
+                                          assignment.practice_mode !==
+                                            "word_selection" && (
+                                            <Button
+                                              variant="default"
+                                              size="sm"
+                                              className="bg-purple-600 hover:bg-purple-700 text-white h-10 min-h-10"
+                                              onClick={() => {
+                                                setBatchGradingModal({
+                                                  open: true,
+                                                  assignmentId: assignment.id,
+                                                  classroomId: Number(id),
+                                                });
+                                              }}
+                                            >
+                                              <Sparkles className="w-4 h-4 mr-1" />
+                                              {t(
+                                                "assignmentDetail.buttons.batchGrade",
+                                              )}
+                                            </Button>
+                                          )}
                                       </div>
                                     </td>
                                   </tr>
