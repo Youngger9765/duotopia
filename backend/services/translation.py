@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class TranslationService:
     def __init__(self):
         self.client = None
-        self.model = "gpt-3.5-turbo"
+        self.model = "gpt-4o-mini"
 
     def _ensure_client(self):
         """Lazy initialization of OpenAI client"""
