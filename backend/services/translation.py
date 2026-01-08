@@ -1,5 +1,7 @@
 """
-Translation service using OpenAI API
+Translation service using OpenAI API or Vertex AI (Gemini)
+
+Supports switching between OpenAI and Vertex AI via USE_VERTEX_AI environment variable.
 """
 
 import os
@@ -16,16 +18,28 @@ logger = logging.getLogger(__name__)
 
 class TranslationService:
     def __init__(self):
-        self.client = None
-        self.model = "gpt-4o-mini"
+        self.use_vertex_ai = os.getenv("USE_VERTEX_AI", "false").lower() == "true"
+        self.client = None  # OpenAI client (lazy init)
+        self.vertex_ai = None  # Vertex AI service (lazy init)
+        self.model = "gpt-4o-mini"  # OpenAI model (for fallback)
 
     def _ensure_client(self):
-        """Lazy initialization of OpenAI client"""
-        if self.client is None:
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                raise ValueError("OPENAI_API_KEY not found in environment variables")
-            self.client = OpenAI(api_key=api_key)
+        """Lazy initialization of AI client (OpenAI or Vertex AI)"""
+        if self.use_vertex_ai:
+            if self.vertex_ai is None:
+                from services.vertex_ai import get_vertex_ai_service
+
+                self.vertex_ai = get_vertex_ai_service()
+                logger.info("Using Vertex AI (Gemini) for translation")
+        else:
+            if self.client is None:
+                api_key = os.getenv("OPENAI_API_KEY")
+                if not api_key:
+                    raise ValueError(
+                        "OPENAI_API_KEY not found in environment variables"
+                    )
+                self.client = OpenAI(api_key=api_key)
+                logger.info("Using OpenAI for translation")
 
     async def translate_text(self, text: str, target_lang: str = "zh-TW") -> str:
         """
@@ -56,25 +70,35 @@ class TranslationService:
                     f"only return the translation without any explanation:\n{text}"
                 )
 
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a professional translator. Only provide the "
-                            "translation without any explanation. "
-                            "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
-                            "NOT Simplified Chinese."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.3,  # 降低隨機性以獲得更一致的翻譯
-                max_tokens=100,
+            system_instruction = (
+                "You are a professional translator. Only provide the "
+                "translation without any explanation. "
+                "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
+                "NOT Simplified Chinese."
             )
 
-            return response.choices[0].message.content.strip()
+            # Use Vertex AI or OpenAI based on configuration
+            if self.use_vertex_ai:
+                result = await self.vertex_ai.generate_text(
+                    prompt=prompt,
+                    model_type="flash",
+                    max_tokens=100,
+                    temperature=0.3,
+                    system_instruction=system_instruction,
+                )
+                return result.strip()
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.3,  # 降低隨機性以獲得更一致的翻譯
+                    max_tokens=100,
+                )
+                return response.choices[0].message.content.strip()
+
         except Exception as e:
             print(f"Translation error: {e}")
             # 如果翻譯失敗，返回原文
@@ -143,35 +167,44 @@ det. (determiner), aux. (auxiliary)
 
 Only reply with JSON, no other text."""
 
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a professional linguist specializing in English grammar. "
-                            "When identifying parts of speech, you MUST list ALL common usages - "
-                            "many English words function as multiple parts of speech. "
-                            "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
-                            "NOT Simplified Chinese. Always respond with valid JSON only."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.2,  # Lower temperature for more consistent POS detection
-                max_tokens=200,
+            system_instruction = (
+                "You are a professional linguist specializing in English grammar. "
+                "When identifying parts of speech, you MUST list ALL common usages - "
+                "many English words function as multiple parts of speech. "
+                "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
+                "NOT Simplified Chinese. Always respond with valid JSON only."
             )
 
-            # 解析 JSON 回應
-            import re
+            # Use Vertex AI or OpenAI based on configuration
+            if self.use_vertex_ai:
+                result = await self.vertex_ai.generate_json(
+                    prompt=prompt,
+                    model_type="flash",
+                    max_tokens=200,
+                    temperature=0.2,
+                    system_instruction=system_instruction,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.2,  # Lower temperature for more consistent POS detection
+                    max_tokens=200,
+                )
 
-            content = response.choices[0].message.content.strip()
-            # 移除可能的 markdown 代碼塊標記
-            content = re.sub(r"^```json\s*", "", content)
-            content = re.sub(r"\s*```$", "", content)
-            content = content.strip()
+                # 解析 JSON 回應
+                import re
 
-            result = json.loads(content)
+                content = response.choices[0].message.content.strip()
+                # 移除可能的 markdown 代碼塊標記
+                content = re.sub(r"^```json\s*", "", content)
+                content = re.sub(r"\s*```$", "", content)
+                content = content.strip()
+
+                result = json.loads(content)
 
             # 確保返回正確的結構
             return {
@@ -232,48 +265,60 @@ Input: {texts_json}
 
 Required: Return format must be ["translation1", "translation2", ...]"""
 
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a professional translator. Always return results "
-                            "as a valid JSON array with the exact same number of items as input. "
-                            "Return ONLY the JSON array, no markdown, no explanation. "
-                            "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
-                            "NOT Simplified Chinese."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.3,
-                max_tokens=500,  # 與單元測試預期一致
+            system_instruction = (
+                "You are a professional translator. Always return results "
+                "as a valid JSON array with the exact same number of items as input. "
+                "Return ONLY the JSON array, no markdown, no explanation. "
+                "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
+                "NOT Simplified Chinese."
             )
 
-            # 解析 JSON 回應
-            import re
+            # Use Vertex AI or OpenAI based on configuration
+            if self.use_vertex_ai:
+                translations = await self.vertex_ai.generate_json(
+                    prompt=prompt,
+                    model_type="flash",
+                    max_tokens=500,
+                    temperature=0.3,
+                    system_instruction=system_instruction,
+                )
+                # Ensure it's a list
+                if isinstance(translations, str):
+                    translations = translations.split("---")
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.3,
+                    max_tokens=500,  # 與單元測試預期一致
+                )
 
-            content = response.choices[0].message.content.strip()
+                # 解析 JSON 回應
+                import re
 
-            # 移除可能的 markdown 代碼塊標記
-            content = re.sub(r"^```json\s*", "", content)
-            content = re.sub(r"\s*```$", "", content)
-            content = content.strip()
+                content = response.choices[0].message.content.strip()
 
-            # Try JSON parse; handle legacy separator when JSON decode fails
-            try:
-                translations = json.loads(content)
-            except Exception:
-                # If not JSON, fall back to separator or raw string
-                if "---" in content:
-                    translations = [
-                        seg.strip() for seg in content.split("---") if seg.strip()
-                    ]
-                else:
-                    translations = [content.strip()] if content else []
-            if isinstance(translations, str):
-                translations = translations.split("---")
+                # 移除可能的 markdown 代碼塊標記
+                content = re.sub(r"^```json\s*", "", content)
+                content = re.sub(r"\s*```$", "", content)
+                content = content.strip()
+
+                # Try JSON parse; handle legacy separator when JSON decode fails
+                try:
+                    translations = json.loads(content)
+                except Exception:
+                    # If not JSON, fall back to separator or raw string
+                    if "---" in content:
+                        translations = [
+                            seg.strip() for seg in content.split("---") if seg.strip()
+                        ]
+                    else:
+                        translations = [content.strip()] if content else []
+                if isinstance(translations, str):
+                    translations = translations.split("---")
 
             # 確保返回的翻譯數量與輸入相同
             if len(translations) != len(texts):
@@ -378,34 +423,43 @@ det. (determiner), aux. (auxiliary)
 
 Only reply with JSON array, no other text."""
 
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a professional linguist specializing in English grammar. "
-                            "When identifying parts of speech, you MUST list ALL common usages - "
-                            "many English words function as multiple parts of speech. "
-                            "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
-                            "NOT Simplified Chinese. Always respond with valid JSON array only."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.2,  # Lower temperature for more consistent POS detection
-                max_tokens=2000,
+            system_instruction = (
+                "You are a professional linguist specializing in English grammar. "
+                "When identifying parts of speech, you MUST list ALL common usages - "
+                "many English words function as multiple parts of speech. "
+                "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
+                "NOT Simplified Chinese. Always respond with valid JSON array only."
             )
 
-            # 解析 JSON 回應
-            import re
+            # Use Vertex AI or OpenAI based on configuration
+            if self.use_vertex_ai:
+                results = await self.vertex_ai.generate_json(
+                    prompt=prompt,
+                    model_type="flash",
+                    max_tokens=2000,
+                    temperature=0.2,
+                    system_instruction=system_instruction,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.2,  # Lower temperature for more consistent POS detection
+                    max_tokens=2000,
+                )
 
-            content = response.choices[0].message.content.strip()
-            content = re.sub(r"^```json\s*", "", content)
-            content = re.sub(r"\s*```$", "", content)
-            content = content.strip()
+                # 解析 JSON 回應
+                import re
 
-            results = json.loads(content)
+                content = response.choices[0].message.content.strip()
+                content = re.sub(r"^```json\s*", "", content)
+                content = re.sub(r"\s*```$", "", content)
+                content = content.strip()
+
+                results = json.loads(content)
 
             # 確保返回數量正確
             if len(results) != len(texts):
@@ -501,27 +555,37 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
 
             user_prompt += "\n\nOnly return the JSON array, no other text."
 
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.8,  # 稍高一點讓例句更有變化
-                max_tokens=2000,
-            )
+            # Use Vertex AI or OpenAI based on configuration
+            if self.use_vertex_ai:
+                sentences = await self.vertex_ai.generate_json(
+                    prompt=user_prompt,
+                    model_type="flash",
+                    max_tokens=2000,
+                    temperature=0.8,
+                    system_instruction=system_prompt,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=0.8,  # 稍高一點讓例句更有變化
+                    max_tokens=2000,
+                )
 
-            # 解析回應
-            import re
+                # 解析回應
+                import re
 
-            content = response.choices[0].message.content.strip()
+                content = response.choices[0].message.content.strip()
 
-            # 移除可能的 markdown 代碼塊標記
-            content = re.sub(r"^```json\s*", "", content)
-            content = re.sub(r"\s*```$", "", content)
-            content = content.strip()
+                # 移除可能的 markdown 代碼塊標記
+                content = re.sub(r"^```json\s*", "", content)
+                content = re.sub(r"\s*```$", "", content)
+                content = content.strip()
 
-            sentences = json.loads(content)
+                sentences = json.loads(content)
 
             # 確保返回數量正確
             if len(sentences) != len(words):
@@ -592,37 +656,46 @@ JSON 陣列，只包含 {count} 個干擾項：
 
 只回覆 JSON 陣列，不要其他文字。"""
 
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a vocabulary quiz generator for language learners. "
-                            "Your task is to generate WRONG answer options (distractors). "
-                            "RULES: 1) NO synonyms or similar meanings (改變→不可用交換/變換) "
-                            "2) Stay in the same category/domain (assignment=作業→用考試/報告, apple=蘋果→用香蕉/橘子) "
-                            "3) Distractors should be plausible, not random words. "
-                            "All Chinese MUST be Traditional Chinese (繁體中文). "
-                            "Respond with valid JSON array only."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.8,  # Balanced: variety while following instructions
-                max_tokens=200,
+            system_instruction = (
+                "You are a vocabulary quiz generator for language learners. "
+                "Your task is to generate WRONG answer options (distractors). "
+                "RULES: 1) NO synonyms or similar meanings (改變→不可用交換/變換) "
+                "2) Stay in the same category/domain (assignment=作業→用考試/報告, apple=蘋果→用香蕉/橘子) "
+                "3) Distractors should be plausible, not random words. "
+                "All Chinese MUST be Traditional Chinese (繁體中文). "
+                "Respond with valid JSON array only."
             )
 
-            # Parse JSON response
-            import re
+            # Use Vertex AI or OpenAI based on configuration
+            if self.use_vertex_ai:
+                distractors = await self.vertex_ai.generate_json(
+                    prompt=prompt,
+                    model_type="flash",
+                    max_tokens=200,
+                    temperature=0.8,
+                    system_instruction=system_instruction,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.8,  # Balanced: variety while following instructions
+                    max_tokens=200,
+                )
 
-            content = response.choices[0].message.content.strip()
-            # Remove markdown code block markers if present
-            content = re.sub(r"^```json\s*", "", content)
-            content = re.sub(r"\s*```$", "", content)
-            content = content.strip()
+                # Parse JSON response
+                import re
 
-            distractors = json.loads(content)
+                content = response.choices[0].message.content.strip()
+                # Remove markdown code block markers if present
+                content = re.sub(r"^```json\s*", "", content)
+                content = re.sub(r"\s*```$", "", content)
+                content = content.strip()
+
+                distractors = json.loads(content)
 
             # Filter: remove duplicates (case-insensitive) and correct answer
             seen = {translation.lower().strip()}
@@ -698,36 +771,45 @@ JSON 陣列，每個元素是一個包含 {count} 個干擾項的陣列：
 
 只回覆 JSON 陣列，不要其他文字。"""
 
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a vocabulary quiz generator for language learners. "
-                            "Your task is to generate WRONG answer options (distractors). "
-                            "RULES: 1) NO synonyms or similar meanings (改變→不可用交換/變換) "
-                            "2) Stay in the same category/domain (assignment=作業→用考試/報告, apple=蘋果→用香蕉/橘子) "
-                            "3) Distractors should be plausible, not random words. "
-                            "All Chinese MUST be Traditional Chinese (繁體中文). "
-                            "Respond with valid JSON array only."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.8,  # Balanced: variety while following instructions
-                max_tokens=1000,
+            system_instruction = (
+                "You are a vocabulary quiz generator for language learners. "
+                "Your task is to generate WRONG answer options (distractors). "
+                "RULES: 1) NO synonyms or similar meanings (改變→不可用交換/變換) "
+                "2) Stay in the same category/domain (assignment=作業→用考試/報告, apple=蘋果→用香蕉/橘子) "
+                "3) Distractors should be plausible, not random words. "
+                "All Chinese MUST be Traditional Chinese (繁體中文). "
+                "Respond with valid JSON array only."
             )
 
-            # Parse JSON response
-            import re
+            # Use Vertex AI or OpenAI based on configuration
+            if self.use_vertex_ai:
+                all_distractors = await self.vertex_ai.generate_json(
+                    prompt=prompt,
+                    model_type="flash",
+                    max_tokens=1000,
+                    temperature=0.8,
+                    system_instruction=system_instruction,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.8,  # Balanced: variety while following instructions
+                    max_tokens=1000,
+                )
 
-            content = response.choices[0].message.content.strip()
-            content = re.sub(r"^```json\s*", "", content)
-            content = re.sub(r"\s*```$", "", content)
-            content = content.strip()
+                # Parse JSON response
+                import re
 
-            all_distractors = json.loads(content)
+                content = response.choices[0].message.content.strip()
+                content = re.sub(r"^```json\s*", "", content)
+                content = re.sub(r"\s*```$", "", content)
+                content = content.strip()
+
+                all_distractors = json.loads(content)
 
             # Verify count matches
             if len(all_distractors) != len(words):
