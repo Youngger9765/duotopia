@@ -521,6 +521,10 @@ The sentences should be natural, educational, and appropriate for the difficulty
 CRITICAL REQUIREMENTS:
 1. Each sentence MUST contain the exact target word (the word being learned). Do NOT use synonyms or derivatives.
 2. If translating to Chinese, you MUST use Traditional Chinese (繁體中文), NOT Simplified Chinese.
+3. **IF USER PROVIDES CUSTOM INSTRUCTIONS, YOU MUST FOLLOW THEM EXACTLY.**
+   - Many English words have multiple meanings (e.g., "like" = 喜歡 or 像是, "change" = 改變 or 零錢)
+   - When user specifies a particular meaning, use ONLY that meaning in the sentence
+   - This is the HIGHEST PRIORITY requirement
 
 Level guidelines:
 - A1: Simple present/past, basic vocabulary, short sentences (5-8 words)
@@ -531,12 +535,23 @@ Level guidelines:
 - C2: Near-native fluency, literary style, rare vocabulary acceptable"""
 
             # 構建 user prompt
-            user_prompt = f"""Generate example sentences for the following words:
+            user_prompt = ""
+
+            # 如果有自訂 prompt，要在最前面強調
+            if prompt:
+                user_prompt += f"""**CRITICAL USER REQUIREMENT (MUST FOLLOW)**:
+{prompt}
+
+This instruction OVERRIDES the default interpretation. For example:
+- If the word is "like" and user says "use 像是 meaning", you MUST generate sentences where "like" means "similar to/such as", NOT "to enjoy".
+- If the word is "change" and user says "use 零錢 meaning", you MUST generate sentences about coins/change (money), NOT about modification.
+
+"""
+
+            user_prompt += f"""Generate example sentences for the following words:
 {words_json}
 
 """
-            if prompt:
-                user_prompt += f"Additional instructions: {prompt}\n\n"
 
             if translate_to:
                 lang_name = {

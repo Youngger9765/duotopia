@@ -160,12 +160,52 @@ class VertexAIService:
 
             content = response.text.strip()
 
-            # 移除可能的 markdown 代碼塊標記
-            content = re.sub(r"^```json\s*", "", content)
+            # 移除可能的前綴文字和 markdown 代碼塊標記
+            # 處理 "Here is the JSON requested:\n```json" 等情況
+            content = re.sub(r"^.*?```json\s*", "", content, flags=re.DOTALL)
+            content = re.sub(r"^.*?```\s*", "", content, flags=re.DOTALL)
             content = re.sub(r"\s*```$", "", content)
             content = content.strip()
 
-            return json.loads(content)
+            # 如果清理後仍然無法解析，嘗試找到第一個 [ 或 {
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                # 尋找 JSON 陣列或物件的起始位置
+                array_start = content.find("[")
+                object_start = content.find("{")
+
+                if array_start >= 0 and (
+                    object_start < 0 or array_start < object_start
+                ):
+                    # JSON 陣列
+                    json_content = content[array_start:]
+                    # 找到對應的結束括號
+                    bracket_count = 0
+                    for i, char in enumerate(json_content):
+                        if char == "[":
+                            bracket_count += 1
+                        elif char == "]":
+                            bracket_count -= 1
+                            if bracket_count == 0:
+                                json_content = json_content[: i + 1]
+                                break
+                    return json.loads(json_content)
+                elif object_start >= 0:
+                    # JSON 物件
+                    json_content = content[object_start:]
+                    bracket_count = 0
+                    for i, char in enumerate(json_content):
+                        if char == "{":
+                            bracket_count += 1
+                        elif char == "}":
+                            bracket_count -= 1
+                            if bracket_count == 0:
+                                json_content = json_content[: i + 1]
+                                break
+                    return json.loads(json_content)
+                else:
+                    raise
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON from Vertex AI response: {e}")
             logger.error(f"Raw response: {response.text if response else 'None'}")
