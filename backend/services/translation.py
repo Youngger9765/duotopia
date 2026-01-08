@@ -543,8 +543,10 @@ Level guidelines:
 {prompt}
 
 This instruction OVERRIDES the default interpretation. For example:
-- If the word is "like" and user says "use 像是 meaning", you MUST generate sentences where "like" means "similar to/such as", NOT "to enjoy".
-- If the word is "change" and user says "use 零錢 meaning", you MUST generate sentences about coins/change (money), NOT about modification.
+- If the word is "like" and user says "use 像是 meaning", you MUST generate sentences
+  where "like" means "similar to/such as", NOT "to enjoy".
+- If the word is "change" and user says "use 零錢 meaning", you MUST generate sentences
+  about coins/change (money), NOT about modification.
 
 """
 
