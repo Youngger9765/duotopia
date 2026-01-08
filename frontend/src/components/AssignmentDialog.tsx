@@ -1898,17 +1898,17 @@ export function AssignmentDialog({
                 <ScrollArea className="h-full">
                   <div className="grid grid-cols-3 gap-1.5 p-1">
                     {students
+                      .slice()
                       .sort((a, b) => {
-                        // 依學號排序（升冪）
-                        // 無學號的排在最後
-                        if (!a.student_number && !b.student_number) return 0;
-                        if (!a.student_number) return 1;
-                        if (!b.student_number) return -1;
-                        return a.student_number.localeCompare(
-                          b.student_number,
-                          "zh-TW",
-                          { numeric: true },
-                        );
+                        // 依學號排序（升冪）- 無學號的排在最後
+                        const numA = a.student_number ?? "";
+                        const numB = b.student_number ?? "";
+                        if (!numA && !numB) return 0;
+                        if (!numA) return 1;
+                        if (!numB) return -1;
+                        return numA.localeCompare(numB, "zh-TW", {
+                          numeric: true,
+                        });
                       })
                       .map((student) => (
                         <div
