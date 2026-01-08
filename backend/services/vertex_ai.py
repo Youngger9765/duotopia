@@ -7,8 +7,8 @@ Vertex AI (Gemini) Service
 - JSON 格式輸出（詞性分析、干擾選項等）
 
 Model 對應：
-- gpt-4o-mini → gemini-2.0-flash-001（快速、高效能）
-- gpt-4 → gemini-2.0-flash-001（統一使用）
+- gpt-4o-mini → gemini-2.5-flash（快速、高效能）
+- gpt-4 → gemini-2.5-flash（統一使用）
 """
 
 import os
@@ -25,10 +25,10 @@ class VertexAIService:
 
     def __init__(self):
         self.project_id = os.getenv("VERTEX_AI_PROJECT_ID", "duotopia-472708")
-        self.location = os.getenv("VERTEX_AI_LOCATION", "asia-east1")
+        self.location = os.getenv("VERTEX_AI_LOCATION", "us-central1")
         self._initialized = False
-        self._flash_model = None  # gemini-2.0-flash-001
-        self._pro_model = None  # gemini-2.0-flash-001 (統一使用)
+        self._flash_model = None  # gemini-2.5-flash
+        self._pro_model = None  # gemini-2.5-flash (統一使用)
 
     def _ensure_initialized(self):
         """Lazy initialization of Vertex AI"""
@@ -47,21 +47,21 @@ class VertexAIService:
                 raise
 
     def get_flash_model(self):
-        """取得 Gemini 2.0 Flash (對應 gpt-4o-mini)"""
+        """取得 Gemini 2.5 Flash (對應 gpt-4o-mini)"""
         self._ensure_initialized()
         if self._flash_model is None:
             from vertexai.generative_models import GenerativeModel
 
-            self._flash_model = GenerativeModel("gemini-2.0-flash-001")
+            self._flash_model = GenerativeModel("gemini-2.5-flash")
         return self._flash_model
 
     def get_pro_model(self):
-        """取得 Gemini 2.0 Flash (統一使用，對應 gpt-4)"""
+        """取得 Gemini 2.5 Flash (統一使用，對應 gpt-4)"""
         self._ensure_initialized()
         if self._pro_model is None:
             from vertexai.generative_models import GenerativeModel
 
-            self._pro_model = GenerativeModel("gemini-2.0-flash-001")
+            self._pro_model = GenerativeModel("gemini-2.5-flash")
         return self._pro_model
 
     async def generate_text(

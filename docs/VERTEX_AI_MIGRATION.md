@@ -14,7 +14,7 @@
 |------|--------|------|
 | `USE_VERTEX_AI` | `false` | 開關，設為 `true` 啟用 Vertex AI |
 | `VERTEX_AI_PROJECT_ID` | `duotopia-472708` | GCP 專案 ID |
-| `VERTEX_AI_LOCATION` | `asia-east1` | 區域（台灣） |
+| `VERTEX_AI_LOCATION` | `us-central1` | 區域（美國中部，Gemini 2.5 模型支援完整） |
 
 ---
 
@@ -49,9 +49,9 @@ gh variable set USE_VERTEX_AI --body "false"
 
 | 用途 | OpenAI Model | Vertex AI Model | 說明 |
 |------|--------------|-----------------|------|
-| 翻譯、詞性判斷、干擾選項、例句 | gpt-4o-mini | gemini-2.0-flash-001 | 快速、高效能 |
-| 帳單分析摘要 | gpt-4 | gemini-2.0-flash-001 | 統一使用 |
-| 錄音錯誤報告 | gpt-4o-mini | gemini-2.0-flash-001 | 快速、高效能 |
+| 翻譯、詞性判斷、干擾選項、例句 | gpt-4o-mini | gemini-2.5-flash | 最新穩定版，快速高效能 |
+| 帳單分析摘要 | gpt-4 | gemini-2.5-flash | 統一使用 |
+| 錄音錯誤報告 | gpt-4o-mini | gemini-2.5-flash | 最新穩定版，快速高效能 |
 
 ---
 
@@ -87,7 +87,7 @@ vertex_ai = get_vertex_ai_service()
 # 文字生成
 result = await vertex_ai.generate_text(
     prompt="翻譯這段文字",
-    model_type="flash",  # "flash" 或 "pro"（目前都使用 gemini-2.0-flash-001）
+    model_type="flash",  # "flash" 或 "pro"（目前都使用 gemini-2.5-flash）
     max_tokens=100,
     temperature=0.3,
     system_instruction="你是專業翻譯",
@@ -144,9 +144,9 @@ result = vertex_ai.generate_text_sync(
 |------|-------|-----------------|
 | OpenAI | gpt-4o-mini | $0.15 input / $0.60 output |
 | OpenAI | gpt-4 | $30 input / $60 output |
-| **Vertex AI** | **gemini-2.0-flash-001** | **$0.10 input / $0.40 output** |
+| **Vertex AI** | **gemini-2.5-flash** | **$0.15 input / $0.60 output** |
 
-**注意**: gemini-2.0-flash-001 比 gpt-4o-mini 便宜，效能相近；比 gpt-4 便宜非常多。
+**注意**: gemini-2.5-flash 與 gpt-4o-mini 價格相近，但性能更強；比 gpt-4 便宜非常多。
 
 ---
 
@@ -173,7 +173,7 @@ result = vertex_ai.generate_text_sync(
 
 ---
 
-**文件版本**: v1.2
+**文件版本**: v1.3
 **建立日期**: 2026-01-08
-**更新日期**: 2026-01-08 (修正為 gemini-2.0-flash-001)
+**更新日期**: 2026-01-08 (升級為 gemini-2.5-flash，區域改為 us-central1)
 **作者**: Claude Code

@@ -73,7 +73,7 @@ class Settings:
     VERTEX_AI_PROJECT_ID: Optional[str] = os.getenv(
         "VERTEX_AI_PROJECT_ID", "duotopia-472708"
     )
-    VERTEX_AI_LOCATION: str = os.getenv("VERTEX_AI_LOCATION", "asia-east1")
+    VERTEX_AI_LOCATION: str = os.getenv("VERTEX_AI_LOCATION", "us-central1")
 
     # TapPay Configuration
     TAPPAY_ENV: Literal["sandbox", "production"] = os.getenv("TAPPAY_ENV", "sandbox")
