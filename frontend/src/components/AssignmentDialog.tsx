@@ -67,6 +67,7 @@ interface Student {
   id: number;
   name: string;
   email?: string; // Make email optional to match global Student type
+  student_number?: string; // 學號
 }
 
 // ContentItem 包含 audio_url 資訊，用於驗證音檔是否存在
@@ -1896,38 +1897,55 @@ export function AssignmentDialog({
               <div className="flex-1 border rounded-lg bg-gray-50 p-2 overflow-hidden">
                 <ScrollArea className="h-full">
                   <div className="grid grid-cols-3 gap-1.5 p-1">
-                    {students.map((student) => (
-                      <div
-                        key={student.id}
-                        onClick={() => toggleStudent(student.id)}
-                        className={cn(
-                          "p-2 rounded-md border transition-all text-left relative cursor-pointer",
-                          formData.student_ids.includes(student.id)
-                            ? "bg-blue-50 border-blue-300 shadow-sm"
-                            : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm",
-                        )}
-                      >
-                        <div className="flex items-start gap-2">
-                          <Checkbox
-                            checked={formData.student_ids.includes(student.id)}
-                            className="data-[state=checked]:bg-blue-600 mt-0.5 h-4 w-4 pointer-events-none"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-xs truncate">
-                              {student.name}
-                            </p>
-                            <p className="text-[10px] text-gray-500 truncate">
-                              {student.email}
-                            </p>
+                    {students
+                      .sort((a, b) => {
+                        // 依學號排序（升冪）
+                        // 無學號的排在最後
+                        if (!a.student_number && !b.student_number) return 0;
+                        if (!a.student_number) return 1;
+                        if (!b.student_number) return -1;
+                        return a.student_number.localeCompare(
+                          b.student_number,
+                          "zh-TW",
+                          { numeric: true },
+                        );
+                      })
+                      .map((student) => (
+                        <div
+                          key={student.id}
+                          onClick={() => toggleStudent(student.id)}
+                          className={cn(
+                            "p-2 rounded-md border transition-all text-left relative cursor-pointer",
+                            formData.student_ids.includes(student.id)
+                              ? "bg-blue-50 border-blue-300 shadow-sm"
+                              : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm",
+                          )}
+                        >
+                          <div className="flex items-start gap-2">
+                            <Checkbox
+                              checked={formData.student_ids.includes(
+                                student.id,
+                              )}
+                              className="data-[state=checked]:bg-blue-600 mt-0.5 h-4 w-4 pointer-events-none"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-xs truncate">
+                                {student.student_number
+                                  ? `${student.student_number}. ${student.name}`
+                                  : student.name}
+                              </p>
+                              <p className="text-[10px] text-gray-500 truncate">
+                                {student.email}
+                              </p>
+                            </div>
                           </div>
+                          {formData.student_ids.includes(student.id) && (
+                            <div className="absolute top-1 right-1">
+                              <CheckCircle2 className="h-3 w-3 text-blue-600" />
+                            </div>
+                          )}
                         </div>
-                        {formData.student_ids.includes(student.id) && (
-                          <div className="absolute top-1 right-1">
-                            <CheckCircle2 className="h-3 w-3 text-blue-600" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 </ScrollArea>
               </div>
