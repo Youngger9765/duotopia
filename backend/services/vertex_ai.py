@@ -102,13 +102,15 @@ class VertexAIService:
             full_prompt = f"{system_instruction}\n\n{prompt}"
 
         try:
+            logger.info(f"Vertex AI generate_text: calling model (type={model_type})")
             response = await model.generate_content_async(
                 full_prompt,
                 generation_config=config,
             )
+            logger.info("Vertex AI generate_text: response received")
             return response.text
         except Exception as e:
-            logger.error(f"Vertex AI generation failed: {e}")
+            logger.error(f"Vertex AI generation failed: {e}", exc_info=True)
             raise
 
     async def generate_json(
@@ -149,10 +151,12 @@ class VertexAIService:
             full_prompt = f"{system_instruction}\n\n{prompt}"
 
         try:
+            logger.info(f"Vertex AI generate_json: calling model (type={model_type})")
             response = await model.generate_content_async(
                 full_prompt,
                 generation_config=config,
             )
+            logger.info("Vertex AI generate_json: response received")
 
             content = response.text.strip()
 
@@ -164,10 +168,10 @@ class VertexAIService:
             return json.loads(content)
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON from Vertex AI response: {e}")
-            logger.debug(f"Raw response: {response.text if response else 'None'}")
+            logger.error(f"Raw response: {response.text if response else 'None'}")
             raise
         except Exception as e:
-            logger.error(f"Vertex AI JSON generation failed: {e}")
+            logger.error(f"Vertex AI JSON generation failed: {e}", exc_info=True)
             raise
 
     def generate_text_sync(
