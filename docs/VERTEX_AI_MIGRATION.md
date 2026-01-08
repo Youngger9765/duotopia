@@ -67,7 +67,7 @@ gh variable set USE_VERTEX_AI --body "false"
 
 | 檔案 | 修改內容 |
 |------|----------|
-| `backend/requirements.txt` | 新增 `google-cloud-aiplatform==1.38.1` |
+| `backend/requirements.txt` | 新增 `google-cloud-aiplatform==1.75.0` |
 | `backend/core/config.py` | 新增 Vertex AI 配置項 |
 | `backend/services/translation.py` | 所有 AI 方法新增 Vertex AI 分支 |
 | `backend/services/billing_analysis_service.py` | AI 摘要生成新增 Vertex AI 支援 |
