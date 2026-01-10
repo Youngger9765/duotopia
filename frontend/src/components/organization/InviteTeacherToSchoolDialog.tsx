@@ -197,7 +197,8 @@ export function InviteTeacherToSchoolDialog({
 
         const teachers = await teachersResponse.json();
         const existingTeacher = teachers.find(
-          (t: any) => t.email === newTeacherData.email,
+          (t: { id: number; email: string }) =>
+            t.email === newTeacherData.email,
         );
 
         if (!existingTeacher) {

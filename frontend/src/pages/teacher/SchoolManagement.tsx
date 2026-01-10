@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { API_URL } from "@/config/api";
 import toast from "react-hot-toast";
 import { Edit2, Trash2 } from "lucide-react";
@@ -31,6 +32,7 @@ interface DeleteConfirmationState {
 export default function SchoolManagement() {
   const { orgId } = useParams<{ orgId: string }>();
   const token = useTeacherAuthStore((state) => state.token);
+  const { refreshSchools } = useOrganization();
   const [schools, setSchools] = useState<School[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrgId, setSelectedOrgId] = useState<string>(orgId || "");
@@ -154,6 +156,8 @@ export default function SchoolManagement() {
         toast.success("學校已成功刪除");
         setSchools(schools.filter((s) => s.id !== deleteConfirmation.schoolId));
         setDeleteConfirmation({ isOpen: false });
+        // Sync context for sidebar update
+        if (token && selectedOrgId) await refreshSchools(token, selectedOrgId);
       } else {
         const error = await response.json();
         toast.error(`刪除失敗: ${error.detail}`);
@@ -183,6 +187,8 @@ export default function SchoolManagement() {
         setShowCreateForm(false);
         resetForm();
         fetchSchools(selectedOrgId);
+        // Sync context for sidebar update
+        if (token && selectedOrgId) await refreshSchools(token, selectedOrgId);
       } else {
         const error = await response.json();
         toast.error(`創建失敗: ${error.detail}`);
@@ -216,6 +222,8 @@ export default function SchoolManagement() {
         setEditingSchool(null);
         resetForm();
         fetchSchools(selectedOrgId);
+        // Sync context for sidebar update
+        if (token && selectedOrgId) await refreshSchools(token, selectedOrgId);
       } else {
         const error = await response.json();
         toast.error(`更新失敗: ${error.detail}`);

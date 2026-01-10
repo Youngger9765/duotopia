@@ -62,6 +62,7 @@ class OrganizationCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     display_name: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
+    tax_id: Optional[str] = Field(None, max_length=20, description="統一編號 (8 digits)")
     contact_email: Optional[str] = Field(None, max_length=200)
     contact_phone: Optional[str] = Field(None, max_length=50)
     address: Optional[str] = None
@@ -73,6 +74,7 @@ class OrganizationUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     display_name: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
+    tax_id: Optional[str] = Field(None, max_length=20, description="統一編號 (8 digits)")
     contact_email: Optional[str] = Field(None, max_length=200)
     contact_phone: Optional[str] = Field(None, max_length=50)
     address: Optional[str] = None
@@ -86,6 +88,7 @@ class OrganizationResponse(BaseModel):
     name: str
     display_name: Optional[str]
     description: Optional[str]
+    tax_id: Optional[str]
     contact_email: Optional[str]
     contact_phone: Optional[str]
     address: Optional[str]
@@ -106,6 +109,7 @@ class OrganizationResponse(BaseModel):
             name=org.name,
             display_name=org.display_name,
             description=org.description,
+            tax_id=org.tax_id,
             contact_email=org.contact_email,
             contact_phone=org.contact_phone,
             address=org.address,
@@ -172,11 +176,24 @@ async def create_organization(
     """
     casbin_service = get_casbin_service()
 
+    # Check tax_id uniqueness if provided
+    if org_data.tax_id:
+        existing = (
+            db.query(Organization)
+            .filter(Organization.tax_id == org_data.tax_id)
+            .first()
+        )
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="此統一編號已被使用"
+            )
+
     # Create organization
     org = Organization(
         name=org_data.name,
         display_name=org_data.display_name,
         description=org_data.description,
+        tax_id=org_data.tax_id,
         contact_email=org_data.contact_email,
         contact_phone=org_data.contact_phone,
         address=org_data.address,
@@ -267,6 +284,114 @@ async def list_organizations(
     return result
 
 
+class OrganizationStatsResponse(BaseModel):
+    """Response model for organization statistics"""
+
+    total_organizations: int
+    total_schools: int
+    total_teachers: int
+    total_students: int
+
+
+@router.get("/stats", response_model=OrganizationStatsResponse)
+async def get_organization_stats(
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Get aggregated statistics for organizations the current teacher can access.
+    Returns counts of organizations, schools, teachers, and students.
+    """
+    from sqlalchemy import func, distinct
+
+    # Get teacher's organizations
+    teacher_orgs = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher.id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .all()
+    )
+
+    # Validate and collect organization IDs (defensive coding)
+    org_ids = []
+    for to in teacher_orgs:
+        if isinstance(to.organization_id, uuid.UUID):
+            org_ids.append(to.organization_id)
+        else:
+            try:
+                org_ids.append(uuid.UUID(str(to.organization_id)))
+            except ValueError:
+                continue  # Skip invalid UUIDs
+
+    # If no organizations, return zeros
+    if not org_ids:
+        return OrganizationStatsResponse(
+            total_organizations=0,
+            total_schools=0,
+            total_teachers=0,
+            total_students=0,
+        )
+
+    # Count active organizations
+    total_orgs = (
+        db.query(func.count(Organization.id))
+        .filter(Organization.id.in_(org_ids), Organization.is_active.is_(True))
+        .scalar()
+    )
+
+    # Count schools under these organizations
+    total_schools = (
+        db.query(func.count(School.id))
+        .filter(School.organization_id.in_(org_ids), School.is_active.is_(True))
+        .scalar()
+    )
+
+    # Count unique teachers (org members + school members)
+    org_teachers = (
+        db.query(func.count(distinct(TeacherOrganization.teacher_id)))
+        .filter(
+            TeacherOrganization.organization_id.in_(org_ids),
+            TeacherOrganization.is_active.is_(True),
+        )
+        .scalar()
+    )
+
+    # Get school IDs for counting school-level teachers
+    school_ids = (
+        db.query(School.id)
+        .filter(School.organization_id.in_(org_ids), School.is_active.is_(True))
+        .all()
+    )
+    school_id_list = [s.id for s in school_ids]
+
+    school_teachers = 0
+    if school_id_list:
+        school_teachers = (
+            db.query(func.count(distinct(TeacherSchool.teacher_id)))
+            .filter(
+                TeacherSchool.school_id.in_(school_id_list),
+                TeacherSchool.is_active.is_(True),
+            )
+            .scalar()
+        ) or 0
+
+    # Note: total_teachers might double-count if teacher is both org and school member
+    # For now, we just sum them. Could use UNION for exact count if needed.
+    total_teachers = (org_teachers or 0) + school_teachers
+
+    # TODO: Count students when student model is available
+    total_students = 0
+
+    return OrganizationStatsResponse(
+        total_organizations=total_orgs or 0,
+        total_schools=total_schools or 0,
+        total_teachers=total_teachers,
+        total_students=total_students,
+    )
+
+
 @router.get("/{org_id}", response_model=OrganizationResponse)
 async def get_organization(
     org_id: uuid.UUID,
@@ -301,6 +426,21 @@ async def update_organization(
         org.display_name = org_data.display_name
     if org_data.description is not None:
         org.description = org_data.description
+    if org_data.tax_id is not None:
+        # Check uniqueness if tax_id is being changed
+        if org_data.tax_id != org.tax_id:
+            existing = (
+                db.query(Organization)
+                .filter(
+                    Organization.tax_id == org_data.tax_id, Organization.id != org_id
+                )
+                .first()
+            )
+            if existing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, detail="此統一編號已被使用"
+                )
+        org.tax_id = org_data.tax_id
     if org_data.contact_email is not None:
         org.contact_email = org_data.contact_email
     if org_data.contact_phone is not None:

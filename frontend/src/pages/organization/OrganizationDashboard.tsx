@@ -89,6 +89,13 @@ export default function OrganizationDashboard() {
   // Auto-redirect based on user role
   useEffect(() => {
     const checkAndRedirect = async () => {
+      // If user is already on dashboard, respect their choice and don't redirect
+      const currentPath = window.location.pathname;
+      if (currentPath === "/organization/dashboard") {
+        console.log("👤 User is on dashboard, respecting their choice");
+        return;
+      }
+
       if (
         !token ||
         !userRoles ||
@@ -155,7 +162,7 @@ export default function OrganizationDashboard() {
     checkAndRedirect();
   }, [token, userRoles, organizations, navigate]);
 
-  // Fetch statistics
+  // Fetch statistics from backend API
   useEffect(() => {
     const fetchStats = async () => {
       if (!token) return;
@@ -163,27 +170,46 @@ export default function OrganizationDashboard() {
       try {
         setLoadingStats(true);
 
-        // For now, calculate stats from organizations data
-        // TODO: Create backend endpoint for aggregated stats
-        const orgCount = organizations.length;
+        // Try to fetch stats from backend API
+        const response = await fetch(`${API_URL}/api/organizations/stats`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
+        if (response.ok) {
+          const data = await response.json();
+          setStats({
+            total_organizations:
+              data.total_organizations || organizations.length,
+            total_schools: data.total_schools || 0,
+            total_teachers: data.total_teachers || 0,
+            total_students: data.total_students || 0,
+          });
+        } else {
+          // Fallback: count from local organizations data
+          console.warn("Stats API not available, using fallback");
+          setStats({
+            total_organizations: organizations.length,
+            total_schools: 0,
+            total_teachers: 0,
+            total_students: 0,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+        // Fallback on error
         setStats({
-          total_organizations: orgCount,
-          total_schools: 0, // Will be updated when we fetch schools
+          total_organizations: organizations.length,
+          total_schools: 0,
           total_teachers: 0,
           total_students: 0,
         });
-      } catch (error) {
-        console.error("Error fetching stats:", error);
       } finally {
         setLoadingStats(false);
       }
     };
 
-    if (organizations.length > 0) {
-      fetchStats();
-    }
-  }, [token, organizations]);
+    fetchStats();
+  }, [token, organizations.length]);
 
   const handleNodeSelect = (
     type: "organization" | "school",

@@ -19,7 +19,7 @@ from models import (
 )
 from .dependencies import get_current_teacher
 from .validators import *
-from .utils import TEST_SUBSCRIPTION_WHITELIST, parse_birthdate
+from .utils import TEST_SUBSCRIPTION_WHITELIST  # parse_birthdate is defined locally
 from auth import get_password_hash
 
 router = APIRouter()

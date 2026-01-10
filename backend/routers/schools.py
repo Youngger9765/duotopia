@@ -275,8 +275,10 @@ async def list_schools(
         .filter(
             TeacherSchool.teacher_id == teacher.id,
             or_(
-                TeacherSchool.roles.op("@>")(["school_admin"]),  # JSONB contains operator
-                TeacherSchool.roles.op("@>")(["school_director"])
+                TeacherSchool.roles.op("@>")(
+                    ["school_admin"]
+                ),  # JSONB contains operator
+                TeacherSchool.roles.op("@>")(["school_director"]),
             ),
             TeacherSchool.is_active.is_(True),
         )
@@ -290,21 +292,19 @@ async def list_schools(
         query = db.query(School).filter(
             or_(
                 School.organization_id.in_(org_ids),
-                School.id.in_(school_ids_from_roles)
+                School.id.in_(school_ids_from_roles),
             ),
-            School.is_active.is_(True)
+            School.is_active.is_(True),
         )
     elif org_ids:
         # Only org-level access (org_owner, org_admin)
         query = db.query(School).filter(
-            School.organization_id.in_(org_ids),
-            School.is_active.is_(True)
+            School.organization_id.in_(org_ids), School.is_active.is_(True)
         )
     elif school_ids_from_roles:
         # Only school-level access (school_admin, school_director)
         query = db.query(School).filter(
-            School.id.in_(school_ids_from_roles),
-            School.is_active.is_(True)
+            School.id.in_(school_ids_from_roles), School.is_active.is_(True)
         )
     else:
         # No access - return empty list

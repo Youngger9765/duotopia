@@ -19,7 +19,7 @@ from models import (
 )
 from .dependencies import get_current_teacher
 from .validators import *
-from .utils import TEST_SUBSCRIPTION_WHITELIST, parse_birthdate
+from .utils import parse_birthdate  # TEST_SUBSCRIPTION_WHITELIST is defined locally
 
 router = APIRouter()
 

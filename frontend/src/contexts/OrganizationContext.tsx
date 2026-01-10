@@ -1,4 +1,12 @@
-import { createContext, useContext, useState, ReactNode, useMemo } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useMemo,
+  useCallback,
+} from "react";
+import { API_URL } from "@/config/api";
 
 interface Organization {
   id: string;
@@ -42,6 +50,9 @@ interface OrganizationContextType {
   setExpandedOrgs: React.Dispatch<React.SetStateAction<string[]>>;
   isFetchingOrgs: boolean;
   setIsFetchingOrgs: React.Dispatch<React.SetStateAction<boolean>>;
+  // Refresh functions for syncing state after CRUD operations
+  refreshOrganizations: (token: string) => Promise<void>;
+  refreshSchools: (token: string, orgId: string) => Promise<void>;
 }
 
 const OrganizationContext = createContext<OrganizationContextType | undefined>(
@@ -54,6 +65,54 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [schools, setSchools] = useState<Record<string, SchoolData[]>>({});
   const [expandedOrgs, setExpandedOrgs] = useState<string[]>([]);
   const [isFetchingOrgs, setIsFetchingOrgs] = useState(false);
+
+  // Refresh organizations from API - call after CRUD operations
+  const refreshOrganizations = useCallback(async (token: string) => {
+    if (!token) {
+      console.warn("refreshOrganizations called without token");
+      return;
+    }
+    try {
+      setIsFetchingOrgs(true);
+      const response = await fetch(`${API_URL}/api/organizations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setOrganizations(data);
+      } else {
+        console.error("Failed to refresh organizations:", response.status);
+      }
+    } catch (error) {
+      console.error("Failed to refresh organizations:", error);
+    } finally {
+      setIsFetchingOrgs(false);
+    }
+  }, []);
+
+  // Refresh schools for a specific org - call after CRUD operations
+  const refreshSchools = useCallback(async (token: string, orgId: string) => {
+    if (!token || !orgId) {
+      console.warn("refreshSchools called without token or orgId");
+      return;
+    }
+    try {
+      const response = await fetch(
+        `${API_URL}/api/schools?organization_id=${orgId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setSchools((prev) => ({ ...prev, [orgId]: data }));
+      } else {
+        console.error("Failed to refresh schools:", response.status);
+      }
+    } catch (error) {
+      console.error("Failed to refresh schools:", error);
+    }
+  }, []);
 
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(
@@ -68,8 +127,18 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       setExpandedOrgs,
       isFetchingOrgs,
       setIsFetchingOrgs,
+      refreshOrganizations,
+      refreshSchools,
     }),
-    [selectedNode, organizations, schools, expandedOrgs, isFetchingOrgs],
+    [
+      selectedNode,
+      organizations,
+      schools,
+      expandedOrgs,
+      isFetchingOrgs,
+      refreshOrganizations,
+      refreshSchools,
+    ],
   );
 
   return (

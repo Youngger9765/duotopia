@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import TeacherLayout from "@/components/TeacherLayout";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { API_URL } from "@/config/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ interface Organization {
   name: string;
   display_name?: string;
   description?: string;
+  tax_id?: string;
   contact_email?: string;
   is_active: boolean;
   created_at: string;
@@ -23,6 +25,7 @@ interface FormData {
   name: string;
   display_name: string;
   description: string;
+  tax_id: string;
   contact_email: string;
   contact_phone: string;
   address: string;
@@ -52,11 +55,13 @@ export default function OrganizationManagement() {
     });
   const navigate = useNavigate();
   const token = useTeacherAuthStore((state) => state.token);
+  const { refreshOrganizations } = useOrganization();
 
   const [formData, setFormData] = useState<FormData>({
     name: "",
     display_name: "",
     description: "",
+    tax_id: "",
     contact_email: "",
     contact_phone: "",
     address: "",
@@ -101,6 +106,7 @@ export default function OrganizationManagement() {
       name: "",
       display_name: "",
       description: "",
+      tax_id: "",
       contact_email: "",
       contact_phone: "",
       address: "",
@@ -113,6 +119,7 @@ export default function OrganizationManagement() {
       name: org.name,
       display_name: org.display_name || "",
       description: org.description || "",
+      tax_id: org.tax_id || "",
       contact_email: org.contact_email || "",
       contact_phone: "",
       address: "",
@@ -139,6 +146,8 @@ export default function OrganizationManagement() {
           if (response.ok) {
             toast.success("Organization deleted successfully");
             setOrganizations(organizations.filter((org) => org.id !== orgId));
+            // Sync context for sidebar update
+            if (token) await refreshOrganizations(token);
           } else {
             const error = await response.text();
             toast.error(`Failed to delete: ${error}`);
@@ -180,6 +189,8 @@ export default function OrganizationManagement() {
             organizations.filter((org) => !selectedOrgs.has(org.id)),
           );
           setSelectedOrgs(new Set());
+          // Sync context for sidebar update
+          if (token) await refreshOrganizations(token);
         } catch (error) {
           console.error("Batch delete failed:", error);
           toast.error("Error deleting organizations");
@@ -227,6 +238,8 @@ export default function OrganizationManagement() {
         setShowCreateForm(false);
         resetForm();
         fetchOrganizations();
+        // Sync context for sidebar update
+        if (token) await refreshOrganizations(token);
       } else {
         const error = await response.text();
         toast.error(`Failed to create: ${error}`);
@@ -263,6 +276,8 @@ export default function OrganizationManagement() {
         setEditingOrg(null);
         resetForm();
         fetchOrganizations();
+        // Sync context for sidebar update
+        if (token) await refreshOrganizations(token);
       } else {
         const error = await response.text();
         toast.error(`Failed to update: ${error}`);
@@ -340,6 +355,24 @@ export default function OrganizationManagement() {
               rows={3}
               placeholder="Organization description"
             />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium">統一編號</label>
+            <Input
+              type="text"
+              value={formData.tax_id}
+              onChange={(e) => {
+                // Only allow digits, max 8 characters
+                const value = e.target.value.replace(/\D/g, "").slice(0, 8);
+                setFormData({ ...formData, tax_id: value });
+              }}
+              maxLength={8}
+              pattern="[0-9]{8}"
+              placeholder="8位數字 (例: 12345678)"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              台灣公司統一編號，8位數字
+            </p>
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium">聯絡電郵</label>

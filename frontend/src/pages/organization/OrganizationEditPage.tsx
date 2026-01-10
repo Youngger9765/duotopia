@@ -150,8 +150,9 @@ export default function OrganizationEditPage() {
 
               if (teachersResponse.ok) {
                 const teachers = await teachersResponse.json();
-                const principal = teachers.find((t: any) =>
-                  t.roles?.includes("school_admin"),
+                const principal = teachers.find(
+                  (t: { name?: string; email?: string; roles?: string[] }) =>
+                    t.roles?.includes("school_admin"),
                 );
 
                 return {

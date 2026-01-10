@@ -39,6 +39,9 @@ class Organization(Base):
     display_name = Column(String(200), nullable=True)
     description = Column(Text, nullable=True)
 
+    # 統一編號 (Taiwan Business ID) - unique, required for business orgs
+    tax_id = Column(String(20), unique=True, nullable=True, index=True)
+
     # 聯絡資訊
     contact_email = Column(String(200), nullable=True)
     contact_phone = Column(String(50), nullable=True)

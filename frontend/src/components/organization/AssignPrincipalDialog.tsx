@@ -104,11 +104,12 @@ export function AssignPrincipalDialog({
 
       if (teachersResponse.ok) {
         const schoolTeachers = await teachersResponse.json();
-        existingPrincipal = schoolTeachers.find((t: any) =>
-          t.roles?.includes("school_admin"),
+        existingPrincipal = schoolTeachers.find(
+          (t: { id: number; roles?: string[] }) =>
+            t.roles?.includes("school_admin"),
         );
         selectedTeacherInSchool = schoolTeachers.find(
-          (t: any) => t.id === parseInt(selectedTeacherId),
+          (t: { id: number }) => t.id === parseInt(selectedTeacherId),
         );
       }
 
