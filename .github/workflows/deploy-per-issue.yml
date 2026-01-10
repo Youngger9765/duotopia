@@ -77,8 +77,8 @@ jobs:
           echo "🔄 Running Alembic database migrations..."
           echo "📊 Current migration status:"
           alembic current || echo "No current revision"
-          echo "🔄 Upgrading to latest migration..."
-          alembic upgrade head
+          echo "🔄 Upgrading to all heads (handles multiple branches)..."
+          alembic upgrade heads
           echo "✅ Migrations complete"
 
       - name: Deploy backend to Cloud Run
