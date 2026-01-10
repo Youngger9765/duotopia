@@ -2,7 +2,7 @@
   "hooks": {
     "UserPromptSubmit": [
       {
-        "matcher": {},
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
@@ -13,9 +13,16 @@
     ],
     "PreToolUse": [
       {
-        "matcher": {
-          "tools": ["Write", "Edit"]
-        },
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-file-size.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
         "hooks": [
           {
             "type": "command",
