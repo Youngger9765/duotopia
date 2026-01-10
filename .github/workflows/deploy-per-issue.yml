@@ -68,7 +68,9 @@ jobs:
       - name: Run Alembic database migrations
         working-directory: ./backend
         env:
-          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          # Use pooler URL for GitHub Actions (direct connection blocked by Supabase)
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_POOLER_URL }}
+          STAGING_SUPABASE_POOLER_URL: ${{ secrets.STAGING_DATABASE_POOLER_URL }}
         run: |
           echo "🔍 Installing dependencies for migrations..."
           pip install alembic psycopg2-binary sqlalchemy python-dotenv
