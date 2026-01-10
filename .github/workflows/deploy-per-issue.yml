@@ -71,7 +71,7 @@ jobs:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
           echo "🔍 Installing dependencies for migrations..."
-          pip install alembic psycopg2-binary sqlalchemy
+          pip install alembic psycopg2-binary sqlalchemy python-dotenv
           echo "🔄 Running Alembic database migrations..."
           echo "📊 Current migration status:"
           alembic current || echo "No current revision"
