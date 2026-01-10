@@ -3,7 +3,7 @@ Organization API Routes
 
 CRUD operations for organizations with Casbin permission checks.
 
-Note: Per-issue deploy now includes database migrations (2026-01-11)
+Note: Per-issue deploy now includes database migrations (2026-01-11 v2)
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
