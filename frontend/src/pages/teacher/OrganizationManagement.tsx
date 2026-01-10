@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Edit2, Trash2, Plus, X, Loader2 } from "lucide-react";
+import { getCSRFToken } from "@/utils/csrf";
+import { deleteInBatches, formatBatchResult } from "@/utils/batchOperations";
 
 interface Organization {
   id: string;
@@ -139,7 +141,10 @@ export default function OrganizationManagement() {
             `${API_URL}/api/organizations/${orgId}`,
             {
               method: "DELETE",
-              headers: { Authorization: `Bearer ${token}` },
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "X-CSRF-Token": getCSRFToken(),
+              },
             },
           );
 
@@ -176,17 +181,43 @@ export default function OrganizationManagement() {
       onConfirm: async () => {
         setDeleting(true);
         try {
-          const deletePromises = Array.from(selectedOrgs).map((orgId) =>
-            fetch(`${API_URL}/api/organizations/${orgId}`, {
-              method: "DELETE",
-              headers: { Authorization: `Bearer ${token}` },
-            }),
+          const orgIds = Array.from(selectedOrgs);
+
+          // Rate-limited batch delete (5 at a time, 100ms delay)
+          const result = await deleteInBatches(
+            orgIds,
+            async (orgId: string) => {
+              const response = await fetch(
+                `${API_URL}/api/organizations/${orgId}`,
+                {
+                  method: "DELETE",
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    "X-CSRF-Token": getCSRFToken(),
+                  },
+                },
+              );
+              return response.ok;
+            },
+            {
+              batchSize: 5,
+              delayMs: 100,
+            },
           );
 
-          await Promise.all(deletePromises);
-          toast.success(`Deleted ${selectedOrgs.size} organization(s)`);
+          // Show appropriate toast based on results
+          if (result.failed.length === 0) {
+            toast.success(formatBatchResult(result));
+          } else if (result.succeeded.length === 0) {
+            toast.error(formatBatchResult(result));
+          } else {
+            toast.warning(formatBatchResult(result));
+          }
+
+          // Update local state with succeeded deletions
+          const deletedIds = new Set(result.succeeded);
           setOrganizations(
-            organizations.filter((org) => !selectedOrgs.has(org.id)),
+            organizations.filter((org) => !deletedIds.has(org.id)),
           );
           setSelectedOrgs(new Set());
           // Sync context for sidebar update
@@ -229,6 +260,7 @@ export default function OrganizationManagement() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          "X-CSRF-Token": getCSRFToken(),
         },
         body: JSON.stringify(formData),
       });
@@ -265,6 +297,7 @@ export default function OrganizationManagement() {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
+            "X-CSRF-Token": getCSRFToken(),
           },
           body: JSON.stringify(formData),
         },
