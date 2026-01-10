@@ -235,53 +235,84 @@ async def list_organizations(
     Security: Returns 403 if teacher has no organization access.
     Performance: Fetches owners with joinedload to avoid N+1 queries.
     """
-    # Get all teacher-organization relationships
-    query = db.query(TeacherOrganization).filter(
-        TeacherOrganization.teacher_id == teacher.id,
-        TeacherOrganization.is_active.is_(True),
-    )
+    import logging
 
-    # Filter by owner role if requested
-    if owner_only:
-        query = query.filter(TeacherOrganization.role == "org_owner")
+    logger = logging.getLogger(__name__)
 
-    teacher_orgs = query.all()
-
-    # ✅ SECURITY FIX: Reject if no organization access
-    if not teacher_orgs:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="此功能僅限組織成員使用。您目前不屬於任何組織。",
+    try:
+        # Get all teacher-organization relationships
+        logger.info(
+            f"Fetching organizations for teacher_id={teacher.id}, owner_only={owner_only}"
         )
 
-    org_ids = [to.organization_id for to in teacher_orgs]
+        query = db.query(TeacherOrganization).filter(
+            TeacherOrganization.teacher_id == teacher.id,
+            TeacherOrganization.is_active.is_(True),
+        )
 
-    # Get organizations
-    organizations = (
-        db.query(Organization)
-        .filter(Organization.id.in_(org_ids), Organization.is_active.is_(True))
-        .all()
-    )
+        # Filter by owner role if requested
+        if owner_only:
+            query = query.filter(TeacherOrganization.role == "org_owner")
 
-    # Build response with owner information
-    result = []
-    for org in organizations:
-        # Get org_owner for this organization
-        owner_rel = (
+        teacher_orgs = query.all()
+        logger.info(f"Found {len(teacher_orgs)} teacher-organization relationships")
+
+        # ✅ SECURITY FIX: Reject if no organization access
+        if not teacher_orgs:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="此功能僅限組織成員使用。您目前不屬於任何組織。",
+            )
+
+        org_ids = [to.organization_id for to in teacher_orgs]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching teacher organizations: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="獲取組織列表失敗"
+        )
+
+    try:
+        # Get organizations
+        logger.info(f"Fetching {len(org_ids)} organizations")
+        organizations = (
+            db.query(Organization)
+            .filter(Organization.id.in_(org_ids), Organization.is_active.is_(True))
+            .all()
+        )
+        logger.info(f"Found {len(organizations)} active organizations")
+
+        # ✅ PERFORMANCE FIX: Fetch all org owners in a single query to avoid N+1
+        owner_rels = (
             db.query(TeacherOrganization)
             .options(joinedload(TeacherOrganization.teacher))
             .filter(
-                TeacherOrganization.organization_id == org.id,
+                TeacherOrganization.organization_id.in_(org_ids),
                 TeacherOrganization.role == "org_owner",
                 TeacherOrganization.is_active.is_(True),
             )
-            .first()
+            .all()
         )
+        logger.info(f"Found {len(owner_rels)} organization owners")
 
-        owner = owner_rel.teacher if owner_rel else None
-        result.append(OrganizationResponse.from_orm(org, owner))
+        # Create a mapping of org_id -> owner for O(1) lookup
+        owner_map = {rel.organization_id: rel.teacher for rel in owner_rels}
 
-    return result
+        # Build response with owner information
+        result = []
+        for org in organizations:
+            owner = owner_map.get(org.id)
+            result.append(OrganizationResponse.from_orm(org, owner))
+
+        logger.info(f"Successfully built {len(result)} organization responses")
+        return result
+
+    except Exception as e:
+        logger.error(f"Error building organization list: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="建立組織列表失敗"
+        )
 
 
 class OrganizationStatsResponse(BaseModel):
