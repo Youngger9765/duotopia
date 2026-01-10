@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -55,7 +55,7 @@ interface FormData {
 export default function SchoolsPage() {
   const { orgId } = useParams<{ orgId: string }>();
   const token = useTeacherAuthStore((state) => state.token);
-  const { selectedNode } = useOrganization();
+  const { selectedNode, refreshSchools } = useOrganization();
 
   const [schools, setSchools] = useState<SchoolData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,9 +132,14 @@ export default function SchoolsPage() {
     setShowEditDialog(true);
   };
 
-  const handleEditSuccess = () => {
+  const handleEditSuccess = useCallback(() => {
+    // Refetch local state for this page
     fetchSchools();
-  };
+    // Also refresh the sidebar's schools data in OrganizationContext
+    if (effectiveOrgId && token) {
+      refreshSchools(token, effectiveOrgId);
+    }
+  }, [effectiveOrgId, token, refreshSchools]);
 
   const handleSaveCreate = async () => {
     if (!effectiveOrgId || !formData.name.trim()) {
@@ -161,6 +166,10 @@ export default function SchoolsPage() {
         setShowCreateDialog(false);
         resetForm();
         fetchSchools();
+        // Also refresh the sidebar's schools data in OrganizationContext
+        if (effectiveOrgId && token) {
+          refreshSchools(token, effectiveOrgId);
+        }
       } else {
         const error = await response.json();
         toast.error(error.detail || "建立失敗");
@@ -190,6 +199,10 @@ export default function SchoolsPage() {
         toast.success("學校刪除成功");
         setDeleteConfirmId(null);
         fetchSchools();
+        // Also refresh the sidebar's schools data in OrganizationContext
+        if (effectiveOrgId && token) {
+          refreshSchools(token, effectiveOrgId);
+        }
       } else {
         const error = await response.json();
         toast.error(error.detail || "刪除失敗");
