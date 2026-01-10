@@ -6,6 +6,7 @@ import { API_URL } from "@/config/api";
 import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
+import { SchoolEditDialog } from "@/components/organization/SchoolEditDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -128,13 +129,11 @@ export default function SchoolsPage() {
 
   const handleEdit = (school: SchoolData) => {
     setEditingSchool(school);
-    setFormData({
-      name: school.name,
-      display_name: school.display_name || "",
-      description: school.description || "",
-      contact_email: school.contact_email || "",
-    });
     setShowEditDialog(true);
+  };
+
+  const handleEditSuccess = () => {
+    fetchSchools();
   };
 
   const handleSaveCreate = async () => {
@@ -168,44 +167,6 @@ export default function SchoolsPage() {
       }
     } catch (error) {
       console.error("Failed to create school:", error);
-      toast.error("網路錯誤");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingSchool || !formData.name.trim()) {
-      toast.error("請填寫必填欄位");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const response = await fetch(
-        `${API_URL}/api/schools/${editingSchool.id}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(formData),
-        },
-      );
-
-      if (response.ok) {
-        toast.success("學校更新成功");
-        setShowEditDialog(false);
-        setEditingSchool(null);
-        resetForm();
-        fetchSchools();
-      } else {
-        const error = await response.json();
-        toast.error(error.detail || "更新失敗");
-      }
-    } catch (error) {
-      console.error("Failed to update school:", error);
       toast.error("網路錯誤");
     } finally {
       setSaving(false);
@@ -428,74 +389,17 @@ export default function SchoolsPage() {
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>編輯學校</DialogTitle>
-            <DialogDescription>修改學校資料</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit_name">學校名稱 *</Label>
-              <Input
-                id="edit_name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit_display_name">顯示名稱</Label>
-              <Input
-                id="edit_display_name"
-                value={formData.display_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, display_name: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit_description">描述</Label>
-              <Textarea
-                id="edit_description"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                rows={3}
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit_contact_email">聯絡信箱</Label>
-              <Input
-                id="edit_contact_email"
-                type="email"
-                value={formData.contact_email}
-                onChange={(e) =>
-                  setFormData({ ...formData, contact_email: e.target.value })
-                }
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowEditDialog(false);
-                setEditingSchool(null);
-                resetForm();
-              }}
-            >
-              取消
-            </Button>
-            <Button onClick={handleSaveEdit} disabled={saving}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              儲存
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SchoolEditDialog
+        school={editingSchool}
+        open={showEditDialog}
+        onOpenChange={(open) => {
+          setShowEditDialog(open);
+          if (!open) {
+            setEditingSchool(null);
+          }
+        }}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
 }
