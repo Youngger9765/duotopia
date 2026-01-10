@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -71,7 +71,8 @@ export default function OrganizationEditPage() {
   const { orgId } = useParams<{ orgId: string }>();
   const navigate = useNavigate();
   const token = useTeacherAuthStore((state) => state.token);
-  const { setSelectedNode, setExpandedOrgs } = useOrganization();
+  const { setSelectedNode, setExpandedOrgs, refreshSchools } =
+    useOrganization();
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [schools, setSchools] = useState<School[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -200,13 +201,21 @@ export default function OrganizationEditPage() {
     fetchOrganization();
   };
 
-  const handleSchoolCreateSuccess = () => {
+  const handleSchoolCreateSuccess = useCallback(() => {
     fetchSchools();
-  };
+    // Sync sidebar schools data in OrganizationContext
+    if (orgId && token) {
+      refreshSchools(token, orgId);
+    }
+  }, [orgId, token, refreshSchools]);
 
-  const handleSchoolEditSuccess = () => {
+  const handleSchoolEditSuccess = useCallback(() => {
     fetchSchools();
-  };
+    // Sync sidebar schools data in OrganizationContext
+    if (orgId && token) {
+      refreshSchools(token, orgId);
+    }
+  }, [orgId, token, refreshSchools]);
 
   const handleEditSchool = (school: School) => {
     setSelectedSchool(school);
@@ -218,9 +227,13 @@ export default function OrganizationEditPage() {
     setAssignPrincipalDialogOpen(true);
   };
 
-  const handleAssignPrincipalSuccess = () => {
+  const handleAssignPrincipalSuccess = useCallback(() => {
     fetchSchools();
-  };
+    // Sync sidebar schools data in OrganizationContext
+    if (orgId && token) {
+      refreshSchools(token, orgId);
+    }
+  }, [orgId, token, refreshSchools]);
 
   const handleInviteTeacherSuccess = () => {
     fetchTeachers();
