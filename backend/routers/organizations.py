@@ -264,7 +264,25 @@ async def list_organizations(
                 detail="此功能僅限組織成員使用。您目前不屬於任何組織。",
             )
 
-        org_ids = [to.organization_id for to in teacher_orgs]
+        # Validate and collect organization IDs (defensive coding - same as stats endpoint)
+        org_ids = []
+        for to in teacher_orgs:
+            if isinstance(to.organization_id, uuid.UUID):
+                org_ids.append(to.organization_id)
+            else:
+                try:
+                    org_ids.append(uuid.UUID(str(to.organization_id)))
+                except ValueError:
+                    logger.warning(
+                        f"Invalid UUID for organization_id: {to.organization_id}"
+                    )
+                    continue  # Skip invalid UUIDs
+
+        if not org_ids:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="此功能僅限組織成員使用。您目前不屬於任何組織。",
+            )
     except HTTPException:
         raise
     except Exception as e:
