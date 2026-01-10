@@ -293,7 +293,7 @@ async def list_organizations(
 
     try:
         # Get organizations
-        logger.info(f"Fetching {len(org_ids)} organizations")
+        logger.info(f"Fetching {len(org_ids)} organizations, org_ids={org_ids}")
         organizations = (
             db.query(Organization)
             .filter(Organization.id.in_(org_ids), Organization.is_active.is_(True))
@@ -302,6 +302,7 @@ async def list_organizations(
         logger.info(f"Found {len(organizations)} active organizations")
 
         # ✅ PERFORMANCE FIX: Fetch all org owners in a single query to avoid N+1
+        logger.info("Fetching organization owners...")
         owner_rels = (
             db.query(TeacherOrganization)
             .options(joinedload(TeacherOrganization.teacher))
@@ -316,20 +317,38 @@ async def list_organizations(
 
         # Create a mapping of org_id -> owner for O(1) lookup
         owner_map = {rel.organization_id: rel.teacher for rel in owner_rels}
+        logger.info(f"Built owner_map with {len(owner_map)} entries")
 
         # Build response with owner information
         result = []
-        for org in organizations:
-            owner = owner_map.get(org.id)
-            result.append(OrganizationResponse.from_orm(org, owner))
+        for i, org in enumerate(organizations):
+            try:
+                owner = owner_map.get(org.id)
+                logger.info(
+                    f"Building response for org {i}: id={org.id}, name={org.name}"
+                )
+                response = OrganizationResponse.from_orm(org, owner)
+                result.append(response)
+            except Exception as org_error:
+                logger.error(
+                    f"Error building response for org {org.id}: {str(org_error)}",
+                    exc_info=True,
+                )
+                raise
 
         logger.info(f"Successfully built {len(result)} organization responses")
         return result
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error building organization list: {str(e)}", exc_info=True)
+        logger.error(
+            f"Error building organization list: {type(e).__name__}: {str(e)}",
+            exc_info=True,
+        )
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="建立組織列表失敗"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"建立組織列表失敗: {type(e).__name__}",
         )
 
 
