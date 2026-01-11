@@ -4,11 +4,11 @@ Casbin Permission Service
 提供基於 Casbin 的權限管理服務，支援多租戶 RBAC
 """
 
-import os
 import casbin
 import logging
-from typing import List, Optional
+import os
 from pathlib import Path
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -243,7 +243,6 @@ class CasbinService:
         這個方法應該在應用啟動時呼叫，
         將 teacher_organizations 和 teacher_schools 表的資料同步到 Casbin
         """
-        from sqlalchemy.orm import Session
         from database import get_session_local
         from models.organization import TeacherOrganization, TeacherSchool
 
@@ -299,7 +298,8 @@ class CasbinService:
             # 角色分配只存在記憶體中，每次啟動時從資料庫同步
             # self.enforcer.save_policy()  # REMOVED
             logger.info(
-                f"[Casbin] Database sync complete: {len(org_roles)} org roles + {len(school_roles)} school roles"
+                f"[Casbin] Database sync complete: "
+                f"{len(org_roles)} org roles + {len(school_roles)} school roles"
             )
 
         except Exception as e:
@@ -311,10 +311,13 @@ class CasbinService:
                 or "relation" in error_msg
             ):
                 logger.warning(
-                    f"[Casbin] Organization tables not found in database (expected in preview/staging environments without migrations): {e}"
+                    f"[Casbin] Organization tables not found in database "
+                    f"(expected in preview/staging environments without "
+                    f"migrations): {e}"
                 )
                 logger.info(
-                    "[Casbin] Skipping database sync - application will start with policy-only permissions"
+                    "[Casbin] Skipping database sync - application will start "
+                    "with policy-only permissions"
                 )
                 # Don't raise - allow application to start without organization roles
             else:
@@ -340,7 +343,6 @@ class CasbinService:
             teacher_id: 老師 ID
             db: Optional database session (for testing). If None, creates a new session.
         """
-        from sqlalchemy.orm import Session
         from database import get_session_local
         from models.organization import TeacherOrganization, TeacherSchool
 

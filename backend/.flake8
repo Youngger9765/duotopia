@@ -1,0 +1,11 @@
+[flake8]
+max-line-length = 100
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    alembic/versions
+per-file-ignores =
+    # Seed data uses star imports and cross-file dependencies
+    seed_data/*.py:F403,F405,F821,F841

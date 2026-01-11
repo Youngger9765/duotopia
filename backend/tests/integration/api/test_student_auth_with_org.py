@@ -9,12 +9,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from models import Student, Teacher, Classroom, ClassroomStudent
-from models.organization import (
-    Organization,
-    School,
-    ClassroomSchool,
-    TeacherOrganization,
-)
+from models.organization import Organization, School, ClassroomSchool
 from auth import get_password_hash as hash_password
 
 

@@ -271,7 +271,6 @@ class TestDatabaseSync:
     def test_sync_from_database_with_org_roles(self):
         """測試同步組織角色"""
         from models.organization import Organization, TeacherOrganization
-        from models import Teacher
         from tests.factories import TestDataFactory
         import uuid
 
@@ -310,7 +309,6 @@ class TestDatabaseSync:
     def test_sync_from_database_with_school_roles(self):
         """測試同步學校角色"""
         from models.organization import Organization, School, TeacherSchool
-        from models import Teacher
         from tests.factories import TeacherFactory
         import uuid
 
