@@ -161,7 +161,8 @@ async def startup_event():
                 RETRY_DELAY *= 2  # Exponential backoff
 
     print(
-        "🚀 Application startup complete - HTTP client pool, thread pools initialized, query logging enabled, Casbin synced"
+        "🚀 Application startup complete - "
+        "HTTP client pool, thread pools initialized, query logging enabled, Casbin synced"
     )
 
 
