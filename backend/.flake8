@@ -9,9 +9,7 @@ exclude =
 per-file-ignores =
     # Seed data uses star imports and cross-file dependencies
     seed_data/*.py:F403,F405,F821,F841,W291
-    # Teachers router uses star imports for convenience
-    routers/teachers/tts_ops.py:F401,F403,F405
-    routers/teachers/upload_ops.py:F401,F403
-    routers/teachers/validators.py:F401
+    # Teachers router uses star imports for convenience (all files in directory)
+    routers/teachers/*.py:F401,F403,F405
     # Integration tests have imports after path manipulation
     tests/integration/api/*.py:E402
