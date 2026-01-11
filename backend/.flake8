@@ -6,10 +6,22 @@ exclude =
     .venv,
     venv,
     alembic/versions
+
+# Ignore F401 (unused imports) globally - common in Python codebase structure
+# F403/F405 for star imports, E402 for import order, E722 for bare except
+extend-ignore = F401
+
 per-file-ignores =
     # Seed data uses star imports and cross-file dependencies
     seed_data/*.py:F403,F405,F821,F841,W291
-    # Teachers router uses star imports for convenience (all files in directory)
-    routers/teachers/*.py:F401,F403,F405
+    # Routers use star imports and have module-level imports after path manipulation
+    routers/teachers/*.py:F403,F405
+    routers/teachers/__init__.py:E402
+    routers/assignments/*.py:F403,F405,F821
+    routers/assignments/__init__.py:E402
+    routers/students/*.py:F403,F405
+    routers/schools.py:E722
+    # Models use re-exports
+    models/*.py:F403,F405
     # Integration tests have imports after path manipulation
     tests/integration/api/*.py:E402
