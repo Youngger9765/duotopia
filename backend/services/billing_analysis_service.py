@@ -3,6 +3,7 @@ import os
 import logging
 from typing import Dict, Any, List
 from openai import AsyncOpenAI
+from utils.http_client import get_http_client
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,10 @@ class BillingAnalysisService:
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.use_ai = bool(self.openai_api_key)
         if self.use_ai:
-            self.client = AsyncOpenAI(api_key=self.openai_api_key)
+            # Use shared http_client for connection pooling
+            self.client = AsyncOpenAI(
+                api_key=self.openai_api_key, http_client=get_http_client()
+            )
         else:
             self.client = None
 

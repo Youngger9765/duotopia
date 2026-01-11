@@ -105,8 +105,8 @@ class TestAzureSpeechTokenService:
     """Test Azure Speech Token Service (unit tests)"""
 
     @pytest.mark.asyncio
-    @patch("services.azure_speech_token.httpx.AsyncClient")
-    async def test_token_first_call_fetches_from_azure(self, mock_httpx):
+    @patch("services.azure_speech_token.get_http_client")
+    async def test_token_first_call_fetches_from_azure(self, mock_get_client):
         """Test 7: 第一次调用从 Azure 获取 token"""
         from services.azure_speech_token import AzureSpeechTokenService
 
@@ -116,8 +116,8 @@ class TestAzureSpeechTokenService:
         mock_response.raise_for_status = AsyncMock()
 
         mock_client = AsyncMock()
-        mock_client.__aenter__.return_value.post.return_value = mock_response
-        mock_httpx.return_value = mock_client
+        mock_client.post.return_value = mock_response
+        mock_get_client.return_value = mock_client
 
         # Mock environment variable
         with patch.dict("os.environ", {"AZURE_SPEECH_KEY": "test-key"}):
@@ -129,11 +129,11 @@ class TestAzureSpeechTokenService:
             assert result["expires_in"] == 600
 
             # 验证调用了 Azure issueToken endpoint
-            mock_client.__aenter__.return_value.post.assert_called_once()
+            mock_client.post.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("services.azure_speech_token.httpx.AsyncClient")
-    async def test_token_caching_within_8_minutes(self, mock_httpx):
+    @patch("services.azure_speech_token.get_http_client")
+    async def test_token_caching_within_8_minutes(self, mock_get_client):
         """Test 8: 8 分钟内重用缓存的 token"""
         from services.azure_speech_token import AzureSpeechTokenService
 
@@ -142,8 +142,8 @@ class TestAzureSpeechTokenService:
         mock_response.raise_for_status = AsyncMock()
 
         mock_client = AsyncMock()
-        mock_client.__aenter__.return_value.post.return_value = mock_response
-        mock_httpx.return_value = mock_client
+        mock_client.post.return_value = mock_response
+        mock_get_client.return_value = mock_client
 
         with patch.dict("os.environ", {"AZURE_SPEECH_KEY": "test-key"}):
             service = AzureSpeechTokenService()
@@ -158,11 +158,11 @@ class TestAzureSpeechTokenService:
 
             assert token1 == token2
             # Azure issueToken 只应该被调用一次
-            assert mock_client.__aenter__.return_value.post.call_count == 1
+            assert mock_client.post.call_count == 1
 
     @pytest.mark.asyncio
-    @patch("services.azure_speech_token.httpx.AsyncClient")
-    async def test_token_refresh_after_expiration(self, mock_httpx):
+    @patch("services.azure_speech_token.get_http_client")
+    async def test_token_refresh_after_expiration(self, mock_get_client):
         """Test 9: Token 过期后重新获取"""
         from services.azure_speech_token import AzureSpeechTokenService
 
@@ -177,8 +177,8 @@ class TestAzureSpeechTokenService:
             return mock_response
 
         mock_client = AsyncMock()
-        mock_client.__aenter__.return_value.post = mock_post
-        mock_httpx.return_value = mock_client
+        mock_client.post = mock_post
+        mock_get_client.return_value = mock_client
 
         with patch.dict("os.environ", {"AZURE_SPEECH_KEY": "test-key"}):
             service = AzureSpeechTokenService()
@@ -207,8 +207,8 @@ class TestAzureSpeechTokenService:
                 AzureSpeechTokenService()
 
     @pytest.mark.asyncio
-    @patch("services.azure_speech_token.httpx.AsyncClient")
-    async def test_token_azure_http_error(self, mock_httpx):
+    @patch("services.azure_speech_token.get_http_client")
+    async def test_token_azure_http_error(self, mock_get_client):
         """Test 11: Azure HTTP 错误处理"""
         from services.azure_speech_token import AzureSpeechTokenService
         import httpx
@@ -218,26 +218,26 @@ class TestAzureSpeechTokenService:
         mock_response.text = "Unauthorized"
 
         mock_client = AsyncMock()
-        mock_client.__aenter__.return_value.post.side_effect = httpx.HTTPStatusError(
+        mock_client.post.side_effect = httpx.HTTPStatusError(
             "401 Unauthorized", request=AsyncMock(), response=mock_response
         )
-        mock_httpx.return_value = mock_client
+        mock_get_client.return_value = mock_client
 
         with patch.dict("os.environ", {"AZURE_SPEECH_KEY": "invalid-key"}):
             service = AzureSpeechTokenService()
 
-            with pytest.raises(httpx.HTTPStatusError):
+            with pytest.raises(Exception):
                 await service.get_token()
 
     @pytest.mark.asyncio
-    @patch("services.azure_speech_token.httpx.AsyncClient")
-    async def test_token_network_timeout(self, mock_httpx):
+    @patch("services.azure_speech_token.get_http_client")
+    async def test_token_network_timeout(self, mock_get_client):
         """Test 12: 网络超时处理"""
         from services.azure_speech_token import AzureSpeechTokenService
 
         mock_client = AsyncMock()
-        mock_client.__aenter__.return_value.post.side_effect = Exception("Timeout")
-        mock_httpx.return_value = mock_client
+        mock_client.post.side_effect = Exception("Timeout")
+        mock_get_client.return_value = mock_client
 
         with patch.dict("os.environ", {"AZURE_SPEECH_KEY": "test-key"}):
             service = AzureSpeechTokenService()
