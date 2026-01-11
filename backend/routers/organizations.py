@@ -8,7 +8,7 @@ Note: Per-issue deploy now includes database migrations (2026-01-11 v4 - upgrade
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload, load_only
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
@@ -304,10 +304,16 @@ async def list_organizations(
         logger.info(f"Found {len(organizations)} active organizations")
 
         # ✅ PERFORMANCE FIX: Fetch all org owners in a single query to avoid N+1
+        # ✅ FIX #157: Use selectinload + load_only to prevent loading all Teacher relationships
+        # This avoids massive JOINs that cause timeout in Cloud Run (30s statement_timeout)
         logger.info("Fetching organization owners...")
         owner_rels = (
             db.query(TeacherOrganization)
-            .options(joinedload(TeacherOrganization.teacher))
+            .options(
+                selectinload(TeacherOrganization.teacher).load_only(
+                    Teacher.id, Teacher.name, Teacher.email
+                )
+            )
             .filter(
                 TeacherOrganization.organization_id.in_(org_ids),
                 TeacherOrganization.role == "org_owner",
