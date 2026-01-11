@@ -206,16 +206,15 @@ export default function PricingPage() {
   };
 
   const handleLogout = () => {
-    // Clear all auth data
-    localStorage.removeItem("token");
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("teacher-auth-storage");
-    localStorage.removeItem("student-auth-storage");
-    localStorage.removeItem("auth-storage");
-    localStorage.removeItem("user");
-    localStorage.removeItem("role");
-    localStorage.removeItem("username");
-    localStorage.removeItem("userType");
+    // Use Zustand store logout methods
+    const teacherLogout = useTeacherAuthStore.getState().logout;
+    const studentLogout = useStudentAuthStore.getState().logout;
+
+    // Call both logout methods to clear all auth state
+    teacherLogout();
+    studentLogout();
+
+    // Clear any remaining localStorage items
     localStorage.removeItem("selectedPlan");
 
     setUserInfo({ isLoggedIn: false });

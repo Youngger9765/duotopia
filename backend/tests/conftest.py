@@ -5,6 +5,7 @@ Global pytest configuration
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.compiler import compiles
@@ -45,10 +46,13 @@ def get_test_engine():
     """獲取全域測試引擎"""
     global _test_engine
     if _test_engine is None:
-        # 🔧 使用 file-based SQLite 而不是 in-memory
-        # in-memory database 在 FastAPI TestClient 的異步環境中可能無法正確共享
+        # 🔧 使用 file-based SQLite + StaticPool for data visibility across requests
+        # StaticPool ensures all connections share the same underlying connection
         _test_engine = create_engine(
-            "sqlite:///./test.db", echo=False, connect_args={"check_same_thread": False}
+            "sqlite:///./test_org.db",  # File-based DB
+            echo=False,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,  # Single shared connection
         )
 
         # checkfirst=True: 避免平行測試時重複創建表
@@ -94,14 +98,6 @@ def shared_test_session(test_engine):
     TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     session = TestSessionLocal()
 
-    # 🔧 清理所有資料（保留 schema）
-    try:
-        for table in reversed(Base.metadata.sorted_tables):
-            session.execute(table.delete())
-        session.commit()
-    except Exception:
-        session.rollback()
-
     try:
         yield session
     finally:
@@ -109,6 +105,14 @@ def shared_test_session(test_engine):
             session.rollback()
         except Exception:
             pass
+
+        # 🔧 清理所有資料（保留 schema）- 移到 cleanup 階段
+        try:
+            for table in reversed(Base.metadata.sorted_tables):
+                session.execute(table.delete())
+            session.commit()
+        except Exception:
+            session.rollback()
         finally:
             session.close()
 
@@ -149,14 +153,6 @@ def db_session(test_engine):
     TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     session = TestSessionLocal()
 
-    # 🔧 清理所有資料（保留 schema）
-    try:
-        for table in reversed(Base.metadata.sorted_tables):
-            session.execute(table.delete())
-        session.commit()
-    except Exception:
-        session.rollback()
-
     try:
         yield session
     finally:
@@ -164,6 +160,14 @@ def db_session(test_engine):
             session.rollback()
         except Exception:
             pass
+
+        # 🔧 清理所有資料（保留 schema）- 移到 cleanup 階段
+        try:
+            for table in reversed(Base.metadata.sorted_tables):
+                session.execute(table.delete())
+            session.commit()
+        except Exception:
+            session.rollback()
         finally:
             session.close()
 

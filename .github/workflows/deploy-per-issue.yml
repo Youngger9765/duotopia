@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'fix/issue-*'
+      - 'feat/issue-*'
       - 'feature/issue-*'
       - 'claude/issue-*'
     paths:
@@ -122,10 +123,11 @@ jobs:
             --platform managed \
             --region ${REGION} \
             --allow-unauthenticated \
-            --port 8000 \
-            --memory 256Mi \
-            --cpu 500m \
-            --concurrency 1 \
+            --port 8080 \
+            --memory 1Gi \
+            --cpu 1 \
+            --timeout 300 \
+            --concurrency 10 \
             --max-instances 1 \
             --min-instances 0 \
             --set-env-vars "${ENV_VARS}" \

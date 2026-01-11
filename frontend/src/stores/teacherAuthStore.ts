@@ -5,6 +5,9 @@ export interface TeacherUser {
   id: number;
   name: string;
   email: string;
+  role?: string;
+  organization_id?: string | null;
+  school_id?: string | null;
   is_demo?: boolean;
   is_admin?: boolean;
   phone?: string;
@@ -14,9 +17,13 @@ interface TeacherAuthState {
   token: string | null;
   user: TeacherUser | null;
   isAuthenticated: boolean;
+  userRoles: string[];
+  rolesLoading: boolean;
   login: (token: string, user: TeacherUser) => void;
   logout: () => void;
   updateUser: (user: Partial<TeacherUser>) => void;
+  setUserRoles: (roles: string[]) => void;
+  setRolesLoading: (loading: boolean) => void;
 }
 
 export const useTeacherAuthStore = create<TeacherAuthState>()(
@@ -25,6 +32,8 @@ export const useTeacherAuthStore = create<TeacherAuthState>()(
       token: null,
       user: null,
       isAuthenticated: false,
+      userRoles: [],
+      rolesLoading: false,
 
       login: (token: string, user: TeacherUser) => {
         set({
@@ -39,6 +48,8 @@ export const useTeacherAuthStore = create<TeacherAuthState>()(
           token: null,
           user: null,
           isAuthenticated: false,
+          userRoles: [],
+          rolesLoading: false,
         });
       },
 
@@ -47,6 +58,14 @@ export const useTeacherAuthStore = create<TeacherAuthState>()(
           user: state.user ? { ...state.user, ...updates } : null,
         }));
       },
+
+      setUserRoles: (roles: string[]) => {
+        set({ userRoles: roles });
+      },
+
+      setRolesLoading: (loading: boolean) => {
+        set({ rolesLoading: loading });
+      },
     }),
     {
       name: "teacher-auth-storage",
@@ -54,6 +73,8 @@ export const useTeacherAuthStore = create<TeacherAuthState>()(
         token: state.token,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        userRoles: state.userRoles,
+        rolesLoading: state.rolesLoading,
       }),
     },
   ),

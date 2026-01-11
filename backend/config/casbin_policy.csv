@@ -1,0 +1,36 @@
+# Casbin Policy Definitions for Duotopia
+# Format: p, role, domain, resource, action
+
+# org_owner permissions (can manage everything in their organization)
+p, org_owner, *, manage_schools, write
+p, org_owner, *, manage_teachers, write
+p, org_owner, *, manage_students, read
+p, org_owner, *, manage_students, write
+p, org_owner, *, manage_classrooms, write
+p, org_owner, *, manage_subscription, write
+p, org_owner, *, view_analytics, read
+
+# org_admin permissions (can manage schools and teachers, but not subscription)
+p, org_admin, *, manage_schools, write
+p, org_admin, *, manage_teachers, write
+p, org_admin, *, manage_students, read
+p, org_admin, *, manage_students, write
+p, org_admin, *, manage_classrooms, write
+p, org_admin, *, view_analytics, read
+
+# school_admin permissions (can manage teachers and students in their school only)
+p, school_admin, *, manage_teachers, write
+p, school_admin, *, manage_students, write
+p, school_admin, *, manage_classrooms, write
+p, school_admin, *, view_school_analytics, read
+
+# school_director permissions (same as school_admin, assists in school management)
+p, school_director, *, manage_teachers, write
+p, school_director, *, manage_students, write
+p, school_director, *, manage_classrooms, write
+p, school_director, *, view_school_analytics, read
+
+# teacher permissions (can only manage own classrooms)
+p, teacher, *, manage_own_classrooms, write
+p, teacher, *, manage_students, read
+p, teacher, *, view_own_analytics, read

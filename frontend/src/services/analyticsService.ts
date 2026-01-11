@@ -3,6 +3,8 @@
  */
 
 import { apiClient } from "../lib/api";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { useStudentAuthStore } from "@/stores/studentAuthStore";
 
 export interface PaymentErrorData {
   // 基本資訊
@@ -131,8 +133,8 @@ class AnalyticsService {
       amount,
       planName,
       additionalContext: {
-        hasToken: !!localStorage.getItem("teacher-auth-storage"),
-        hasStudentToken: !!localStorage.getItem("student-auth-storage"),
+        hasToken: !!useTeacherAuthStore.getState().token,
+        hasStudentToken: !!useStudentAuthStore.getState().token,
       },
       userAgent: navigator.userAgent,
       url: window.location.href,

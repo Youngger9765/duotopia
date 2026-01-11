@@ -27,6 +27,7 @@ COPY *.py ./
 COPY alembic ./alembic/
 COPY alembic.ini ./
 # 複製其他目錄（如果存在）
+COPY model[s] ./models/
 COPY service[s] ./services/
 COPY router[s] ./routers/
 COPY route[s] ./routes/
@@ -34,6 +35,7 @@ COPY cor[e] ./core/
 COPY ap[i] ./api/
 COPY util[s] ./utils/
 COPY middlewar[e] ./middleware/
+COPY confi[g] ./config/
 
 # 複製 GCS service account key（如果存在）
 # 注意：Cloud Run 有預設認證，不需要額外的 key file
