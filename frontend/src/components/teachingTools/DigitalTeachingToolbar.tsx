@@ -626,6 +626,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({
     e: React.MouseEvent | React.TouchEvent,
     setScale: (scale: number) => void,
     currentScale: number,
+    direction: number = 1,
   ) => {
     e.stopPropagation();
     const clientX = (e as React.TouchEvent).touches
@@ -642,7 +643,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({
       const moveX = (moveEvent as TouchEvent).touches
         ? (moveEvent as TouchEvent).touches[0].clientX
         : (moveEvent as MouseEvent).clientX;
-      const delta = (moveX - startX) * 0.005;
+      const delta = direction * (moveX - startX) * 0.005;
 
       if (frameId) cancelAnimationFrame(frameId);
       frameId = requestAnimationFrame(() => {
