@@ -624,9 +624,14 @@ async def list_organization_teachers(
     check_org_permission(teacher.id, org_id, db)
 
     # Get all teacher relationships with eager loading (eliminates N+1 query)
+    # ✅ FIX #157: Use selectinload + load_only (same fix as list_organizations)
     teacher_orgs = (
         db.query(TeacherOrganization)
-        .options(joinedload(TeacherOrganization.teacher))
+        .options(
+            selectinload(TeacherOrganization.teacher).load_only(
+                Teacher.id, Teacher.name, Teacher.email
+            )
+        )
         .filter(
             TeacherOrganization.organization_id == org_id,
             TeacherOrganization.is_active.is_(True),
