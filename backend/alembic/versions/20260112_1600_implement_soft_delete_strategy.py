@@ -36,18 +36,21 @@ def upgrade() -> None:
     # ========================================
 
     # Remove old unique constraint if exists
-    # Note: The constraint might be named differently, so we use if_exists-like logic
-    try:
-        op.drop_constraint("uq_organizations_tax_id", "organizations", type_="unique")
-    except Exception:
-        # Constraint might not exist or have different name
-        pass
+    # Use SQL IF EXISTS to avoid transaction abort when constraint doesn't exist
+    # Python try-except doesn't prevent PostgreSQL from aborting the transaction
+    op.execute(
+        """
+        ALTER TABLE organizations
+        DROP CONSTRAINT IF EXISTS uq_organizations_tax_id
+    """
+    )
 
-    try:
-        op.drop_constraint("organizations_tax_id_key", "organizations", type_="unique")
-    except Exception:
-        # Standard PostgreSQL naming convention
-        pass
+    op.execute(
+        """
+        ALTER TABLE organizations
+        DROP CONSTRAINT IF EXISTS organizations_tax_id_key
+    """
+    )
 
     # Create partial unique index (only for active organizations)
     # This allows reusing tax_id after organization is deactivated
