@@ -6,8 +6,9 @@ import os
 import asyncio
 import logging
 from typing import List, Dict, Optional  # noqa: F401
-from openai import OpenAI
+from openai import AsyncOpenAI
 from dotenv import load_dotenv
+from utils.http_client import get_http_client
 
 load_dotenv()
 
@@ -20,12 +21,13 @@ class TranslationService:
         self.model = "gpt-3.5-turbo"
 
     def _ensure_client(self):
-        """Lazy initialization of OpenAI client"""
+        """Lazy initialization of AsyncOpenAI client with connection pool"""
         if self.client is None:
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise ValueError("OPENAI_API_KEY not found in environment variables")
-            self.client = OpenAI(api_key=api_key)
+            # Use shared http_client for connection pooling
+            self.client = AsyncOpenAI(api_key=api_key, http_client=get_http_client())
 
     async def translate_text(self, text: str, target_lang: str = "zh-TW") -> str:
         """
@@ -56,7 +58,7 @@ class TranslationService:
                     f"only return the translation without any explanation:\n{text}"
                 )
 
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {
@@ -128,7 +130,7 @@ det. (determiner), aux. (auxiliary)
 
 Only reply with JSON, no other text."""
 
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {
@@ -211,7 +213,7 @@ Input: {texts_json}
 
 Required: Return format must be ["translation1", "translation2", ...]"""
 
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {
@@ -342,7 +344,7 @@ det. (determiner), aux. (auxiliary)
 
 Only reply with JSON array, no other text."""
 
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {
@@ -453,7 +455,7 @@ Where translation is in {lang_name}."""
 
             user_prompt += "\n\nOnly return the JSON array, no other text."
 
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
