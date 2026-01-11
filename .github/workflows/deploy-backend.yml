@@ -243,7 +243,8 @@ jobs:
               'student_content_progress', 'student_item_progress',
               'subscription_periods', 'point_usage_logs',
               'teacher_subscription_transaction', 'teacher_subscription_transactions', 'invoice_status_history',
-              'user_word_progress', 'practice_sessions', 'practice_answers'
+              'user_word_progress', 'practice_sessions', 'practice_answers',
+              'organizations', 'schools', 'teacher_organizations', 'teacher_schools', 'classroom_schools'
             )
           ORDER BY tablename;
         " | xargs)
