@@ -134,8 +134,12 @@ def check_org_permission(
     Raises HTTPException if not found or no permission.
     Returns organization if permission granted.
     """
-    # Check if organization exists
-    org = db.query(Organization).filter(Organization.id == org_id).first()
+    # Check if organization exists and is active (soft delete strategy)
+    org = (
+        db.query(Organization)
+        .filter(Organization.id == org_id, Organization.is_active.is_(True))
+        .first()
+    )
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found"
@@ -178,11 +182,14 @@ async def create_organization(
     """
     casbin_service = get_casbin_service()
 
-    # Check tax_id uniqueness if provided
+    # Check tax_id uniqueness if provided (only among active organizations)
+    # Per #151 Decision #2: Partial unique index allows tax_id reuse after deactivation
     if org_data.tax_id:
         existing = (
             db.query(Organization)
-            .filter(Organization.tax_id == org_data.tax_id)
+            .filter(
+                Organization.tax_id == org_data.tax_id, Organization.is_active.is_(True)
+            )
             .first()
         )
         if existing:
@@ -503,12 +510,15 @@ async def update_organization(
     if org_data.description is not None:
         org.description = org_data.description
     if org_data.tax_id is not None:
-        # Check uniqueness if tax_id is being changed
+        # Check uniqueness if tax_id is being changed (only among active organizations)
+        # Per #151 Decision #2: Partial unique index allows tax_id reuse after deactivation
         if org_data.tax_id != org.tax_id:
             existing = (
                 db.query(Organization)
                 .filter(
-                    Organization.tax_id == org_data.tax_id, Organization.id != org_id
+                    Organization.tax_id == org_data.tax_id,
+                    Organization.id != org_id,
+                    Organization.is_active.is_(True),
                 )
                 .first()
             )
