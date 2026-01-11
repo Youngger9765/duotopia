@@ -16,9 +16,9 @@ vi.mock("react-i18next", () => ({
 describe("DigitalTeachingToolbar", () => {
   beforeEach(() => {
     // Mock canvas for testing
-    HTMLCanvasElement.prototype.getContext = vi.fn(
-      () =>
-        ({
+    HTMLCanvasElement.prototype.getContext = vi.fn((contextId: string) => {
+      if (contextId === "2d") {
+        const ctx = {
           scale: vi.fn(),
           lineCap: "",
           lineJoin: "",
@@ -31,8 +31,11 @@ describe("DigitalTeachingToolbar", () => {
           globalCompositeOperation: "",
           strokeStyle: "",
           lineWidth: 0,
-        }) as unknown as CanvasRenderingContext2D,
-    );
+        };
+        return ctx as unknown as CanvasRenderingContext2D;
+      }
+      return null;
+    }) as unknown as HTMLCanvasElement["getContext"];
 
     // Mock window.innerWidth and innerHeight
     window.innerWidth = 1024;
