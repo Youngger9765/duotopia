@@ -93,15 +93,26 @@
     "deleteConfirm": "確定要刪除此錄音嗎？"
   },
   "home": {
+    "header": {
+      "logo": "Duotopia"
+    },
     "hero": {
       "badge": "AI 驅動的英語學習革命",
+      "tagline": "AI 驅動的英語學習革命",
+      "brand": "Duotopia",
       "title": "Duotopia",
       "subtitle": "多元智能英語學習平台",
       "description": "透過 AI 語音辨識與即時回饋，為 6-15 歲學生打造個人化的英語口說學習體驗。讓每個孩子都能自信開口說英語！",
+      "benefit1": "AI 語音辨識，精準評估發音與流暢度",
+      "benefit2": "多元智能學習，全方位提升英語能力",
+      "benefit3": "遊戲化激勵，提高學習動機與參與度",
       "freeTrial": "免費試用",
+      "freeTrialBtn": "免費體驗 14 天",
       "watchVideo": "觀看介紹影片",
       "trustedBy": "超過 {{count}}+ 教師信賴",
-      "studentsUsing": "{{count}}+ 學生正在使用"
+      "trustedTeachers": "已有 500+ 教師選擇 Duotopia",
+      "studentsUsing": "{{count}}+ 學生正在使用",
+      "studentsImproved": "幫助 10,000+ 學生提升英語口說能力"
     },
     "stats": {
       "satisfaction": "學生滿意度",
@@ -180,6 +191,18 @@
       "startFreeTrial": "立即免費試用",
       "studentLogin": "學生登入",
       "benefits": "無需信用卡 • 永久免費方案 • 5 分鐘快速上手"
+    },
+    "cta2": {
+      "title": "準備好開始了嗎？",
+      "subtitle": "立即免費體驗 Duotopia，無需信用卡",
+      "button": "免費體驗 14 天",
+      "noCreditCard": "無需信用卡 • 隨時可取消"
+    },
+    "steps": {
+      "title": "簡單三步驟，開始學習之旅",
+      "step1": "免費註冊帳號",
+      "step2": "建立班級並邀請學生",
+      "step3": "派發作業，開始教學"
     },
     "loginOptions": {
       "title": "快速登入通道",
