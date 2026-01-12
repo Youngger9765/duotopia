@@ -892,6 +892,9 @@ interface SortableRowInnerProps {
   handleOpenAIGenerateModal: (index: number) => void;
   rowsLength: number;
   imageUploading?: boolean;
+  // 剪貼簿貼上圖片功能
+  isActive?: boolean;
+  onRowFocus?: () => void;
 }
 
 function SortableRowInner({
@@ -911,6 +914,8 @@ function SortableRowInner({
   handleOpenAIGenerateModal,
   rowsLength,
   imageUploading,
+  isActive = false,
+  onRowFocus,
 }: SortableRowInnerProps) {
   const { t } = useTranslation();
   const {
@@ -928,6 +933,26 @@ function SortableRowInner({
     opacity: isDragging ? 0.4 : 1,
   };
 
+  // 偵測作業系統，用於顯示對應的截圖提示
+  const getScreenshotHint = (): string => {
+    // 手機版不顯示提示（sm breakpoint = 640px）
+    if (typeof window !== "undefined" && window.innerWidth < 640) {
+      return "";
+    }
+    // 偵測作業系統
+    if (typeof navigator !== "undefined") {
+      const platform = navigator.platform?.toLowerCase() || "";
+      const userAgent = navigator.userAgent?.toLowerCase() || "";
+      if (platform.includes("mac") || userAgent.includes("mac")) {
+        return t("vocabularySet.image.macScreenshotHint");
+      }
+      if (platform.includes("win") || userAgent.includes("win")) {
+        return t("vocabularySet.image.windowsScreenshotHint");
+      }
+    }
+    return "";
+  };
+
   // 處理詞性切換
   const handleTogglePartOfSpeech = (pos: string) => {
     const currentPOS = row.partsOfSpeech || [];
@@ -938,7 +963,14 @@ function SortableRowInner({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="p-4 bg-gray-50 rounded-lg">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`p-4 rounded-lg transition-all cursor-pointer ${
+        isActive ? "bg-blue-50 border-l-4 border-l-blue-500" : "bg-gray-50"
+      }`}
+      onClick={onRowFocus}
+    >
       {/* 頂部：拖曳手把 + 序號 + 動作按鈕 */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -1145,9 +1177,14 @@ function SortableRowInner({
           </div>
         ) : (
           <label
-            className={`inline-flex items-center gap-2 px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all ${
-              imageUploading ? "opacity-50 cursor-not-allowed" : ""
+            className={`inline-flex items-center gap-2 px-3 py-2 border-2 border-dashed rounded-lg cursor-pointer transition-all ${
+              imageUploading
+                ? "opacity-50 cursor-not-allowed border-gray-300"
+                : isActive
+                  ? "border-blue-400 bg-blue-50 hover:bg-blue-100"
+                  : "border-gray-300 hover:border-blue-400 hover:bg-blue-50"
             }`}
+            title={isActive ? getScreenshotHint() : ""}
           >
             <input
               type="file"
@@ -1166,12 +1203,25 @@ function SortableRowInner({
             {imageUploading ? (
               <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />
             ) : (
-              <ImageIcon className="h-4 w-4 text-gray-500" />
+              <ImageIcon
+                className={`h-4 w-4 ${isActive ? "text-blue-500" : "text-gray-500"}`}
+              />
             )}
-            <span className="text-sm text-gray-600">
-              {imageUploading
-                ? t("vocabularySet.image.uploading")
-                : t("vocabularySet.image.upload")}
+            <span
+              className={`text-sm ${isActive ? "text-blue-600" : "text-gray-600"}`}
+            >
+              {imageUploading ? (
+                t("vocabularySet.image.uploading")
+              ) : isActive ? (
+                <>
+                  <span className="hidden sm:inline">
+                    {t("vocabularySet.image.pasteShortcut")}
+                  </span>
+                  {t("vocabularySet.image.clickToUpload")}
+                </>
+              ) : (
+                t("vocabularySet.image.upload")
+              )}
             </span>
           </label>
         )}
@@ -1294,6 +1344,7 @@ export default function VocabularySetPanel({
       text: "",
       definition: "",
       translation: "",
+      imageUrl: "",
       selectedWordLanguage: "chinese",
       example_sentence: "",
       example_sentence_translation: "",
@@ -1303,6 +1354,7 @@ export default function VocabularySetPanel({
       text: "",
       definition: "",
       translation: "",
+      imageUrl: "",
       selectedWordLanguage: "chinese",
       example_sentence: "",
       example_sentence_translation: "",
@@ -1312,6 +1364,7 @@ export default function VocabularySetPanel({
       text: "",
       definition: "",
       translation: "",
+      imageUrl: "",
       selectedWordLanguage: "chinese",
       example_sentence: "",
       example_sentence_translation: "",
@@ -1319,6 +1372,8 @@ export default function VocabularySetPanel({
   ]);
   const [selectedRow, setSelectedRow] = useState<ContentRow | null>(null);
   const [ttsModalOpen, setTtsModalOpen] = useState(false);
+  // 追蹤當前編輯的行索引（用於剪貼簿貼上圖片）
+  const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [batchPasteDialogOpen, setBatchPasteDialogOpen] = useState(false);
@@ -1570,6 +1625,7 @@ export default function VocabularySetPanel({
       definition: row.definition, // 中文翻譯
       translation: row.translation, // 英文釋義
       audio_url: row.audioUrl,
+      image_url: row.imageUrl || "", // 圖片 URL
       selectedWordLanguage: row.selectedWordLanguage, // 記錄最後選擇的語言
       example_sentence: row.example_sentence,
       example_sentence_translation: row.example_sentence_translation,
@@ -1608,6 +1664,7 @@ export default function VocabularySetPanel({
       text: "",
       definition: "",
       translation: "",
+      imageUrl: "",
       selectedWordLanguage: "chinese",
       example_sentence: "",
       example_sentence_translation: "",
@@ -1737,6 +1794,65 @@ export default function VocabularySetPanel({
     setRows(newRows);
     toast.info(t("vocabularySet.image.removed"));
   };
+
+  // 剪貼簿貼上圖片功能
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      // 從剪貼簿獲取圖片
+      const items = e.clipboardData?.items;
+      const files = e.clipboardData?.files;
+
+      let imageBlob: Blob | null = null;
+
+      // 方法 1: 從 DataTransferItemList 獲取（適用於複製圖檔）
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].kind === "file" && items[i].type.startsWith("image/")) {
+            imageBlob = items[i].getAsFile();
+            break;
+          }
+        }
+      }
+
+      // 方法 2: 從 FileList 獲取（適用於 macOS 截圖）
+      if (!imageBlob && files && files.length > 0) {
+        for (let i = 0; i < files.length; i++) {
+          if (files[i].type.startsWith("image/")) {
+            imageBlob = files[i];
+            break;
+          }
+        }
+      }
+
+      // 如果沒有圖片，讓預設行為處理（文字貼上）
+      if (!imageBlob) return;
+
+      // 檢查是否有選中的行
+      if (activeRowIndex === null) {
+        toast.info(t("vocabularySet.image.pasteSelectRow"));
+        return;
+      }
+
+      // 檢查該行是否已有圖片
+      if (rows[activeRowIndex].imageUrl) {
+        toast.info(t("vocabularySet.image.pasteHasImage"));
+        return;
+      }
+
+      // 阻止預設行為
+      e.preventDefault();
+
+      // 轉換為 File 並上傳
+      const ext = imageBlob.type.split("/")[1] || "png";
+      const file = new File([imageBlob], `pasted-image.${ext}`, {
+        type: imageBlob.type,
+      });
+      await handleImageUpload(activeRowIndex, file);
+    };
+
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, [activeRowIndex, rows, t]);
 
   const handleOpenTTSModal = (row: ContentRow) => {
     setSelectedRow(row);
@@ -2724,6 +2840,8 @@ export default function VocabularySetPanel({
                   handleOpenAIGenerateModal={handleOpenAIGenerateModal}
                   rowsLength={rows.length}
                   imageUploading={imageUploading}
+                  isActive={activeRowIndex === index}
+                  onRowFocus={() => setActiveRowIndex(index)}
                 />
               );
             })}
