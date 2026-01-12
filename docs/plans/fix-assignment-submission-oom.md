@@ -118,14 +118,7 @@ if (onSubmit) {
 - 分塊間加入短暫延遲允許記憶體釋放
 - 避免大批次導致 OOM
 
-#### 2.2 增加 Cloud Run 記憶體
-
-**檔案**: `.github/workflows/deploy-backend.yml`
-
-**修改內容**:
-- staging/develop 環境記憶體從 256Mi 增加到 512Mi
-
-#### 2.3 限制批次大小
+#### 2.2 限制批次大小
 
 **檔案**: `backend/routers/teachers.py`
 
@@ -160,7 +153,6 @@ if (onSubmit) {
 | P1 | `frontend/src/pages/student/StudentActivityPageContent.tsx` | await onSubmit |
 | P1 | `frontend/src/components/activities/RearrangementActivity.tsx` | 錯誤提示 |
 | P2 | `backend/services/translation.py` | 分塊批次處理 |
-| P2 | `.github/workflows/deploy-backend.yml` | 增加記憶體 |
 | P2 | `backend/routers/teachers.py` | 限制批次大小 |
 
 ---
@@ -173,14 +165,11 @@ Phase 1 - 立即（防止未來數據丟失 + 即時更新）
 ├── P1.1 前端重試機制
 └── P1.2 await onSubmit 修復
 
-Phase 2 - 短期（減少 OOM 機率）
-└── P2.2 增加 Cloud Run 記憶體到 512Mi
-
-Phase 3 - 中期（根本解決記憶體問題）
+Phase 2 - 中期（根本解決記憶體問題）
 ├── P2.1 批次翻譯分塊處理
-└── P2.3 限制批次大小
+└── P2.2 限制批次大小
 
-Phase 4 - 長期（增加系統韌性）
+Phase 3 - 長期（增加系統韌性）
 ├── P3.1 本地狀態持久化
 └── P3.2 背景同步機制
 ```
@@ -202,7 +191,6 @@ Phase 4 - 長期（增加系統韌性）
 ### P2 驗收
 - [ ] 大批次翻譯（100+ 詞）不會觸發 OOM
 - [ ] 超過 50 個詞的批次請求返回 400 錯誤
-- [ ] Cloud Run 記憶體監控顯示穩定在 512Mi 以下
 
 ---
 
