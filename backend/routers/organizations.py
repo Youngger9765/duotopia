@@ -115,6 +115,7 @@ class OrganizationResponse(BaseModel):
             display_name=org.display_name,
             description=org.description,
             tax_id=org.tax_id,
+            teacher_limit=org.teacher_limit,  # Decision #5: Teacher authorization limit
             contact_email=org.contact_email,
             contact_phone=org.contact_phone,
             address=org.address,
