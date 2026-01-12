@@ -699,6 +699,25 @@ async def invite_teacher_to_organization(
             detail="You don't have permission to invite teachers to this organization",
         )
 
+    # Check teacher limit (Decision #5: Teacher Authorization Count)
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if org and org.teacher_limit is not None:
+        # Count active teachers
+        active_teacher_count = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.organization_id == org_id,
+                TeacherOrganization.is_active.is_(True),
+            )
+            .count()
+        )
+
+        if active_teacher_count >= org.teacher_limit:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"已達教師授權上限（{org.teacher_limit} 位）",
+            )
+
     # Check if teacher already exists by email
     existing_teacher = db.query(Teacher).filter(Teacher.email == request.email).first()
 
@@ -837,6 +856,25 @@ async def add_teacher_to_organization(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Organization already has an owner",
+            )
+
+    # Check teacher limit (Decision #5: Teacher Authorization Count)
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if org and org.teacher_limit is not None:
+        # Count active teachers
+        active_teacher_count = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.organization_id == org_id,
+                TeacherOrganization.is_active.is_(True),
+            )
+            .count()
+        )
+
+        if active_teacher_count >= org.teacher_limit:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"已達教師授權上限（{org.teacher_limit} 位）",
             )
 
     # Check if teacher already has relationship
