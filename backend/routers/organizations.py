@@ -65,6 +65,7 @@ class OrganizationCreate(BaseModel):
     display_name: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
     tax_id: Optional[str] = Field(None, max_length=20, description="統一編號 (8 digits)")
+    teacher_limit: Optional[int] = Field(None, ge=1, description="教師授權數上限 (NULL = 無限制)")
     contact_email: Optional[str] = Field(None, max_length=200)
     contact_phone: Optional[str] = Field(None, max_length=50)
     address: Optional[str] = None
@@ -77,6 +78,7 @@ class OrganizationUpdate(BaseModel):
     display_name: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
     tax_id: Optional[str] = Field(None, max_length=20, description="統一編號 (8 digits)")
+    teacher_limit: Optional[int] = Field(None, ge=1, description="教師授權數上限 (NULL = 無限制)")
     contact_email: Optional[str] = Field(None, max_length=200)
     contact_phone: Optional[str] = Field(None, max_length=50)
     address: Optional[str] = None
@@ -91,6 +93,7 @@ class OrganizationResponse(BaseModel):
     display_name: Optional[str]
     description: Optional[str]
     tax_id: Optional[str]
+    teacher_limit: Optional[int]  # Decision #5: Teacher authorization limit
     contact_email: Optional[str]
     contact_phone: Optional[str]
     address: Optional[str]
@@ -211,6 +214,7 @@ async def create_organization(
         display_name=org_data.display_name,
         description=org_data.description,
         tax_id=org_data.tax_id,
+        teacher_limit=org_data.teacher_limit,  # Decision #5: Teacher authorization limit
         contact_email=org_data.contact_email,
         contact_phone=org_data.contact_phone,
         address=org_data.address,
@@ -535,6 +539,8 @@ async def update_organization(
                     status_code=status.HTTP_400_BAD_REQUEST, detail="此統一編號已被使用"
                 )
         org.tax_id = org_data.tax_id
+    if org_data.teacher_limit is not None:
+        org.teacher_limit = org_data.teacher_limit  # Decision #5: Update teacher limit
     if org_data.contact_email is not None:
         org.contact_email = org_data.contact_email
     if org_data.contact_phone is not None:
