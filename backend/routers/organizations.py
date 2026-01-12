@@ -499,7 +499,20 @@ async def get_organization(
     Requires teacher to be a member of the organization.
     """
     org = check_org_permission(teacher.id, org_id, db)
-    return OrganizationResponse.from_orm(org)
+
+    # Get org_owner for response
+    owner = (
+        db.query(Teacher)
+        .join(TeacherOrganization)
+        .filter(
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.role == "org_owner",
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+
+    return OrganizationResponse.from_orm(org, owner=owner)
 
 
 @router.patch("/{org_id}", response_model=OrganizationResponse)
