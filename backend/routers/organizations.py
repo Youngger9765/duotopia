@@ -718,12 +718,14 @@ async def invite_teacher_to_organization(
     # Check teacher limit (Decision #5: Teacher Authorization Count)
     # org is already fetched above with SELECT FOR UPDATE lock
     if org.teacher_limit is not None:
-        # Count active teachers
+        # Count active teachers (excluding org_owner)
+        # org_owner doesn't count towards teacher authorization limit
         active_teacher_count = (
             db.query(TeacherOrganization)
             .filter(
                 TeacherOrganization.organization_id == org_id,
                 TeacherOrganization.is_active.is_(True),
+                TeacherOrganization.role != "org_owner",  # Exclude org_owner from count
             )
             .count()
         )
@@ -878,12 +880,14 @@ async def add_teacher_to_organization(
     # Check teacher limit (Decision #5: Teacher Authorization Count)
     # org is already fetched above with SELECT FOR UPDATE lock
     if org.teacher_limit is not None:
-        # Count active teachers
+        # Count active teachers (excluding org_owner)
+        # org_owner doesn't count towards teacher authorization limit
         active_teacher_count = (
             db.query(TeacherOrganization)
             .filter(
                 TeacherOrganization.organization_id == org_id,
                 TeacherOrganization.is_active.is_(True),
+                TeacherOrganization.role != "org_owner",  # Exclude org_owner from count
             )
             .count()
         )
