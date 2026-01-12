@@ -127,19 +127,27 @@ class OrganizationResponse(BaseModel):
 
 
 def check_org_permission(
-    teacher_id: int, org_id: uuid.UUID, db: Session
+    teacher_id: int, org_id: uuid.UUID, db: Session, for_update: bool = False
 ) -> Organization:
     """
     Check if teacher has access to organization.
     Raises HTTPException if not found or no permission.
     Returns organization if permission granted.
+
+    Args:
+        for_update: If True, locks the organization row with SELECT FOR UPDATE
+                   to prevent race conditions in concurrent operations.
     """
     # Check if organization exists and is active (soft delete strategy)
-    org = (
-        db.query(Organization)
-        .filter(Organization.id == org_id, Organization.is_active.is_(True))
-        .first()
+    query = db.query(Organization).filter(
+        Organization.id == org_id, Organization.is_active.is_(True)
     )
+
+    # Lock row if needed (prevents race conditions in teacher limit checks)
+    if for_update:
+        query = query.with_for_update()
+
+    org = query.first()
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found"
@@ -685,8 +693,9 @@ async def invite_teacher_to_organization(
     """
     casbin_service = get_casbin_service()
 
-    # Check permission (org_owner or org_admin can invite teachers)
-    check_org_permission(teacher.id, org_id, db)
+    # Check permission and get organization (with row lock for teacher limit check)
+    # for_update=True prevents race conditions when checking teacher limit
+    org = check_org_permission(teacher.id, org_id, db, for_update=True)
 
     # Use Casbin to check manage_teachers permission
     has_permission = casbin_service.enforcer.enforce(
@@ -700,8 +709,8 @@ async def invite_teacher_to_organization(
         )
 
     # Check teacher limit (Decision #5: Teacher Authorization Count)
-    org = db.query(Organization).filter(Organization.id == org_id).first()
-    if org and org.teacher_limit is not None:
+    # org is already fetched above with SELECT FOR UPDATE lock
+    if org.teacher_limit is not None:
         # Count active teachers
         active_teacher_count = (
             db.query(TeacherOrganization)
@@ -826,8 +835,9 @@ async def add_teacher_to_organization(
     """
     casbin_service = get_casbin_service()
 
-    # Check permission (org_owner or org_admin can add teachers)
-    check_org_permission(teacher.id, org_id, db)
+    # Check permission and get organization (with row lock for teacher limit check)
+    # for_update=True prevents race conditions when checking teacher limit
+    org = check_org_permission(teacher.id, org_id, db, for_update=True)
 
     # Use Casbin to check manage_teachers permission
     has_permission = casbin_service.enforcer.enforce(
@@ -859,8 +869,8 @@ async def add_teacher_to_organization(
             )
 
     # Check teacher limit (Decision #5: Teacher Authorization Count)
-    org = db.query(Organization).filter(Organization.id == org_id).first()
-    if org and org.teacher_limit is not None:
+    # org is already fetched above with SELECT FOR UPDATE lock
+    if org.teacher_limit is not None:
         # Count active teachers
         active_teacher_count = (
             db.query(TeacherOrganization)
