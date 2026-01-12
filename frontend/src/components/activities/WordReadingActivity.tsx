@@ -61,8 +61,8 @@ interface WordReadingActivityProps {
 export default function WordReadingActivity({
   assignmentId,
   isPreviewMode = false,
-  showTranslation = true,
-  showImage = true,
+  showTranslation: _showTranslationProp = true, // 保留 prop 但使用 API 返回的值
+  showImage: _showImageProp = true, // 保留 prop 但使用 API 返回的值
   onComplete,
 }: WordReadingActivityProps) {
   const { t } = useTranslation();
@@ -75,6 +75,9 @@ export default function WordReadingActivity({
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [timeLimitPerQuestion, setTimeLimitPerQuestion] = useState(0); // 0 = 不限時
+  // 從 API 讀取的顯示設定（解決圖片不顯示的 bug）
+  const [showImageFromApi, setShowImageFromApi] = useState(true);
+  const [showTranslationFromApi, setShowTranslationFromApi] = useState(true);
 
   // Load vocabulary items from backend
   const loadItems = useCallback(async () => {
@@ -98,6 +101,9 @@ export default function WordReadingActivity({
       const data = await response.json();
       setItems(data.items || []);
       setTimeLimitPerQuestion(data.time_limit_per_question || 0);
+      // 讀取 API 返回的顯示設定
+      setShowImageFromApi(data.show_image ?? true);
+      setShowTranslationFromApi(data.show_translation ?? true);
 
       // Find first incomplete item
       const firstIncomplete = (data.items || []).findIndex(
@@ -415,8 +421,8 @@ export default function WordReadingActivity({
         currentItem={currentItem}
         currentIndex={currentIndex}
         totalItems={items.length}
-        showTranslation={showTranslation}
-        showImage={showImage}
+        showTranslation={showTranslationFromApi}
+        showImage={showImageFromApi}
         existingAudioUrl={currentItem.recording_url}
         onRecordingComplete={handleRecordingComplete}
         progressId={currentItem.progress_id}

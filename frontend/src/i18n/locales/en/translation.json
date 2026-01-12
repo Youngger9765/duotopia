@@ -3794,7 +3794,14 @@
       "invalidType": "Unsupported image format. Use JPG, PNG, GIF or WebP",
       "uploadSuccess": "Image uploaded successfully",
       "uploadFailed": "Image upload failed, please try again",
-      "removed": "Image removed"
+      "removed": "Image removed",
+      "pasteSelectRow": "Please click a word row first to add an image",
+      "pasteHasImage": "This row already has an image, please remove it first",
+      "pasteOrUpload": "Ctrl+V to paste or click to upload",
+      "pasteShortcut": "Ctrl+V / Cmd+V to paste or ",
+      "clickToUpload": "click to upload",
+      "macScreenshotHint": "Tip: Use Ctrl+Shift+Cmd+4 for screenshot to paste",
+      "windowsScreenshotHint": "Tip: Use Win+Shift+S for screenshot to paste"
     }
   },
   "wordReading": {

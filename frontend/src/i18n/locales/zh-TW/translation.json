@@ -3801,7 +3801,14 @@
       "invalidType": "不支援的圖片格式，請使用 JPG、PNG、GIF 或 WebP",
       "uploadSuccess": "圖片上傳成功",
       "uploadFailed": "圖片上傳失敗，請稍後再試",
-      "removed": "圖片已移除"
+      "removed": "圖片已移除",
+      "pasteSelectRow": "請先點擊要添加圖片的單字行",
+      "pasteHasImage": "此行已有圖片，請先移除",
+      "pasteOrUpload": "Ctrl+V 貼上 或 點擊上傳",
+      "pasteShortcut": "Ctrl+V / Cmd+V 貼上 或 ",
+      "clickToUpload": "點擊上傳",
+      "macScreenshotHint": "截圖提示：請使用 Ctrl+Shift+Cmd+4 截圖才能貼上",
+      "windowsScreenshotHint": "截圖提示：請使用 Win+Shift+S 截圖後貼上"
     }
   },
   "wordReading": {
