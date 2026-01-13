@@ -654,28 +654,33 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
             prompt = f"""為單字 "{word}"（正確翻譯: {translation}）生成 {count} 個干擾項（錯誤選項）。
 {pos_hint}
 
-## 嚴格要求（必須遵守）
+## 核心原則：干擾項必須是「學生可能會搞混的錯誤答案」
 
-1. **繁體中文**：所有干擾項必須是繁體中文
-2. **同詞性**：名詞配名詞、動詞配動詞、形容詞配形容詞
-3. **絕對禁止近義詞**（最重要！）：
-   - ❌ 錯誤（近義詞）：change=改變 → 不可用「交換、變換、轉變、變更」
-   - ❌ 錯誤（近義詞）：cost=成本 → 不可用「費用、價格、代價、開支、花費」
-   - ❌ 錯誤（近義詞）：type=類型 → 不可用「類別、種類、型態、形式」
-   - ❌ 錯誤（近義詞）：important=重要 → 不可用「關鍵、主要、要緊、重大」
-   - ❌ 錯誤（太離譜）：assignment=作業 → 不可用「海豚、太陽、香蕉」
+干擾項要讓學生需要思考才能排除，但絕對不能是正確答案的同義詞。
 
-4. **要用同領域但不同意思的詞**：
-   - ✅ 正確：assignment=作業 → 可用「考試、報告、課本」（同為學校相關，但意思完全不同）
-   - ✅ 正確：apple=蘋果 → 可用「香蕉、橘子、西瓜」（同為水果，但不是蘋果的同義詞）
-   - ✅ 正確：cost=成本 → 可用「利潤、收入、預算」（同為財務相關，但意思完全不同）
+## 嚴格禁止清單（近義詞 = 意思相近的詞）
 
-5. **干擾項之間也不能是近義詞**
-6. **常見詞彙**：使用小學生都認識的常見詞
+以下是常見錯誤，這些詞彼此意思太接近，絕對不能互相當干擾項：
+- change/改變 的近義詞：變化、轉變、變更、轉換、調整、變遷、改動、更改、變動 ❌
+- cost/成本 的近義詞：費用、價格、代價、開支、花費、支出、經費 ❌
+- type/類型 的近義詞：類別、種類、型態、形式、樣式、款式、品種 ❌
+- important/重要 的近義詞：關鍵、主要、要緊、重大、緊要、關鍵性 ❌
 
-⚠️ 特別警告：「同義詞」和「同領域詞」完全不同！
-- 「費用」和「成本」意思相近 = 同義詞 ❌ 絕對不可用
-- 「利潤」和「成本」意思不同 = 同領域詞 ✅ 可以用
+## 正確範例（同主題但意思完全不同）
+
+| 單字 | 正確翻譯 | ✅ 好的干擾項 | 為什麼好 |
+|------|----------|---------------|----------|
+| change | 改變 | 保持、停止、維持 | 都是「狀態動詞」但意思相反 |
+| cost | 成本 | 利潤、營收、淨值 | 都是「財務術語」但概念不同 |
+| type | 類型 | 數量、顏色、大小 | 都是「描述屬性」但面向不同 |
+| apple | 蘋果 | 香蕉、橘子、葡萄 | 都是「水果」但不是蘋果 |
+| assignment | 作業 | 考試、課本、教室 | 都是「學校相關」但不是作業 |
+
+## 判斷標準
+
+問自己：「如果學生選了這個干擾項，是因為不知道單字意思，還是因為干擾項本身就是對的？」
+- 如果干擾項本身可以當正確答案 → ❌ 這是近義詞，不能用
+- 如果干擾項明顯錯誤但同主題 → ✅ 這才是好的干擾項
 
 ## 輸出格式
 JSON 陣列，只包含 {count} 個干擾項：
@@ -684,13 +689,12 @@ JSON 陣列，只包含 {count} 個干擾項：
 只回覆 JSON 陣列，不要其他文字。"""
 
             system_instruction = (
-                "You are a vocabulary quiz generator for language learners. "
-                "Your task is to generate WRONG answer options (distractors). "
-                "RULES: 1) NO synonyms or similar meanings (改變→不可用交換/變換) "
-                "2) Stay in the same category/domain (assignment=作業→用考試/報告, apple=蘋果→用香蕉/橘子) "
-                "3) Distractors should be plausible, not random words. "
-                "All Chinese MUST be Traditional Chinese (繁體中文). "
-                "Respond with valid JSON array only."
+                "You are a vocabulary quiz generator. Generate WRONG answers (distractors) that are: "
+                "1) NEVER synonyms - if it could be a correct translation, don't use it "
+                "2) Same topic/category but clearly different meaning "
+                "3) 改變→不可用變化/轉變/調整，要用保持/停止/維持 "
+                "4) 成本→不可用費用/價格，要用利潤/營收 "
+                "5) All in Traditional Chinese. JSON array only."
             )
 
             # Use Vertex AI or OpenAI based on configuration
@@ -699,7 +703,7 @@ JSON 陣列，只包含 {count} 個干擾項：
                     prompt=prompt,
                     model_type="flash",
                     max_tokens=200,
-                    temperature=0.3,  # Low temperature to strictly follow prompt rules
+                    temperature=0.2,  # Very low temperature to strictly follow prompt rules
                     system_instruction=system_instruction,
                 )
             else:
@@ -709,7 +713,7 @@ JSON 陣列，只包含 {count} 個干擾項：
                         {"role": "system", "content": system_instruction},
                         {"role": "user", "content": prompt},
                     ],
-                    temperature=0.3,  # Low temperature to strictly follow prompt rules
+                    temperature=0.2,  # Very low temperature to strictly follow prompt rules
                     max_tokens=200,
                 )
 
@@ -778,29 +782,33 @@ JSON 陣列，只包含 {count} 個干擾項：
 單字列表:
 {words_json}
 
-## 嚴格要求（必須遵守）
+## 核心原則：干擾項必須是「學生可能會搞混的錯誤答案」
 
-1. **繁體中文**：所有干擾項必須是繁體中文
-2. **同詞性**：名詞配名詞、動詞配動詞、形容詞配形容詞
-3. **絕對禁止近義詞**（最重要！）：
-   - ❌ 錯誤（近義詞）：change=改變 → 不可用「交換、變換、轉變、變更」
-   - ❌ 錯誤（近義詞）：cost=成本 → 不可用「費用、價格、代價、開支、花費」
-   - ❌ 錯誤（近義詞）：type=類型 → 不可用「類別、種類、型態、形式」
-   - ❌ 錯誤（近義詞）：important=重要 → 不可用「關鍵、主要、要緊、重大」
-   - ❌ 錯誤（太離譜）：assignment=作業 → 不可用「海豚、太陽、香蕉」
+干擾項要讓學生需要思考才能排除，但絕對不能是正確答案的同義詞。
 
-4. **要用同領域但不同意思的詞**：
-   - ✅ 正確：assignment=作業 → 可用「考試、報告、課本」（同為學校相關，但意思完全不同）
-   - ✅ 正確：apple=蘋果 → 可用「香蕉、橘子、西瓜」（同為水果，但不是蘋果的同義詞）
-   - ✅ 正確：cost=成本 → 可用「利潤、收入、預算」（同為財務相關，但意思完全不同）
-   - ✅ 正確：happy=快樂 → 可用「悲傷、憤怒、害怕」（同為情緒詞，但意思完全不同）
+## 嚴格禁止清單（近義詞 = 意思相近的詞）
 
-5. **干擾項之間也不能是近義詞**
-6. **常見詞彙**：使用小學生都認識的常見詞
+以下是常見錯誤，這些詞彼此意思太接近，絕對不能互相當干擾項：
+- change/改變 的近義詞：變化、轉變、變更、轉換、調整、變遷、改動、更改、變動 ❌
+- cost/成本 的近義詞：費用、價格、代價、開支、花費、支出、經費 ❌
+- type/類型 的近義詞：類別、種類、型態、形式、樣式、款式、品種 ❌
+- important/重要 的近義詞：關鍵、主要、要緊、重大、緊要、關鍵性 ❌
 
-⚠️ 特別警告：「同義詞」和「同領域詞」完全不同！
-- 「費用」和「成本」意思相近 = 同義詞 ❌ 絕對不可用
-- 「利潤」和「成本」意思不同 = 同領域詞 ✅ 可以用
+## 正確範例（同主題但意思完全不同）
+
+| 單字 | 正確翻譯 | ✅ 好的干擾項 | 為什麼好 |
+|------|----------|---------------|----------|
+| change | 改變 | 保持、停止、維持 | 都是「狀態動詞」但意思相反 |
+| cost | 成本 | 利潤、營收、淨值 | 都是「財務術語」但概念不同 |
+| type | 類型 | 數量、顏色、大小 | 都是「描述屬性」但面向不同 |
+| apple | 蘋果 | 香蕉、橘子、葡萄 | 都是「水果」但不是蘋果 |
+| happy | 快樂 | 悲傷、憤怒、害怕 | 都是「情緒詞」但不是快樂 |
+
+## 判斷標準
+
+問自己：「如果學生選了這個干擾項，是因為不知道單字意思，還是因為干擾項本身就是對的？」
+- 如果干擾項本身可以當正確答案 → ❌ 這是近義詞，不能用
+- 如果干擾項明顯錯誤但同主題 → ✅ 這才是好的干擾項
 
 ## 輸出格式
 JSON 陣列，每個元素是一個包含 {count} 個干擾項的陣列：
@@ -809,13 +817,12 @@ JSON 陣列，每個元素是一個包含 {count} 個干擾項的陣列：
 只回覆 JSON 陣列，不要其他文字。"""
 
             system_instruction = (
-                "You are a vocabulary quiz generator for language learners. "
-                "Your task is to generate WRONG answer options (distractors). "
-                "RULES: 1) NO synonyms or similar meanings (改變→不可用交換/變換) "
-                "2) Stay in the same category/domain (assignment=作業→用考試/報告, apple=蘋果→用香蕉/橘子) "
-                "3) Distractors should be plausible, not random words. "
-                "All Chinese MUST be Traditional Chinese (繁體中文). "
-                "Respond with valid JSON array only."
+                "You are a vocabulary quiz generator. Generate WRONG answers (distractors) that are: "
+                "1) NEVER synonyms - if it could be a correct translation, don't use it "
+                "2) Same topic/category but clearly different meaning "
+                "3) 改變→不可用變化/轉變/調整，要用保持/停止/維持 "
+                "4) 成本→不可用費用/價格，要用利潤/營收 "
+                "5) All in Traditional Chinese. JSON array only."
             )
 
             # Use Vertex AI or OpenAI based on configuration
@@ -824,7 +831,7 @@ JSON 陣列，每個元素是一個包含 {count} 個干擾項的陣列：
                     prompt=prompt,
                     model_type="flash",
                     max_tokens=1000,
-                    temperature=0.3,  # Low temperature to strictly follow prompt rules
+                    temperature=0.2,  # Very low temperature to strictly follow prompt rules
                     system_instruction=system_instruction,
                 )
             else:
@@ -834,7 +841,7 @@ JSON 陣列，每個元素是一個包含 {count} 個干擾項的陣列：
                         {"role": "system", "content": system_instruction},
                         {"role": "user", "content": prompt},
                     ],
-                    temperature=0.3,  # Low temperature to strictly follow prompt rules
+                    temperature=0.2,  # Very low temperature to strictly follow prompt rules
                     max_tokens=1000,
                 )
 

@@ -3622,6 +3622,9 @@ async def get_assignment_preview(
                     "text": item.text,
                     "translation": item.translation,
                     "audio_url": item.audio_url,
+                    "image_url": item.image_url,  # 修復：添加圖片 URL
+                    "part_of_speech": item.part_of_speech,
+                    "order_index": item.order_index,
                     "example_sentence": item.example_sentence,
                     "example_sentence_translation": item.example_sentence_translation,
                     "recording_url": None,  # 預覽模式沒有學生錄音
