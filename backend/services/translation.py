@@ -658,14 +658,24 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
 
 1. **繁體中文**：所有干擾項必須是繁體中文
 2. **同詞性**：名詞配名詞、動詞配動詞、形容詞配形容詞
-3. **不同意思但同領域**：
-   - ❌ 錯誤（近義詞）：change=改變 → 不可用「交換、變換、轉變」
+3. **絕對禁止近義詞**（最重要！）：
+   - ❌ 錯誤（近義詞）：change=改變 → 不可用「交換、變換、轉變、變更」
+   - ❌ 錯誤（近義詞）：cost=成本 → 不可用「費用、價格、代價、開支、花費」
+   - ❌ 錯誤（近義詞）：type=類型 → 不可用「類別、種類、型態、形式」
+   - ❌ 錯誤（近義詞）：important=重要 → 不可用「關鍵、主要、要緊、重大」
    - ❌ 錯誤（太離譜）：assignment=作業 → 不可用「海豚、太陽、香蕉」
-   - ✅ 正確：assignment=作業 → 可用「考試、報告、課本」（同為學校相關詞）
-   - ✅ 正確：apple=蘋果 → 可用「香蕉、橘子、西瓜」（同為水果）
 
-4. **干擾項之間也不能是近義詞**
-5. **常見詞彙**：使用小學生都認識的常見詞
+4. **要用同領域但不同意思的詞**：
+   - ✅ 正確：assignment=作業 → 可用「考試、報告、課本」（同為學校相關，但意思完全不同）
+   - ✅ 正確：apple=蘋果 → 可用「香蕉、橘子、西瓜」（同為水果，但不是蘋果的同義詞）
+   - ✅ 正確：cost=成本 → 可用「利潤、收入、預算」（同為財務相關，但意思完全不同）
+
+5. **干擾項之間也不能是近義詞**
+6. **常見詞彙**：使用小學生都認識的常見詞
+
+⚠️ 特別警告：「同義詞」和「同領域詞」完全不同！
+- 「費用」和「成本」意思相近 = 同義詞 ❌ 絕對不可用
+- 「利潤」和「成本」意思不同 = 同領域詞 ✅ 可以用
 
 ## 輸出格式
 JSON 陣列，只包含 {count} 個干擾項：
@@ -689,7 +699,7 @@ JSON 陣列，只包含 {count} 個干擾項：
                     prompt=prompt,
                     model_type="flash",
                     max_tokens=200,
-                    temperature=0.8,
+                    temperature=0.3,  # Low temperature to strictly follow prompt rules
                     system_instruction=system_instruction,
                 )
             else:
@@ -699,7 +709,7 @@ JSON 陣列，只包含 {count} 個干擾項：
                         {"role": "system", "content": system_instruction},
                         {"role": "user", "content": prompt},
                     ],
-                    temperature=0.8,  # Balanced: variety while following instructions
+                    temperature=0.3,  # Low temperature to strictly follow prompt rules
                     max_tokens=200,
                 )
 
@@ -772,15 +782,25 @@ JSON 陣列，只包含 {count} 個干擾項：
 
 1. **繁體中文**：所有干擾項必須是繁體中文
 2. **同詞性**：名詞配名詞、動詞配動詞、形容詞配形容詞
-3. **不同意思但同領域**：
-   - ❌ 錯誤範例（近義詞）：change=改變 → 不可用「交換、變換、轉變」
-   - ❌ 錯誤範例（太離譜）：assignment=作業 → 不可用「海豚、太陽、香蕉」
-   - ✅ 正確範例：assignment=作業 → 可用「考試、報告、課本」（同為學校相關詞）
-   - ✅ 正確範例：apple=蘋果 → 可用「香蕉、橘子、西瓜」（同為水果）
-   - ✅ 正確範例：happy=快樂 → 可用「悲傷、憤怒、害怕」（同為情緒詞）
+3. **絕對禁止近義詞**（最重要！）：
+   - ❌ 錯誤（近義詞）：change=改變 → 不可用「交換、變換、轉變、變更」
+   - ❌ 錯誤（近義詞）：cost=成本 → 不可用「費用、價格、代價、開支、花費」
+   - ❌ 錯誤（近義詞）：type=類型 → 不可用「類別、種類、型態、形式」
+   - ❌ 錯誤（近義詞）：important=重要 → 不可用「關鍵、主要、要緊、重大」
+   - ❌ 錯誤（太離譜）：assignment=作業 → 不可用「海豚、太陽、香蕉」
 
-4. **干擾項之間也要完全不同**：三個干擾項彼此也不能是近義詞
-5. **常見詞彙**：使用小學生都認識的常見詞
+4. **要用同領域但不同意思的詞**：
+   - ✅ 正確：assignment=作業 → 可用「考試、報告、課本」（同為學校相關，但意思完全不同）
+   - ✅ 正確：apple=蘋果 → 可用「香蕉、橘子、西瓜」（同為水果，但不是蘋果的同義詞）
+   - ✅ 正確：cost=成本 → 可用「利潤、收入、預算」（同為財務相關，但意思完全不同）
+   - ✅ 正確：happy=快樂 → 可用「悲傷、憤怒、害怕」（同為情緒詞，但意思完全不同）
+
+5. **干擾項之間也不能是近義詞**
+6. **常見詞彙**：使用小學生都認識的常見詞
+
+⚠️ 特別警告：「同義詞」和「同領域詞」完全不同！
+- 「費用」和「成本」意思相近 = 同義詞 ❌ 絕對不可用
+- 「利潤」和「成本」意思不同 = 同領域詞 ✅ 可以用
 
 ## 輸出格式
 JSON 陣列，每個元素是一個包含 {count} 個干擾項的陣列：
@@ -804,7 +824,7 @@ JSON 陣列，每個元素是一個包含 {count} 個干擾項的陣列：
                     prompt=prompt,
                     model_type="flash",
                     max_tokens=1000,
-                    temperature=0.8,
+                    temperature=0.3,  # Low temperature to strictly follow prompt rules
                     system_instruction=system_instruction,
                 )
             else:
@@ -814,7 +834,7 @@ JSON 陣列，每個元素是一個包含 {count} 個干擾項的陣列：
                         {"role": "system", "content": system_instruction},
                         {"role": "user", "content": prompt},
                     ],
-                    temperature=0.8,  # Balanced: variety while following instructions
+                    temperature=0.3,  # Low temperature to strictly follow prompt rules
                     max_tokens=1000,
                 )
 
