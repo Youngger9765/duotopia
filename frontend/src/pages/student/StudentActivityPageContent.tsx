@@ -1841,6 +1841,7 @@ export default function StudentActivityPageContent({
           <WordReadingActivity
             assignmentId={assignmentId}
             isPreviewMode={isPreviewMode}
+            authToken={authToken}
             onComplete={() => {
               toast.success(t("wordReading.toast.completed") || "作業已完成！");
               if (onSubmit) {

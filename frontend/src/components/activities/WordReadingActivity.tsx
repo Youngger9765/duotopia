@@ -53,6 +53,7 @@ interface WordItem {
 interface WordReadingActivityProps {
   assignmentId: number;
   isPreviewMode?: boolean;
+  authToken?: string; // 認證 token（預覽模式用老師 token）
   showTranslation?: boolean;
   showImage?: boolean;
   onComplete?: () => void;
@@ -61,12 +62,15 @@ interface WordReadingActivityProps {
 export default function WordReadingActivity({
   assignmentId,
   isPreviewMode = false,
+  authToken,
   showTranslation: _showTranslationProp = true, // 保留 prop 但使用 API 返回的值
   showImage: _showImageProp = true, // 保留 prop 但使用 API 返回的值
   onComplete,
 }: WordReadingActivityProps) {
   const { t } = useTranslation();
-  const { token } = useStudentAuthStore();
+  const { token: studentToken } = useStudentAuthStore();
+  // 預覽模式使用傳入的 authToken（老師 token），否則使用學生 token
+  const token = isPreviewMode && authToken ? authToken : studentToken;
 
   // State
   const [loading, setLoading] = useState(true);
@@ -85,14 +89,16 @@ export default function WordReadingActivity({
       setLoading(true);
       const apiUrl = import.meta.env.VITE_API_URL || "";
 
-      const response = await fetch(
-        `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/activities`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      // 預覽模式使用老師端點，學生模式使用學生端點
+      const endpoint = isPreviewMode
+        ? `${apiUrl}/api/teachers/assignments/${assignmentId}/preview/vocabulary/activities`
+        : `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/activities`;
+
+      const response = await fetch(endpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to load vocabulary items: ${response.status}`);
@@ -120,7 +126,7 @@ export default function WordReadingActivity({
     } finally {
       setLoading(false);
     }
-  }, [assignmentId, token, t]);
+  }, [assignmentId, token, isPreviewMode, t]);
 
   useEffect(() => {
     loadItems();

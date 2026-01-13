@@ -4154,6 +4154,80 @@ async def get_quota_usage_analytics(
     return analytics
 
 
+# ============ Word Reading Preview API ============
+
+
+@router.get("/assignments/{assignment_id}/preview/vocabulary/activities")
+async def preview_vocabulary_activities(
+    assignment_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    預覽模式專用：取得單字朗讀練習資料
+
+    - 供老師預覽示範用
+    - 不需要 StudentAssignment，直接從 Assignment 讀取
+    - 返回格式與學生端 API 相同
+    """
+    # 取得作業（確認老師有權限）
+    assignment = (
+        db.query(Assignment)
+        .join(Classroom)
+        .filter(
+            Assignment.id == assignment_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 確認是單字朗讀模式
+    if assignment.practice_mode != "word_reading":
+        raise HTTPException(
+            status_code=400, detail="This assignment is not in word_reading mode"
+        )
+
+    # 取得所有內容項目
+    content_items = (
+        db.query(ContentItem)
+        .join(Content)
+        .join(AssignmentContent)
+        .filter(AssignmentContent.assignment_id == assignment.id)
+        .order_by(ContentItem.order_index)
+        .all()
+    )
+
+    # 構建 items 資料（預覽模式沒有學生進度）
+    items = []
+    for item in content_items:
+        item_data = {
+            "id": item.id,
+            "text": item.text,
+            "translation": item.translation,
+            "audio_url": item.audio_url,
+            "image_url": item.image_url,
+            "part_of_speech": item.part_of_speech,
+            "order_index": item.order_index,
+            "recording_url": None,  # 預覽模式沒有學生錄音
+        }
+        items.append(item_data)
+
+    return {
+        "assignment_id": assignment_id,
+        "title": assignment.title,
+        "status": "preview",
+        "practice_mode": "word_reading",
+        "show_translation": assignment.show_translation if assignment.show_translation is not None else True,
+        "show_image": assignment.show_image if assignment.show_image is not None else True,
+        "time_limit_per_question": assignment.time_limit_per_question or 0,
+        "total_items": len(items),
+        "items": items,
+    }
+
+
 # ============ Word Selection Preview API ============
 
 
