@@ -4220,8 +4220,12 @@ async def preview_vocabulary_activities(
         "title": assignment.title,
         "status": "preview",
         "practice_mode": "word_reading",
-        "show_translation": assignment.show_translation if assignment.show_translation is not None else True,
-        "show_image": assignment.show_image if assignment.show_image is not None else True,
+        "show_translation": assignment.show_translation
+        if assignment.show_translation is not None
+        else True,
+        "show_image": assignment.show_image
+        if assignment.show_image is not None
+        else True,
         "time_limit_per_question": assignment.time_limit_per_question or 0,
         "total_items": len(items),
         "items": items,
