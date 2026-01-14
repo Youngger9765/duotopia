@@ -141,12 +141,12 @@ export default function TeachersPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb items={[{ label: "組織管理" }, { label: "教師管理" }]} />
+      <Breadcrumb items={[{ label: "組織管理" }, { label: "人員管理" }]} />
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">教師管理</h1>
+          <h1 className="text-3xl font-bold text-gray-900">人員管理</h1>
           <p className="text-gray-600 mt-2">管理組織內的教師成員</p>
         </div>
         <Button className="gap-2">

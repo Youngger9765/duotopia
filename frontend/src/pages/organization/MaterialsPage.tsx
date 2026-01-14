@@ -26,7 +26,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { BookOpen, Plus, Edit2, Trash2, Loader2 } from "lucide-react";
+import {
+  BookOpen,
+  Plus,
+  Edit2,
+  Trash2,
+  Loader2,
+  FileText,
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface ProgramData {
@@ -139,6 +146,28 @@ export default function MaterialsPage() {
       toast.error("網路錯誤");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const getLevelBadgeColor = (level?: string) => {
+    if (!level) return "bg-gray-100 text-gray-800";
+    switch (level.toUpperCase()) {
+      case "PREA":
+        return "bg-gray-100 text-gray-800";
+      case "A1":
+        return "bg-green-100 text-green-800";
+      case "A2":
+        return "bg-blue-100 text-blue-800";
+      case "B1":
+        return "bg-yellow-100 text-yellow-800";
+      case "B2":
+        return "bg-orange-100 text-orange-800";
+      case "C1":
+        return "bg-purple-100 text-purple-800";
+      case "C2":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -263,13 +292,20 @@ export default function MaterialsPage() {
                 {programs.map((program) => (
                   <TableRow key={program.id}>
                     <TableCell className="font-medium">
-                      {program.name}
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-gray-400" />
+                        {program.name}
+                      </div>
                     </TableCell>
                     <TableCell className="max-w-xs truncate">
                       {program.description || "-"}
                     </TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getLevelBadgeColor(
+                          program.level,
+                        )}`}
+                      >
                         {getLevelLabel(program.level)}
                       </span>
                     </TableCell>
