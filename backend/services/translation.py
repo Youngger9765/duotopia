@@ -627,7 +627,7 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
         self,
         word: str,
         translation: str,
-        count: int = 3,
+        count: int = 2,
         part_of_speech: Optional[str] = None,
     ) -> List[str]:
         """
@@ -639,11 +639,11 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
         Args:
             word: The English word (e.g., "apple")
             translation: The correct Chinese translation (e.g., "蘋果")
-            count: Number of distractors to generate (default: 3)
+            count: Number of distractors to generate (default: 2, 另外1個由同作業其他單字提供)
             part_of_speech: Optional part of speech to help generate better distractors
 
         Returns:
-            List of distractor translations (e.g., ["香蕉", "橘子", "葡萄"])
+            List of distractor translations (e.g., ["香蕉", "橘子"])
         """
         self._ensure_client()
         import json
@@ -654,59 +654,46 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
             prompt = f"""為單字 "{word}"（正確翻譯: {translation}）生成 {count} 個干擾項（錯誤選項）。
 {pos_hint}
 
-## 核心原則：干擾項必須是「同領域但意思不同的詞」
+## 核心原則
 
-干擾項要讓學生需要思考才能排除，但：
-1. 絕對不能是近義詞（意思相近）
-2. 也不要用反義詞（意思相反）
-3. 要用「同領域但不相關」的詞
+生成「同領域但意思不同」的干擾項。
 
-## 嚴格禁止清單
+## 規則
 
-### 禁止近義詞（意思相近的詞）：
-- change/改變：變化、轉變、變更、轉換、調整、變遷、改動、更改、變動 ❌
-- cost/成本：費用、價格、代價、開支、花費、支出、經費 ❌
-- type/類型：類別、種類、型態、形式、樣式、款式、品種 ❌
-- config/配置：設定、設置、組態、安裝 ❌
-- associated/相關：關聯、有關、連結、連繫 ❌
+1. **絕對禁止近義詞**：意思相近的詞不能當干擾項
+   - change/改變 → ❌ 變化、轉變、調整
+   - cost/成本 → ❌ 費用、價格、開支
+   - config/配置 → ❌ 設定、設置
 
-### 禁止反義詞（意思相反的詞）：
-- associated/相關：不可用「無關、不相干、無聯繫」❌
-- change/改變：不可用「維持、保持、不變」❌
-- increase/增加：不可用「減少、降低」❌
+2. **允許使用反義詞，但要有多樣性**：反義詞可以出現，但不要全部都是反義詞
+   - 如果生成 2 個干擾項，最多 1 個可以是反義詞
 
-## 正確範例（同領域但不相關的詞）
+3. **優先使用「同領域但不相關」的詞**：
+   - change/改變 → ✅ 移動、旋轉、執行（都是動作動詞）
+   - cost/成本 → ✅ 利潤、營收、淨值（都是財務術語）
+   - associated/相關 → ✅ 公開、預設、必要（都是描述性質）
+
+## 範例
 
 | 單字 | 正確翻譯 | ✅ 好的干擾項 | 為什麼好 |
 |------|----------|---------------|----------|
-| change | 改變 | 移動、旋轉、執行 | 都是「動作動詞」但不相關 |
-| cost | 成本 | 利潤、營收、淨值 | 都是「財務術語」但概念不同 |
-| type | 類型 | 數量、顏色、大小 | 都是「屬性詞」但面向不同 |
-| config | 配置 | 效能、版本、權限 | 都是「系統相關」但概念不同 |
-| associated | 相關 | 公開、預設、必要 | 都是「描述性質」但不相關 |
-| apple | 蘋果 | 香蕉、橘子、葡萄 | 都是「水果」但不是蘋果 |
-
-## 判斷標準
-
-問自己三個問題：
-1. 這個詞可以當正確答案嗎？→ 可以就是近義詞 ❌
-2. 這個詞是正確答案的相反？→ 是就是反義詞 ❌
-3. 這個詞和正確答案同領域但不相關？→ 是才是好的干擾項 ✅
+| change | 改變 | 移動、執行 | 同領域不相關 |
+| increase | 增加 | 計算、減少 | 1個不相關 + 1個反義 ✅ |
+| happy | 快樂 | 驚訝、悲傷 | 1個不相關 + 1個反義 ✅ |
+| apple | 蘋果 | 香蕉、橘子 | 都是水果但不是蘋果 |
 
 ## 輸出格式
 JSON 陣列，只包含 {count} 個干擾項：
-["干擾項1", "干擾項2", "干擾項3"]
+["干擾項1", "干擾項2"]
 
 只回覆 JSON 陣列，不要其他文字。"""
 
             system_instruction = (
                 "You are a vocabulary quiz generator. Generate WRONG answers (distractors) that are: "
                 "1) NEVER synonyms - if it could be a correct translation, don't use it "
-                "2) NEVER antonyms - opposite meanings are too easy to identify "
-                "3) Same domain but UNRELATED meaning (同領域但不相關) "
-                "4) 改變→不可用變化/轉變/調整(近義)或維持/保持(反義)，要用移動/旋轉/執行 "
-                "5) 相關→不可用關聯/有關(近義)或無關/不相干(反義)，要用公開/預設/必要 "
-                "6) All in Traditional Chinese. JSON array only."
+                "2) Antonyms are OK but not ALL of them - mix antonyms with unrelated words "
+                "3) Prefer same domain but UNRELATED meaning (同領域但不相關) "
+                "4) All in Traditional Chinese. JSON array only."
             )
 
             # Use Vertex AI or OpenAI based on configuration
@@ -768,14 +755,14 @@ JSON 陣列，只包含 {count} 個干擾項：
     async def batch_generate_distractors(
         self,
         words: List[Dict[str, str]],
-        count: int = 3,
+        count: int = 2,
     ) -> List[List[str]]:
         """
         Batch generate distractors for multiple words.
 
         Args:
             words: List of dicts with 'word', 'translation', and optionally 'part_of_speech'
-            count: Number of distractors per word (default: 3)
+            count: Number of distractors per word (default: 2, 另外1個由同作業其他單字提供)
 
         Returns:
             List of distractor lists, one per input word
@@ -796,63 +783,48 @@ JSON 陣列，只包含 {count} 個干擾項：
 單字列表（請按此順序輸出）:
 {words_json}
 
-## 核心原則：干擾項必須是「同領域但意思不同的詞」
+## 核心原則
 
-干擾項要讓學生需要思考才能排除，但：
-1. 絕對不能是近義詞（意思相近）
-2. 也不要用反義詞（意思相反）
-3. 要用「同領域但不相關」的詞
+生成「同領域但意思不同」的干擾項。
 
-## 嚴格禁止清單
+## 規則
 
-### 禁止近義詞（意思相近的詞）：
-- change/改變：變化、轉變、變更、轉換、調整、變遷、改動、更改、變動 ❌
-- cost/成本：費用、價格、代價、開支、花費、支出、經費 ❌
-- type/類型：類別、種類、型態、形式、樣式、款式、品種 ❌
-- config/配置：設定、設置、組態、安裝 ❌
-- associated/相關：關聯、有關、連結、連繫 ❌
-- important/重要：關鍵、主要、要緊、重大、緊要、關鍵性 ❌
+1. **絕對禁止近義詞**：意思相近的詞不能當干擾項
+   - change/改變 → ❌ 變化、轉變、調整
+   - cost/成本 → ❌ 費用、價格、開支
+   - config/配置 → ❌ 設定、設置
 
-### 禁止反義詞（意思相反的詞）：
-- associated/相關：不可用「無關、不相干、無聯繫」❌
-- change/改變：不可用「維持、保持、不變」❌
-- increase/增加：不可用「減少、降低」❌
-- happy/快樂：不可用「悲傷、不快樂」❌
+2. **允許使用反義詞，但要有多樣性**：反義詞可以出現，但不要全部都是反義詞
+   - 如果生成 2 個干擾項，最多 1 個可以是反義詞
 
-## 正確範例（同領域但不相關的詞）
+3. **優先使用「同領域但不相關」的詞**：
+   - change/改變 → ✅ 移動、旋轉、執行（都是動作動詞）
+   - cost/成本 → ✅ 利潤、營收、淨值（都是財務術語）
+   - associated/相關 → ✅ 公開、預設、必要（都是描述性質）
+
+## 範例
 
 | 單字 | 正確翻譯 | ✅ 好的干擾項 | 為什麼好 |
 |------|----------|---------------|----------|
-| change | 改變 | 移動、旋轉、執行 | 都是「動作動詞」但不相關 |
-| cost | 成本 | 利潤、營收、淨值 | 都是「財務術語」但概念不同 |
-| type | 類型 | 數量、顏色、大小 | 都是「屬性詞」但面向不同 |
-| config | 配置 | 效能、版本、權限 | 都是「系統相關」但概念不同 |
-| associated | 相關 | 公開、預設、必要 | 都是「描述性質」但不相關 |
-| apple | 蘋果 | 香蕉、橘子、葡萄 | 都是「水果」但不是蘋果 |
-
-## 判斷標準
-
-問自己三個問題：
-1. 這個詞可以當正確答案嗎？→ 可以就是近義詞 ❌
-2. 這個詞是正確答案的相反？→ 是就是反義詞 ❌
-3. 這個詞和正確答案同領域但不相關？→ 是才是好的干擾項 ✅
+| change | 改變 | 移動、執行 | 同領域不相關 |
+| increase | 增加 | 計算、減少 | 1個不相關 + 1個反義 ✅ |
+| happy | 快樂 | 驚訝、悲傷 | 1個不相關 + 1個反義 ✅ |
+| apple | 蘋果 | 香蕉、橘子 | 都是水果但不是蘋果 |
 
 ## 輸出格式
 JSON 陣列，每個元素是一個包含 {count} 個干擾項的陣列。
 ⚠️ 順序必須與輸入單字列表完全對應！
-[["干擾項1", "干擾項2", "干擾項3"], ...]
+[["干擾項1", "干擾項2"], ...]
 
 只回覆 JSON 陣列，不要其他文字。"""
 
             system_instruction = (
                 "You are a vocabulary quiz generator. Generate WRONG answers (distractors) that are: "
                 "1) NEVER synonyms - if it could be a correct translation, don't use it "
-                "2) NEVER antonyms - opposite meanings are too easy to identify "
-                "3) Same domain but UNRELATED meaning (同領域但不相關) "
-                "4) 改變→不可用變化/轉變/調整(近義)或維持/保持(反義)，要用移動/旋轉/執行 "
-                "5) 相關→不可用關聯/有關(近義)或無關/不相干(反義)，要用公開/預設/必要 "
-                "6) MAINTAIN INPUT ORDER - output array must match input word order exactly "
-                "7) All in Traditional Chinese. JSON array only."
+                "2) Antonyms are OK but not ALL of them - mix antonyms with unrelated words "
+                "3) Prefer same domain but UNRELATED meaning (同領域但不相關) "
+                "4) MAINTAIN INPUT ORDER - output array must match input word order exactly "
+                "5) All in Traditional Chinese. JSON array only."
             )
 
             # Use Vertex AI or OpenAI based on configuration

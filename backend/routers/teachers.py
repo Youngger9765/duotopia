@@ -2513,9 +2513,9 @@ async def create_content(
             ]
 
             try:
-                # Generate distractors in batch using OpenAI
+                # Generate distractors in batch using OpenAI (2個AI生成，1個從同作業其他單字取)
                 all_distractors = await translation_service.batch_generate_distractors(
-                    words_data, count=3
+                    words_data, count=2
                 )
 
                 # Update each content item with its distractors
@@ -3063,9 +3063,9 @@ async def update_content(
             ]
 
             try:
-                # Generate distractors in batch using OpenAI
+                # Generate distractors in batch using OpenAI (2個AI生成，1個從同作業其他單字取)
                 all_distractors = await translation_service.batch_generate_distractors(
-                    words_data, count=3
+                    words_data, count=2
                 )
 
                 # Update each content item with its distractors
@@ -4302,8 +4302,9 @@ async def preview_word_selection_start(
             for item in items_needing_generation
         ]
         try:
+            # 2個AI生成，1個從同作業其他單字取
             generated = await translation_service.batch_generate_distractors(
-                words_for_distractors, count=3
+                words_for_distractors, count=2
             )
             for i, item in enumerate(items_needing_generation):
                 if i < len(generated):
