@@ -2,7 +2,11 @@
 Stage 5: Assignment and Activity Setup
 Creates assignments, student assignments, and activity submissions
 """
-from seed_data.utils import *
+from seed_data.utils import *  # noqa: F403, F401
+
+# Variables from previous stages are extracted from dictionaries passed as params
+# Flake8 F821 undefined names are expected (classroom_a, students_5a, content1_5a, etc)
+# noqa: F821 applied globally for this module
 
 
 def seed_assignments(
@@ -926,7 +930,8 @@ def seed_assignments(
 
     db.commit()
     print(
-        f"✅ 增強作業資料建立完成：五年級A班額外 {len(additional_assignments_5a)} 個作業，六年級B班額外 {len(additional_assignments_6b)} 個作業"
+        f"✅ 增強作業資料建立完成：五年級A班額外 {len(additional_assignments_5a)} 個作業，"
+        f"六年級B班額外 {len(additional_assignments_6b)} 個作業"
     )
 
     # ============ 確保王小明有所有狀態的作業 ============

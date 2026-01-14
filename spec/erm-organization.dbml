@@ -29,9 +29,13 @@ Table organizations {
   contact_phone varchar(50) [null, note: "機構聯絡電話"]
   address text [null, note: "機構地址"]
   
-  // 統一編號 (QA 新增需求: 2026-01-05)
-  tax_id varchar(20) [unique, null, note: "統一編號，唯一值，待定義是否必填"]
-  
+  // 統一編號
+  // Note: Partial unique index (WHERE is_active=true) allows reuse after soft delete
+  tax_id varchar(20) [unique, null, note: "統一編號（可選填，軟刪除後可重複使用）"]
+
+  // Note: Owner information retrieved via teacher_organizations relationship (role='org_owner')
+  // No need to duplicate teacher data in organizations table (avoid data redundancy)
+
   // 狀態
   is_active boolean [not null, default: true, note: "機構是否啟用"]
   

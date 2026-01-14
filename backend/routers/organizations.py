@@ -8,7 +8,7 @@ Note: Per-issue deploy now includes database migrations (2026-01-11 v4 - upgrade
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload, load_only
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
@@ -65,6 +65,7 @@ class OrganizationCreate(BaseModel):
     display_name: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
     tax_id: Optional[str] = Field(None, max_length=20, description="統一編號 (8 digits)")
+    teacher_limit: Optional[int] = Field(None, ge=1, description="教師授權數上限 (NULL = 無限制)")
     contact_email: Optional[str] = Field(None, max_length=200)
     contact_phone: Optional[str] = Field(None, max_length=50)
     address: Optional[str] = None
@@ -77,6 +78,7 @@ class OrganizationUpdate(BaseModel):
     display_name: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
     tax_id: Optional[str] = Field(None, max_length=20, description="統一編號 (8 digits)")
+    teacher_limit: Optional[int] = Field(None, ge=1, description="教師授權數上限 (NULL = 無限制)")
     contact_email: Optional[str] = Field(None, max_length=200)
     contact_phone: Optional[str] = Field(None, max_length=50)
     address: Optional[str] = None
@@ -91,6 +93,7 @@ class OrganizationResponse(BaseModel):
     display_name: Optional[str]
     description: Optional[str]
     tax_id: Optional[str]
+    teacher_limit: Optional[int]  # Decision #5: Teacher authorization limit
     contact_email: Optional[str]
     contact_phone: Optional[str]
     address: Optional[str]
@@ -112,6 +115,7 @@ class OrganizationResponse(BaseModel):
             display_name=org.display_name,
             description=org.description,
             tax_id=org.tax_id,
+            teacher_limit=org.teacher_limit,  # Decision #5: Teacher authorization limit
             contact_email=org.contact_email,
             contact_phone=org.contact_phone,
             address=org.address,
@@ -127,15 +131,27 @@ class OrganizationResponse(BaseModel):
 
 
 def check_org_permission(
-    teacher_id: int, org_id: uuid.UUID, db: Session
+    teacher_id: int, org_id: uuid.UUID, db: Session, for_update: bool = False
 ) -> Organization:
     """
     Check if teacher has access to organization.
     Raises HTTPException if not found or no permission.
     Returns organization if permission granted.
+
+    Args:
+        for_update: If True, locks the organization row with SELECT FOR UPDATE
+                   to prevent race conditions in concurrent operations.
     """
-    # Check if organization exists
-    org = db.query(Organization).filter(Organization.id == org_id).first()
+    # Check if organization exists and is active (soft delete strategy)
+    query = db.query(Organization).filter(
+        Organization.id == org_id, Organization.is_active.is_(True)
+    )
+
+    # Lock row if needed (prevents race conditions in teacher limit checks)
+    if for_update:
+        query = query.with_for_update()
+
+    org = query.first()
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found"
@@ -178,11 +194,14 @@ async def create_organization(
     """
     casbin_service = get_casbin_service()
 
-    # Check tax_id uniqueness if provided
+    # Check tax_id uniqueness if provided (only among active organizations)
+    # Per #151 Decision #2: Partial unique index allows tax_id reuse after deactivation
     if org_data.tax_id:
         existing = (
             db.query(Organization)
-            .filter(Organization.tax_id == org_data.tax_id)
+            .filter(
+                Organization.tax_id == org_data.tax_id, Organization.is_active.is_(True)
+            )
             .first()
         )
         if existing:
@@ -196,6 +215,7 @@ async def create_organization(
         display_name=org_data.display_name,
         description=org_data.description,
         tax_id=org_data.tax_id,
+        teacher_limit=org_data.teacher_limit,  # Decision #5: Teacher authorization limit
         contact_email=org_data.contact_email,
         contact_phone=org_data.contact_phone,
         address=org_data.address,
@@ -234,8 +254,10 @@ async def list_organizations(
     Args:
         owner_only: If True, only return organizations where teacher is org_owner
 
-    Security: Returns 403 if teacher has no organization access.
-    Performance: Fetches owners with joinedload to avoid N+1 queries.
+    Returns:
+        List of organizations (empty list if teacher has no organizations)
+
+    Performance: Fetches owners with selectinload to avoid N+1 queries.
     """
     import logging
 
@@ -259,12 +281,10 @@ async def list_organizations(
         teacher_orgs = query.all()
         logger.info(f"Found {len(teacher_orgs)} teacher-organization relationships")
 
-        # ✅ SECURITY FIX: Reject if no organization access
+        # Return empty list if teacher has no organizations (not an error)
         if not teacher_orgs:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="此功能僅限組織成員使用。您目前不屬於任何組織。",
-            )
+            logger.info("Teacher has no organizations, returning empty list")
+            return []
 
         # Validate and collect organization IDs (defensive coding - same as stats endpoint)
         org_ids = []
@@ -280,11 +300,10 @@ async def list_organizations(
                     )
                     continue  # Skip invalid UUIDs
 
+        # If all UUIDs were invalid, return empty list
         if not org_ids:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="此功能僅限組織成員使用。您目前不屬於任何組織。",
-            )
+            logger.warning("All organization UUIDs were invalid, returning empty list")
+            return []
     except HTTPException:
         raise
     except Exception as e:
@@ -304,10 +323,16 @@ async def list_organizations(
         logger.info(f"Found {len(organizations)} active organizations")
 
         # ✅ PERFORMANCE FIX: Fetch all org owners in a single query to avoid N+1
+        # ✅ FIX #157: Use selectinload + load_only to prevent loading all Teacher relationships
+        # This avoids massive JOINs that cause timeout in Cloud Run (30s statement_timeout)
         logger.info("Fetching organization owners...")
         owner_rels = (
             db.query(TeacherOrganization)
-            .options(joinedload(TeacherOrganization.teacher))
+            .options(
+                selectinload(TeacherOrganization.teacher).load_only(
+                    Teacher.id, Teacher.name, Teacher.email
+                )
+            )
             .filter(
                 TeacherOrganization.organization_id.in_(org_ids),
                 TeacherOrganization.role == "org_owner",
@@ -473,7 +498,20 @@ async def get_organization(
     Requires teacher to be a member of the organization.
     """
     org = check_org_permission(teacher.id, org_id, db)
-    return OrganizationResponse.from_orm(org)
+
+    # Get org_owner for response
+    owner = (
+        db.query(Teacher)
+        .join(TeacherOrganization)
+        .filter(
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.role == "org_owner",
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+
+    return OrganizationResponse.from_orm(org, owner=owner)
 
 
 @router.patch("/{org_id}", response_model=OrganizationResponse)
@@ -497,12 +535,15 @@ async def update_organization(
     if org_data.description is not None:
         org.description = org_data.description
     if org_data.tax_id is not None:
-        # Check uniqueness if tax_id is being changed
+        # Check uniqueness if tax_id is being changed (only among active organizations)
+        # Per #151 Decision #2: Partial unique index allows tax_id reuse after deactivation
         if org_data.tax_id != org.tax_id:
             existing = (
                 db.query(Organization)
                 .filter(
-                    Organization.tax_id == org_data.tax_id, Organization.id != org_id
+                    Organization.tax_id == org_data.tax_id,
+                    Organization.id != org_id,
+                    Organization.is_active.is_(True),
                 )
                 .first()
             )
@@ -511,6 +552,8 @@ async def update_organization(
                     status_code=status.HTTP_400_BAD_REQUEST, detail="此統一編號已被使用"
                 )
         org.tax_id = org_data.tax_id
+    if org_data.teacher_limit is not None:
+        org.teacher_limit = org_data.teacher_limit  # Decision #5: Update teacher limit
     if org_data.contact_email is not None:
         org.contact_email = org_data.contact_email
     if org_data.contact_phone is not None:
@@ -588,6 +631,14 @@ class TeacherRelationResponse(BaseModel):
         )
 
 
+class TeacherUpdateRequest(BaseModel):
+    """Request model for updating teacher in organization"""
+
+    role: str  # "org_owner" | "org_admin" | "teacher"
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+
 class TeacherInfo(BaseModel):
     """Teacher information in organization"""
 
@@ -618,9 +669,14 @@ async def list_organization_teachers(
     check_org_permission(teacher.id, org_id, db)
 
     # Get all teacher relationships with eager loading (eliminates N+1 query)
+    # ✅ FIX #157: Use selectinload + load_only (same fix as list_organizations)
     teacher_orgs = (
         db.query(TeacherOrganization)
-        .options(joinedload(TeacherOrganization.teacher))
+        .options(
+            selectinload(TeacherOrganization.teacher).load_only(
+                Teacher.id, Teacher.name, Teacher.email
+            )
+        )
         .filter(
             TeacherOrganization.organization_id == org_id,
             TeacherOrganization.is_active.is_(True),
@@ -664,8 +720,9 @@ async def invite_teacher_to_organization(
     """
     casbin_service = get_casbin_service()
 
-    # Check permission (org_owner or org_admin can invite teachers)
-    check_org_permission(teacher.id, org_id, db)
+    # Check permission and get organization (with row lock for teacher limit check)
+    # for_update=True prevents race conditions when checking teacher limit
+    org = check_org_permission(teacher.id, org_id, db, for_update=True)
 
     # Use Casbin to check manage_teachers permission
     has_permission = casbin_service.enforcer.enforce(
@@ -677,6 +734,27 @@ async def invite_teacher_to_organization(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to invite teachers to this organization",
         )
+
+    # Check teacher limit (Decision #5: Teacher Authorization Count)
+    # org is already fetched above with SELECT FOR UPDATE lock
+    if org.teacher_limit is not None:
+        # Count active teachers (excluding org_owner)
+        # org_owner doesn't count towards teacher authorization limit
+        active_teacher_count = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.organization_id == org_id,
+                TeacherOrganization.is_active.is_(True),
+                TeacherOrganization.role != "org_owner",  # Exclude org_owner from count
+            )
+            .count()
+        )
+
+        if active_teacher_count >= org.teacher_limit:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"已達教師授權上限（{org.teacher_limit} 位）",
+            )
 
     # Check if teacher already exists by email
     existing_teacher = db.query(Teacher).filter(Teacher.email == request.email).first()
@@ -786,8 +864,9 @@ async def add_teacher_to_organization(
     """
     casbin_service = get_casbin_service()
 
-    # Check permission (org_owner or org_admin can add teachers)
-    check_org_permission(teacher.id, org_id, db)
+    # Check permission and get organization (with row lock for teacher limit check)
+    # for_update=True prevents race conditions when checking teacher limit
+    org = check_org_permission(teacher.id, org_id, db, for_update=True)
 
     # Use Casbin to check manage_teachers permission
     has_permission = casbin_service.enforcer.enforce(
@@ -816,6 +895,27 @@ async def add_teacher_to_organization(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Organization already has an owner",
+            )
+
+    # Check teacher limit (Decision #5: Teacher Authorization Count)
+    # org is already fetched above with SELECT FOR UPDATE lock
+    if org.teacher_limit is not None:
+        # Count active teachers (excluding org_owner)
+        # org_owner doesn't count towards teacher authorization limit
+        active_teacher_count = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.organization_id == org_id,
+                TeacherOrganization.is_active.is_(True),
+                TeacherOrganization.role != "org_owner",  # Exclude org_owner from count
+            )
+            .count()
+        )
+
+        if active_teacher_count >= org.teacher_limit:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"已達教師授權上限（{org.teacher_limit} 位）",
             )
 
     # Check if teacher already has relationship
@@ -866,6 +966,108 @@ async def add_teacher_to_organization(
         )
 
     return TeacherRelationResponse.from_orm(teacher_org)
+
+
+@router.put("/{org_id}/teachers/{teacher_id}")
+async def update_teacher_role(
+    org_id: uuid.UUID,
+    teacher_id: int,
+    update_data: TeacherUpdateRequest,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Update teacher's role in organization.
+    Requires org_owner role or manage_teachers permission.
+    """
+    from datetime import timezone
+
+    casbin_service = get_casbin_service()
+
+    # Check org exists
+    organization = (
+        db.query(Organization)
+        .filter(Organization.id == org_id, Organization.is_active.is_(True))
+        .first()
+    )
+    if not organization:
+        raise HTTPException(404, f"Organization {org_id} not found")
+
+    # Get current teacher's relation
+    current_relation = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == current_teacher.id,
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+    if not current_relation:
+        raise HTTPException(403, "Not a member of this organization")
+
+    # Permission check
+    if current_relation.role != "org_owner":
+        has_permission = casbin_service.enforcer.enforce(
+            str(current_teacher.id), f"org-{org_id}", "manage_teachers", "write"
+        )
+        if not has_permission:
+            raise HTTPException(403, "No permission to update teacher roles")
+
+    # Prevent self-modification
+    if teacher_id == current_teacher.id:
+        raise HTTPException(400, "Cannot change your own role")
+
+    # Get target teacher
+    target_relation = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher_id,
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+    if not target_relation:
+        raise HTTPException(404, f"Teacher {teacher_id} not found in organization")
+
+    # Handle org_owner transfer
+    if update_data.role == "org_owner":
+        current_owner = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.organization_id == org_id,
+                TeacherOrganization.role == "org_owner",
+                TeacherOrganization.is_active.is_(True),
+            )
+            .first()
+        )
+        if current_owner and current_owner.teacher_id != teacher_id:
+            current_owner.role = "org_admin"
+            current_owner.updated_at = datetime.now(timezone.utc)
+
+    # Update role
+    target_relation.role = update_data.role
+    target_relation.updated_at = datetime.now(timezone.utc)
+
+    # Update teacher info if provided
+    if update_data.first_name or update_data.last_name:
+        target_teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+        if update_data.first_name:
+            target_teacher.first_name = update_data.first_name
+        if update_data.last_name:
+            target_teacher.last_name = update_data.last_name
+
+    db.commit()
+    db.refresh(target_relation)
+
+    return {
+        "id": target_relation.id,
+        "teacher_id": target_relation.teacher_id,
+        "organization_id": str(target_relation.organization_id),
+        "role": target_relation.role,
+        "updated_at": target_relation.updated_at.isoformat(),
+    }
 
 
 @router.delete("/{org_id}/teachers/{teacher_id}")

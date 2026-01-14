@@ -31,6 +31,7 @@ from routers import (
     files,
     programs,
     speech_assessment,
+    azure_speech_token,
     admin,
     admin_subscriptions,
     admin_monitoring,
@@ -44,6 +45,7 @@ from routers import (
     schools,
     classroom_schools,
 )
+from routers import organization_programs
 from routes import logs
 from api import debug
 
@@ -114,6 +116,11 @@ async def startup_event():
     get_speech_thread_pool()
     get_audio_thread_pool()
 
+    # Initialize HTTP client connection pool
+    from utils.http_client import get_http_client
+
+    get_http_client()
+
     # Setup query logging (only log slow queries in production)
     from database import get_engine
 
@@ -155,16 +162,22 @@ async def startup_event():
                 RETRY_DELAY *= 2  # Exponential backoff
 
     print(
-        "🚀 Application startup complete - Thread pools initialized, query logging enabled, Casbin synced"
+        "🚀 Application startup complete - "
+        "HTTP client pool, thread pools initialized, query logging enabled, Casbin synced"
     )
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """應用程式關閉時清理資源"""
+    # Close HTTP client connection pool
+    from utils.http_client import close_http_client
+
+    await close_http_client()
+
     # 關閉線程池
     shutdown_thread_pools(wait=True)
-    print("👋 Application shutdown complete - Thread pools closed")
+    print("👋 Application shutdown complete - Thread pools and HTTP client closed")
 
 
 @app.get("/")
@@ -234,6 +247,7 @@ if environment in ["development", "staging"]:
 app.include_router(teachers.router)
 app.include_router(students.router)
 app.include_router(organizations.router)  # 機構管理路由
+app.include_router(organization_programs.router)  # 機構教材管理路由
 app.include_router(schools.router)  # 學校管理路由
 app.include_router(classroom_schools.router)  # 班級-學校關聯路由
 app.include_router(assignments.router)
@@ -241,6 +255,7 @@ app.include_router(unassign.router)
 app.include_router(files.router)  # 檔案服務路由
 app.include_router(programs.router)  # 課程管理路由
 app.include_router(speech_assessment.router)  # 語音評估路由
+app.include_router(azure_speech_token.router)  # Azure Speech Token 路由
 app.include_router(teacher_review.router)  # 老師批改路由
 app.include_router(admin.router)  # 管理路由
 app.include_router(admin_subscriptions.router)  # Admin 訂閱管理路由（新）
