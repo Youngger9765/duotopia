@@ -6,6 +6,7 @@ import { API_URL } from "@/config/api";
 import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
+import { TeacherRoleEditDialog } from "@/components/organization/TeacherRoleEditDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, UserPlus, Mail } from "lucide-react";
+import { Users, UserPlus, Mail, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface TeacherInfo {
@@ -34,11 +35,16 @@ interface TeacherInfo {
 export default function TeachersPage() {
   const { orgId } = useParams<{ orgId: string }>();
   const token = useTeacherAuthStore((state) => state.token);
+  const user = useTeacherAuthStore((state) => state.user);
   const { selectedNode } = useOrganization();
 
   const [teachers, setTeachers] = useState<TeacherInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingTeacher, setEditingTeacher] = useState<TeacherInfo | null>(
+    null,
+  );
+  const [showRoleEditDialog, setShowRoleEditDialog] = useState(false);
 
   const effectiveOrgId =
     orgId ||
@@ -109,6 +115,19 @@ export default function TeachersPage() {
         return role;
     }
   };
+
+  const handleEditRole = (teacher: TeacherInfo) => {
+    setEditingTeacher(teacher);
+    setShowRoleEditDialog(true);
+  };
+
+  const handleRoleEditSuccess = () => {
+    fetchTeachers();
+  };
+
+  // Check if current user can edit roles
+  const canEditRoles =
+    user?.role === "org_owner" || user?.role === "org_admin";
 
   if (!effectiveOrgId) {
     return (
@@ -251,9 +270,16 @@ export default function TeachersPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        編輯權限
-                      </Button>
+                      {canEditRoles && teacher.id !== user?.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditRole(teacher)}
+                        >
+                          <Edit2 className="h-4 w-4 mr-1" />
+                          編輯角色
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -262,6 +288,24 @@ export default function TeachersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Role Edit Dialog */}
+      {effectiveOrgId && user && (
+        <TeacherRoleEditDialog
+          teacher={editingTeacher}
+          organizationId={effectiveOrgId}
+          currentUserRole={user.role || "teacher"}
+          currentUserId={user.id}
+          open={showRoleEditDialog}
+          onOpenChange={(open) => {
+            setShowRoleEditDialog(open);
+            if (!open) {
+              setEditingTeacher(null);
+            }
+          }}
+          onSuccess={handleRoleEditSuccess}
+        />
+      )}
     </div>
   );
 }

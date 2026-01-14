@@ -28,6 +28,8 @@ import {
   School as SchoolIcon,
   UserPlus,
   Users,
+  BookOpen,
+  ArrowRight,
 } from "lucide-react";
 
 interface Organization {
@@ -393,6 +395,73 @@ export default function OrganizationEditPage() {
         </CardContent>
       </Card>
 
+      {/* Quick Actions - Navigation Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent
+            className="p-6"
+            onClick={() => navigate(`/organization/${orgId}/schools`)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <SchoolIcon className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">學校管理</h3>
+                  <p className="text-sm text-gray-500">
+                    {schools.length} 所學校
+                  </p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent
+            className="p-6"
+            onClick={() => navigate(`/organization/${orgId}/teachers`)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Users className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">教師管理</h3>
+                  <p className="text-sm text-gray-500">
+                    {teachers.length} 位教師
+                  </p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent
+            className="p-6"
+            onClick={() => navigate(`/organization/${orgId}/materials`)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <BookOpen className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">組織教材</h3>
+                  <p className="text-sm text-gray-500">教材與課程</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Teachers/Staff Table */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -402,15 +471,26 @@ export default function OrganizationEditPage() {
             </div>
             <CardTitle className="text-base">工作人員</CardTitle>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => setInviteTeacherDialogOpen(true)}
-          >
-            <UserPlus className="h-4 w-4" />
-            新增工作人員
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+              onClick={() => navigate(`/organization/${orgId}/teachers`)}
+            >
+              查看全部
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setInviteTeacherDialogOpen(true)}
+            >
+              <UserPlus className="h-4 w-4" />
+              新增工作人員
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="pt-0">
           {teachers.length === 0 ? (
@@ -480,15 +560,26 @@ export default function OrganizationEditPage() {
             </div>
             <CardTitle className="text-base">學校列表</CardTitle>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => setCreateSchoolDialogOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            新增學校
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+              onClick={() => navigate(`/organization/${orgId}/schools`)}
+            >
+              查看全部
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setCreateSchoolDialogOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              新增學校
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="pt-0">
           {schools.length === 0 ? (

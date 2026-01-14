@@ -4,6 +4,7 @@ import OrganizationLayout from "@/layouts/OrganizationLayout";
 import OrganizationDashboard from "@/pages/organization/OrganizationDashboard";
 import SchoolsPage from "@/pages/organization/SchoolsPage";
 import TeachersPage from "@/pages/organization/TeachersPage";
+import MaterialsPage from "@/pages/organization/MaterialsPage";
 import OrganizationEditPage from "@/pages/organization/OrganizationEditPage";
 import SchoolDetailPage from "@/pages/organization/SchoolDetailPage";
 import OrganizationsListPage from "@/pages/organization/OrganizationsListPage";
@@ -45,12 +46,16 @@ export const organizationRoutes = (
     {/* Teachers management under specific organization */}
     <Route path=":orgId/teachers" element={<TeachersPage />} />
 
+    {/* Materials management under specific organization */}
+    <Route path=":orgId/materials" element={<MaterialsPage />} />
+
     {/* School detail page */}
     <Route path="schools/:schoolId" element={<SchoolDetailPage />} />
 
-    {/* Default schools/teachers pages (use selected org from context) */}
+    {/* Default schools/teachers/materials pages (use selected org from context) */}
     <Route path="schools" element={<SchoolsPage />} />
     <Route path="teachers" element={<TeachersPage />} />
+    <Route path="materials" element={<MaterialsPage />} />
 
     {/* Default redirect to dashboard */}
     <Route index element={<OrganizationDashboard />} />
