@@ -254,8 +254,10 @@ async def list_organizations(
     Args:
         owner_only: If True, only return organizations where teacher is org_owner
 
-    Security: Returns 403 if teacher has no organization access.
-    Performance: Fetches owners with joinedload to avoid N+1 queries.
+    Returns:
+        List of organizations (empty list if teacher has no organizations)
+
+    Performance: Fetches owners with selectinload to avoid N+1 queries.
     """
     import logging
 
@@ -279,12 +281,10 @@ async def list_organizations(
         teacher_orgs = query.all()
         logger.info(f"Found {len(teacher_orgs)} teacher-organization relationships")
 
-        # ✅ SECURITY FIX: Reject if no organization access
+        # Return empty list if teacher has no organizations (not an error)
         if not teacher_orgs:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="此功能僅限組織成員使用。您目前不屬於任何組織。",
-            )
+            logger.info("Teacher has no organizations, returning empty list")
+            return []
 
         # Validate and collect organization IDs (defensive coding - same as stats endpoint)
         org_ids = []
@@ -300,11 +300,10 @@ async def list_organizations(
                     )
                     continue  # Skip invalid UUIDs
 
+        # If all UUIDs were invalid, return empty list
         if not org_ids:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="此功能僅限組織成員使用。您目前不屬於任何組織。",
-            )
+            logger.warning("All organization UUIDs were invalid, returning empty list")
+            return []
     except HTTPException:
         raise
     except Exception as e:
