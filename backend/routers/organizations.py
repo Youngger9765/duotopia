@@ -631,6 +631,14 @@ class TeacherRelationResponse(BaseModel):
         )
 
 
+class TeacherUpdateRequest(BaseModel):
+    """Request model for updating teacher in organization"""
+
+    role: str  # "org_owner" | "org_admin" | "teacher"
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+
 class TeacherInfo(BaseModel):
     """Teacher information in organization"""
 
@@ -958,6 +966,108 @@ async def add_teacher_to_organization(
         )
 
     return TeacherRelationResponse.from_orm(teacher_org)
+
+
+@router.put("/{org_id}/teachers/{teacher_id}")
+async def update_teacher_role(
+    org_id: uuid.UUID,
+    teacher_id: int,
+    update_data: TeacherUpdateRequest,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Update teacher's role in organization.
+    Requires org_owner role or manage_teachers permission.
+    """
+    from datetime import timezone
+
+    casbin_service = get_casbin_service()
+
+    # Check org exists
+    organization = (
+        db.query(Organization)
+        .filter(Organization.id == org_id, Organization.is_active.is_(True))
+        .first()
+    )
+    if not organization:
+        raise HTTPException(404, f"Organization {org_id} not found")
+
+    # Get current teacher's relation
+    current_relation = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == current_teacher.id,
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+    if not current_relation:
+        raise HTTPException(403, "Not a member of this organization")
+
+    # Permission check
+    if current_relation.role != "org_owner":
+        has_permission = casbin_service.enforcer.enforce(
+            str(current_teacher.id), f"org-{org_id}", "manage_teachers", "write"
+        )
+        if not has_permission:
+            raise HTTPException(403, "No permission to update teacher roles")
+
+    # Prevent self-modification
+    if teacher_id == current_teacher.id:
+        raise HTTPException(400, "Cannot change your own role")
+
+    # Get target teacher
+    target_relation = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher_id,
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+    if not target_relation:
+        raise HTTPException(404, f"Teacher {teacher_id} not found in organization")
+
+    # Handle org_owner transfer
+    if update_data.role == "org_owner":
+        current_owner = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.organization_id == org_id,
+                TeacherOrganization.role == "org_owner",
+                TeacherOrganization.is_active.is_(True),
+            )
+            .first()
+        )
+        if current_owner and current_owner.teacher_id != teacher_id:
+            current_owner.role = "org_admin"
+            current_owner.updated_at = datetime.now(timezone.utc)
+
+    # Update role
+    target_relation.role = update_data.role
+    target_relation.updated_at = datetime.now(timezone.utc)
+
+    # Update teacher info if provided
+    if update_data.first_name or update_data.last_name:
+        target_teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+        if update_data.first_name:
+            target_teacher.first_name = update_data.first_name
+        if update_data.last_name:
+            target_teacher.last_name = update_data.last_name
+
+    db.commit()
+    db.refresh(target_relation)
+
+    return {
+        "id": target_relation.id,
+        "teacher_id": target_relation.teacher_id,
+        "organization_id": str(target_relation.organization_id),
+        "role": target_relation.role,
+        "updated_at": target_relation.updated_at.isoformat(),
+    }
 
 
 @router.delete("/{org_id}/teachers/{teacher_id}")

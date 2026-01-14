@@ -45,6 +45,7 @@ from routers import (
     schools,
     classroom_schools,
 )
+from routers import organization_programs
 from routes import logs
 from api import debug
 
@@ -246,6 +247,7 @@ if environment in ["development", "staging"]:
 app.include_router(teachers.router)
 app.include_router(students.router)
 app.include_router(organizations.router)  # 機構管理路由
+app.include_router(organization_programs.router)  # 機構教材管理路由
 app.include_router(schools.router)  # 學校管理路由
 app.include_router(classroom_schools.router)  # 班級-學校關聯路由
 app.include_router(assignments.router)
