@@ -159,11 +159,8 @@ def test_org_with_materials(test_db: Session, test_org: Organization, org_owner:
             description=f"Organization material {i+1}",
             is_template=True,  # Organization materials are templates
             teacher_id=org_owner.id,
+            organization_id=test_org.id,  # Use organization_id column
             is_active=True,
-            source_metadata={
-                "organization_id": str(test_org.id),
-                "created_by": org_owner.id,
-            },
         )
         test_db.add(program)
         test_db.flush()
@@ -576,7 +573,7 @@ class TestCreateMaterial:
         test_org: Organization,
         owner_headers: dict,
     ):
-        """Organization ID is correctly set in source_metadata"""
+        """Organization ID is correctly set in organization_id column"""
         payload = {
             "name": "Org Material",
             "description": "Test",
@@ -590,8 +587,8 @@ class TestCreateMaterial:
 
         assert response.status_code == 201
         data = response.json()
-        assert "source_metadata" in data
-        assert data["source_metadata"]["organization_id"] == str(test_org.id)
+        assert "organization_id" in data
+        assert data["organization_id"] == str(test_org.id)
 
     def test_validates_required_fields(
         self,
@@ -727,9 +724,7 @@ class TestUpdateMaterial:
 
         payload = {
             "name": "Updated Name",
-            "source_metadata": {
-                "organization_id": different_org_id,
-            },
+            "organization_id": different_org_id,  # Try to change org_id
         }
 
         response = test_client.put(
@@ -743,7 +738,7 @@ class TestUpdateMaterial:
         if response.status_code == 200:
             data = response.json()
             # Organization ID should remain unchanged
-            assert data["source_metadata"]["organization_id"] == str(test_org.id)
+            assert data["organization_id"] == str(test_org.id)
 
 
 # ============================================================================

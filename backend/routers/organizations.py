@@ -785,6 +785,34 @@ async def invite_teacher_to_organization(
             is_active=True,
         )
         db.add(teacher_org)
+
+        # Fix TOCTOU race condition: flush to DB but keep transaction open
+        # This allows us to verify the actual count after insert
+        db.flush()
+        db.refresh(teacher_org)
+
+        # Re-verify teacher limit AFTER insert to prevent race condition
+        # Even with SELECT FOR UPDATE, concurrent transactions can insert between
+        # check and commit. We must verify the final state.
+        if org.teacher_limit is not None:
+            actual_count = (
+                db.query(TeacherOrganization)
+                .filter(
+                    TeacherOrganization.organization_id == org_id,
+                    TeacherOrganization.is_active.is_(True),
+                    TeacherOrganization.role != "org_owner",
+                )
+                .count()
+            )
+
+            if actual_count > org.teacher_limit:
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"已達教師授權上限（{org.teacher_limit} 位）。目前: {actual_count}",
+                )
+
+        # All checks passed, commit the transaction
         db.commit()
         db.refresh(teacher_org)
 
@@ -826,6 +854,34 @@ async def invite_teacher_to_organization(
             is_active=True,
         )
         db.add(teacher_org)
+
+        # Fix TOCTOU race condition: flush to DB but keep transaction open
+        # This allows us to verify the actual count after insert
+        db.flush()
+        db.refresh(teacher_org)
+
+        # Re-verify teacher limit AFTER insert to prevent race condition
+        # Even with SELECT FOR UPDATE, concurrent transactions can insert between
+        # check and commit. We must verify the final state.
+        if org.teacher_limit is not None:
+            actual_count = (
+                db.query(TeacherOrganization)
+                .filter(
+                    TeacherOrganization.organization_id == org_id,
+                    TeacherOrganization.is_active.is_(True),
+                    TeacherOrganization.role != "org_owner",
+                )
+                .count()
+            )
+
+            if actual_count > org.teacher_limit:
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"已達教師授權上限（{org.teacher_limit} 位）。目前: {actual_count}",
+                )
+
+        # All checks passed, commit the transaction
         db.commit()
         db.refresh(teacher_org)
 
@@ -950,6 +1006,34 @@ async def add_teacher_to_organization(
         is_active=True,
     )
     db.add(teacher_org)
+
+    # Fix TOCTOU race condition: flush to DB but keep transaction open
+    # This allows us to verify the actual count after insert
+    db.flush()
+    db.refresh(teacher_org)
+
+    # Re-verify teacher limit AFTER insert to prevent race condition
+    # Even with SELECT FOR UPDATE, concurrent transactions can insert between
+    # check and commit. We must verify the final state.
+    if org.teacher_limit is not None and request.role != "org_owner":
+        actual_count = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.organization_id == org_id,
+                TeacherOrganization.is_active.is_(True),
+                TeacherOrganization.role != "org_owner",
+            )
+            .count()
+        )
+
+        if actual_count > org.teacher_limit:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"已達教師授權上限（{org.teacher_limit} 位）。目前: {actual_count}",
+            )
+
+    # All checks passed, commit the transaction
     db.commit()
     db.refresh(teacher_org)
 

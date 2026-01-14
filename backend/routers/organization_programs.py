@@ -15,11 +15,11 @@ Endpoints:
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import cast, String
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer, model_validator
 from typing import List, Optional
 import uuid
 from datetime import datetime
+import logging
 
 from database import get_db
 from models import (
@@ -34,6 +34,8 @@ from models import (
 )
 from auth import verify_token
 from services.casbin_service import get_casbin_service
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/api/organizations", tags=["organization-programs"])
@@ -147,8 +149,23 @@ class ProgramResponse(BaseModel):
     is_active: bool
     classroom_id: Optional[int]
     teacher_id: int
+    organization_id: Optional[str]  # UUID as string
     source_metadata: Optional[dict]
     lessons: List[LessonResponse] = []
+
+    @model_validator(mode='before')
+    @classmethod
+    def convert_uuid_fields(cls, data):
+        """Convert UUID fields to strings before validation"""
+        if hasattr(data, 'organization_id') and data.organization_id is not None:
+            # Handle SQLAlchemy model
+            if not isinstance(data.organization_id, str):
+                object.__setattr__(data, 'organization_id', str(data.organization_id))
+        elif isinstance(data, dict) and 'organization_id' in data:
+            # Handle dict
+            if data['organization_id'] is not None and not isinstance(data['organization_id'], str):
+                data['organization_id'] = str(data['organization_id'])
+        return data
 
     class Config:
         from_attributes = True
@@ -204,10 +221,10 @@ def get_organization_programs(
     """
     Get all programs belonging to organization.
 
-    Programs are identified by source_metadata.organization_id.
+    Programs are identified by organization_id column (NOT source_metadata).
     """
     query = db.query(Program).filter(
-        cast(Program.source_metadata["organization_id"], String) == str(org_id),
+        Program.organization_id == org_id,
         Program.is_template.is_(True),
     )
 
@@ -314,6 +331,9 @@ async def list_organization_materials(
     List all active organization materials (templates).
 
     Permission: org_owner or org_admin with manage_materials
+
+    Performance: Uses organization_id column (NOT source_metadata JSON)
+    for efficient SQL filtering instead of loading all programs.
     """
     # Check permission
     if not check_manage_materials_permission(current_teacher.id, org_id, db):
@@ -322,8 +342,10 @@ async def list_organization_materials(
             detail="No permission to manage organization materials",
         )
 
-    # Get all template programs
-    all_programs = (
+    # Query organization materials using SQL filter (NOT Python filter)
+    # Uses organization_id column for organization-owned materials
+    # (source_metadata is for classroom copies tracking origin)
+    programs = (
         db.query(Program)
         .options(
             joinedload(Program.lessons)
@@ -333,21 +355,12 @@ async def list_organization_materials(
         .filter(
             Program.is_template.is_(True),
             Program.is_active.is_(True),
+            Program.organization_id == org_id,  # Direct column filter
         )
+        .offset(skip)
+        .limit(limit)
         .all()
     )
-
-    # Filter by organization_id in source_metadata (JSON query doesn't work well in SQLite)
-    org_id_str = str(org_id)
-    programs = [
-        p
-        for p in all_programs
-        if p.source_metadata
-        and p.source_metadata.get("organization_id") == org_id_str
-    ]
-
-    # Apply pagination
-    programs = programs[skip : skip + limit]
 
     # Convert to response models
     result = []
@@ -417,11 +430,8 @@ async def get_organization_material_details(
             detail="Material not found",
         )
 
-    # Verify program belongs to organization
-    org_id_str = str(org_id)
-    if not program.source_metadata or program.source_metadata.get(
-        "organization_id"
-    ) != org_id_str:
+    # Verify program belongs to organization (using column, not JSON)
+    if program.organization_id != org_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Material not found or doesn't belong to organization",
@@ -485,9 +495,9 @@ async def create_organization_material(
         is_template=True,  # Force to True for organization materials
         classroom_id=None,  # Organization materials are not classroom-specific
         teacher_id=current_teacher.id,
+        organization_id=org_id,  # Use column for organization ownership
         is_active=True,
         source_metadata={
-            "organization_id": str(org_id),
             "created_by": current_teacher.id,
         },
     )
@@ -529,11 +539,8 @@ async def update_organization_material(
             detail="Material not found",
         )
 
-    # Verify program belongs to organization
-    org_id_str = str(org_id)
-    if not program.source_metadata or program.source_metadata.get(
-        "organization_id"
-    ) != org_id_str:
+    # Verify program belongs to organization (using column, not JSON)
+    if program.organization_id != org_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Material not found or doesn't belong to organization",
@@ -546,11 +553,9 @@ async def update_organization_material(
     if payload.description is not None:
         program.description = payload.description
 
-    # Preserve organization_id in source_metadata
-    if program.source_metadata:
-        program.source_metadata["organization_id"] = str(org_id)
-    else:
-        program.source_metadata = {"organization_id": str(org_id)}
+    # Ensure organization_id cannot be changed via update
+    # (It should remain the same as org_id from URL)
+    program.organization_id = org_id
 
     db.commit()
     db.refresh(program)
@@ -587,11 +592,8 @@ async def soft_delete_organization_material(
             detail="Material not found",
         )
 
-    # Verify program belongs to organization
-    org_id_str = str(org_id)
-    if not program.source_metadata or program.source_metadata.get(
-        "organization_id"
-    ) != org_id_str:
+    # Verify program belongs to organization (using column, not JSON)
+    if program.organization_id != org_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Material not found or doesn't belong to organization",
@@ -656,10 +658,7 @@ async def copy_material_to_classroom(
         )
 
     # Verify program belongs to organization
-    org_id_str = str(org_id)
-    if not source_program.source_metadata or source_program.source_metadata.get(
-        "organization_id"
-    ) != org_id_str:
+    if source_program.organization_id != org_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Source material not found or doesn't belong to organization",
@@ -699,29 +698,41 @@ async def copy_material_to_classroom(
             detail="You are not a member of this organization",
         )
 
-    # Deep copy program
-    new_program = deep_copy_program(
-        source_program=source_program,
-        target_classroom_id=payload.classroom_id,
-        target_teacher_id=current_teacher.id,
-        organization=organization,
-        db=db,
-    )
-
-    db.commit()
-    db.refresh(new_program)
-
-    # Load full hierarchy for response
-    new_program = (
-        db.query(Program)
-        .options(
-            joinedload(Program.lessons)
-            .joinedload(Lesson.contents)
-            .joinedload(Content.content_items)
+    # Deep copy program with error handling and rollback
+    try:
+        new_program = deep_copy_program(
+            source_program=source_program,
+            target_classroom_id=payload.classroom_id,
+            target_teacher_id=current_teacher.id,
+            organization=organization,
+            db=db,
         )
-        .filter(Program.id == new_program.id)
-        .first()
-    )
+
+        db.commit()
+        db.refresh(new_program)
+
+        # Load full hierarchy for response
+        new_program = (
+            db.query(Program)
+            .options(
+                joinedload(Program.lessons)
+                .joinedload(Lesson.contents)
+                .joinedload(Content.content_items)
+            )
+            .filter(Program.id == new_program.id)
+            .first()
+        )
+
+    except Exception as e:
+        db.rollback()
+        logger.error(
+            f"Failed to copy material {program_id} to classroom {payload.classroom_id}: {str(e)}",
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to copy material: {str(e)}",
+        )
 
     # Build response
     program_data = ProgramResponse.from_orm(new_program)

@@ -142,16 +142,29 @@ def downgrade() -> None:
     # Remove tax_id partial unique index
     op.execute("DROP INDEX IF EXISTS uq_organizations_tax_id_active")
 
-    # Restore original tax_id unique constraint
-    # Note: This may fail if there are duplicate tax_ids after soft deletes
-    # In production, would need data migration first
-    try:
-        op.create_unique_constraint(
-            "uq_organizations_tax_id",
-            "organizations",
-            ["tax_id"],
+    # Clean duplicate tax_ids before restoring unique constraint
+    # Strategy: For each duplicate tax_id, keep only the most recent organization
+    # Note: This is destructive but safe for downgrade (dev-only operation)
+    op.execute("""
+        -- Step 1: Mark older duplicates with NULL tax_id
+        UPDATE organizations
+        SET tax_id = NULL
+        WHERE id IN (
+            SELECT id
+            FROM (
+                SELECT id,
+                       tax_id,
+                       ROW_NUMBER() OVER (PARTITION BY tax_id ORDER BY created_at DESC) as rn
+                FROM organizations
+                WHERE tax_id IS NOT NULL
+            ) AS ranked
+            WHERE rn > 1
         )
-    except Exception:
-        # If restoration fails, leave tax_id without constraint
-        # Manual intervention required
-        pass
+    """)
+
+    # Now safe to restore unique constraint (no duplicates)
+    op.create_unique_constraint(
+        "uq_organizations_tax_id",
+        "organizations",
+        ["tax_id"],
+    )
