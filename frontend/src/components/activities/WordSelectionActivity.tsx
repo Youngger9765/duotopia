@@ -11,7 +11,7 @@
  * - Achievement dialog when target_proficiency is reached
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -99,17 +99,55 @@ export default function WordSelectionActivity({
   const [roundCompleted, setRoundCompleted] = useState(false);
 
   // Preview mode local proficiency tracking (不存入資料庫，離開後重置)
-  const [previewStats, setPreviewStats] = useState({
-    correctCount: 0,
-    totalCount: 0,
-  });
+  // 模擬學生模式的 SM-2 算法：追蹤每個單字的 memory_strength
+  const [previewWordStrengths, setPreviewWordStrengths] = useState<
+    Record<number, number>
+  >({});
+
+  // SM-2 簡化版：計算新的 memory_strength
+  const calculateNewStrength = (
+    currentStrength: number | undefined,
+    isCorrect: boolean,
+  ): number => {
+    if (currentStrength === undefined) {
+      // 第一次作答
+      return isCorrect ? 0.5 : 0.2;
+    }
+    // 後續作答：答對 +0.15，答錯 -0.2（但不低於 0.1）
+    if (isCorrect) {
+      return Math.min(1.0, currentStrength + 0.15);
+    } else {
+      return Math.max(0.1, currentStrength - 0.2);
+    }
+  };
+
+  // Computed: 預覽模式的平均熟練度（模擬學生模式）
+  const previewProficiency = useMemo(() => {
+    const strengths = Object.values(previewWordStrengths);
+    if (strengths.length === 0) return 0;
+    const totalWords = proficiency.total_words || strengths.length;
+    // 未練習的單字視為 0 強度
+    const sum = strengths.reduce((acc, s) => acc + s, 0);
+    return (sum / totalWords) * 100;
+  }, [previewWordStrengths, proficiency.total_words]);
+
+  // Computed: 預覽模式的已熟練單字數（memory_strength >= target * 0.8）
+  const previewWordsMastered = useMemo(() => {
+    const targetThreshold = ((proficiency.target_mastery || 80) / 100) * 0.8;
+    return Object.values(previewWordStrengths).filter(
+      (s) => s >= targetThreshold,
+    ).length;
+  }, [previewWordStrengths, proficiency.target_mastery]);
 
   // Computed: 顯示用的熟練度（預覽模式用本地計算，學生模式用 API 回傳）
   const displayProficiency = isPreviewMode
-    ? previewStats.totalCount > 0
-      ? (previewStats.correctCount / previewStats.totalCount) * 100
-      : 0
+    ? previewProficiency
     : proficiency.current_mastery;
+
+  // Computed: 顯示用的已熟練單字數（預覽模式用本地計算）
+  const displayWordsMastered = isPreviewMode
+    ? previewWordsMastered
+    : proficiency.words_mastered;
 
   // Timer
   const [timeLimit, setTimeLimit] = useState<number | null>(null);
@@ -281,11 +319,12 @@ export default function WordSelectionActivity({
     setShowResult(true);
     setSubmitting(true);
 
-    // Skip API call in preview mode, but track local stats
+    // Skip API call in preview mode, but track local stats (SM-2 simulation)
     if (isPreviewMode) {
-      setPreviewStats((prev) => ({
-        correctCount: prev.correctCount, // timeout = incorrect
-        totalCount: prev.totalCount + 1,
+      const wordId = currentWord.content_item_id;
+      setPreviewWordStrengths((prev) => ({
+        ...prev,
+        [wordId]: calculateNewStrength(prev[wordId], false), // timeout = incorrect
       }));
       setSubmitting(false);
       return;
@@ -323,11 +362,12 @@ export default function WordSelectionActivity({
     setShowResult(true);
     setSubmitting(true);
 
-    // Skip API call in preview mode, but track local stats
+    // Skip API call in preview mode, but track local stats (SM-2 simulation)
     if (isPreviewMode) {
-      setPreviewStats((prev) => ({
-        correctCount: prev.correctCount + (correct ? 1 : 0),
-        totalCount: prev.totalCount + 1,
+      const wordId = currentWord.content_item_id;
+      setPreviewWordStrengths((prev) => ({
+        ...prev,
+        [wordId]: calculateNewStrength(prev[wordId], correct),
       }));
       setSubmitting(false);
       return;
@@ -449,10 +489,10 @@ export default function WordSelectionActivity({
           <div className="text-gray-600">
             <p>
               {t("wordSelection.wordsMastered", {
-                mastered: proficiency.words_mastered,
+                mastered: displayWordsMastered,
                 total: proficiency.total_words,
               }) ||
-                `${proficiency.words_mastered} / ${proficiency.total_words} words mastered`}
+                `${displayWordsMastered} / ${proficiency.total_words} words mastered`}
             </p>
           </div>
 
@@ -692,10 +732,10 @@ export default function WordSelectionActivity({
                 </p>
                 <p>
                   {t("wordSelection.wordsMastered", {
-                    mastered: proficiency.words_mastered,
+                    mastered: displayWordsMastered,
                     total: proficiency.total_words,
                   }) ||
-                    `Words Mastered: ${proficiency.words_mastered} / ${proficiency.total_words}`}
+                    `Words Mastered: ${displayWordsMastered} / ${proficiency.total_words}`}
                 </p>
               </div>
             </DialogDescription>

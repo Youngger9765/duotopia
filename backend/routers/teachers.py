@@ -4285,6 +4285,9 @@ async def preview_word_selection_start(
             status_code=404, detail="No vocabulary items found for this assignment"
         )
 
+    # 記錄作業總單字數（在限制之前）
+    total_words_in_assignment = len(content_items)
+
     # 如果需要打亂順序
     if assignment.shuffle_questions:
         random.shuffle(content_items)
@@ -4389,7 +4392,7 @@ async def preview_word_selection_start(
     return {
         "session_id": None,  # 預覽模式不建立 session
         "words": words_with_options,
-        "total_words": len(words_with_options),
+        "total_words": total_words_in_assignment,  # 作業總單字數，非當次練習數
         "current_proficiency": 0,
         "target_proficiency": assignment.target_proficiency or 80,
         "show_word": assignment.show_word if assignment.show_word is not None else True,

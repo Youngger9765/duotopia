@@ -3155,6 +3155,37 @@ async def start_word_selection_practice(
     # Get target proficiency from assignment (default 80%)
     target_proficiency = assignment.target_proficiency if assignment else 80
 
+    # 取得作業總單字數（用於前端顯示「已熟練 N / Total 個單字」）
+    total_words_result = db.execute(
+        text(
+            """
+            SELECT COUNT(DISTINCT ci.id) as total_count
+            FROM student_content_progress scp
+            JOIN content_items ci ON ci.content_id = scp.content_id
+            WHERE scp.student_assignment_id = :sa_id
+        """
+        ),
+        {"sa_id": assignment_id},
+    ).fetchone()
+    total_words_in_assignment = (
+        total_words_result.total_count if total_words_result else 0
+    )
+
+    # 若 student_content_progress 還沒有資料，從 assignment_contents 取得總數
+    if total_words_in_assignment == 0:
+        fallback_count = db.execute(
+            text(
+                """
+                SELECT COUNT(DISTINCT ci.id) as total_count
+                FROM assignment_contents ac
+                JOIN content_items ci ON ci.content_id = ac.content_id
+                WHERE ac.assignment_id = :assignment_id
+            """
+            ),
+            {"assignment_id": student_assignment.assignment_id},
+        ).fetchone()
+        total_words_in_assignment = fallback_count.total_count if fallback_count else 0
+
     # Call get_words_for_practice PostgreSQL function
     words_result = db.execute(
         text("SELECT * FROM get_words_for_practice(:sa_id, :limit_count)"),
@@ -3362,7 +3393,7 @@ async def start_word_selection_practice(
     return {
         "session_id": practice_session.id,
         "words": words_with_options,
-        "total_words": len(words_with_options),
+        "total_words": total_words_in_assignment,  # 作業總單字數，非當次練習數
         "current_proficiency": current_proficiency,
         "target_proficiency": target_proficiency,
         "show_word": assignment.show_word if assignment else True,
