@@ -4316,40 +4316,62 @@ async def preview_word_selection_start(
 
     # 建立回應資料
     words_with_options = []
+
+    # 收集所有單字的翻譯，用於交叉干擾（從同作業其他單字取翻譯）
+    all_translations = {
+        item.translation.lower().strip(): item.translation
+        for item in content_items
+        if item.translation
+    }
+
     for item in content_items:
         correct_answer = item.translation or ""
 
         # 使用預生成的或剛生成的干擾選項
         if item.distractors:
-            distractors = item.distractors
+            ai_distractors = item.distractors
         elif hasattr(item, "_generated_distractors"):
-            distractors = item._generated_distractors
+            ai_distractors = item._generated_distractors
         else:
-            distractors = ["選項A", "選項B", "選項C"]
+            ai_distractors = []
 
-        # 過濾重複和正確答案
-        unique_distractors = []
+        # 用於去重的集合
         seen = {correct_answer.lower().strip()}
-        for d in distractors:
+        final_distractors = []
+
+        # Step 1: 從同作業其他單字隨機抽取 1 個翻譯作為干擾項
+        other_translations = [
+            t
+            for key, t in all_translations.items()
+            if key != correct_answer.lower().strip()
+        ]
+        if other_translations:
+            sibling_distractor = random.choice(other_translations)
+            if sibling_distractor.lower().strip() not in seen:
+                final_distractors.append(sibling_distractor)
+                seen.add(sibling_distractor.lower().strip())
+
+        # Step 2: 加入 AI 生成的干擾項（最多 2 個）
+        for d in ai_distractors:
             d_normalized = d.lower().strip()
             if d_normalized not in seen and d.strip():
                 seen.add(d_normalized)
-                unique_distractors.append(d)
-            if len(unique_distractors) >= 3:
+                final_distractors.append(d)
+            if len(final_distractors) >= 3:
                 break
 
-        # 確保有 3 個干擾選項
+        # Step 3: Fallback 確保有 3 個干擾選項
         fallback_options = ["選項A", "選項B", "選項C", "選項D", "選項E"]
         fallback_idx = 0
-        while len(unique_distractors) < 3:
+        while len(final_distractors) < 3:
             fallback = fallback_options[fallback_idx]
             if fallback.lower() not in seen:
-                unique_distractors.append(fallback)
+                final_distractors.append(fallback)
                 seen.add(fallback.lower())
             fallback_idx += 1
 
         # 建立選項陣列並打亂
-        options = [correct_answer] + unique_distractors[:3]
+        options = [correct_answer] + final_distractors[:3]
         random.shuffle(options)
 
         words_with_options.append(

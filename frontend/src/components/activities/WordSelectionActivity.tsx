@@ -98,6 +98,19 @@ export default function WordSelectionActivity({
   // Round tracking
   const [roundCompleted, setRoundCompleted] = useState(false);
 
+  // Preview mode local proficiency tracking (不存入資料庫，離開後重置)
+  const [previewStats, setPreviewStats] = useState({
+    correctCount: 0,
+    totalCount: 0,
+  });
+
+  // Computed: 顯示用的熟練度（預覽模式用本地計算，學生模式用 API 回傳）
+  const displayProficiency = isPreviewMode
+    ? previewStats.totalCount > 0
+      ? (previewStats.correctCount / previewStats.totalCount) * 100
+      : 0
+    : proficiency.current_mastery;
+
   // Timer
   const [timeLimit, setTimeLimit] = useState<number | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
@@ -268,8 +281,12 @@ export default function WordSelectionActivity({
     setShowResult(true);
     setSubmitting(true);
 
-    // Skip API call in preview mode
+    // Skip API call in preview mode, but track local stats
     if (isPreviewMode) {
+      setPreviewStats((prev) => ({
+        correctCount: prev.correctCount, // timeout = incorrect
+        totalCount: prev.totalCount + 1,
+      }));
       setSubmitting(false);
       return;
     }
@@ -306,8 +323,12 @@ export default function WordSelectionActivity({
     setShowResult(true);
     setSubmitting(true);
 
-    // Skip API call in preview mode
+    // Skip API call in preview mode, but track local stats
     if (isPreviewMode) {
+      setPreviewStats((prev) => ({
+        correctCount: prev.correctCount + (correct ? 1 : 0),
+        totalCount: prev.totalCount + 1,
+      }));
       setSubmitting(false);
       return;
     }
@@ -419,15 +440,10 @@ export default function WordSelectionActivity({
                 {t("wordSelection.currentProficiency") || "Proficiency"}
               </span>
               <span>
-                {proficiency.current_mastery.toFixed(1)}% /{" "}
-                {proficiency.target_mastery}%
+                {displayProficiency.toFixed(1)}% / {proficiency.target_mastery}%
               </span>
             </div>
-            <Progress
-              value={proficiency.current_mastery}
-              max={100}
-              className="h-3"
-            />
+            <Progress value={displayProficiency} max={100} className="h-3" />
           </div>
 
           <div className="text-gray-600">
@@ -493,7 +509,7 @@ export default function WordSelectionActivity({
             {t("wordSelection.proficiency") || "Proficiency"}:
           </span>
           <span className="font-medium text-blue-600">
-            {proficiency.current_mastery.toFixed(1)}%
+            {displayProficiency.toFixed(1)}%
           </span>
         </div>
       </div>
@@ -671,7 +687,7 @@ export default function WordSelectionActivity({
                     "Current Proficiency"}
                   :{" "}
                   <span className="font-bold text-blue-600">
-                    {proficiency.current_mastery.toFixed(1)}%
+                    {displayProficiency.toFixed(1)}%
                   </span>
                 </p>
                 <p>
