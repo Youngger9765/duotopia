@@ -101,6 +101,35 @@
    - Select target classroom
    - Confirmation & success feedback
 
+### Material Copy Modularization (Multi-Scope) 🟡 TODO
+
+**Goal**: Make classroom copy flow reusable across Teacher/Classroom/School/Organization scopes.
+
+1. **Inventory Existing Copy Flow** ⏰
+   - Locate classroom copy code (API + frontend)
+   - Map current source/target constraints
+
+2. **Backend Service Layer** ⏰
+   - Add `copy_program_tree()` in `backend/services/program_service.py`
+   - Inputs: `source_scope`, `source_program_id`, `target_scope`, `target_id`, `teacher_id`
+   - Behavior: deep copy Program → Lesson → Content → Item
+   - Always write `source_metadata` (scope/id/name/type)
+   - Centralize permission check (e.g. `check_copy_permission()`)
+
+3. **Unified API Endpoint** ⏰
+   - `POST /api/programs/{program_id}/copy`
+   - Body: `{ "target_scope": "...", "target_id": "..." }`
+   - Resolve source scope from program + context
+
+4. **Frontend Hook** ⏰
+   - `useProgramCopy()` with `copyProgram({ sourceScope, programId, targetScope, targetId })`
+   - Refresh relevant tree view after copy
+
+5. **Docs Update** ⏰
+   - Add 4-scope matrix (Teacher/Classroom/School/Organization) to `docs/MATERIALS_ARCHITECTURE.md`
+   - Add copy flow and permissions to `PRD.md`
+   - Add scope notes to `docs/API_ORGANIZATION_HIERARCHY.md`
+
 ---
 
 ## 🔵 MEDIUM-LOW Priority - Integration Tests
@@ -286,7 +315,82 @@
 
 ### Technical Debt
 
-- None identified in current sprint
+#### 🔴 HIGH - Program Table Refactoring
+
+**問題**: `programs` table 設計混亂，用多個 nullable FK + `is_template` 組合判斷類型
+
+**現狀**:
+| 類型 | is_template | classroom_id | organization_id | teacher_id |
+|------|-------------|--------------|-----------------|------------|
+| Organization 教材 | True | NULL | 有值 | 有值 |
+| Teacher 模板 | True | NULL | NULL | 有值 |
+| Classroom 教材 | False | 有值 | NULL | 有值 |
+
+**問題**:
+1. 欄位語意混淆 - 靠 NULL/非 NULL 組合判斷類型
+2. 擴展性差 - 每加一個層級就要加 `xxx_id` 欄位
+3. 查詢複雜 - 需要多條件判斷
+
+**重構方案**:
+```python
+class ProgramScope(str, Enum):
+    ORGANIZATION = "organization"  # 機構教材
+    SCHOOL = "school"              # 學校教材
+    TEACHER = "teacher"            # 教師模板
+    CLASSROOM = "classroom"        # 班級教材
+
+class Program:
+    # 新增欄位
+    scope = Column(Enum(ProgramScope), nullable=False)  # 明確類型
+    owner_id = Column(String(36), nullable=False)       # 統一擁有者 ID (UUID or int as string)
+    
+    # 保留欄位 (向下相容，逐步廢棄)
+    is_template = Column(Boolean)      # deprecated
+    classroom_id = Column(Integer)     # deprecated  
+    organization_id = Column(UUID)     # deprecated
+    school_id = Column(UUID)           # 新增 (如果不重構)
+```
+
+**重構步驟**:
+1. ⏰ **Phase 1: 新增欄位** (向下相容)
+   - 新增 `scope` 和 `owner_id` 欄位 (nullable)
+   - 寫 migration 填充現有資料
+   - 更新 Model 加入新屬性
+
+2. ⏰ **Phase 2: 更新 API**
+   - 更新所有 router 使用新欄位
+   - 新增 `/api/schools/{school_id}/programs` router
+   - 更新查詢邏輯用 `scope` 過濾
+
+3. ⏰ **Phase 3: 廢棄舊欄位**
+   - 移除 `is_template` 依賴
+   - 移除 `classroom_id`/`organization_id` 依賴
+   - 最終 migration 刪除舊欄位
+
+**預估工作量**: 2-3 天
+**風險**: 中 (需要 migration + 多處 API 修改)
+**優先級**: 🔵 LOW - 延後處理
+
+> ⚠️ **決策 (2026-01-15)**: 先求有，後續再重構
+> - 先用快速方案：只加 `school_id` 欄位
+> - 重構計畫保留，等功能穩定後再執行
+
+---
+
+#### 🔴 HIGH - School 教材功能 (快速方案)
+
+**目標**: 讓學校可以有自己的教材模板
+
+**方案**: 只加 `school_id` 欄位 (不重構)
+
+**步驟**:
+1. ⏰ Migration: 新增 `school_id` 到 programs table
+2. ⏰ Model: 更新 Program model
+3. ⏰ Router: 新增 `/api/schools/{school_id}/programs` (複製 organization_programs.py)
+4. ⏰ 測試: 基本 CRUD + 權限測試
+
+**預估工作量**: 1 小時
+**技術債**: 會累積 (table 設計更亂)，但可接受
 
 ### Questions / Blockers
 

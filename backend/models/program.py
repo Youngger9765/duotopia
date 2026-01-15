@@ -44,8 +44,11 @@ class Program(Base):
         UUID,
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=True,
-        index=True
+        index=True,
     )  # Organization-owned materials (NOT classroom copies)
+    school_id = Column(
+        UUID, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, index=True
+    )  # School-owned materials
 
     # 來源追蹤
     source_type = Column(
@@ -94,6 +97,11 @@ class Program(Base):
     def is_classroom_program(self):
         """判斷是否為班級課程"""
         return not self.is_template and self.classroom_id is not None
+
+    @property
+    def is_school_template(self):
+        """判斷是否為學校教材"""
+        return self.is_template and self.school_id is not None
 
     def __repr__(self):
         type_str = "Template" if self.is_template else f"Class {self.classroom_id}"
