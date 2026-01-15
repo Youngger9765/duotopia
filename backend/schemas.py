@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from typing import Optional, List, Dict, Any  # noqa: F401
 from datetime import datetime  # noqa: F401
 from enum import Enum
@@ -63,6 +63,7 @@ class ProgramResponse(ProgramBase):
     is_template: bool
     classroom_id: Optional[int] = None
     teacher_id: int
+    organization_id: Optional[str] = None
     source_type: Optional[str] = None
     source_metadata: Optional[Dict[str, Any]] = None
     is_active: bool
@@ -74,6 +75,19 @@ class ProgramResponse(ProgramBase):
     teacher_name: Optional[str] = None
     lesson_count: Optional[int] = 0
     is_duplicate: Optional[bool] = None
+    lessons: List["LessonResponse"] = []
+
+    @model_validator(mode='before')
+    @classmethod
+    def convert_uuid_fields(cls, data):
+        """Convert UUID fields to strings before validation"""
+        if hasattr(data, 'organization_id') and data.organization_id is not None:
+            if not isinstance(data.organization_id, str):
+                object.__setattr__(data, 'organization_id', str(data.organization_id))
+        elif isinstance(data, dict) and 'organization_id' in data:
+            if data['organization_id'] is not None and not isinstance(data['organization_id'], str):
+                data['organization_id'] = str(data['organization_id'])
+        return data
 
     class Config:
         from_attributes = True
@@ -109,6 +123,43 @@ class LessonResponse(LessonBase):
     is_active: bool
     created_at: datetime
     updated_at: Optional[datetime] = None
+    contents: List["ContentResponse"] = []
+
+    class Config:
+        from_attributes = True
+
+
+# Content Item schemas
+class ContentItemResponse(BaseModel):
+    """Response model for content item"""
+    id: int
+    content_id: int
+    order_index: int
+    text: str
+    translation: Optional[str] = None
+    audio_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+# Content schemas
+class ContentCreate(BaseModel):
+    """Request model for creating content"""
+    type: str
+    title: str
+    order_index: int = 1
+
+
+class ContentResponse(BaseModel):
+    """Response model for content"""
+    id: int
+    lesson_id: int
+    type: str
+    title: str
+    order_index: int
+    is_active: bool
+    items: List["ContentItemResponse"] = []
 
     class Config:
         from_attributes = True
@@ -342,3 +393,10 @@ class RefundRequest(BaseModel):
     amount: Optional[int] = Field(None, description="退款金額（None = 全額退款）")
     reason: str = Field(..., min_length=1, description="退款原因（必填）")
     notes: Optional[str] = Field(None, description="備註")
+
+
+# Rebuild models to resolve forward references
+ContentItemResponse.model_rebuild()
+ContentResponse.model_rebuild()
+LessonResponse.model_rebuild()
+ProgramResponse.model_rebuild()

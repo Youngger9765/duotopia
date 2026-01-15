@@ -698,6 +698,15 @@ async def list_organization_teachers(
                 )
             )
 
+    # Sort by role priority: org_owner > org_admin > school_admin > teacher
+    role_priority = {
+        "org_owner": 0,
+        "org_admin": 1,
+        "school_admin": 2,
+        "teacher": 3,
+    }
+    result.sort(key=lambda t: role_priority.get(t.role, 999))
+
     return result
 
 
