@@ -3111,14 +3111,20 @@
       "custom": "自建課程"
     },
     "template": {
+      "search": "搜尋公版課程模板...",
       "searchPlaceholder": "搜尋公版課程模板...",
       "selected": "已選擇 {{count}} / {{total}} 個模板",
       "selectAll": "全選",
       "clear": "清除",
       "loading": "載入中...",
+      "empty": "沒有可用的公版課程模板",
       "noTemplates": "沒有可用的公版課程模板",
+      "duplicate": "⚠️ 已有此課程，重複建立可能造成混淆",
       "duplicateWarning": "已有此課程，重複建立可能造成混淆",
       "confirmDuplicate": "⚠️ 警告：以下課程已存在於班級中：\n\n{{names}}\n\n重複建立可能造成混淆，確定要繼續嗎？",
+      "nameLabel": "新課程名稱（選填，留空使用原名）",
+      "namePlaceholder": "{{originalName}}",
+      "multipleNote": "已選擇 {{count}} 個模板，將使用原始名稱建立課程",
       "nameOptional": "新課程名稱（選填，留空使用原名）",
       "multipleSelected": "已選擇 {{count}} 個模板，將使用原始名稱建立課程"
     },

@@ -16,6 +16,7 @@ from typing import List, Optional, Dict, Any
 import uuid
 import logging
 from datetime import datetime
+from copy import deepcopy
 
 from models import (
     Program,
@@ -24,6 +25,7 @@ from models import (
     ContentItem,
     Teacher,
     Organization,
+    Classroom,
 )
 from utils.permissions import (
     has_manage_materials_permission,
@@ -33,6 +35,105 @@ from utils.permissions import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _copy_content_with_items(
+    content: Content, new_lesson_id: int, db: Session
+) -> Content:
+    """Deep copy a content record with its content items."""
+    new_content = Content(
+        lesson_id=new_lesson_id,
+        title=content.title,
+        type=content.type,
+        level=content.level if hasattr(content, "level") else "A1",
+        tags=content.tags.copy() if hasattr(content, "tags") and content.tags else [],
+        is_public=content.is_public if hasattr(content, "is_public") else False,
+        target_wpm=content.target_wpm if hasattr(content, "target_wpm") else None,
+        target_accuracy=content.target_accuracy
+        if hasattr(content, "target_accuracy")
+        else None,
+        time_limit_seconds=content.time_limit_seconds
+        if hasattr(content, "time_limit_seconds")
+        else None,
+        order_index=content.order_index if hasattr(content, "order_index") else 0,
+        is_active=content.is_active,
+    )
+    db.add(new_content)
+    db.flush()
+
+    for original_item in content.content_items:
+        item_copy = ContentItem(
+            content_id=new_content.id,
+            order_index=original_item.order_index,
+            text=original_item.text,
+            translation=original_item.translation
+            if hasattr(original_item, "translation")
+            else None,
+            audio_url=original_item.audio_url
+            if hasattr(original_item, "audio_url")
+            else None,
+            item_metadata=deepcopy(original_item.item_metadata)
+            if hasattr(original_item, "item_metadata") and original_item.item_metadata
+            else {},
+        )
+        db.add(item_copy)
+
+    return new_content
+
+
+def copy_program_tree(
+    source_program: Program,
+    target_classroom: Classroom,
+    target_teacher_id: int,
+    db: Session,
+    source_type: str,
+    source_metadata: Dict[str, Any],
+    name: Optional[str] = None,
+) -> Program:
+    """Deep copy program tree (Program → Lesson → Content → Item) to classroom."""
+    new_program = Program(
+        name=name or source_program.name,
+        description=source_program.description,
+        level=source_program.level,
+        is_template=False,
+        classroom_id=target_classroom.id,
+        teacher_id=target_teacher_id,
+        estimated_hours=source_program.estimated_hours,
+        order_index=source_program.order_index,
+        tags=source_program.tags,
+        source_type=source_type,
+        source_metadata=source_metadata,
+        is_active=True,
+    )
+    db.add(new_program)
+    db.flush()
+
+    for lesson in source_program.lessons:
+        if not lesson.is_active:
+            continue
+
+        new_lesson = Lesson(
+            program_id=new_program.id,
+            name=lesson.name,
+            description=lesson.description,
+            order_index=lesson.order_index,
+            estimated_minutes=lesson.estimated_minutes,
+            is_active=lesson.is_active,
+        )
+        db.add(new_lesson)
+        db.flush()
+
+        for content in lesson.contents:
+            if hasattr(content, "is_active") and not content.is_active:
+                continue
+
+            if hasattr(content, "is_assignment_copy") and content.is_assignment_copy:
+                continue
+
+            _copy_content_with_items(content, new_lesson.id, db)
+
+    db.flush()
+    return new_program
 
 
 # ============================================================================

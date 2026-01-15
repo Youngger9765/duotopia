@@ -1,4 +1,4 @@
-# Duotopia 系統架構文件
+# 教材模組化與權限架構文件
 
 **版本**: 1.0
 **更新日期**: 2026-01-15
@@ -149,6 +149,20 @@
 | 檔案數量 | 2 個獨立頁面 | 1 組共用模組 | 50% |
 | CRUD API 呼叫 | 重複實作 2 次 | 統一 Hook | 100% 重用 |
 | 維護點 | 2 處 | 1 處 | -50% |
+
+### 教材 Tree / Copy 覆蓋矩陣（四層）
+
+| 層級 | Tree View (ProgramTreeView) | Copy 功能 | 現況 |
+|------|-----------------------------|-----------|------|
+| 老師公用課程 | ✅ Teacher Programs 使用 | ✅ `POST /api/programs/copy-from-template` → 班級 | Tree 已完成，Copy 已完成 |
+| 班級課程 | ❌ 未納入 ProgramTreeView | ✅ `POST /api/programs/copy-from-classroom` / `POST /api/teachers/classrooms/{id}/programs/copy` | Tree 缺口，Copy 已完成 |
+| 學校管理 | ❌ 無教材 Tree | ❌ 無教材 Copy | 未覆蓋 |
+| 機構管理 | ✅ Organization Materials 使用 | ✅ `POST /api/organizations/{org_id}/programs/{program_id}/copy-to-classroom` | Tree 已完成，Copy 已完成 |
+
+**補強方向**:
+- 統一 copy 入口：`POST /api/programs/{program_id}/copy`（source/target scope 參數化）
+- 抽出 `copy_program_tree()` service（Program→Lesson→Content→Item 深度複製）
+- 讓班級、學校層共用 ProgramTreeView（按權限決定 readOnly/可編輯）
 
 ---
 

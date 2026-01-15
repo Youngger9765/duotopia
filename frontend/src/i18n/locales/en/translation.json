@@ -2915,14 +2915,20 @@
       "custom": "Custom Program"
     },
     "template": {
+      "search": "Search program templates...",
       "searchPlaceholder": "Search program templates...",
       "selected": "Selected {{count}} / {{total}} templates",
       "selectAll": "Select All",
       "clear": "Clear",
       "loading": "Loading...",
+      "empty": "No templates available",
       "noTemplates": "No templates available",
+      "duplicate": "⚠️ This program already exists, duplication may cause confusion",
       "duplicateWarning": "⚠️ This program already exists, duplication may cause confusion",
       "confirmDuplicate": "⚠️ Warning: The following programs already exist in the classroom:\n\n{{names}}\n\nDuplication may cause confusion, continue anyway?",
+      "nameLabel": "New program name (optional, leave blank to use original)",
+      "namePlaceholder": "{{originalName}}",
+      "multipleNote": "{{count}} templates selected, will use original names",
       "nameOptional": "New program name (optional, leave blank to use original)",
       "multipleSelected": "{{count}} templates selected, will use original names"
     },

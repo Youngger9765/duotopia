@@ -26,6 +26,7 @@ from models import (
     Teacher,
     School,
     TeacherSchool,
+    TeacherOrganization,
     Program,
     Lesson,
     Content,
@@ -172,6 +173,51 @@ class ProgramResponse(BaseModel):
 # ============ Helper Functions ============
 
 
+def check_school_access(
+    teacher_id: int, school_id: uuid.UUID, db: Session
+) -> bool:
+    """
+    Check if teacher can access school materials.
+
+    Access granted if:
+    - Teacher is a member of the school (TeacherSchool)
+    - Teacher is org_owner/org_admin of the school's organization (TeacherOrganization)
+    """
+    # Check school membership
+    membership = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == teacher_id,
+            TeacherSchool.school_id == school_id,
+            TeacherSchool.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if membership:
+        return True
+
+    # Check organization-level access
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        return False
+
+    org_membership = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher_id,
+            TeacherOrganization.organization_id == school.organization_id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if org_membership and org_membership.role in ["org_owner", "org_admin"]:
+        return True
+
+    return False
+
+
 def check_manage_materials_permission(
     teacher_id: int, school_id: uuid.UUID, db: Session
 ) -> bool:
@@ -179,10 +225,27 @@ def check_manage_materials_permission(
     Check if teacher has manage_materials permission in school.
 
     Permission hierarchy:
+    - org_owner/org_admin: Always has permission
     - school_admin: Always has permission
     - school_director: Always has permission
     - teacher: No permission (only view)
     """
+    # Check organization-level access first (org_owner/org_admin)
+    school = db.query(School).filter(School.id == school_id).first()
+    if school:
+        org_membership = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == teacher_id,
+                TeacherOrganization.organization_id == school.organization_id,
+                TeacherOrganization.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if org_membership and org_membership.role in ["org_owner", "org_admin"]:
+            return True
+
     # Check if teacher is member of school
     membership = (
         db.query(TeacherSchool)
@@ -311,23 +374,13 @@ async def list_school_materials(
     """
     List all active school materials (templates).
 
-    Permission: school_admin, school_director, or teacher with manage_materials
+    Permission: school member OR org_owner/org_admin of the school's organization
     """
-    # Check if teacher is member of school
-    membership = (
-        db.query(TeacherSchool)
-        .filter(
-            TeacherSchool.teacher_id == current_teacher.id,
-            TeacherSchool.school_id == school_id,
-            TeacherSchool.is_active.is_(True),
-        )
-        .first()
-    )
-
-    if not membership:
+    # Check access permission
+    if not check_school_access(current_teacher.id, school_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not a member of this school",
+            detail="You do not have access to this school",
         )
 
     # Query school materials
@@ -385,23 +438,13 @@ async def get_school_material_details(
     """
     Get school material details with full hierarchy.
 
-    Permission: Must be member of school
+    Permission: school member OR org_owner/org_admin
     """
-    # Check if teacher is member of school
-    membership = (
-        db.query(TeacherSchool)
-        .filter(
-            TeacherSchool.teacher_id == current_teacher.id,
-            TeacherSchool.school_id == school_id,
-            TeacherSchool.is_active.is_(True),
-        )
-        .first()
-    )
-
-    if not membership:
+    # Check access permission
+    if not check_school_access(current_teacher.id, school_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not a member of this school",
+            detail="You do not have access to this school",
         )
 
     # Get program with hierarchy

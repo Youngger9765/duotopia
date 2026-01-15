@@ -489,7 +489,7 @@ class AssignmentStatus(str, enum.Enum):
 
 **模組化核心**: 教師個人教材 (Teacher Programs) 和組織公版教材 (Organization Materials) 共用 80% 程式碼。
 
-**架構文件**: 詳見 [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
+**架構文件**: 詳見 [`docs/MATERIALS_ARCHITECTURE.md`](./docs/MATERIALS_ARCHITECTURE.md)
 
 #### Frontend 模組（共用組件）
 
@@ -587,7 +587,7 @@ class ContentType(str, enum.Enum):
 
 | 文件 | 路徑 | 說明 |
 |------|------|------|
-| **系統架構圖** | `docs/ARCHITECTURE.md` | 完整的模組化架構說明 |
+| **系統架構圖** | `docs/MATERIALS_ARCHITECTURE.md` | 完整的模組化架構說明 |
 | **組織層級規格** | `ORG_IMPLEMENTATION_SPEC.md` | Organization 功能規格 |
 
 ### 2.4 Phase 2 擴展規劃（未來）

@@ -130,6 +130,17 @@
    - Add copy flow and permissions to `PRD.md`
    - Add scope notes to `docs/API_ORGANIZATION_HIERARCHY.md`
 
+#### Finalized Copy Rules (Confirmed)
+
+- **Organization (Top Level)**: only allow `organization → school` copy
+- **School**: teacher must have `school_admin` or `teacher` role in that school to copy
+- **School → Teacher/Public**: allowed
+- **School → Classroom**: allowed
+- **Teacher/Public ↔ Classroom**: allowed (same teacher only)
+- **Classroom ↔ Classroom**: allowed (same teacher only)
+- **Organization → Classroom**: not allowed
+- **Organization → Teacher/Public**: not allowed
+
 ---
 
 ## 🔵 MEDIUM-LOW Priority - Integration Tests

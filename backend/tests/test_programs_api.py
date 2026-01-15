@@ -190,7 +190,6 @@ def test_organization(test_db: Session):
         id=uuid.uuid4(),
         name=f"Test Org {uuid.uuid4().hex[:6]}",
         display_name="Test Organization",
-        type="school_group",
         is_active=True,
     )
     test_db.add(org)
@@ -358,6 +357,168 @@ def lesson_with_content(test_db: Session, teacher_user):
     lesson._content = content  # Attach for easy access
     lesson._program = program
     return lesson
+
+
+@pytest.fixture
+def teacher_classroom(test_db: Session, teacher_user):
+    """Create a classroom for teacher"""
+    classroom = Classroom(
+        name="Teacher Classroom",
+        description="Test classroom",
+        teacher_id=teacher_user.id,
+        is_active=True,
+    )
+    test_db.add(classroom)
+    test_db.commit()
+    test_db.refresh(classroom)
+    return classroom
+
+
+@pytest.fixture
+def second_teacher_classroom(test_db: Session, teacher_user):
+    """Create another classroom for teacher"""
+    classroom = Classroom(
+        name="Teacher Classroom 2",
+        description="Second test classroom",
+        teacher_id=teacher_user.id,
+        is_active=True,
+    )
+    test_db.add(classroom)
+    test_db.commit()
+    test_db.refresh(classroom)
+    return classroom
+
+
+@pytest.fixture
+def template_program_with_tree(test_db: Session, teacher_user):
+    """Create a teacher template program with lesson/content/items"""
+    program = Program(
+        name="Template Program",
+        description="Template",
+        is_template=True,
+        teacher_id=teacher_user.id,
+        is_active=True,
+    )
+    test_db.add(program)
+    test_db.flush()
+
+    lesson = Lesson(
+        program_id=program.id,
+        name="Template Lesson",
+        order_index=1,
+        is_active=True,
+    )
+    test_db.add(lesson)
+    test_db.flush()
+
+    content = Content(
+        lesson_id=lesson.id,
+        type=ContentType.READING_ASSESSMENT,
+        title="Template Content",
+        order_index=1,
+        is_active=True,
+    )
+    test_db.add(content)
+    test_db.flush()
+
+    item = ContentItem(
+        content_id=content.id,
+        order_index=1,
+        text="Hello template",
+    )
+    test_db.add(item)
+    test_db.commit()
+    test_db.refresh(program)
+    return program
+
+
+@pytest.fixture
+def classroom_program_with_tree(test_db: Session, teacher_user, teacher_classroom):
+    """Create a classroom program with lesson/content/items"""
+    program = Program(
+        name="Classroom Program",
+        description="Classroom source",
+        is_template=False,
+        classroom_id=teacher_classroom.id,
+        teacher_id=teacher_user.id,
+        is_active=True,
+        source_type="custom",
+    )
+    test_db.add(program)
+    test_db.flush()
+
+    lesson = Lesson(
+        program_id=program.id,
+        name="Classroom Lesson",
+        order_index=1,
+        is_active=True,
+    )
+    test_db.add(lesson)
+    test_db.flush()
+
+    content = Content(
+        lesson_id=lesson.id,
+        type=ContentType.READING_ASSESSMENT,
+        title="Classroom Content",
+        order_index=1,
+        is_active=True,
+    )
+    test_db.add(content)
+    test_db.flush()
+
+    item = ContentItem(
+        content_id=content.id,
+        order_index=1,
+        text="Hello classroom",
+    )
+    test_db.add(item)
+    test_db.commit()
+    test_db.refresh(program)
+    return program
+
+
+@pytest.fixture
+def org_program_with_tree(test_db: Session, org_owner_user, test_organization):
+    """Create an organization program with lesson/content/items"""
+    program = Program(
+        name="Org Program",
+        description="Org material",
+        is_template=True,
+        teacher_id=org_owner_user.id,
+        organization_id=test_organization.id,
+        is_active=True,
+    )
+    test_db.add(program)
+    test_db.flush()
+
+    lesson = Lesson(
+        program_id=program.id,
+        name="Org Lesson",
+        order_index=1,
+        is_active=True,
+    )
+    test_db.add(lesson)
+    test_db.flush()
+
+    content = Content(
+        lesson_id=lesson.id,
+        type=ContentType.READING_ASSESSMENT,
+        title="Org Content",
+        order_index=1,
+        is_active=True,
+    )
+    test_db.add(content)
+    test_db.flush()
+
+    item = ContentItem(
+        content_id=content.id,
+        order_index=1,
+        text="Hello org",
+    )
+    test_db.add(item)
+    test_db.commit()
+    test_db.refresh(program)
+    return program
 
 
 # ============================================================================
@@ -771,3 +932,91 @@ class TestEdgeCases:
         )
 
         assert response.status_code == 400
+
+
+# ============================================================================
+# Unified Copy API Tests
+# ============================================================================
+
+
+class TestProgramCopyUnified:
+    """Test unified program copy endpoint"""
+
+    def test_copy_teacher_template_to_classroom(
+        self,
+        authenticated_client: TestClient,
+        teacher_classroom,
+        template_program_with_tree,
+    ):
+        """Copy teacher template program to classroom"""
+        response = authenticated_client.post(
+            f"/api/programs/{template_program_with_tree.id}/copy",
+            json={
+                "target_scope": "classroom",
+                "target_id": teacher_classroom.id,
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["classroom_id"] == teacher_classroom.id
+        assert data["is_template"] is False
+        assert data["source_type"] == "template"
+        assert data["source_metadata"]["template_id"] == template_program_with_tree.id
+        assert len(data["lessons"]) == 1
+        assert len(data["lessons"][0]["contents"]) == 1
+        assert len(data["lessons"][0]["contents"][0]["items"]) == 1
+
+    def test_copy_classroom_program_to_classroom(
+        self,
+        authenticated_client: TestClient,
+        classroom_program_with_tree,
+        second_teacher_classroom,
+    ):
+        """Copy classroom program to another classroom"""
+        response = authenticated_client.post(
+            f"/api/programs/{classroom_program_with_tree.id}/copy",
+            json={
+                "target_scope": "classroom",
+                "target_id": second_teacher_classroom.id,
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["classroom_id"] == second_teacher_classroom.id
+        assert data["source_type"] == "classroom"
+        assert data["source_metadata"]["source_program_id"] == classroom_program_with_tree.id
+
+    def test_copy_organization_program_to_classroom(
+        self,
+        org_owner_client: TestClient,
+        org_owner_membership,
+        org_program_with_tree,
+        test_db: Session,
+        org_owner_user,
+    ):
+        """Copy organization program to classroom"""
+        classroom = Classroom(
+            name="Org Owner Classroom",
+            description="Org owner classroom",
+            teacher_id=org_owner_user.id,
+            is_active=True,
+        )
+        test_db.add(classroom)
+        test_db.commit()
+        test_db.refresh(classroom)
+
+        response = org_owner_client.post(
+            f"/api/programs/{org_program_with_tree.id}/copy",
+            json={
+                "target_scope": "classroom",
+                "target_id": classroom.id,
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["classroom_id"] == classroom.id
+        assert data["source_metadata"]["organization_id"] == str(org_program_with_tree.organization_id)
+        assert data["source_metadata"]["program_id"] == org_program_with_tree.id

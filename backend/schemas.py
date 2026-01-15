@@ -105,6 +105,12 @@ class ProgramCopyFromClassroom(BaseModel):
     name: Optional[str] = None  # 可選，預設使用來源名稱
 
 
+class ProgramCopyRequest(BaseModel):
+    target_scope: str
+    target_id: int
+    name: Optional[str] = None
+
+
 # Lesson schemas
 class LessonBase(BaseModel):
     name: str

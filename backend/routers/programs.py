@@ -12,13 +12,23 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy.exc import SQLAlchemyError
 
 from database import get_db
-from models import Program, Lesson, Teacher, Classroom, Content, ContentItem
+from models import (
+    Program,
+    Lesson,
+    Teacher,
+    Classroom,
+    Content,
+    ContentItem,
+    Organization,
+    TeacherOrganization,
+)
 from schemas import (
     ProgramCreate,
     ProgramUpdate,
     ProgramResponse,
     ProgramCopyFromTemplate,
     ProgramCopyFromClassroom,
+    ProgramCopyRequest,
     LessonCreate,
     ContentCreate,
 )
@@ -316,7 +326,36 @@ async def get_classroom_programs(
         .all()
     )
 
-    return programs
+    result = []
+    for program in programs:
+        result.append(
+            ProgramResponse(
+                id=program.id,
+                name=program.name,
+                description=program.description,
+                level=program.level,
+                estimated_hours=program.estimated_hours,
+                tags=program.tags,
+                is_template=program.is_template,
+                classroom_id=program.classroom_id,
+                teacher_id=program.teacher_id,
+                organization_id=str(program.organization_id)
+                if program.organization_id
+                else None,
+                source_type=program.source_type,
+                source_metadata=program.source_metadata,
+                is_active=program.is_active,
+                created_at=program.created_at or datetime.now(),
+                updated_at=program.updated_at,
+                classroom_name=getattr(program, "classroom_name", None),
+                teacher_name=getattr(program, "teacher_name", None),
+                lesson_count=len(program.lessons) if program.lessons else 0,
+                is_duplicate=getattr(program, "is_duplicate", None),
+                lessons=[],
+            )
+        )
+
+    return result
 
 
 # ============ 三種複製方式 ============
@@ -770,7 +809,30 @@ async def list_programs(
         # Build response with hierarchy
         result = []
         for program in programs:
-            program_data = ProgramResponse.from_orm(program)
+            program_data = ProgramResponse(
+                id=program.id,
+                name=program.name,
+                description=program.description,
+                level=program.level,
+                estimated_hours=program.estimated_hours,
+                tags=program.tags,
+                is_template=program.is_template,
+                classroom_id=program.classroom_id,
+                teacher_id=program.teacher_id,
+                organization_id=str(program.organization_id)
+                if program.organization_id
+                else None,
+                source_type=program.source_type,
+                source_metadata=program.source_metadata,
+                is_active=program.is_active,
+                created_at=program.created_at or datetime.now(),
+                updated_at=program.updated_at,
+                classroom_name=getattr(program, "classroom_name", None),
+                teacher_name=getattr(program, "teacher_name", None),
+                lesson_count=len(program.lessons) if program.lessons else 0,
+                is_duplicate=getattr(program, "is_duplicate", None),
+                lessons=[],
+            )
             program_data.lessons = []
 
             for lesson in sorted(program.lessons, key=lambda x: x.order_index):
@@ -822,6 +884,202 @@ async def list_programs(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+
+
+@router.post("/{program_id}/copy", response_model=ProgramResponse, status_code=201)
+async def copy_program(
+    program_id: int,
+    payload: ProgramCopyRequest,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """Unified program copy API (supports classroom target for now)."""
+    if payload.target_scope != "classroom":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only classroom target is supported",
+        )
+
+    target_classroom = (
+        db.query(Classroom).filter(Classroom.id == payload.target_id).first()
+    )
+    if not target_classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+
+    if target_classroom.teacher_id != current_teacher.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not the teacher of this classroom",
+        )
+
+    source_program = (
+        db.query(Program)
+        .options(
+            joinedload(Program.classroom),
+            joinedload(Program.lessons)
+            .joinedload(Lesson.contents)
+            .joinedload(Content.content_items),
+        )
+        .filter(Program.id == program_id, Program.is_active.is_(True))
+        .first()
+    )
+    if not source_program:
+        raise HTTPException(status_code=404, detail="Program not found")
+
+    source_metadata = {}
+    source_type = None
+
+    if source_program.organization_id:
+        membership = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == current_teacher.id,
+                TeacherOrganization.organization_id == source_program.organization_id,
+                TeacherOrganization.is_active.is_(True),
+            )
+            .first()
+        )
+        if not membership:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not a member of this organization",
+            )
+
+        organization = (
+            db.query(Organization)
+            .filter(Organization.id == source_program.organization_id)
+            .first()
+        )
+        if not organization:
+            raise HTTPException(status_code=404, detail="Organization not found")
+
+        source_type = "organization_template"
+        source_metadata = {
+            "organization_id": str(organization.id),
+            "organization_name": organization.display_name or organization.name,
+            "program_id": source_program.id,
+            "program_name": source_program.name,
+            "source_type": "organization_template",
+        }
+    elif source_program.is_template and source_program.classroom_id is None:
+        if source_program.teacher_id != current_teacher.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No permission to copy this template",
+            )
+        source_type = "template"
+        source_metadata = {
+            "template_id": source_program.id,
+            "template_name": source_program.name,
+            "copied_at": datetime.now().isoformat(),
+        }
+    elif source_program.classroom_id:
+        if source_program.classroom and source_program.classroom.teacher_id != current_teacher.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No permission to copy this classroom program",
+            )
+        source_type = "classroom"
+        source_metadata = {
+            "source_classroom_id": source_program.classroom_id,
+            "source_classroom_name": source_program.classroom.name
+            if source_program.classroom
+            else None,
+            "source_program_id": source_program.id,
+            "source_program_name": source_program.name,
+            "copied_at": datetime.now().isoformat(),
+        }
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported program scope for copy",
+        )
+
+    if payload.name:
+        new_name = payload.name
+    elif source_type == "template":
+        new_name = f"{source_program.name} (複製)"
+    elif source_type == "classroom":
+        source_classroom_name = (
+            source_program.classroom.name if source_program.classroom else "班級"
+        )
+        new_name = f"{source_program.name} (從{source_classroom_name}複製)"
+    else:
+        new_name = source_program.name
+
+    try:
+        new_program = program_service.copy_program_tree(
+            source_program=source_program,
+            target_classroom=target_classroom,
+            target_teacher_id=current_teacher.id,
+            db=db,
+            source_type=source_type,
+            source_metadata=source_metadata,
+            name=new_name,
+        )
+        db.commit()
+        db.refresh(new_program)
+
+        new_program = (
+            db.query(Program)
+            .options(
+                joinedload(Program.lessons)
+                .joinedload(Lesson.contents)
+                .joinedload(Content.content_items)
+            )
+            .filter(Program.id == new_program.id)
+            .first()
+        )
+    except Exception as e:
+        db.rollback()
+        logger.error(
+            f"Failed to copy program {program_id} to classroom {payload.target_id}: {str(e)}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to copy program: {str(e)}",
+        )
+
+    program_data = ProgramResponse.from_orm(new_program)
+    program_data.lessons = []
+
+    for lesson in sorted(new_program.lessons, key=lambda x: x.order_index):
+        lesson_data = {
+            "id": lesson.id,
+            "program_id": lesson.program_id,
+            "name": lesson.name,
+            "description": lesson.description,
+            "order_index": lesson.order_index,
+            "is_active": lesson.is_active,
+            "contents": [],
+        }
+
+        for content in sorted(lesson.contents, key=lambda x: x.order_index):
+            content_data = {
+                "id": content.id,
+                "lesson_id": content.lesson_id,
+                "type": content.type,
+                "title": content.title,
+                "order_index": content.order_index,
+                "is_active": content.is_active,
+                "items": [
+                    {
+                        "id": item.id,
+                        "content_id": item.content_id,
+                        "order_index": item.order_index,
+                        "text": item.text,
+                        "translation": item.translation,
+                        "audio_url": item.audio_url,
+                    }
+                    for item in sorted(content.content_items, key=lambda x: x.order_index)
+                ],
+            }
+            lesson_data["contents"].append(content_data)
+
+        program_data.lessons.append(lesson_data)
+
+    return program_data
 
 
 @router.post("", response_model=ProgramResponse, status_code=201)

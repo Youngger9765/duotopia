@@ -341,7 +341,7 @@ async def get_teacher_dashboard(
         organization_info = OrganizationInfo(
             id=str(org.id),
             name=org.display_name or org.name,
-            type=org.type or "personal",
+            type="organization",
         )
 
     # Query teacher's schools via TeacherSchool (with eager loading)
