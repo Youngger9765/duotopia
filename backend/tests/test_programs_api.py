@@ -35,6 +35,8 @@ from models import (
     Teacher,
     Organization,
     TeacherOrganization,
+    TeacherSchool,
+    School,
     Program,
     Lesson,
     Content,
@@ -196,6 +198,52 @@ def test_organization(test_db: Session):
     test_db.commit()
     test_db.refresh(org)
     return org
+
+
+@pytest.fixture
+def test_school(test_db: Session, test_organization):
+    """Create test school"""
+    school = School(
+        id=uuid.uuid4(),
+        organization_id=test_organization.id,
+        name=f"Test School {uuid.uuid4().hex[:6]}",
+        display_name="Test School",
+        is_active=True,
+    )
+    test_db.add(school)
+    test_db.commit()
+    test_db.refresh(school)
+    return school
+
+
+@pytest.fixture
+def teacher_school_membership(test_db: Session, teacher_user, test_school):
+    """Create teacher membership for school"""
+    membership = TeacherSchool(
+        teacher_id=teacher_user.id,
+        school_id=test_school.id,
+        roles=["teacher"],
+        is_active=True,
+    )
+    test_db.add(membership)
+    test_db.commit()
+    test_db.refresh(membership)
+    return membership
+
+
+@pytest.fixture
+def school_admin_membership(test_db: Session, org_owner_user, test_school):
+    """Create school admin membership for school"""
+    membership = TeacherSchool(
+        teacher_id=org_owner_user.id,
+        school_id=test_school.id,
+        roles=["school_admin"],
+        is_active=True,
+    )
+    test_db.add(membership)
+    test_db.commit()
+    test_db.refresh(membership)
+    return membership
 
 
 @pytest.fixture
@@ -514,6 +562,50 @@ def org_program_with_tree(test_db: Session, org_owner_user, test_organization):
         content_id=content.id,
         order_index=1,
         text="Hello org",
+    )
+    test_db.add(item)
+    test_db.commit()
+    test_db.refresh(program)
+    return program
+
+
+@pytest.fixture
+def school_program_with_tree(test_db: Session, teacher_user, test_school):
+    """Create a school program with lesson/content/items"""
+    program = Program(
+        name="School Program",
+        description="School material",
+        is_template=True,
+        teacher_id=teacher_user.id,
+        school_id=test_school.id,
+        is_active=True,
+    )
+    test_db.add(program)
+    test_db.flush()
+
+    lesson = Lesson(
+        program_id=program.id,
+        name="School Lesson",
+        order_index=1,
+        is_active=True,
+    )
+    test_db.add(lesson)
+    test_db.flush()
+
+    content = Content(
+        lesson_id=lesson.id,
+        type=ContentType.READING_ASSESSMENT,
+        title="School Content",
+        order_index=1,
+        is_active=True,
+    )
+    test_db.add(content)
+    test_db.flush()
+
+    item = ContentItem(
+        content_id=content.id,
+        order_index=1,
+        text="Hello school",
     )
     test_db.add(item)
     test_db.commit()
@@ -988,7 +1080,30 @@ class TestProgramCopyUnified:
         assert data["source_type"] == "classroom"
         assert data["source_metadata"]["source_program_id"] == classroom_program_with_tree.id
 
-    def test_copy_organization_program_to_classroom(
+    def test_copy_organization_program_to_school(
+        self,
+        org_owner_client: TestClient,
+        org_owner_membership,
+        school_admin_membership,
+        org_program_with_tree,
+        test_school,
+    ):
+        """Copy organization program to school"""
+        response = org_owner_client.post(
+            f"/api/programs/{org_program_with_tree.id}/copy",
+            json={
+                "target_scope": "school",
+                "target_id": str(test_school.id),
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["school_id"] == str(test_school.id)
+        assert data["source_metadata"]["organization_id"] == str(org_program_with_tree.organization_id)
+        assert data["source_metadata"]["program_id"] == org_program_with_tree.id
+
+    def test_organization_program_copy_to_classroom_rejected(
         self,
         org_owner_client: TestClient,
         org_owner_membership,
@@ -996,7 +1111,7 @@ class TestProgramCopyUnified:
         test_db: Session,
         org_owner_user,
     ):
-        """Copy organization program to classroom"""
+        """Organization program cannot be copied directly to classroom"""
         classroom = Classroom(
             name="Org Owner Classroom",
             description="Org owner classroom",
@@ -1015,8 +1130,48 @@ class TestProgramCopyUnified:
             },
         )
 
+        assert response.status_code == 400
+
+    def test_copy_school_program_to_teacher_template(
+        self,
+        authenticated_client: TestClient,
+        teacher_school_membership,
+        school_program_with_tree,
+        teacher_user,
+    ):
+        """Copy school program to teacher template"""
+        response = authenticated_client.post(
+            f"/api/programs/{school_program_with_tree.id}/copy",
+            json={
+                "target_scope": "teacher",
+                "target_id": teacher_user.id,
+            },
+        )
+
         assert response.status_code == 201
         data = response.json()
-        assert data["classroom_id"] == classroom.id
-        assert data["source_metadata"]["organization_id"] == str(org_program_with_tree.organization_id)
-        assert data["source_metadata"]["program_id"] == org_program_with_tree.id
+        assert data["classroom_id"] is None
+        assert data["school_id"] is None
+        assert data["is_template"] is True
+        assert data["source_metadata"]["school_id"] == str(school_program_with_tree.school_id)
+
+    def test_copy_school_program_to_classroom(
+        self,
+        authenticated_client: TestClient,
+        teacher_school_membership,
+        school_program_with_tree,
+        teacher_classroom,
+    ):
+        """Copy school program to classroom"""
+        response = authenticated_client.post(
+            f"/api/programs/{school_program_with_tree.id}/copy",
+            json={
+                "target_scope": "classroom",
+                "target_id": teacher_classroom.id,
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["classroom_id"] == teacher_classroom.id
+        assert data["source_metadata"]["school_id"] == str(school_program_with_tree.school_id)

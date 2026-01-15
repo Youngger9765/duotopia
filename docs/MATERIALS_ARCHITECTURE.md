@@ -164,6 +164,14 @@
 - 抽出 `copy_program_tree()` service（Program→Lesson→Content→Item 深度複製）
 - 讓班級、學校層共用 ProgramTreeView（按權限決定 readOnly/可編輯）
 
+#### 統一 Copy 規則（現行）
+
+- Organization → School（僅允許學校端複製）
+- School → Teacher / Classroom（需具 school_admin 或 teacher 角色）
+- Teacher ↔ Classroom（同一教師）
+- Classroom ↔ Classroom（同一教師）
+- Organization → Classroom / Teacher（不允許）
+
 ---
 
 ## 🎨 Frontend 架構

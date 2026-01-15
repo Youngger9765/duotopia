@@ -6,6 +6,7 @@ import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { ProgramTreeView } from "@/components/shared/ProgramTreeView";
+import { SchoolProgramCreateDialog } from "@/components/shared/SchoolProgramCreateDialog";
 import { LessonDialog } from "@/components/LessonDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Content } from "@/types";
 import { BookOpen, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,18 +46,13 @@ interface Program {
 }
 
 interface Lesson {
-  id: number;
+  id?: number;
   name: string;
   description?: string;
   order_index?: number;
+  estimated_minutes?: number;
+  program_id?: number;
   contents?: Content[];
-}
-
-interface Content {
-  id: number;
-  type: string;
-  title: string;
-  order_index?: number;
 }
 
 /**
@@ -155,53 +152,12 @@ export default function SchoolMaterialsPage() {
   const canManageMaterials =
     user?.role === "org_owner" ||
     user?.role === "org_admin" ||
-    user?.role === "school_admin";
+    user?.role === "school_admin" ||
+    user?.role === "school_director";
 
   // Create program
   const handleCreate = () => {
-    setFormName("");
-    setFormDescription("");
     setShowCreateDialog(true);
-  };
-
-  const handleCreateSubmit = async () => {
-    if (!formName.trim()) {
-      toast.error("請填寫教材名稱");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const response = await fetch(
-        `${API_URL}/api/schools/${schoolId}/programs`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name: formName.trim(),
-            description: formDescription.trim() || undefined,
-          }),
-        }
-      );
-
-      if (response.ok) {
-        const newProgram = await response.json();
-        setPrograms((prev) => [...prev, newProgram]);
-        setShowCreateDialog(false);
-        toast.success("教材建立成功");
-      } else {
-        const err = await response.json();
-        toast.error(err.detail || "建立失敗");
-      }
-    } catch (err) {
-      console.error("Failed to create program:", err);
-      toast.error("網路錯誤");
-    } finally {
-      setSaving(false);
-    }
   };
 
   // Edit program
@@ -370,6 +326,36 @@ export default function SchoolMaterialsPage() {
     setSelectedLesson(null);
   };
 
+  const handleDeleteContent = async (contentId: number) => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/schools/${schoolId}/programs/contents/${contentId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.ok) {
+        setPrograms((prev) =>
+          prev.map((program) => ({
+            ...program,
+            lessons: program.lessons?.map((lesson) => ({
+              ...lesson,
+              contents: lesson.contents?.filter((c) => c.id !== contentId),
+            })),
+          }))
+        );
+        toast.success("內容刪除成功");
+      } else {
+        toast.error("刪除失敗");
+      }
+    } catch (err) {
+      console.error("Failed to delete content:", err);
+      toast.error("網路錯誤");
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -473,6 +459,8 @@ export default function SchoolMaterialsPage() {
             <div className="mt-4">
               <ProgramTreeView
                 programs={programs}
+                onProgramsChange={setPrograms}
+                onRefresh={fetchData}
                 showCreateButton={canManageMaterials}
                 createButtonText="新增教材"
                 onCreateClick={handleCreate}
@@ -514,6 +502,11 @@ export default function SchoolMaterialsPage() {
                       setLessonProgramId(program.id);
                       setLessonDialogType("delete");
                     }
+                  } else if (level === 2 && canManageMaterials) {
+                    const contentItem = item as { id?: number };
+                    if (contentItem.id) {
+                      handleDeleteContent(contentItem.id);
+                    }
                   }
                 }}
               />
@@ -522,56 +515,14 @@ export default function SchoolMaterialsPage() {
         </CardContent>
       </Card>
 
-      {/* Create Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>新增教材</DialogTitle>
-            <DialogDescription>建立新的學校教材</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">
-                教材名稱 <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="name"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="輸入教材名稱"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">描述</Label>
-              <Textarea
-                id="description"
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-                placeholder="輸入教材描述（選填）"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowCreateDialog(false)}
-              disabled={saving}
-            >
-              取消
-            </Button>
-            <Button onClick={handleCreateSubmit} disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  建立中...
-                </>
-              ) : (
-                "建立"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SchoolProgramCreateDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        schoolId={schoolId || ""}
+        schoolName={school?.name || ""}
+        organizationId={organization?.id}
+        onSuccess={fetchData}
+      />
 
       {/* Edit Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
@@ -677,6 +628,8 @@ export default function SchoolMaterialsPage() {
         }}
         onSave={handleSaveLesson}
         onDelete={handleDeleteLesson}
+        apiBasePath={`${API_URL}/api/schools/${schoolId}`}
+        authToken={token || undefined}
       />
     </div>
   );

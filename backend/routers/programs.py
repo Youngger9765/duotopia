@@ -5,6 +5,7 @@
 from datetime import datetime  # noqa: F401
 from typing import List, Literal  # noqa: F401
 from copy import deepcopy
+import uuid
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordBearer
@@ -21,6 +22,8 @@ from models import (
     ContentItem,
     Organization,
     TeacherOrganization,
+    School,
+    TeacherSchool,
 )
 from schemas import (
     ProgramCreate,
@@ -33,6 +36,7 @@ from schemas import (
     ContentCreate,
 )
 from auth import verify_token
+from utils.permissions import has_manage_materials_permission
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
 
@@ -342,6 +346,7 @@ async def get_classroom_programs(
                 organization_id=str(program.organization_id)
                 if program.organization_id
                 else None,
+                school_id=str(program.school_id) if program.school_id else None,
                 source_type=program.source_type,
                 source_metadata=program.source_metadata,
                 is_active=program.is_active,
@@ -822,6 +827,7 @@ async def list_programs(
                 organization_id=str(program.organization_id)
                 if program.organization_id
                 else None,
+                school_id=str(program.school_id) if program.school_id else None,
                 source_type=program.source_type,
                 source_metadata=program.source_metadata,
                 is_active=program.is_active,
@@ -886,6 +892,42 @@ async def list_programs(
         )
 
 
+def _has_school_access(teacher_id: int, school_id: uuid.UUID, db: Session) -> bool:
+    membership = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == teacher_id,
+            TeacherSchool.school_id == school_id,
+            TeacherSchool.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not membership or not membership.roles:
+        return False
+
+    return any(role in ["school_admin", "school_director", "teacher"] for role in membership.roles)
+
+
+def _has_school_manage_permission(
+    teacher_id: int, school_id: uuid.UUID, db: Session
+) -> bool:
+    membership = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == teacher_id,
+            TeacherSchool.school_id == school_id,
+            TeacherSchool.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not membership or not membership.roles:
+        return False
+
+    return any(role in ["school_admin", "school_director"] for role in membership.roles)
+
+
 @router.post("/{program_id}/copy", response_model=ProgramResponse, status_code=201)
 async def copy_program(
     program_id: int,
@@ -894,23 +936,30 @@ async def copy_program(
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
     """Unified program copy API (supports classroom target for now)."""
-    if payload.target_scope != "classroom":
+    if payload.target_scope not in ["classroom", "teacher", "school"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only classroom target is supported",
+            detail="Invalid target_scope",
         )
 
-    target_classroom = (
-        db.query(Classroom).filter(Classroom.id == payload.target_id).first()
-    )
-    if not target_classroom:
-        raise HTTPException(status_code=404, detail="Classroom not found")
-
-    if target_classroom.teacher_id != current_teacher.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not the teacher of this classroom",
-        )
+    target_id_int = None
+    target_school_id = None
+    if payload.target_scope in ["classroom", "teacher"]:
+        try:
+            target_id_int = int(payload.target_id)
+        except (TypeError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid target_id for classroom/teacher",
+            )
+    else:
+        try:
+            target_school_id = uuid.UUID(payload.target_id)
+        except (TypeError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid target_id for school",
+            )
 
     source_program = (
         db.query(Program)
@@ -928,21 +977,29 @@ async def copy_program(
 
     source_metadata = {}
     source_type = None
+    source_scope = None
 
     if source_program.organization_id:
-        membership = (
-            db.query(TeacherOrganization)
-            .filter(
-                TeacherOrganization.teacher_id == current_teacher.id,
-                TeacherOrganization.organization_id == source_program.organization_id,
-                TeacherOrganization.is_active.is_(True),
-            )
-            .first()
+        source_scope = "organization"
+    elif source_program.school_id:
+        source_scope = "school"
+    elif source_program.classroom_id:
+        source_scope = "classroom"
+    elif source_program.is_template:
+        source_scope = "teacher"
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported program scope for copy",
         )
-        if not membership:
+
+    if source_scope == "organization":
+        if not has_manage_materials_permission(
+            current_teacher.id, source_program.organization_id, db
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not a member of this organization",
+                detail="No permission to access organization materials",
             )
 
         organization = (
@@ -953,34 +1010,65 @@ async def copy_program(
         if not organization:
             raise HTTPException(status_code=404, detail="Organization not found")
 
+        if payload.target_scope != "school":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Organization materials can only be copied to school",
+            )
+
         source_type = "organization_template"
         source_metadata = {
+            "source_scope": "organization",
             "organization_id": str(organization.id),
             "organization_name": organization.display_name or organization.name,
             "program_id": source_program.id,
             "program_name": source_program.name,
-            "source_type": "organization_template",
         }
-    elif source_program.is_template and source_program.classroom_id is None:
-        if source_program.teacher_id != current_teacher.id:
+    elif source_scope == "school":
+        if not _has_school_access(current_teacher.id, source_program.school_id, db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="No permission to copy this template",
+                detail="No permission to access school materials",
             )
-        source_type = "template"
+
+        if payload.target_scope not in ["teacher", "classroom"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="School materials can only be copied to teacher or classroom",
+            )
+
+        school = (
+            db.query(School)
+            .filter(School.id == source_program.school_id)
+            .first()
+        )
+        if not school:
+            raise HTTPException(status_code=404, detail="School not found")
+
+        source_type = "school_template"
         source_metadata = {
-            "template_id": source_program.id,
-            "template_name": source_program.name,
-            "copied_at": datetime.now().isoformat(),
+            "source_scope": "school",
+            "school_id": str(school.id),
+            "school_name": school.display_name or school.name,
+            "program_id": source_program.id,
+            "program_name": source_program.name,
         }
-    elif source_program.classroom_id:
+    elif source_scope == "classroom":
         if source_program.classroom and source_program.classroom.teacher_id != current_teacher.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No permission to copy this classroom program",
             )
+
+        if payload.target_scope not in ["teacher", "classroom"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Classroom programs can only be copied to teacher or classroom",
+            )
+
         source_type = "classroom"
         source_metadata = {
+            "source_scope": "classroom",
             "source_classroom_id": source_program.classroom_id,
             "source_classroom_name": source_program.classroom.name
             if source_program.classroom
@@ -990,10 +1078,26 @@ async def copy_program(
             "copied_at": datetime.now().isoformat(),
         }
     else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unsupported program scope for copy",
-        )
+        if source_program.teacher_id != current_teacher.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No permission to copy this template",
+            )
+
+        if payload.target_scope == "school":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Teacher templates cannot be copied to school",
+            )
+
+        source_type = "template"
+        source_metadata = {
+            "source_scope": "teacher",
+            "teacher_id": current_teacher.id,
+            "template_id": source_program.id,
+            "template_name": source_program.name,
+            "copied_at": datetime.now().isoformat(),
+        }
 
     if payload.name:
         new_name = payload.name
@@ -1008,15 +1112,75 @@ async def copy_program(
         new_name = source_program.name
 
     try:
-        new_program = program_service.copy_program_tree(
-            source_program=source_program,
-            target_classroom=target_classroom,
-            target_teacher_id=current_teacher.id,
-            db=db,
-            source_type=source_type,
-            source_metadata=source_metadata,
-            name=new_name,
-        )
+        if payload.target_scope == "classroom":
+            target_classroom = (
+                db.query(Classroom).filter(Classroom.id == target_id_int).first()
+            )
+            if not target_classroom:
+                raise HTTPException(status_code=404, detail="Classroom not found")
+
+            if target_classroom.teacher_id != current_teacher.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You are not the teacher of this classroom",
+                )
+
+            new_program = program_service.copy_program_tree(
+                source_program=source_program,
+                target_classroom=target_classroom,
+                target_teacher_id=current_teacher.id,
+                db=db,
+                source_type=source_type,
+                source_metadata=source_metadata,
+                name=new_name,
+            )
+        elif payload.target_scope == "teacher":
+            if target_id_int != current_teacher.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Cannot copy to another teacher",
+                )
+
+            new_program = program_service.copy_program_tree_to_template(
+                source_program=source_program,
+                target_teacher_id=current_teacher.id,
+                target_school_id=None,
+                db=db,
+                source_type=source_type,
+                source_metadata=source_metadata,
+                name=new_name,
+            )
+        else:
+            target_school = (
+                db.query(School).filter(School.id == target_school_id).first()
+            )
+            if not target_school:
+                raise HTTPException(status_code=404, detail="School not found")
+
+            if not _has_school_manage_permission(
+                current_teacher.id, target_school.id, db
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="No permission to manage school materials",
+                )
+
+            if source_scope == "organization":
+                if target_school.organization_id != source_program.organization_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="School does not belong to source organization",
+                    )
+
+            new_program = program_service.copy_program_tree_to_template(
+                source_program=source_program,
+                target_teacher_id=current_teacher.id,
+                target_school_id=target_school.id,
+                db=db,
+                source_type=source_type,
+                source_metadata=source_metadata,
+                name=new_name,
+            )
         db.commit()
         db.refresh(new_program)
 

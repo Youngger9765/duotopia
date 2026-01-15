@@ -33,6 +33,7 @@ from models import (
     ContentItem,
     Classroom,
 )
+from schemas import LessonCreate
 from auth import verify_token
 from services.casbin_service import get_casbin_service
 
@@ -628,6 +629,218 @@ async def soft_delete_school_material(
     db.commit()
 
     return {"message": "Material soft deleted successfully", "program_id": program_id}
+
+
+# ============ Lesson CRUD ============
+
+
+@router.post("/{school_id}/programs/{program_id}/lessons")
+async def create_school_lesson(
+    school_id: uuid.UUID,
+    program_id: int,
+    lesson_data: LessonCreate,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """Create a new lesson in a school program."""
+    # Check access
+    if not check_school_access(current_teacher.id, school_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this school",
+        )
+
+    # Check permission
+    if not check_manage_materials_permission(current_teacher.id, school_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to manage materials",
+        )
+
+    # Verify program exists and belongs to school
+    program = (
+        db.query(Program)
+        .filter(
+            Program.id == program_id,
+            Program.school_id == school_id,
+            Program.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not program:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Program not found",
+        )
+
+    lesson = Lesson(
+        program_id=program_id,
+        name=lesson_data.name,
+        description=lesson_data.description,
+        order_index=lesson_data.order_index or 1,
+        estimated_minutes=lesson_data.estimated_minutes,
+    )
+    db.add(lesson)
+    db.commit()
+    db.refresh(lesson)
+
+    return {
+        "id": lesson.id,
+        "name": lesson.name,
+        "description": lesson.description,
+        "order_index": lesson.order_index,
+        "estimated_minutes": lesson.estimated_minutes,
+    }
+
+
+@router.put("/{school_id}/programs/lessons/{lesson_id}")
+async def update_school_lesson(
+    school_id: uuid.UUID,
+    lesson_id: int,
+    lesson_data: LessonCreate,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """Update a lesson in a school program."""
+    # Check access
+    if not check_school_access(current_teacher.id, school_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this school",
+        )
+
+    # Check permission
+    if not check_manage_materials_permission(current_teacher.id, school_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to manage materials",
+        )
+
+    # Verify lesson exists and belongs to a program in this school
+    lesson = (
+        db.query(Lesson)
+        .join(Program)
+        .filter(
+            Lesson.id == lesson_id,
+            Program.school_id == school_id,
+            Program.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not lesson:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lesson not found",
+        )
+
+    lesson.name = lesson_data.name
+    lesson.description = lesson_data.description
+    if lesson_data.order_index:
+        lesson.order_index = lesson_data.order_index
+    if lesson_data.estimated_minutes:
+        lesson.estimated_minutes = lesson_data.estimated_minutes
+
+    db.commit()
+    db.refresh(lesson)
+
+    return {
+        "id": lesson.id,
+        "name": lesson.name,
+        "description": lesson.description,
+        "order_index": lesson.order_index,
+        "estimated_minutes": lesson.estimated_minutes,
+    }
+
+
+@router.delete("/{school_id}/programs/lessons/{lesson_id}")
+async def delete_school_lesson(
+    school_id: uuid.UUID,
+    lesson_id: int,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """Delete a lesson from a school program."""
+    # Check access
+    if not check_school_access(current_teacher.id, school_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this school",
+        )
+
+    # Check permission
+    if not check_manage_materials_permission(current_teacher.id, school_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to manage materials",
+        )
+
+    # Verify lesson exists and belongs to a program in this school
+    lesson = (
+        db.query(Lesson)
+        .join(Program)
+        .filter(
+            Lesson.id == lesson_id,
+            Program.school_id == school_id,
+            Program.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not lesson:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lesson not found",
+        )
+
+    db.delete(lesson)
+    db.commit()
+
+    return {"message": "Lesson deleted successfully", "lesson_id": lesson_id}
+
+
+# ============ Content CRUD ============
+
+
+@router.delete("/{school_id}/programs/contents/{content_id}")
+async def delete_school_content(
+    school_id: uuid.UUID,
+    content_id: int,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """Delete a content from a school program."""
+    # Check permission
+    if not check_manage_materials_permission(current_teacher.id, school_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No permission to manage materials",
+        )
+
+    # Find content and verify it belongs to this school
+    content = (
+        db.query(Content)
+        .join(Lesson)
+        .join(Program)
+        .filter(
+            Content.id == content_id,
+            Program.school_id == school_id,
+            Program.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content not found",
+        )
+
+    db.delete(content)
+    db.commit()
+
+    return {"message": "Content deleted successfully", "content_id": content_id}
 
 
 @router.post(

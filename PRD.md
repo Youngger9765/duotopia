@@ -1507,6 +1507,12 @@ class AssignmentStatus(str, enum.Enum):
   ```
 - 複製後的課程歸屬班級，可獨立編輯
 
+**跨層複製規則（補充）**：
+- Organization → School（僅允許學校端複製）
+- School → Teacher / Classroom（需具 school_admin 或 teacher 角色）
+- Teacher ↔ Classroom（同一教師）
+- Classroom ↔ Classroom（同一教師）
+
 #### 3.6.3 權限控管
 
 **RBAC 權限設計**：

@@ -136,6 +136,63 @@ def copy_program_tree(
     return new_program
 
 
+def copy_program_tree_to_template(
+    source_program: Program,
+    target_teacher_id: int,
+    db: Session,
+    source_type: str,
+    source_metadata: Dict[str, Any],
+    name: Optional[str] = None,
+    target_school_id: Optional[uuid.UUID] = None,
+) -> Program:
+    """Deep copy program tree into a template (teacher or school owned)."""
+    new_program = Program(
+        name=name or source_program.name,
+        description=source_program.description,
+        level=source_program.level,
+        is_template=True,
+        classroom_id=None,
+        teacher_id=target_teacher_id,
+        organization_id=None,
+        school_id=target_school_id,
+        estimated_hours=source_program.estimated_hours,
+        order_index=source_program.order_index,
+        tags=source_program.tags,
+        source_type=source_type,
+        source_metadata=source_metadata,
+        is_active=True,
+    )
+    db.add(new_program)
+    db.flush()
+
+    for lesson in source_program.lessons:
+        if not lesson.is_active:
+            continue
+
+        new_lesson = Lesson(
+            program_id=new_program.id,
+            name=lesson.name,
+            description=lesson.description,
+            order_index=lesson.order_index,
+            estimated_minutes=lesson.estimated_minutes,
+            is_active=lesson.is_active,
+        )
+        db.add(new_lesson)
+        db.flush()
+
+        for content in lesson.contents:
+            if hasattr(content, "is_active") and not content.is_active:
+                continue
+
+            if hasattr(content, "is_assignment_copy") and content.is_assignment_copy:
+                continue
+
+            _copy_content_with_items(content, new_lesson.id, db)
+
+    db.flush()
+    return new_program
+
+
 # ============================================================================
 # Program CRUD
 # ============================================================================

@@ -7,7 +7,7 @@ from unittest.mock import Mock
 from sqlalchemy.orm import Session
 
 from models import Content
-from routers.teachers import ContentUpdate
+from routers.teachers.validators import ContentUpdate
 
 
 class TestContentOrderUpdate:

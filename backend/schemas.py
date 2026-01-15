@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, model_validator
-from typing import Optional, List, Dict, Any  # noqa: F401
+from typing import Optional, List, Dict, Any, Union  # noqa: F401
 from datetime import datetime  # noqa: F401
 from enum import Enum
 from models import ProgramLevel  # 使用 models 中定義的 Enum
@@ -64,6 +64,7 @@ class ProgramResponse(ProgramBase):
     classroom_id: Optional[int] = None
     teacher_id: int
     organization_id: Optional[str] = None
+    school_id: Optional[str] = None
     source_type: Optional[str] = None
     source_metadata: Optional[Dict[str, Any]] = None
     is_active: bool
@@ -87,6 +88,13 @@ class ProgramResponse(ProgramBase):
         elif isinstance(data, dict) and 'organization_id' in data:
             if data['organization_id'] is not None and not isinstance(data['organization_id'], str):
                 data['organization_id'] = str(data['organization_id'])
+
+        if hasattr(data, 'school_id') and data.school_id is not None:
+            if not isinstance(data.school_id, str):
+                object.__setattr__(data, 'school_id', str(data.school_id))
+        elif isinstance(data, dict) and 'school_id' in data:
+            if data['school_id'] is not None and not isinstance(data['school_id'], str):
+                data['school_id'] = str(data['school_id'])
         return data
 
     class Config:
@@ -107,7 +115,7 @@ class ProgramCopyFromClassroom(BaseModel):
 
 class ProgramCopyRequest(BaseModel):
     target_scope: str
-    target_id: int
+    target_id: Optional[Union[str, int]] = None
     name: Optional[str] = None
 
 
