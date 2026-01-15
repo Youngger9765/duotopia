@@ -23,25 +23,14 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-
-interface ProgramData {
-  id: number;
-  organization_id: string;
-  name: string;
-  description?: string;
-  level?: string;
-  total_hours?: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { OrganizationProgram } from "@/types/organizationPrograms";
 
 interface MaterialEditDialogProps {
-  program: ProgramData | null;
+  program: OrganizationProgram | null;
   organizationId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (program: OrganizationProgram) => void;
 }
 
 const CEFR_LEVELS = [
@@ -134,8 +123,9 @@ export function MaterialEditDialog({
       );
 
       if (response.ok) {
+        const updatedProgram = await response.json();
         toast.success("教材更新成功");
-        onSuccess();
+        onSuccess(updatedProgram);
         onOpenChange(false);
       } else {
         const data = await response.json();

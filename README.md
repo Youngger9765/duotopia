@@ -31,6 +31,17 @@ cd backend && pytest -n auto
 cd frontend && npm run lint && npm run typecheck
 ```
 
+### 4. Seed 資料（本機）
+```bash
+# 必填環境變數
+export SEED_OWNER_PASSWORD="your-owner-password"
+export SEED_DEFAULT_PASSWORD="your-default-password"
+
+# 建立本機測試機構 + demo 資料
+cd backend && python seed_local_org.py
+cd backend && python seed_demo_data.py
+```
+
 ### 4. 部署到 staging
 ```bash
 git push origin staging

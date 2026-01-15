@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { OrganizationProgram } from "@/types/organizationPrograms";
 import {
   Select,
   SelectContent,
@@ -27,7 +28,7 @@ interface MaterialCreateDialogProps {
   organizationId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (program: OrganizationProgram) => void;
 }
 
 const CEFR_LEVELS = [
@@ -111,9 +112,10 @@ export function MaterialCreateDialog({
       );
 
       if (response.ok) {
+        const createdProgram = await response.json();
         toast.success("教材建立成功");
         resetForm();
-        onSuccess();
+        onSuccess(createdProgram);
         onOpenChange(false);
       } else {
         const data = await response.json();

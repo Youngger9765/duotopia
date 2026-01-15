@@ -3,21 +3,20 @@ import { useParams } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { API_URL } from "@/config/api";
+import { useProgramAPI } from "@/hooks/useProgramAPI";
 import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { MaterialCreateDialog } from "@/components/organization/MaterialCreateDialog";
 import { MaterialEditDialog } from "@/components/organization/MaterialEditDialog";
+import { LessonDialog } from "@/components/LessonDialog";
+import { ProgramTreeView } from "@/components/shared/ProgramTreeView";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  OrganizationLesson,
+  OrganizationProgram,
+} from "@/types/organizationPrograms";
 import {
   Dialog,
   DialogContent,
@@ -28,25 +27,9 @@ import {
 } from "@/components/ui/dialog";
 import {
   BookOpen,
-  Plus,
-  Edit2,
-  Trash2,
   Loader2,
-  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
-
-interface ProgramData {
-  id: number;
-  organization_id: string;
-  name: string;
-  description?: string;
-  level?: string;
-  total_hours?: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
 
 /**
  * MaterialsPage - Manage organization-level educational programs/materials
@@ -57,20 +40,56 @@ export default function MaterialsPage() {
   const user = useTeacherAuthStore((state) => state.user);
   const { selectedNode } = useOrganization();
 
-  const [programs, setPrograms] = useState<ProgramData[]>([]);
+  const [programs, setPrograms] = useState<OrganizationProgram[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editingProgram, setEditingProgram] = useState<ProgramData | null>(
-    null,
-  );
+  const [editingProgram, setEditingProgram] =
+    useState<OrganizationProgram | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [organization, setOrganization] = useState<{ name: string } | null>(null);
+
+  // Lesson dialog state
+  const [lessonDialogType, setLessonDialogType] = useState<
+    "create" | "edit" | "delete" | null
+  >(null);
+  const [selectedLesson, setSelectedLesson] =
+    useState<OrganizationLesson | null>(null);
+  const [lessonProgramId, setLessonProgramId] = useState<number | undefined>();
+
+  type ItemWithId = { id?: number };
 
   const effectiveOrgId =
     orgId ||
     (selectedNode?.type === "organization" ? selectedNode.id : undefined);
+
+  // Use unified Programs API
+  const api = useProgramAPI({
+    scope: 'organization',
+    organizationId: effectiveOrgId,
+  });
+
+  useEffect(() => {
+    const fetchOrg = async () => {
+      if (!effectiveOrgId || !token) return;
+      try {
+        const res = await fetch(`${API_URL}/api/organizations/${effectiveOrgId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setOrganization(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch organization:', error);
+      }
+    };
+    if (effectiveOrgId && token) {
+      fetchOrg();
+    }
+  }, [effectiveOrgId, token]);
 
   useEffect(() => {
     if (effectiveOrgId) {
@@ -85,24 +104,12 @@ export default function MaterialsPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(
-        `${API_URL}/api/organizations/${effectiveOrgId}/programs`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setPrograms(data);
-      } else {
-        setError(`載入教材列表失敗：${response.status}`);
-        toast.error("載入教材列表失敗");
-      }
+      const data = await api.getPrograms();
+      setPrograms(data);
     } catch (error) {
       console.error("Failed to fetch programs:", error);
-      setError("網路連線錯誤，請檢查您的網路連線");
-      toast.error("網路錯誤");
+      setError("載入教材列表失敗");
+      toast.error("載入教材列表失敗");
     } finally {
       setLoading(false);
     }
@@ -112,7 +119,7 @@ export default function MaterialsPage() {
     setShowCreateDialog(true);
   };
 
-  const handleEdit = (program: ProgramData) => {
+  const handleEdit = (program: OrganizationProgram) => {
     setEditingProgram(program);
     setShowEditDialog(true);
   };
@@ -134,9 +141,12 @@ export default function MaterialsPage() {
       );
 
       if (response.ok) {
+        // Update state without re-fetching
+        setPrograms(prevPrograms =>
+          prevPrograms.filter(program => program.id !== deleteConfirmId)
+        );
         toast.success("教材刪除成功");
         setDeleteConfirmId(null);
-        fetchPrograms();
       } else {
         const error = await response.json();
         toast.error(error.detail || "刪除失敗");
@@ -149,31 +159,97 @@ export default function MaterialsPage() {
     }
   };
 
-  const getLevelBadgeColor = (level?: string) => {
-    if (!level) return "bg-gray-100 text-gray-800";
-    switch (level.toUpperCase()) {
-      case "PREA":
-        return "bg-gray-100 text-gray-800";
-      case "A1":
-        return "bg-green-100 text-green-800";
-      case "A2":
-        return "bg-blue-100 text-blue-800";
-      case "B1":
-        return "bg-yellow-100 text-yellow-800";
-      case "B2":
-        return "bg-orange-100 text-orange-800";
-      case "C1":
-        return "bg-purple-100 text-purple-800";
-      case "C2":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
+  // Lesson handlers
+  const handleCreateLesson = (programId: number) => {
+    setSelectedLesson(null);
+    setLessonProgramId(programId);
+    setLessonDialogType("create");
+  };
+
+  const handleEditLesson = (programId: number, lessonId: number) => {
+    const program = programs.find((p) => p.id === programId);
+    const lesson = program?.lessons?.find((l) => l.id === lessonId);
+    if (lesson && program) {
+      setSelectedLesson(lesson);
+      setLessonProgramId(program.id);
+      setLessonDialogType("edit");
     }
   };
 
-  const getLevelLabel = (level?: string) => {
-    if (!level) return "-";
-    return level.toUpperCase();
+  const handleSaveLesson = (lessonData: OrganizationLesson) => {
+    if (lessonDialogType === "create" && lessonProgramId) {
+      // lessonData is already the created lesson from LessonDialog
+      setPrograms(prevPrograms =>
+        prevPrograms.map(program => {
+          if (program.id === lessonProgramId) {
+            return {
+              ...program,
+              lessons: [...(program.lessons || []), lessonData],
+            };
+          }
+          return program;
+        })
+      );
+      toast.success("課程單元新增成功");
+    } else if (lessonDialogType === "edit") {
+      // lessonData is already the updated lesson
+      setPrograms(prevPrograms =>
+        prevPrograms.map(program => ({
+          ...program,
+          lessons: program.lessons?.map(lesson =>
+            lesson.id === lessonData.id ? lessonData : lesson
+          ),
+        }))
+      );
+      toast.success("課程單元更新成功");
+    }
+
+    setLessonDialogType(null);
+    setSelectedLesson(null);
+    setLessonProgramId(undefined);
+  };
+
+  const handleDeleteLesson = async (lessonId: number) => {
+    try {
+      await api.deleteLesson(lessonId);
+
+      // Update state without re-fetching
+      setPrograms(prevPrograms =>
+        prevPrograms.map(program => ({
+          ...program,
+          lessons: program.lessons?.filter(lesson => lesson.id !== lessonId),
+        }))
+      );
+
+      toast.success("課程單元刪除成功");
+      setLessonDialogType(null);
+      setSelectedLesson(null);
+    } catch (error) {
+      console.error("Failed to delete lesson:", error);
+      toast.error("刪除失敗");
+    }
+  };
+
+  const handleDeleteContent = async (contentId: number) => {
+    try {
+      await api.deleteContent(contentId);
+
+      // Update state without re-fetching
+      setPrograms(prevPrograms =>
+        prevPrograms.map(program => ({
+          ...program,
+          lessons: program.lessons?.map(lesson => ({
+            ...lesson,
+            contents: lesson.contents?.filter(content => content.id !== contentId),
+          })),
+        }))
+      );
+
+      toast.success("內容刪除成功");
+    } catch (error) {
+      console.error("Failed to delete content:", error);
+      toast.error("刪除失敗");
+    }
   };
 
   // Check if current user can manage materials
@@ -192,7 +268,11 @@ export default function MaterialsPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb items={[{ label: "組織管理" }, { label: "組織教材" }]} />
+      <Breadcrumb items={[
+        { label: "組織管理" },
+        { label: organization?.name || "...", href: `/organization/${orgId}` },
+        { label: "組織教材" }
+      ]} />
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -200,12 +280,6 @@ export default function MaterialsPage() {
           <h1 className="text-3xl font-bold text-gray-900">組織教材</h1>
           <p className="text-gray-600 mt-2">管理組織層級的教學教材與課程</p>
         </div>
-        {canManageMaterials && (
-          <Button onClick={handleCreate} className="gap-2">
-            <Plus className="h-4 w-4" />
-            新增教材
-          </Button>
-        )}
       </div>
 
       {/* Statistics */}
@@ -257,103 +331,80 @@ export default function MaterialsPage() {
           {loading ? (
             <LoadingSpinner />
           ) : error ? (
-            <ErrorMessage message={error} onRetry={fetchPrograms} />
+            <ErrorMessage message={error} onRetry={() => window.location.reload()} />
           ) : programs.length === 0 ? (
             <div className="text-center py-12">
               <BookOpen className="w-16 h-16 mx-auto mb-4 text-gray-300" />
               <p className="text-gray-500 mb-2">此組織尚無教材</p>
               {canManageMaterials && (
-                <Button
-                  variant="outline"
-                  onClick={handleCreate}
-                  className="mt-4 gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  新增第一個教材
-                </Button>
+                <p className="text-sm text-gray-400 mt-4">
+                  點擊上方「新增教材」按鈕開始建立
+                </p>
               )}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>教材名稱</TableHead>
-                  <TableHead>描述</TableHead>
-                  <TableHead>等級</TableHead>
-                  <TableHead>時數</TableHead>
-                  <TableHead>建立時間</TableHead>
-                  <TableHead>狀態</TableHead>
-                  {canManageMaterials && (
-                    <TableHead className="text-right">操作</TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {programs.map((program) => (
-                  <TableRow key={program.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-gray-400" />
-                        {program.name}
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate">
-                      {program.description || "-"}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getLevelBadgeColor(
-                          program.level,
-                        )}`}
-                      >
-                        {getLevelLabel(program.level)}
-                      </span>
-                    </TableCell>
-                    <TableCell>{program.total_hours || "-"}</TableCell>
-                    <TableCell>
-                      {new Date(program.created_at).toLocaleDateString("zh-TW")}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          program.is_active
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {program.is_active ? "啟用" : "停用"}
-                      </span>
-                    </TableCell>
-                    {canManageMaterials && (
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(program)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(program.id)}
-                            disabled={deleting}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            {deleting && deleteConfirmId === program.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="mt-4">
+              <ProgramTreeView
+                programs={programs}
+                showCreateButton={canManageMaterials}
+                createButtonText="新增教材"
+                onCreateClick={handleCreate}
+                onCreate={(level, parentId) => {
+                  if (level === 1) {
+                    handleCreateLesson(parentId as number);
+                  }
+                }}
+                onEdit={(item, level) => {
+                  if (level === 0) {
+                    const program = programs.find((p) => p.id === item.id);
+                    if (program) handleEdit(program);
+                  } else if (level === 1) {
+                    const lessonItem = item as OrganizationLesson;
+                    if (!lessonItem.id) {
+                      return;
+                    }
+                    const program = programs.find(p =>
+                      p.lessons?.some((l) => l.id === lessonItem.id)
+                    );
+                    if (program) {
+                      handleEditLesson(program.id, lessonItem.id);
+                    }
+                  }
+                }}
+                onDelete={(item, level) => {
+                  if (level === 0 && canManageMaterials) {
+                    const itemId = (item as ItemWithId).id;
+                    if (!itemId) {
+                      return;
+                    }
+                    handleDelete(itemId);
+                  } else if (level === 1 && canManageMaterials) {
+                    // Show delete confirmation dialog
+                    const lessonItem = item as OrganizationLesson;
+                    if (!lessonItem.id) {
+                      return;
+                    }
+                    const program = programs.find(p =>
+                      p.lessons?.some((l) => l.id === lessonItem.id)
+                    );
+                    const lesson = program?.lessons?.find(
+                      (l) => l.id === lessonItem.id
+                    );
+                    if (lesson && program) {
+                      setSelectedLesson(lesson);
+                      setLessonProgramId(program.id);
+                      setLessonDialogType("delete");
+                    }
+                  } else if (level === 2 && canManageMaterials) {
+                    const itemId = (item as ItemWithId).id;
+                    if (!itemId) {
+                      return;
+                    }
+                    handleDeleteContent(itemId);
+                  }
+                }}
+              />
+            </div>
           )}
         </CardContent>
       </Card>
@@ -364,7 +415,9 @@ export default function MaterialsPage() {
           organizationId={effectiveOrgId}
           open={showCreateDialog}
           onOpenChange={setShowCreateDialog}
-          onSuccess={fetchPrograms}
+          onSuccess={(newProgram) => {
+            setPrograms(prevPrograms => [...prevPrograms, newProgram]);
+          }}
         />
       )}
 
@@ -380,7 +433,15 @@ export default function MaterialsPage() {
               setEditingProgram(null);
             }
           }}
-          onSuccess={fetchPrograms}
+          onSuccess={(updatedProgram) => {
+            setPrograms(prevPrograms =>
+              prevPrograms.map(p =>
+                p.id === updatedProgram.id
+                  ? { ...updatedProgram, lessons: p.lessons || [] }
+                  : p
+              )
+            );
+          }}
         />
       )}
 
@@ -421,6 +482,21 @@ export default function MaterialsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Lesson Dialog */}
+      <LessonDialog
+        lesson={selectedLesson}
+        dialogType={lessonDialogType}
+        programId={lessonProgramId}
+        onClose={() => {
+          setLessonDialogType(null);
+          setSelectedLesson(null);
+          setLessonProgramId(undefined);
+        }}
+        onSave={handleSaveLesson}
+        onDelete={handleDeleteLesson}
+      />
+
     </div>
   );
 }
