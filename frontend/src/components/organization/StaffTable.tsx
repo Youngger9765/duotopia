@@ -147,6 +147,7 @@ export function StaffTable({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="teacher">教師</SelectItem>
+                    <SelectItem value="school_admin">學校管理員</SelectItem>
                     <SelectItem value="org_admin">組織管理員</SelectItem>
                   </SelectContent>
                 </Select>

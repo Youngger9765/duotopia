@@ -63,7 +63,16 @@ export function SchoolListTable({
             <TableCell>{school.contact_email || "-"}</TableCell>
             <TableCell>
               {school.principal_name ? (
-                <span className="text-gray-900">{school.principal_name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-900">{school.principal_name}</span>
+                  <button
+                    onClick={() => onAssignPrincipal(school)}
+                    className="text-gray-400 hover:text-blue-600 transition-colors"
+                    title="更換校長"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                </div>
               ) : (
                 <Button
                   variant="ghost"

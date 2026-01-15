@@ -11,6 +11,7 @@ import SentenceMakingPanel from "@/components/SentenceMakingPanel";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { apiClient } from "@/lib/api";
+import { useProgramAPI } from "@/hooks/useProgramAPI";
 import { toast } from "sonner";
 import { Program, Lesson, Content } from "@/types";
 
@@ -59,6 +60,11 @@ export default function TeacherTemplateProgramsNew() {
     number | null
   >(null);
 
+  // Use unified Programs API
+  const api = useProgramAPI({
+    scope: 'teacher',
+  });
+
   useEffect(() => {
     fetchTemplatePrograms();
   }, []);
@@ -66,9 +72,8 @@ export default function TeacherTemplateProgramsNew() {
   const fetchTemplatePrograms = async () => {
     try {
       setLoading(true);
-      // 使用 teachers API，已包含完整的 lessons/contents 和排序（teachers.py Line 300, 304）
-      const response = await apiClient.getTeacherPrograms(true);
-      setPrograms(response as Program[]);
+      const data = await api.getPrograms();
+      setPrograms(data);
     } catch (err) {
       console.error("Failed to fetch template programs:", err);
       toast.error(t("teacherTemplatePrograms.messages.loadFailed"));
@@ -171,7 +176,7 @@ export default function TeacherTemplateProgramsNew() {
 
   const handleDeleteLessonConfirm = async (lessonId: number) => {
     try {
-      await apiClient.deleteLesson(lessonId);
+      await api.deleteLesson(lessonId);
       const updatedPrograms = programs.map((program) => {
         if (program.lessons) {
           return {
@@ -249,7 +254,7 @@ export default function TeacherTemplateProgramsNew() {
     }
 
     try {
-      await apiClient.deleteContent(contentId);
+      await api.deleteContent(contentId);
       const updatedPrograms = programs.map((program) => ({
         ...program,
         lessons: program.lessons?.map((lesson) => {
@@ -546,49 +551,51 @@ export default function TeacherTemplateProgramsNew() {
                   </svg>
                 </button>
               </div>
-              <div className="flex-1 overflow-hidden">
-                <ReadingAssessmentPanel
-                  lessonId={editorLessonId}
-                  isCreating={true}
-                  onSave={async (
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    newContent?: any,
-                  ) => {
-                    // 如果有返回新內容，直接更新前端狀態，不重整頁面
-                    if (newContent && editorLessonId) {
-                      setPrograms(
-                        programs.map((program) => ({
-                          ...program,
-                          lessons: program.lessons?.map((lesson) => {
-                            if (lesson.id === editorLessonId) {
-                              return {
-                                ...lesson,
-                                contents: [
-                                  ...(lesson.contents || []),
-                                  newContent,
-                                ],
-                              };
-                            }
-                            return lesson;
-                          }),
-                        })),
+              <div className="flex-1 overflow-hidden flex flex-col">
+                <div className="flex-1 overflow-auto p-6 min-h-0">
+                  <ReadingAssessmentPanel
+                    lessonId={editorLessonId}
+                    isCreating={true}
+                    onSave={async (
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      newContent?: any,
+                    ) => {
+                      // 如果有返回新內容，直接更新前端狀態，不重整頁面
+                      if (newContent && editorLessonId) {
+                        setPrograms(
+                          programs.map((program) => ({
+                            ...program,
+                            lessons: program.lessons?.map((lesson) => {
+                              if (lesson.id === editorLessonId) {
+                                return {
+                                  ...lesson,
+                                  contents: [
+                                    ...(lesson.contents || []),
+                                    newContent,
+                                  ],
+                                };
+                              }
+                              return lesson;
+                            }),
+                          })),
+                        );
+                      }
+                      setShowReadingEditor(false);
+                      setEditorLessonId(null);
+                      setEditorContentId(null);
+                      setSelectedContent(null);
+                      toast.success(
+                        t("teacherTemplatePrograms.messages.contentSaved"),
                       );
-                    }
-                    setShowReadingEditor(false);
-                    setEditorLessonId(null);
-                    setEditorContentId(null);
-                    setSelectedContent(null);
-                    toast.success(
-                      t("teacherTemplatePrograms.messages.contentSaved"),
-                    );
-                  }}
-                  onCancel={() => {
-                    setShowReadingEditor(false);
-                    setEditorLessonId(null);
-                    setEditorContentId(null);
-                    setSelectedContent(null);
-                  }}
-                />
+                    }}
+                    onCancel={() => {
+                      setShowReadingEditor(false);
+                      setEditorLessonId(null);
+                      setEditorContentId(null);
+                      setSelectedContent(null);
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -612,8 +619,8 @@ export default function TeacherTemplateProgramsNew() {
               />
 
               {/* Panel */}
-              <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+              <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col animate-in slide-in-from-right duration-300">
+                <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-gray-900">
                     {t("teacherTemplatePrograms.dialogs.editContentTitle")}
                   </h2>
@@ -643,8 +650,9 @@ export default function TeacherTemplateProgramsNew() {
                   </button>
                 </div>
 
-                <div className="p-6">
-                  <ReadingAssessmentPanel
+                <div className="flex-1 overflow-hidden flex flex-col">
+                  <div className="flex-1 overflow-auto p-6 min-h-0">
+                    <ReadingAssessmentPanel
                     lessonId={editorLessonId}
                     contentId={editorContentId}
                     content={{
@@ -677,13 +685,14 @@ export default function TeacherTemplateProgramsNew() {
                         t("teacherTemplatePrograms.messages.contentSaved"),
                       );
                     }}
-                    onCancel={() => {
-                      setShowReadingEditor(false);
-                      setEditorLessonId(null);
-                      setEditorContentId(null);
-                      setSelectedContent(null);
-                    }}
-                  />
+                      onCancel={() => {
+                        setShowReadingEditor(false);
+                        setEditorLessonId(null);
+                        setEditorContentId(null);
+                        setSelectedContent(null);
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             </>
