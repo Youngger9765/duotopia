@@ -67,18 +67,33 @@ async def teacher_login(
     request: Request, login_req: TeacherLoginRequest, db: Session = Depends(get_db)
 ):
     """教師登入"""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info(f"🔍 Login attempt for email: {login_req.email}")
     teacher = db.query(Teacher).filter(Teacher.email == login_req.email).first()
 
     # 🔐 Security: 統一錯誤訊息，不洩漏帳號是否存在
     if not teacher:
+        logger.error(f"❌ Teacher not found for email: {login_req.email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
 
-    if not verify_password(login_req.password, teacher.password_hash):
+    logger.info(f"✅ Teacher found: id={teacher.id}, email={teacher.email}")
+    logger.info(f"   - is_active: {teacher.is_active}")
+    logger.info(f"   - email_verified: {teacher.email_verified}")
+
+    password_valid = verify_password(login_req.password, teacher.password_hash)
+    logger.info(f"🔑 Password verification result: {password_valid}")
+
+    if not password_valid:
+        logger.error(f"❌ Password verification failed for email: {login_req.email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
+
+    logger.info(f"✅ Password verified successfully")
 
     if not teacher.is_active:
         # 檢查是否是因為 email 未驗證

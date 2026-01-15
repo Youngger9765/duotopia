@@ -3,11 +3,13 @@
 """
 
 from datetime import datetime  # noqa: F401
-from typing import List  # noqa: F401
+from typing import List, Literal  # noqa: F401
 from copy import deepcopy
-from fastapi import APIRouter, Depends, HTTPException, status
+import logging
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy.exc import SQLAlchemyError
 
 from database import get_db
 from models import Program, Lesson, Teacher, Classroom, Content, ContentItem
@@ -17,12 +19,16 @@ from schemas import (
     ProgramResponse,
     ProgramCopyFromTemplate,
     ProgramCopyFromClassroom,
+    LessonCreate,
+    ContentCreate,
 )
 from auth import verify_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
 
 router = APIRouter(prefix="/api/programs", tags=["programs"])
+
+logger = logging.getLogger(__name__)
 
 
 # ============ 認證輔助函數 ============
@@ -721,3 +727,397 @@ async def soft_delete_program(
     db.commit()
 
     return {"message": "Program deleted successfully"}
+
+
+# ============================================================================
+# UNIFIED PROGRAMS API (TDD Implementation)
+# Supports both teacher and organization scopes
+# ============================================================================
+
+from services import program_service
+
+
+@router.get("", response_model=List[ProgramResponse])
+async def list_programs(
+    scope: Literal["teacher", "organization"] = Query(..., description="Scope: teacher or organization"),
+    organization_id: str = Query(None, description="Required if scope=organization"),
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    Unified API: List programs based on scope.
+
+    - scope=teacher: Returns teacher's personal programs
+    - scope=organization: Returns organization programs (requires organization_id)
+    """
+    # Validate parameters
+    if scope == "organization" and not organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="organization_id is required when scope=organization"
+        )
+
+    try:
+        import uuid as uuid_module
+        org_uuid = uuid_module.UUID(organization_id) if organization_id else None
+        programs = program_service.get_programs_by_scope(
+            scope=scope,
+            teacher_id=current_teacher.id,
+            db=db,
+            organization_id=org_uuid,
+        )
+
+        # Build response with hierarchy
+        result = []
+        for program in programs:
+            program_data = ProgramResponse.from_orm(program)
+            program_data.lessons = []
+
+            for lesson in sorted(program.lessons, key=lambda x: x.order_index):
+                lesson_data = {
+                    "id": lesson.id,
+                    "program_id": lesson.program_id,
+                    "name": lesson.name,
+                    "description": lesson.description,
+                    "order_index": lesson.order_index,
+                    "is_active": lesson.is_active,
+                    "contents": []
+                }
+
+                for content in sorted(lesson.contents, key=lambda x: x.order_index):
+                    content_data = {
+                        "id": content.id,
+                        "lesson_id": content.lesson_id,
+                        "type": content.type,
+                        "title": content.title,
+                        "order_index": content.order_index,
+                        "is_active": content.is_active,
+                        "items": [
+                            {
+                                "id": item.id,
+                                "content_id": item.content_id,
+                                "order_index": item.order_index,
+                                "text": item.text,
+                                "translation": item.translation,
+                                "audio_url": item.audio_url,
+                            }
+                            for item in sorted(content.content_items, key=lambda x: x.order_index)
+                        ]
+                    }
+                    lesson_data["contents"].append(content_data)
+
+                program_data.lessons.append(lesson_data)
+
+            result.append(program_data)
+
+        return result
+
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post("", response_model=ProgramResponse, status_code=201)
+async def create_program(
+    payload: ProgramCreate,
+    scope: Literal["teacher", "organization"] = Query(..., description="Scope: teacher or organization"),
+    organization_id: str = Query(None, description="Required if scope=organization"),
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    Unified API: Create program.
+
+    - scope=teacher: Creates personal program for teacher
+    - scope=organization: Creates organization program (requires organization_id and permission)
+    """
+    # Validate parameters
+    if scope == "organization" and not organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="organization_id is required when scope=organization"
+        )
+
+    try:
+        import uuid as uuid_module
+        org_uuid = uuid_module.UUID(organization_id) if organization_id else None
+        program = program_service.create_program(
+            scope=scope,
+            teacher_id=current_teacher.id,
+            data={"name": payload.name, "description": payload.description},
+            db=db,
+            organization_id=org_uuid,
+        )
+
+        return ProgramResponse.from_orm(program)
+
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+# Lesson endpoints
+@router.post("/{program_id}/lessons", status_code=201)
+async def create_lesson(
+    program_id: int,
+    payload: LessonCreate,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    Unified API: Create lesson in program.
+
+    Automatically checks program permission (works for both teacher and org programs).
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info(
+        "[CREATE_LESSON_ENDPOINT] Called with program_id=%s teacher_id=%s lesson_name=%s",
+        program_id,
+        current_teacher.id,
+        payload.name,
+    )
+
+    try:
+        lesson = program_service.create_lesson(
+            program_id=program_id,
+            teacher_id=current_teacher.id,
+            data=payload.dict(),
+            db=db,
+        )
+
+        logger.info(
+            "[CREATE_LESSON_ENDPOINT] Service returned lesson_id=%s name=%s",
+            lesson.id,
+            lesson.name,
+        )
+
+        # Double-check: Count lessons with same name in this program
+        from models import Lesson
+        duplicate_count = db.query(Lesson).filter(
+            Lesson.program_id == program_id,
+            Lesson.name == lesson.name,
+            Lesson.is_active == True
+        ).count()
+        logger.info(
+            "[CREATE_LESSON_ENDPOINT] Duplicate check: %s lessons found in program %s",
+            duplicate_count,
+            program_id,
+        )
+
+        response = {
+            "id": lesson.id,
+            "program_id": lesson.program_id,
+            "name": lesson.name,
+            "description": lesson.description,
+            "order_index": lesson.order_index,
+            "is_active": lesson.is_active,
+        }
+
+        logger.info("[CREATE_LESSON_ENDPOINT] Returning response for lesson_id=%s", lesson.id)
+        return response
+
+    except PermissionError as e:
+        logger.error("[CREATE_LESSON_ENDPOINT] PermissionError: %s", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except ValueError as e:
+        logger.error("[CREATE_LESSON_ENDPOINT] ValueError: %s", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.put("/lessons/{lesson_id}")
+async def update_lesson(
+    lesson_id: int,
+    name: str = Query(None),
+    description: str = Query(None),
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    Unified API: Update lesson.
+
+    Automatically checks lesson->program permission chain.
+    """
+    try:
+        data = {}
+        if name is not None:
+            data["name"] = name
+        if description is not None:
+            data["description"] = description
+
+        lesson = program_service.update_lesson(
+            lesson_id=lesson_id,
+            teacher_id=current_teacher.id,
+            data=data,
+            db=db,
+        )
+
+        return {
+            "id": lesson.id,
+            "program_id": lesson.program_id,
+            "name": lesson.name,
+            "description": lesson.description,
+            "order_index": lesson.order_index,
+            "is_active": lesson.is_active,
+        }
+
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.delete("/lessons/{lesson_id}")
+async def delete_lesson(
+    lesson_id: int,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    Unified API: Soft delete lesson.
+
+    Automatically checks lesson->program permission chain.
+    """
+    try:
+        result = program_service.delete_lesson(
+            lesson_id=lesson_id,
+            teacher_id=current_teacher.id,
+            db=db,
+        )
+
+        return result
+
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+# Content endpoints
+@router.post("/lessons/{lesson_id}/contents", status_code=201)
+async def create_content(
+    lesson_id: int,
+    payload: ContentCreate,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    Unified API: Create content in lesson.
+
+    Automatically checks lesson->program permission chain.
+    """
+    logger.info(
+        "[CREATE_CONTENT_ENDPOINT] Called with lesson_id=%s teacher_id=%s type=%s",
+        lesson_id,
+        current_teacher.id,
+        payload.type,
+    )
+    try:
+        content = program_service.create_content(
+            lesson_id=lesson_id,
+            teacher_id=current_teacher.id,
+            data=payload.dict(),
+            db=db,
+        )
+        logger.info("[CREATE_CONTENT_ENDPOINT] Content created successfully: id=%s", content.id)
+
+        return {
+            "id": content.id,
+            "lesson_id": content.lesson_id,
+            "type": content.type,
+            "title": content.title,
+            "order_index": content.order_index,
+            "is_active": content.is_active,
+        }
+
+    except PermissionError as e:
+        logger.error("Permission denied creating content in lesson %s: %s", lesson_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except ValueError as e:
+        logger.error("Invalid data creating content in lesson %s: %s", lesson_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except SQLAlchemyError as e:
+        logger.error("Database error creating content in lesson %s: %s", lesson_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database error occurred"
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        logger.error("Unexpected error creating content in lesson %s: %s", lesson_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred"
+        )
+
+
+@router.delete("/contents/{content_id}")
+async def delete_content(
+    content_id: int,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    Unified API: Soft delete content.
+
+    Automatically checks content->lesson->program permission chain.
+    """
+    try:
+        result = program_service.delete_content(
+            content_id=content_id,
+            teacher_id=current_teacher.id,
+            db=db,
+        )
+
+        return result
+
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )

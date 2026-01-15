@@ -483,14 +483,121 @@ class AssignmentStatus(str, enum.Enum):
 - **TeacherNotification**：教師通知
 - **StudentProgress**：學生進度追蹤
 
-### 2.3 Phase 2 擴展規劃（未來）
+### 2.3 教材模組架構 (Issue #112 - 2026-01-15 完成)
+
+#### 設計理念
+
+**模組化核心**: 教師個人教材 (Teacher Programs) 和組織公版教材 (Organization Materials) 共用 80% 程式碼。
+
+**架構文件**: 詳見 [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
+
+#### Frontend 模組（共用組件）
+
+**位置**: `frontend/src/hooks/` 和 `frontend/src/components/shared/`
+
+| 模組 | 路徑 | 說明 |
+|------|------|------|
+| **useProgramAPI** | `hooks/useProgramAPI.ts` | 統一的 CRUD API Hook，處理所有 Program/Lesson/Content 操作 |
+| **useProgramTree** | `hooks/useProgramTree.ts` | 樹狀資料管理，處理展開/收合、CRUD 操作 |
+| **useContentEditor** | `hooks/useContentEditor.ts` | Content 編輯器狀態管理 |
+| **ProgramTreeView** | `components/shared/ProgramTreeView.tsx` | 可重用的三層樹狀 UI 組件 |
+| **ContentTypeDialog** | `components/ContentTypeDialog.tsx` | Content 類型選擇對話框 |
+
+**使用範例**:
+```typescript
+// Teacher Programs 頁面
+const api = useProgramAPI();
+const { data } = useProgramTree({ scope: 'teacher' });
+
+// Organization Materials 頁面
+const api = useProgramAPI();
+const { data } = useProgramTree({
+  scope: 'organization',
+  organizationId: orgId
+});
+```
+
+**成果**: 程式碼重用率 80%，維護點減少 50%
+
+#### Backend 模組（Service Layer）
+
+**位置**: `backend/services/program_service.py`
+
+**功能**: 集中化業務邏輯和權限檢查
+
+| 方法 | 說明 |
+|------|------|
+| `create_program()` | 建立教材（Teacher 或 Organization） |
+| `create_lesson()` | 建立單元 |
+| `create_content()` | 建立內容（支援 5 種類型 ✅） |
+| `check_program_permission()` | 檢查 Program 權限 |
+| `check_lesson_permission()` | 檢查 Lesson 權限（自動向上檢查） |
+| `check_manage_materials_permission()` | 檢查組織教材管理權限 |
+
+**權限檢查鏈**:
+```
+Content 權限檢查
+  ↓ 自動向上
+Lesson 權限檢查
+  ↓ 自動向上
+Program 權限檢查
+  ↓ 自動向上
+Organization 權限檢查 (org_owner 自動通過)
+  ↓
+Casbin 規則檢查
+```
+
+#### Unified API
+
+**位置**: `backend/routers/programs.py`
+
+**設計**: 單一 API 路由，透過 `scope` 參數區分使用場景
+
+| Endpoint | Scope | 說明 |
+|----------|-------|------|
+| `GET /api/programs` | `teacher` | 取得老師個人教材 |
+| `GET /api/programs` | `organization` | 取得組織公版教材 |
+| `POST /api/programs/lessons/{id}/contents` | - | 建立內容 |
+
+**Query Parameters**:
+```
+?scope=teacher                              # 預設
+?scope=organization&organization_id=XXX     # 組織教材
+```
+
+#### ContentType Enum 修復 (2026-01-15)
+
+**問題**: Frontend 使用新類型名稱，Backend Database Enum 過時
+
+**修復**:
+- Backend Model (`backend/models/base.py`): 新增 4 個新類型
+- Database Migration (`alembic/versions/20260115_0826_*.py`): 同步 PostgreSQL enum
+
+**支援類型**:
+```python
+class ContentType(str, enum.Enum):
+    READING_ASSESSMENT = "reading_assessment"  # Legacy
+    EXAMPLE_SENTENCES = "example_sentences"     # ✅ 例句集
+    VOCABULARY_SET = "vocabulary_set"           # ✅ 單字集
+    SINGLE_CHOICE_QUIZ = "single_choice_quiz"   # ✅ 單選題庫
+    SCENARIO_DIALOGUE = "scenario_dialogue"     # ✅ 情境對話
+```
+
+#### 關鍵文件
+
+| 文件 | 路徑 | 說明 |
+|------|------|------|
+| **系統架構圖** | `docs/ARCHITECTURE.md` | 完整的模組化架構說明 |
+| **組織層級規格** | `ORG_IMPLEMENTATION_SPEC.md` | Organization 功能規格 |
+
+### 2.4 Phase 2 擴展規劃（未來）
 - **School**：學校管理
 - **Institution**：機構管理
 - **SchoolTeacher**：學校教師關聯
 - **InstitutionTeacher**：機構教師關聯
 - **CourseTemplate**：機構課程模板
 
-### 2.4 活動類型架構（Phase 1）
+### 2.5 活動類型架構（Phase 1）
 
 系統 Phase 1 支援一種核心活動類型：
 

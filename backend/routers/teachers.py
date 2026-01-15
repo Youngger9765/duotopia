@@ -52,15 +52,12 @@ async def get_current_teacher(
 
     # 🔍 診斷 logging
     logger.info("🔍 get_current_teacher called")
-    logger.info(f"🔍 Token received: {token[:30] if token else 'None'}...")
 
     payload = verify_token(token)
-    logger.info(f"🔍 Token verification result: {payload}")
+    logger.info(f"🔍 Token verification result: {bool(payload)}")
 
     if not payload:
-        logger.error(
-            f"❌ Token verification failed! Token: {token[:30] if token else 'None'}..."
-        )
+        logger.error("❌ Token verification failed")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
@@ -2296,22 +2293,11 @@ async def update_lesson(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """更新課程單元"""
-    # 驗證 lesson 屬於當前教師
-    lesson = (
-        db.query(Lesson)
-        .join(Program)
-        .filter(
-            Lesson.id == lesson_id,
-            Program.teacher_id == current_teacher.id,
-            Lesson.is_active.is_(True),
-            Program.is_active.is_(True),
-        )
-        .first()
-    )
+    """更新課程單元（支援 teacher 和 organization programs）"""
+    from utils.permissions import check_lesson_access
 
-    if not lesson:
-        raise HTTPException(status_code=404, detail="Lesson not found")
+    # Unified permission check (supports teacher & org programs)
+    program, lesson = check_lesson_access(db, lesson_id, current_teacher, require_owner=True)
 
     # 更新資料
     lesson.name = lesson_data.name
@@ -2337,23 +2323,11 @@ async def delete_lesson(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """刪除課程單元 - 使用軟刪除保護資料完整性"""
+    """刪除課程單元（支援 teacher 和 organization programs）- 使用軟刪除保護資料完整性"""
+    from utils.permissions import check_lesson_access
 
-    # 驗證 lesson 屬於當前教師
-    lesson = (
-        db.query(Lesson)
-        .join(Program)
-        .filter(
-            Lesson.id == lesson_id,
-            Program.teacher_id == current_teacher.id,
-            Lesson.is_active.is_(True),
-            Program.is_active.is_(True),
-        )
-        .first()
-    )
-
-    if not lesson:
-        raise HTTPException(status_code=404, detail="Lesson not found")
+    # Unified permission check (supports teacher & org programs)
+    program, lesson = check_lesson_access(db, lesson_id, current_teacher, require_owner=True)
 
     # 檢查相關資料
     content_count = (
@@ -2782,48 +2756,13 @@ async def update_content(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """更新內容"""
-    # Verify the content belongs to the teacher
-    # 支援兩種情況：
-    # 1. 模板內容：屬於老師的課程或公版課程
-    # 2. 作業副本：屬於老師的作業
-    content = (
-        db.query(Content)
-        .outerjoin(Lesson)
-        .outerjoin(Program)
-        .outerjoin(
-            AssignmentContent, AssignmentContent.content_id == Content.id
-        )  # 透過 AssignmentContent 關聯
-        .outerjoin(
-            Assignment, Assignment.id == AssignmentContent.assignment_id
-        )  # 再 join Assignment
-        .filter(
-            Content.id == content_id,
-            Content.is_active.is_(True),
-        )
-        .filter(
-            # 模板內容：屬於老師的課程或公版課程
-            (
-                (Content.is_assignment_copy.is_(False))
-                & (
-                    (Program.teacher_id == current_teacher.id)
-                    | (Program.is_template.is_(True))
-                )
-                & (Lesson.is_active.is_(True))
-                & (Program.is_active.is_(True))
-            )
-            # 作業副本：屬於老師的作業
-            | (
-                (Content.is_assignment_copy.is_(True))
-                & (Assignment.teacher_id == current_teacher.id)
-                & (Assignment.is_active.is_(True))
-            )
-        )
-        .first()
-    )
+    """更新內容（支援 teacher、organization programs 和 assignment copies）"""
+    from utils.permissions import check_content_access
 
-    if not content:
-        raise HTTPException(status_code=404, detail="Content not found")
+    # Unified permission check (supports teacher & org programs + assignment copies)
+    program, lesson, content = check_content_access(
+        db, content_id, current_teacher, require_owner=True, allow_assignment_copy=True
+    )
 
     # 驗證句子長度（僅對 EXAMPLE_SENTENCES 類型）
     if update_data.items is not None and content.type == ContentType.EXAMPLE_SENTENCES:
@@ -3177,24 +3116,13 @@ async def delete_content(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """刪除內容（軟刪除）"""
-    # Verify the content belongs to the teacher
-    content = (
-        db.query(Content)
-        .join(Lesson)
-        .join(Program)
-        .filter(
-            Content.id == content_id,
-            Program.teacher_id == current_teacher.id,
-            Content.is_active.is_(True),
-            Lesson.is_active.is_(True),
-            Program.is_active.is_(True),
-        )
-        .first()
-    )
+    """刪除內容（支援 teacher 和 organization programs）- 軟刪除"""
+    from utils.permissions import check_content_access
 
-    if not content:
-        raise HTTPException(status_code=404, detail="Content not found")
+    # Unified permission check (supports teacher & org programs, not assignment copies)
+    program, lesson, content = check_content_access(
+        db, content_id, current_teacher, require_owner=True, allow_assignment_copy=False
+    )
 
     # 檢查是否有相關的作業
 
