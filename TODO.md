@@ -1,6 +1,6 @@
 # TODO - Duotopia Project Tasks
 
-**Last Updated**: 2026-01-14
+**Last Updated**: 2026-01-15
 **Current Branch**: `feature/issue-112-soft-delete-implementation`
 **Focus**: Issue #112 - Organization Soft Delete & Materials Management
 
@@ -388,20 +388,24 @@ class Program:
 
 ---
 
-#### 🔴 HIGH - School 教材功能 (快速方案)
+#### ✅ COMPLETED - School 教材功能 (快速方案)
 
 **目標**: 讓學校可以有自己的教材模板
 
 **方案**: 只加 `school_id` 欄位 (不重構)
 
-**步驟**:
-1. ⏰ Migration: 新增 `school_id` 到 programs table
-2. ⏰ Model: 更新 Program model
-3. ⏰ Router: 新增 `/api/schools/{school_id}/programs` (複製 organization_programs.py)
-4. ⏰ 測試: 基本 CRUD + 權限測試
+**完成項目**:
+1. ✅ Migration: 新增 `school_id` 到 programs table
+2. ✅ Model: 更新 Program model
+3. ✅ Router: `/api/schools/{school_id}/programs` (CRUD + copy-to-classroom)
+4. ✅ 後端 Lesson CRUD endpoints (POST/PUT/DELETE)
+5. ✅ 後端 Content delete endpoint
+6. ✅ 前端 SchoolMaterialsPage (三層 CRUD: Program/Lesson/Content)
+7. ✅ 前端即時更新 tree (onProgramsChange/onRefresh)
+8. ✅ 權限測試: org_owner/org_admin/school_admin 存取控制
+9. ✅ 前端測試: 所有三層 CRUD 功能測試通過
 
-**預估工作量**: 1 小時
-**技術債**: 會累積 (table 設計更亂)，但可接受
+**完成日期**: 2026-01-15
 
 ### Questions / Blockers
 
