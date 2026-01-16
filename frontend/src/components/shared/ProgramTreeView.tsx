@@ -337,6 +337,32 @@ export function ProgramTreeView({
     }
   };
 
+  // Internal Content Delete handler
+  const handleDeleteContent = async (item: TreeItem, level: number, parentId?: string | number) => {
+    if (level !== 2) return; // Only handle content level
+
+    const content = item as Content;
+    const lessonId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
+
+    if (!lessonId) {
+      console.error('Lesson ID is required for content delete');
+      return;
+    }
+
+    try {
+      await programAPI.deleteContent(lessonId, content.id!);
+
+      toast.success('Content deleted successfully');
+
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } catch (error) {
+      console.error('Failed to delete content:', error);
+      toast.error('Failed to delete content');
+    }
+  };
+
   const handleContentClick = (item: TreeItem, level: number, parentId?: string | number) => {
     if (level === 2) {
       // Content level
@@ -445,6 +471,8 @@ export function ProgramTreeView({
       handleDeleteProgram(item, level);
     } else if (level === 1) {
       handleDeleteLesson(item, level, parentId);
+    } else if (level === 2) {
+      handleDeleteContent(item, level, parentId);
     }
   };
 
