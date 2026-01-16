@@ -1,8 +1,9 @@
 # 教材模組化與權限架構文件
 
-**版本**: 1.0
-**更新日期**: 2026-01-15
+**版本**: 1.1
+**更新日期**: 2026-01-16
 **狀態**: ✅ Production Ready
+**最新變更**: 加入 Reorder 功能說明
 
 ---
 
@@ -166,11 +167,13 @@
 
 #### 統一 Copy 規則（現行）
 
-- Organization → School（僅允許學校端複製）
-- School → Teacher / Classroom（需具 school_admin 或 teacher 角色）
-- Teacher ↔ Classroom（同一教師）
-- Classroom ↔ Classroom（同一教師）
-- Organization → Classroom / Teacher（不允許）
+- Organization → School ✅
+- School → Teacher / Classroom ✅
+- Teacher → Teacher / Classroom ✅
+- Classroom → Teacher / Classroom ✅
+- Organization → Teacher / Classroom ❌
+- School → Organization ❌
+- Teacher / Classroom → Organization ❌
 
 ---
 
@@ -314,38 +317,88 @@ await saveContent(updatedData);
 
 **位置**: `frontend/src/components/shared/ProgramTreeView.tsx`
 
-**功能**: 顯示 Program 三層樹狀結構的通用組件
+**功能**: 顯示 Program 三層樹狀結構的通用組件，支援完整 CRUD 與拖曳排序
 
 **Props**:
 ```typescript
 interface ProgramTreeViewProps {
-  scope: 'teacher' | 'organization'
-  organizationId?: string
-  onSelect?: (node) => void
-  readOnly?: boolean
+  programs: ProgramTreeProgram[];
+  onProgramsChange?: (programs: ProgramTreeProgram[]) => void;
+  showCreateButton?: boolean;
+  createButtonText?: string;
+  onCreateClick?: () => void;
+  onEdit?: (item: TreeItem, level: number, parentId?: string | number) => void;
+  onDelete?: (item: TreeItem, level: number, parentId?: string | number) => void;
+  onCreate?: (level: number, parentId: string | number) => void;
+  onReorder?: (fromIndex: number, toIndex: number, level: number, parentId?: string | number) => void;
+  onRefresh?: () => void;
 }
 ```
 
-**使用範例**:
+**功能矩陣**:
+
+| 功能 | MaterialsPage | SchoolMaterialsPage | TeacherTemplatePrograms |
+|------|--------------|---------------------|------------------------|
+| Program CRUD | ✅ MaterialEditDialog | ✅ | ✅ ProgramDialog |
+| Lesson CRUD | ✅ LessonDialog | ✅ | ✅ LessonDialog |
+| Content CRUD | ✅ 內建 (ProgramTreeView) | ✅ | ✅ 自己實作 |
+| **Reorder** | ⚠️ **待實作** | ⚠️ **待實作** | ✅ 完整實作 |
+
+**Reorder 功能說明**:
+
+三層拖曳排序功能（Program / Lesson / Content）：
+
 ```tsx
-// Teacher 頁面
-<ProgramTreeView
-  scope="teacher"
-  onSelect={(node) => console.log(node)}
+// 使用範例（TeacherTemplatePrograms 已實作）
+<RecursiveTreeAccordion
+  data={programs}
+  onReorder={(fromIndex, toIndex, level, parentId) => {
+    if (level === 0) handleReorderPrograms(fromIndex, toIndex);
+    else if (level === 1) handleReorderLessons(parentId, fromIndex, toIndex);
+    else if (level === 2) handleReorderContents(parentId, fromIndex, toIndex);
+  }}
 />
 
-// Organization 頁面
-<ProgramTreeView
-  scope="organization"
-  organizationId={orgId}
-  onSelect={(node) => console.log(node)}
-/>
+// Reorder Handler 實作模式
+const handleReorderPrograms = async (fromIndex, toIndex) => {
+  setIsReordering(true);
+  const originalPrograms = [...programs];  // 備份
+
+  // Optimistic UI Update
+  const newPrograms = [...programs];
+  const [movedItem] = newPrograms.splice(fromIndex, 1);
+  newPrograms.splice(toIndex, 0, movedItem);
+  setPrograms(newPrograms);
+
+  try {
+    const orderData = newPrograms.map((p, index) => ({
+      id: p.id,
+      order_index: index,
+    }));
+    await apiClient.reorderPrograms(orderData);
+    toast.success("排序成功");
+  } catch (err) {
+    setPrograms(originalPrograms);  // Rollback on error
+    toast.error("排序失敗");
+  } finally {
+    setIsReordering(false);
+  }
+};
 ```
+
+**API 支援**:
+- ✅ `apiClient.reorderPrograms(orderData)`
+- ✅ `apiClient.reorderLessons(programId, orderData)`
+- ✅ `apiClient.reorderContents(lessonId, orderData)`
+
+**參考實作**: `src/pages/teacher/TeacherTemplatePrograms.tsx:279-439`
 
 **優點**:
 - ✅ UI 一致性 - 兩邊頁面完全相同的外觀和行為
 - ✅ 減少重複代碼 - 不需要在兩個頁面分別實作
 - ✅ 集中維護 - 修改一處，兩邊同步更新
+- ✅ Optimistic UI - 拖曳立即反應，失敗自動復原
+- ✅ 防重複觸發 - `isReordering` state 保護
 
 ---
 

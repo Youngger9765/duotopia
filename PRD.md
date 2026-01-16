@@ -1492,8 +1492,15 @@ class AssignmentStatus(str, enum.Enum):
   - 軟刪除（設定 `is_active=False`）
   - 保留歷史記錄與追蹤
 
-**複製到班級功能** (`POST /api/organizations/{org_id}/programs/{program_id}/copy-to-classroom`)：
-- 教師可將機構教材複製到自己的班級
+**統一複製 API** (`POST /api/programs/{program_id}/copy`)：
+- 由單一端點處理跨層複製（Organization/School/Teacher/Classroom）
+- Body:
+  ```json
+  {
+    "target_scope": "school|classroom|teacher",
+    "target_id": "uuid-or-int"
+  }
+  ```
 - 自動深度複製：Program → Lessons → Contents → Items
 - 設定 `source_metadata` 追蹤來源：
   ```json
@@ -1505,13 +1512,25 @@ class AssignmentStatus(str, enum.Enum):
     "source_type": "organization_template"
   }
   ```
-- 複製後的課程歸屬班級，可獨立編輯
+- 複製後的課程歸屬目標層級，可獨立編輯
 
 **跨層複製規則（補充）**：
-- Organization → School（僅允許學校端複製）
-- School → Teacher / Classroom（需具 school_admin 或 teacher 角色）
-- Teacher ↔ Classroom（同一教師）
-- Classroom ↔ Classroom（同一教師）
+- Organization → School ✅
+- School → Teacher / Classroom ✅
+- Teacher → Teacher / Classroom ✅
+- Classroom → Teacher / Classroom ✅
+- Organization → Teacher / Classroom ❌
+- School → Organization ❌
+- Teacher / Classroom → Organization ❌
+
+**實作狀態（2026-01-15）**：
+- Backend：統一 copy API + 權限規則完成
+- Frontend：學校層教材 tree + 建立/複製 modal 完成
+- 待完成：copy modal component 模組化
+
+**驗證紀錄（待補）**：
+- 組織後台入口：未驗證
+- 教師端 copy 流程：未驗證
 
 #### 3.6.3 權限控管
 
