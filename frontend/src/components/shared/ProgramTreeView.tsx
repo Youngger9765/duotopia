@@ -36,6 +36,10 @@ interface ProgramTreeViewProps {
   onCreate?: (level: number, parentId: string | number) => void;
   onReorder?: (fromIndex: number, toIndex: number, level: number, parentId?: string | number) => void;
   onRefresh?: () => void;
+  // Scope props for reorder functionality
+  scope: 'teacher' | 'organization' | 'school';
+  organizationId?: string;
+  schoolId?: string;
 }
 
 export function ProgramTreeView({
@@ -49,6 +53,9 @@ export function ProgramTreeView({
   onCreate,
   onReorder,
   onRefresh,
+  scope,
+  organizationId,
+  schoolId,
 }: ProgramTreeViewProps) {
   const { programs, setPrograms, updateProgramContent, addContentToLesson } =
     useProgramTree(externalPrograms);
