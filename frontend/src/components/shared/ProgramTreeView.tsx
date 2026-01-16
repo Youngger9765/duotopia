@@ -26,20 +26,96 @@ type ReadingPanelRow = {
   example_sentence_translation?: string;
 };
 
+/**
+ * Props for the ProgramTreeView component.
+ *
+ * This component provides a hierarchical tree view for Programs, Lessons, and Content
+ * with full CRUD operations at all three levels.
+ *
+ * **Required Props:**
+ * - `programs`: The tree data to display
+ * - `scope`: The authorization scope (teacher/organization/school)
+ *
+ * **Optional CRUD Props (with internal fallbacks):**
+ * All CRUD-related props are optional. If not provided, the component uses internal
+ * handlers that call the API directly via useProgramAPI:
+ *
+ * - `onCreateClick`: Create new program at root level
+ *   - Fallback: Creates program via API and refreshes
+ *
+ * - `onEdit`: Edit program/lesson at any level
+ *   - Fallback: Updates via API based on level (0=program, 1=lesson)
+ *
+ * - `onDelete`: Delete program/lesson/content at any level
+ *   - Fallback: Deletes via API based on level (0=program, 1=lesson, 2=content)
+ *
+ * - `onCreate`: Create new lesson/content (level 1-2)
+ *   - Fallback: For lessons only; content creation uses internal dialog
+ *
+ * - `onReorder`: Reorder items at any level
+ *   - Fallback: Calls reorder API and updates local state optimistically
+ *
+ * **Why provide CRUD props?**
+ * Override the internal handlers if you need custom behavior (e.g., show custom dialog,
+ * additional validation, different API calls).
+ *
+ * **Recommended Usage:**
+ * ```tsx
+ * // Minimal usage (all CRUD handled internally)
+ * <ProgramTreeView
+ *   programs={programs}
+ *   scope="teacher"
+ *   onRefresh={() => refetch()}
+ * />
+ *
+ * // With custom create handler
+ * <ProgramTreeView
+ *   programs={programs}
+ *   scope="organization"
+ *   organizationId={orgId}
+ *   onCreateClick={handleCustomCreate}
+ *   onRefresh={() => refetch()}
+ * />
+ * ```
+ */
 interface ProgramTreeViewProps {
+  /** Required: The program tree data to display */
   programs: ProgramTreeProgram[];
+
+  /** Optional: Callback when internal state changes (for syncing with parent) */
   onProgramsChange?: (programs: ProgramTreeProgram[]) => void;
+
+  /** Optional: Show the root-level "Create Program" button */
   showCreateButton?: boolean;
+
+  /** Optional: Custom text for the create button */
   createButtonText?: string;
+
+  /** Optional: Custom handler for root-level program creation. Fallback: Internal API call */
   onCreateClick?: () => void;
+
+  /** Optional: Custom handler for editing programs/lessons. Fallback: Internal API call */
   onEdit?: (item: TreeItem, level: number, parentId?: string | number) => void;
+
+  /** Optional: Custom handler for deleting programs/lessons/content. Fallback: Internal API call */
   onDelete?: (item: TreeItem, level: number, parentId?: string | number) => void;
+
+  /** Optional: Custom handler for creating lessons. Fallback: Internal API call (content uses dialog) */
   onCreate?: (level: number, parentId: string | number) => void;
+
+  /** Optional: Custom handler for reordering at any level. Fallback: Internal API call with optimistic updates */
   onReorder?: (fromIndex: number, toIndex: number, level: number, parentId?: string | number) => void;
+
+  /** Optional: Callback to refresh data after mutations (called by internal handlers) */
   onRefresh?: () => void;
-  // Scope props for reorder functionality
+
+  /** Required: Authorization scope for API calls (teacher/organization/school) */
   scope: 'teacher' | 'organization' | 'school';
+
+  /** Optional: Organization ID (required when scope='organization' or scope='school') */
   organizationId?: string;
+
+  /** Optional: School ID (required when scope='school') */
   schoolId?: string;
 }
 
