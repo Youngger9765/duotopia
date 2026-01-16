@@ -203,6 +203,65 @@ export function ProgramTreeView({
     }
   };
 
+  // Internal Program CRUD handlers
+  const handleCreateProgram = async () => {
+    try {
+      const result = await programAPI.createProgram({
+        name: 'New Program',
+        description: '',
+      });
+
+      toast.success('Program created successfully');
+
+      // Refresh to get updated list
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } catch (error) {
+      console.error('Failed to create program:', error);
+      toast.error('Failed to create program');
+    }
+  };
+
+  const handleEditProgram = async (item: TreeItem, level: number) => {
+    if (level !== 0) return; // Only handle program level
+
+    const program = item as ProgramTreeProgram;
+    try {
+      await programAPI.updateProgram(program.id!, {
+        name: program.name,
+        description: program.description,
+      });
+
+      toast.success('Program updated successfully');
+
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } catch (error) {
+      console.error('Failed to update program:', error);
+      toast.error('Failed to update program');
+    }
+  };
+
+  const handleDeleteProgram = async (item: TreeItem, level: number) => {
+    if (level !== 0) return; // Only handle program level
+
+    const program = item as ProgramTreeProgram;
+    try {
+      await programAPI.deleteProgram(program.id!);
+
+      toast.success('Program deleted successfully');
+
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } catch (error) {
+      console.error('Failed to delete program:', error);
+      toast.error('Failed to delete program');
+    }
+  };
+
   const handleContentClick = (item: TreeItem, level: number, parentId?: string | number) => {
     if (level === 2) {
       // Content level
@@ -292,9 +351,9 @@ export function ProgramTreeView({
         config={programTreeConfig}
         showCreateButton={showCreateButton}
         createButtonText={createButtonText}
-        onCreateClick={onCreateClick}
-        onEdit={onEdit}
-        onDelete={onDelete}
+        onCreateClick={onCreateClick || handleCreateProgram}
+        onEdit={onEdit || handleEditProgram}
+        onDelete={onDelete || handleDeleteProgram}
         onClick={handleContentClick}
         onCreate={handleCreate}
         onReorder={onReorder || handleInternalReorder}
