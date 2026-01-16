@@ -282,7 +282,7 @@ export function ProgramTreeView({
   // Internal Program CRUD handlers
   const handleCreateProgram = async () => {
     try {
-      const result = await programAPI.createProgram({
+      await programAPI.createProgram({
         name: 'New Program',
         description: '',
       });
@@ -372,7 +372,7 @@ export function ProgramTreeView({
     }
 
     try {
-      await programAPI.updateLesson(programId, lesson.id!, {
+      await programAPI.updateLesson(lesson.id!, {
         name: lesson.name,
         description: lesson.description || '',
       });
@@ -400,7 +400,7 @@ export function ProgramTreeView({
     }
 
     try {
-      await programAPI.deleteLesson(programId, lesson.id!);
+      await programAPI.deleteLesson(lesson.id!);
 
       toast.success('Lesson deleted successfully');
 
@@ -426,7 +426,7 @@ export function ProgramTreeView({
     }
 
     try {
-      await programAPI.deleteContent(lessonId, content.id!);
+      await programAPI.deleteContent(content.id!);
 
       toast.success('Content deleted successfully');
 

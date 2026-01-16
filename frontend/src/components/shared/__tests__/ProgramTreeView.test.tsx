@@ -62,7 +62,7 @@ describe('ProgramTreeView', () => {
           id: 101,
           name: 'Test Lesson 1-1',
           contents: [
-            { id: 1001, title: 'Content 1-1-1', type: 'reading_assessment' },
+            { id: 1001, title: 'Content 1-1-1', type: 'reading_assessment', items_count: 0 },
           ],
         },
       ],
@@ -115,8 +115,6 @@ describe('ProgramTreeView', () => {
       // TDD GREEN Phase: Component now has internal edit handler
       // This test verifies handleEditProgram calls updateProgram with correct params
 
-      const user = userEvent.setup();
-
       // Render WITHOUT onEdit prop (uses internal handler)
       render(
         <ProgramTreeView
@@ -139,8 +137,6 @@ describe('ProgramTreeView', () => {
     it('should call deleteProgram internally when deleting a program', async () => {
       // TDD GREEN Phase: Component now has internal delete handler
       // This test verifies handleDeleteProgram calls deleteProgram with correct ID
-
-      const user = userEvent.setup();
 
       // Render WITHOUT onDelete prop (uses internal handler)
       render(

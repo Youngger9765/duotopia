@@ -4,12 +4,14 @@ import { Content } from "@/types";
 export interface ProgramTreeLesson {
   id?: number;
   name: string;
+  description?: string;
   contents?: Content[];
 }
 
 export interface ProgramTreeProgram {
   id: number;
   name: string;
+  description?: string;
   lessons?: ProgramTreeLesson[];
 }
 
