@@ -262,6 +262,81 @@ export function ProgramTreeView({
     }
   };
 
+  // Internal Lesson CRUD handlers
+  const handleCreateLesson = async (level: number, parentId: string | number) => {
+    if (level !== 1) return; // Only handle lesson level
+
+    const programId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
+    try {
+      await programAPI.createLesson(programId, {
+        name: 'New Lesson',
+        description: '',
+      });
+
+      toast.success('Lesson created successfully');
+
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } catch (error) {
+      console.error('Failed to create lesson:', error);
+      toast.error('Failed to create lesson');
+    }
+  };
+
+  const handleEditLesson = async (item: TreeItem, level: number, parentId?: string | number) => {
+    if (level !== 1) return; // Only handle lesson level
+
+    const lesson = item as ProgramTreeLesson;
+    const programId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
+
+    if (!programId) {
+      console.error('Program ID is required for lesson edit');
+      return;
+    }
+
+    try {
+      await programAPI.updateLesson(programId, lesson.id!, {
+        name: lesson.name,
+        description: lesson.description || '',
+      });
+
+      toast.success('Lesson updated successfully');
+
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } catch (error) {
+      console.error('Failed to update lesson:', error);
+      toast.error('Failed to update lesson');
+    }
+  };
+
+  const handleDeleteLesson = async (item: TreeItem, level: number, parentId?: string | number) => {
+    if (level !== 1) return; // Only handle lesson level
+
+    const lesson = item as ProgramTreeLesson;
+    const programId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
+
+    if (!programId) {
+      console.error('Program ID is required for lesson delete');
+      return;
+    }
+
+    try {
+      await programAPI.deleteLesson(programId, lesson.id!);
+
+      toast.success('Lesson deleted successfully');
+
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } catch (error) {
+      console.error('Failed to delete lesson:', error);
+      toast.error('Failed to delete lesson');
+    }
+  };
+
   const handleContentClick = (item: TreeItem, level: number, parentId?: string | number) => {
     if (level === 2) {
       // Content level
@@ -298,6 +373,7 @@ export function ProgramTreeView({
   };
 
   const handleCreate = (level: number, parentId: string | number) => {
+    // Level 2: Content creation
     if (level === 2) {
       const numericParentId =
         typeof parentId === "string" ? parseInt(parentId) : parentId;
@@ -317,6 +393,17 @@ export function ProgramTreeView({
       }
     }
 
+    // Level 1: Lesson creation (use internal handler if no onCreate prop)
+    if (level === 1) {
+      if (onCreate) {
+        onCreate(level, parentId);
+      } else {
+        handleCreateLesson(level, parentId);
+      }
+      return;
+    }
+
+    // Level 0 or others: Use onCreate prop if provided
     if (onCreate) {
       onCreate(level, parentId);
     }
@@ -344,6 +431,23 @@ export function ProgramTreeView({
       }
     : undefined;
 
+  // Combined handlers that delegate to Program or Lesson handlers based on level
+  const handleInternalEdit = (item: TreeItem, level: number, parentId?: string | number) => {
+    if (level === 0) {
+      handleEditProgram(item, level);
+    } else if (level === 1) {
+      handleEditLesson(item, level, parentId);
+    }
+  };
+
+  const handleInternalDelete = (item: TreeItem, level: number, parentId?: string | number) => {
+    if (level === 0) {
+      handleDeleteProgram(item, level);
+    } else if (level === 1) {
+      handleDeleteLesson(item, level, parentId);
+    }
+  };
+
   return (
     <>
       <RecursiveTreeAccordion
@@ -352,8 +456,8 @@ export function ProgramTreeView({
         showCreateButton={showCreateButton}
         createButtonText={createButtonText}
         onCreateClick={onCreateClick || handleCreateProgram}
-        onEdit={onEdit || handleEditProgram}
-        onDelete={onDelete || handleDeleteProgram}
+        onEdit={onEdit || handleInternalEdit}
+        onDelete={onDelete || handleInternalDelete}
         onClick={handleContentClick}
         onCreate={handleCreate}
         onReorder={onReorder || handleInternalReorder}
