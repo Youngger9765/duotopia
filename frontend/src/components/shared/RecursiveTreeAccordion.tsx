@@ -731,7 +731,7 @@ export function RecursiveTreeAccordion({
       </div>
 
       {/* Drag overlay for visual feedback */}
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeItem && activeConfig ? (
           <div className="bg-blue-500 text-white px-3 py-2 rounded-lg shadow-lg text-sm font-medium">
             移動:{" "}

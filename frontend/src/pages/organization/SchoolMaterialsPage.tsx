@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { API_URL } from "@/config/api";
@@ -89,6 +89,14 @@ export default function SchoolMaterialsPage() {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [lessonProgramId, setLessonProgramId] = useState<number | undefined>();
   const [isReordering, setIsReordering] = useState(false);
+
+  // Memoized callback to prevent infinite loop
+  const handleProgramsChange = useCallback(
+    (updatedPrograms: any) => {
+      setPrograms(updatedPrograms as Program[]);
+    },
+    []
+  );
 
   useEffect(() => {
     if (schoolId) {
@@ -593,9 +601,7 @@ export default function SchoolMaterialsPage() {
             <div className="mt-4">
               <ProgramTreeView
                 programs={programs}
-                onProgramsChange={(updatedPrograms) =>
-                  setPrograms(updatedPrograms as Program[])
-                }
+                onProgramsChange={handleProgramsChange}
                 onRefresh={fetchData}
                 showCreateButton={canManageMaterials}
                 createButtonText="新增教材"

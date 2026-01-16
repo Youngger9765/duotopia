@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -72,6 +72,14 @@ export default function MaterialsPage() {
     scope: 'organization',
     organizationId: effectiveOrgId,
   });
+
+  // Memoized callback to prevent infinite loop
+  const handleProgramsChange = useCallback(
+    (updatedPrograms: any) => {
+      setPrograms(updatedPrograms as OrganizationProgram[]);
+    },
+    []
+  );
 
   useEffect(() => {
     const fetchOrg = async () => {
@@ -480,9 +488,7 @@ export default function MaterialsPage() {
             <div className="mt-4">
               <ProgramTreeView
                 programs={programs}
-                onProgramsChange={(updatedPrograms) =>
-                  setPrograms(updatedPrograms as OrganizationProgram[])
-                }
+                onProgramsChange={handleProgramsChange}
                 showCreateButton={canManageMaterials}
                 createButtonText="新增教材"
                 onCreateClick={handleCreate}
