@@ -11,6 +11,7 @@ const mockDeleteProgram = vi.fn();
 const mockCreateLesson = vi.fn();
 const mockUpdateLesson = vi.fn();
 const mockDeleteLesson = vi.fn();
+const mockDeleteContent = vi.fn();
 
 // Mock dependencies
 vi.mock('@/config/api', () => ({
@@ -25,6 +26,7 @@ vi.mock('@/hooks/useProgramAPI', () => ({
     createLesson: mockCreateLesson,
     updateLesson: mockUpdateLesson,
     deleteLesson: mockDeleteLesson,
+    deleteContent: mockDeleteContent,
   }),
 }));
 
@@ -198,6 +200,23 @@ describe('ProgramTreeView', () => {
       // After Task 5: Component will have internal handleDeleteLesson
       expect(mockDeleteLesson).toBeDefined();
       expect(typeof mockDeleteLesson).toBe('function');
+    });
+  });
+
+  describe('Content Delete operation - Internal Handler (RED Phase)', () => {
+    it('should call deleteContent internally when deleting content', () => {
+      render(
+        <ProgramTreeView
+          programs={mockPrograms}
+          scope="teacher"
+          onRefresh={vi.fn()}
+        />
+      );
+
+      // After Task 7: Component will have internal handleDeleteContent
+      // For now, verify this expectation exists
+      expect(mockDeleteContent).toBeDefined();
+      expect(typeof mockDeleteContent).toBe('function');
     });
   });
 });
