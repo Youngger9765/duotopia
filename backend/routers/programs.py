@@ -1543,3 +1543,251 @@ async def delete_content(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
+
+# ============================================================================
+# Reorder Endpoints (Scope-Aware)
+# ============================================================================
+
+
+@router.put("/reorder")
+async def reorder_programs(
+    order_data: List[dict],
+    scope: Literal["teacher", "organization", "school"] = Query(...),
+    organization_id: str = Query(None),
+    school_id: str = Query(None),
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    Reorder programs based on scope.
+
+    - scope=teacher: Reorder teacher's personal programs
+    - scope=organization: Reorder organization programs (requires organization_id)
+    - scope=school: Reorder school programs (requires school_id)
+    """
+    # Validate required parameters
+    if scope == "organization" and not organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="organization_id is required when scope=organization"
+        )
+    if scope == "school" and not school_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="school_id is required when scope=school"
+        )
+
+    # Build query based on scope
+    query = db.query(Program).filter(Program.is_template == True)
+
+    if scope == "teacher":
+        query = query.filter(
+            Program.teacher_id == current_teacher.id,
+            Program.organization_id == None,
+            Program.school_id == None,
+            Program.class_id == None,
+        )
+    elif scope == "organization":
+        try:
+            org_uuid = uuid.UUID(organization_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid organization_id format"
+            )
+        query = query.filter(
+            Program.organization_id == org_uuid,
+            Program.teacher_id == current_teacher.id
+        )
+    elif scope == "school":
+        try:
+            sch_uuid = uuid.UUID(school_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid school_id format"
+            )
+        query = query.filter(
+            Program.school_id == sch_uuid,
+            Program.teacher_id == current_teacher.id
+        )
+
+    # Get all programs in scope
+    programs = query.all()
+    program_dict = {str(p.id): p for p in programs}
+
+    # Update order_index
+    for item in order_data:
+        program_id = str(item.get("id"))
+        new_order = item.get("order_index")
+
+        if program_id in program_dict:
+            program_dict[program_id].order_index = new_order
+
+    db.commit()
+
+    return {"message": "Programs reordered successfully"}
+
+
+@router.put("/{program_id}/lessons/reorder")
+async def reorder_lessons(
+    program_id: int,
+    order_data: List[dict],
+    scope: Literal["teacher", "organization", "school"] = Query(...),
+    organization_id: str = Query(None),
+    school_id: str = Query(None),
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """Reorder lessons within a program (scope-aware)"""
+    # Validate required parameters
+    if scope == "organization" and not organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="organization_id is required when scope=organization"
+        )
+    if scope == "school" and not school_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="school_id is required when scope=school"
+        )
+
+    # Verify program exists and matches scope
+    query = db.query(Program).filter(Program.id == program_id)
+
+    if scope == "teacher":
+        query = query.filter(
+            Program.teacher_id == current_teacher.id,
+            Program.is_template == True,
+            Program.classroom_id == None,
+            Program.organization_id == None,
+            Program.school_id == None,
+        )
+    elif scope == "organization":
+        try:
+            org_uuid = uuid.UUID(organization_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid organization_id format"
+            )
+        query = query.filter(
+            Program.organization_id == org_uuid,
+            Program.teacher_id == current_teacher.id
+        )
+    elif scope == "school":
+        try:
+            sch_uuid = uuid.UUID(school_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid school_id format"
+            )
+        query = query.filter(
+            Program.school_id == sch_uuid,
+            Program.teacher_id == current_teacher.id
+        )
+
+    program = query.first()
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+
+    # Reorder lessons
+    lesson_ids = [item["id"] for item in order_data]
+    lessons_list = db.query(Lesson).filter(
+        Lesson.id.in_(lesson_ids),
+        Lesson.program_id == program_id
+    ).all()
+
+    lessons_dict = {lesson.id: lesson for lesson in lessons_list}
+
+    for item in order_data:
+        lesson = lessons_dict.get(item["id"])
+        if lesson:
+            lesson.order_index = item["order_index"]
+
+    db.commit()
+
+    return {"message": "Lessons reordered successfully"}
+
+
+@router.put("/lessons/{lesson_id}/contents/reorder")
+async def reorder_contents(
+    lesson_id: int,
+    order_data: List[dict],
+    scope: Literal["teacher", "organization", "school"] = Query(...),
+    organization_id: str = Query(None),
+    school_id: str = Query(None),
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """Reorder contents within a lesson (scope-aware)"""
+    # Validate required parameters
+    if scope == "organization" and not organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="organization_id is required when scope=organization"
+        )
+    if scope == "school" and not school_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="school_id is required when scope=school"
+        )
+
+    # Verify lesson's program matches scope
+    query = db.query(Lesson).join(Program).filter(Lesson.id == lesson_id)
+
+    if scope == "teacher":
+        query = query.filter(
+            Program.teacher_id == current_teacher.id,
+            Program.is_template == True,
+            Program.classroom_id == None,
+            Program.organization_id == None,
+            Program.school_id == None,
+        )
+    elif scope == "organization":
+        try:
+            org_uuid = uuid.UUID(organization_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid organization_id format"
+            )
+        query = query.filter(
+            Program.organization_id == org_uuid,
+            Program.teacher_id == current_teacher.id
+        )
+    elif scope == "school":
+        try:
+            sch_uuid = uuid.UUID(school_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid school_id format"
+            )
+        query = query.filter(
+            Program.school_id == sch_uuid,
+            Program.teacher_id == current_teacher.id
+        )
+
+    lesson = query.first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    # Reorder contents
+    content_ids = [item["id"] for item in order_data]
+    contents_list = db.query(Content).filter(
+        Content.id.in_(content_ids),
+        Content.lesson_id == lesson_id
+    ).all()
+
+    contents_dict = {content.id: content for content in contents_list}
+
+    for item in order_data:
+        content = contents_dict.get(item["id"])
+        if content:
+            content.order_index = item["order_index"]
+
+    db.commit()
+
+    return {"message": "Contents reordered successfully"}
