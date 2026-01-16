@@ -27,36 +27,24 @@
    - **Commit**: da4b519c "fix(reorder): 修復拖曳排序功能 - INSERT邏輯+本地狀態更新"
 
 ### Medium Priority
-1. **重構：ProgramTreeView 取代所有 RecursiveTreeAccordion 直接使用** 🔶
-   - **問題**：架構不統一，Reorder 邏輯散落在多個頁面
-   - **現況**：
-     - TeacherTemplatePrograms（882行）：直接使用 RecursiveTreeAccordion + 所有 CRUD 內建
-     - MaterialsPage/SchoolMaterialsPage：透過 ProgramTreeView wrapper（404行） + 父組件 CRUD
-   - **目標架構**（重要重構）：
-     - ✅ **所有頁面都使用 ProgramTreeView**（禁止直接使用 RecursiveTreeAccordion）
-     - ✅ **ProgramTreeView 內建完整功能**：
-       - Content CRUD（已有 useContentEditor）
-       - Program/Lesson CRUD（待新增）
-       - 三層 Reorder（待新增，scope-aware）
-     - ✅ **RecursiveTreeAccordion 只負責純 UI 層**（拖曳、展開/收合、樹狀結構）
-   - **實作步驟**：
-     1. ProgramTreeView 新增 scope props（scope, organizationId, schoolId）
-     2. ProgramTreeView 使用 useProgramAPI 進行 scope-aware API 呼叫
-     3. ProgramTreeView 內建 Program/Lesson CRUD handlers
-     4. ProgramTreeView 內建三層 Reorder handlers（使用 scope-aware endpoints）
-     5. 重構 TeacherTemplatePrograms 使用 ProgramTreeView
-     6. MaterialsPage/SchoolMaterialsPage 簡化為純 scope 配置
-   - **測試要求（必須完整測試）**：
-     - [ ] Teacher scope: Program/Lesson/Content CRUD + 三層 Reorder
-     - [ ] Organization scope: Program/Lesson/Content CRUD + 三層 Reorder
-     - [ ] School scope: Program/Lesson/Content CRUD + 三層 Reorder
-     - [ ] 拖曳排序後刷新頁面，順序保存（所有 scope）
-     - [ ] 無 Regression（TeacherTemplatePrograms 原有功能不受影響）
-     - [ ] TypeScript 型別安全（無型別錯誤）
-   - **預估工作量**：2-3天（需完整測試）
-   - **風險**：中（TeacherTemplatePrograms 功能複雜）
-   - **優先級**：🔶 MEDIUM-HIGH - 架構債務，影響後續開發效率
-   - **決策**：先修復 High Priority reorder bug，架構穩定後執行此重構
+1. ~~**重構：ProgramTreeView 取代所有 RecursiveTreeAccordion 直接使用**~~ ✅ **已完成**
+   - **完成日期**：2026-01-16
+   - **實作內容**：
+     - ✅ ProgramTreeView 內建完整 Program/Lesson/Content CRUD
+     - ✅ 移除不必要的 props（onEdit/onDelete/onCreate/onReorder 改為可選）
+     - ✅ MaterialsPage 簡化（60% 代碼減少：404行 → 163行）
+     - ✅ SchoolMaterialsPage 簡化（63% 代碼減少：404行 → 151行）
+     - ✅ TeacherTemplatePrograms 遷移（93% 代碼減少：882行 → 64行）
+   - **架構改進**：
+     - RecursiveTreeAccordion 現在只負責純 UI 層（拖曳、展開/收合）
+     - ProgramTreeView 是完整的自包含元件（CRUD + Reorder + Content Editor）
+     - 統一三個 scope 的實作（不再有重複邏輯）
+   - **Commits**: ba1cdeed, f189d519, 7f236f1a, 2a5080dc, 093a19e3, 7607df2b, 1deee214, 67d9bd3c, a6d4c780, 27e3b3e4, 11e29466
+   - **文檔**: `docs/architecture/program-tree-refactor.md`
+   - **測試狀態**：
+     - ✅ Unit tests: Program/Lesson/Content CRUD handlers
+     - ⏰ Integration tests: 待手動驗證（需要瀏覽器測試）
+     - ⏰ E2E tests: 待手動驗證（跨頁面流程）
 
 2. **進行中：教材共用模組** 🔄
    - 現況：Copy 流程分散在多個元件
