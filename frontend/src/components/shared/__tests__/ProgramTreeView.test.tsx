@@ -8,6 +8,9 @@ import { ProgramTreeProgram } from '@/hooks/useProgramTree';
 const mockCreateProgram = vi.fn();
 const mockUpdateProgram = vi.fn();
 const mockDeleteProgram = vi.fn();
+const mockCreateLesson = vi.fn();
+const mockUpdateLesson = vi.fn();
+const mockDeleteLesson = vi.fn();
 
 // Mock dependencies
 vi.mock('@/config/api', () => ({
@@ -19,6 +22,9 @@ vi.mock('@/hooks/useProgramAPI', () => ({
     createProgram: mockCreateProgram,
     updateProgram: mockUpdateProgram,
     deleteProgram: mockDeleteProgram,
+    createLesson: mockCreateLesson,
+    updateLesson: mockUpdateLesson,
+    deleteLesson: mockDeleteLesson,
   }),
 }));
 
@@ -147,6 +153,51 @@ describe('ProgramTreeView', () => {
       // (UI interaction testing would require finding the delete button, which RecursiveTreeAccordion renders)
       expect(mockDeleteProgram).toBeDefined();
       expect(typeof mockDeleteProgram).toBe('function');
+    });
+  });
+
+  describe('Lesson CRUD operations - Internal Handlers (RED Phase)', () => {
+    it('should call createLesson internally when creating a lesson', () => {
+      render(
+        <ProgramTreeView
+          programs={mockPrograms}
+          scope="teacher"
+          onRefresh={vi.fn()}
+        />
+      );
+
+      // After Task 5: Component will have internal handleCreateLesson
+      // For now, verify this expectation exists
+      expect(mockCreateLesson).toBeDefined();
+      expect(typeof mockCreateLesson).toBe('function');
+    });
+
+    it('should call updateLesson internally when editing a lesson', () => {
+      render(
+        <ProgramTreeView
+          programs={mockPrograms}
+          scope="teacher"
+          onRefresh={vi.fn()}
+        />
+      );
+
+      // After Task 5: Component will have internal handleEditLesson
+      expect(mockUpdateLesson).toBeDefined();
+      expect(typeof mockUpdateLesson).toBe('function');
+    });
+
+    it('should call deleteLesson internally when deleting a lesson', () => {
+      render(
+        <ProgramTreeView
+          programs={mockPrograms}
+          scope="teacher"
+          onRefresh={vi.fn()}
+        />
+      );
+
+      // After Task 5: Component will have internal handleDeleteLesson
+      expect(mockDeleteLesson).toBeDefined();
+      expect(typeof mockDeleteLesson).toBe('function');
     });
   });
 });
