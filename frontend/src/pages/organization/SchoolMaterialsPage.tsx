@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { API_URL } from "@/config/api";
-import { apiClient } from "@/lib/api";
 import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
@@ -88,7 +87,6 @@ export default function SchoolMaterialsPage() {
   >(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [lessonProgramId, setLessonProgramId] = useState<number | undefined>();
-  const [isReordering, setIsReordering] = useState(false);
 
   // Memoized callback to prevent infinite loop
   const handleProgramsChange = useCallback(
@@ -155,138 +153,6 @@ export default function SchoolMaterialsPage() {
       toast.error("載入失敗");
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Reorder handlers
-  const handleReorderPrograms = async (fromIndex: number, toIndex: number) => {
-    if (isReordering) {
-      toast.warning("正在排序中...");
-      return;
-    }
-
-    setIsReordering(true);
-    const originalPrograms = [...programs];
-
-    // Optimistic UI update
-    const newPrograms = [...programs];
-    const [movedItem] = newPrograms.splice(fromIndex, 1);
-    newPrograms.splice(toIndex, 0, movedItem);
-    setPrograms(newPrograms);
-
-    try {
-      const orderData = newPrograms.map((program, index) => ({
-        id: program.id,
-        order_index: index,
-      }));
-      await apiClient.reorderPrograms(orderData);
-      toast.success("排序成功");
-      setIsReordering(false);
-    } catch (err) {
-      console.error("Reorder programs failed:", err);
-      toast.error("排序失敗");
-      setPrograms(originalPrograms);
-      setIsReordering(false);
-    }
-  };
-
-  const handleReorderLessons = async (
-    programId: number,
-    fromIndex: number,
-    toIndex: number
-  ) => {
-    if (isReordering) {
-      toast.warning("正在排序中...");
-      return;
-    }
-
-    const program = programs.find((p) => p.id === programId);
-    if (!program || !program.lessons) return;
-
-    setIsReordering(true);
-    const originalPrograms = [...programs];
-
-    // Optimistic UI update
-    const newLessons = [...program.lessons];
-    const [movedItem] = newLessons.splice(fromIndex, 1);
-    newLessons.splice(toIndex, 0, movedItem);
-
-    setPrograms((prevPrograms) =>
-      prevPrograms.map((p) =>
-        p.id === programId ? { ...p, lessons: newLessons } : p
-      )
-    );
-
-    try {
-      const orderData = newLessons
-        .filter((lesson) => lesson.id !== undefined)
-        .map((lesson, index) => ({
-          id: lesson.id!,
-          order_index: index,
-        }));
-      await apiClient.reorderLessons(programId, orderData);
-      toast.success("排序成功");
-      setIsReordering(false);
-    } catch (err) {
-      console.error("Reorder lessons failed:", err);
-      toast.error("排序失敗");
-      setPrograms(originalPrograms);
-      setIsReordering(false);
-    }
-  };
-
-  const handleReorderContents = async (
-    lessonId: number,
-    fromIndex: number,
-    toIndex: number
-  ) => {
-    if (isReordering) {
-      toast.warning("正在排序中...");
-      return;
-    }
-
-    // Find program and lesson
-    const targetProgram = programs.find((p) =>
-      p.lessons?.some((l) => l.id === lessonId)
-    );
-    const targetLesson = targetProgram?.lessons?.find((l) => l.id === lessonId);
-    if (!targetLesson || !targetLesson.contents) return;
-
-    setIsReordering(true);
-    const originalPrograms = [...programs];
-
-    // Optimistic UI update
-    const newContents = [...targetLesson.contents];
-    const [movedItem] = newContents.splice(fromIndex, 1);
-    newContents.splice(toIndex, 0, movedItem);
-
-    setPrograms((prevPrograms) =>
-      prevPrograms.map((p) => {
-        if (p.id === targetProgram!.id) {
-          return {
-            ...p,
-            lessons: p.lessons?.map((l) =>
-              l.id === lessonId ? { ...l, contents: newContents } : l
-            ),
-          };
-        }
-        return p;
-      })
-    );
-
-    try {
-      const orderData = newContents.map((content, index) => ({
-        id: content.id,
-        order_index: index,
-      }));
-      await apiClient.reorderContents(lessonId, orderData);
-      toast.success("排序成功");
-      setIsReordering(false);
-    } catch (err) {
-      console.error("Reorder contents failed:", err);
-      toast.error("排序失敗");
-      setPrograms(originalPrograms);
-      setIsReordering(false);
     }
   };
 
@@ -651,15 +517,8 @@ export default function SchoolMaterialsPage() {
                     }
                   }
                 }}
-                onReorder={(fromIndex, toIndex, level, parentId) => {
-                  if (level === 0) {
-                    handleReorderPrograms(fromIndex, toIndex);
-                  } else if (level === 1) {
-                    handleReorderLessons(parentId as number, fromIndex, toIndex);
-                  } else if (level === 2) {
-                    handleReorderContents(parentId as number, fromIndex, toIndex);
-                  }
-                }}
+                scope="school"
+                schoolId={schoolId}
               />
             </div>
           )}
