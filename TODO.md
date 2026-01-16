@@ -18,9 +18,10 @@
    - **正確架構**：✅ **選項 A - Reorder 內建到 ProgramTreeView**
    - **當前狀態**：
      - [x] UI 拖曳功能正常（infinite loop 已修復）
-     - [ ] Backend: `/api/programs/reorder?scope=xxx` endpoint（待實作）
-     - [ ] ProgramTreeView: 內建 reorder 功能（待重構）
-   - **優先級**：🔴 HIGH - Blocking 用戶使用
+     - [x] Backend: `/api/programs/reorder?scope=xxx` endpoint（已完成）
+     - [x] ProgramTreeView: 內建 reorder 功能（已完成）
+   - **完成日期**：2026-01-16
+   - **解決方案**：✅ 實作 scope-aware reorder endpoints + ProgramTreeView 內建 reorder handlers
 
 ### Medium Priority
 1. **重構：ProgramTreeView 取代所有 RecursiveTreeAccordion 直接使用** 🔶
