@@ -10,6 +10,7 @@ import {
   useProgramTree,
 } from "@/hooks/useProgramTree";
 import { useContentEditor } from "@/hooks/useContentEditor";
+import { useProgramAPI } from "@/hooks/useProgramAPI";
 import { Content, ContentItem } from "@/types";
 import { toast } from "sonner";
 
@@ -60,6 +61,8 @@ export function ProgramTreeView({
   const { programs, setPrograms, updateProgramContent, addContentToLesson } =
     useProgramTree(externalPrograms);
 
+  const programAPI = useProgramAPI({ scope, organizationId, schoolId });
+
   const {
     showReadingEditor,
     editorLessonId,
@@ -93,6 +96,71 @@ export function ProgramTreeView({
       onProgramsChange(programs);
     }
   }, [programs, onProgramsChange]);
+
+  // Internal reorder handler
+  const handleInternalReorder = async (
+    fromIndex: number,
+    toIndex: number,
+    level: number,
+    parentId?: string | number
+  ) => {
+    try {
+      if (level === 0) {
+        // Reorder programs
+        const orderData = programs
+          .filter((p) => p.id !== undefined)
+          .map((program, index) => ({
+            id: program.id!,
+            order_index: index === fromIndex ? toIndex : index === toIndex ? fromIndex : index,
+          }));
+        await programAPI.reorderPrograms(orderData);
+      } else if (level === 1) {
+        // Reorder lessons within a program
+        const programId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
+        if (!programId) throw new Error('Program ID is required for lesson reorder');
+
+        const program = programs.find((p) => p.id === programId);
+        if (!program?.lessons) throw new Error('Program or lessons not found');
+
+        const orderData = program.lessons
+          .filter((l) => l.id !== undefined)
+          .map((lesson, index) => ({
+            id: lesson.id!,
+            order_index: index === fromIndex ? toIndex : index === toIndex ? fromIndex : index,
+          }));
+        await programAPI.reorderLessons(programId, orderData);
+      } else if (level === 2) {
+        // Reorder contents within a lesson
+        const lessonId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
+        if (!lessonId) throw new Error('Lesson ID is required for content reorder');
+
+        const program = programs.find((p) => p.lessons?.some((l) => l.id === lessonId));
+        const lesson = program?.lessons?.find((l) => l.id === lessonId);
+        if (!lesson?.contents) throw new Error('Lesson or contents not found');
+
+        const orderData = lesson.contents
+          .filter((c) => c.id !== undefined)
+          .map((content, index) => ({
+            id: content.id!,
+            order_index: index === fromIndex ? toIndex : index === toIndex ? fromIndex : index,
+          }));
+        await programAPI.reorderContents(lessonId, orderData);
+      }
+
+      // Refresh data after successful reorder
+      if (onRefresh) {
+        await onRefresh();
+      }
+      toast.success('順序已更新');
+    } catch (error) {
+      console.error('Reorder failed:', error);
+      toast.error('更新順序失敗');
+      // Rollback UI by refreshing
+      if (onRefresh) {
+        await onRefresh();
+      }
+    }
+  };
 
   const handleContentClick = (item: TreeItem, level: number, parentId?: string | number) => {
     if (level === 2) {
@@ -188,7 +256,7 @@ export function ProgramTreeView({
         onDelete={onDelete}
         onClick={handleContentClick}
         onCreate={handleCreate}
-        onReorder={onReorder}
+        onReorder={onReorder || handleInternalReorder}
       />
 
       {/* Reading Assessment Modal */}
