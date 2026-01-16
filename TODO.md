@@ -9,19 +9,22 @@
 ## Pending ⏰
 
 ### High Priority
-1. **修復：MaterialsPage/SchoolMaterialsPage Reorder 無法保存** 🔴
+1. ~~**修復：MaterialsPage/SchoolMaterialsPage Reorder 無法保存**~~ ✅ **已完成**
    - **問題**：拖曳排序後重新整理頁面，順序沒有保存
-   - **Root Cause**：呼叫錯誤的 API scope
-     - MaterialsPage（organization scope）→ 呼叫 `/api/teachers/programs/reorder`（teacher scope）❌
-     - SchoolMaterialsPage（school scope）→ 呼叫 `/api/teachers/programs/reorder`（teacher scope）❌
-   - **錯誤架構**：Reorder logic 散落在 3 個地方（TeacherTemplatePrograms, MaterialsPage, SchoolMaterialsPage）
-   - **正確架構**：✅ **選項 A - Reorder 內建到 ProgramTreeView**
-   - **當前狀態**：
-     - [x] UI 拖曳功能正常（infinite loop 已修復）
-     - [x] Backend: `/api/programs/reorder?scope=xxx` endpoint（已完成）
-     - [x] ProgramTreeView: 內建 reorder 功能（已完成）
+   - **Root Cause（實際）**：
+     - ❌ **ProgramTreeView 使用錯誤的 SWAP 邏輯**（應該用 INSERT splice）
+     - ❌ **Backend GET endpoint 沒有排序 programs**（只排序了 lessons/contents）
+     - ❌ **使用 onRefresh() 導致不必要的頁面重整**
+   - **解決方案**：
+     - ✅ Frontend: 修復 SWAP → INSERT 邏輯（三層皆使用 splice）
+     - ✅ Backend: 新增 `sorted(programs, key=lambda x: x.order_index)`
+     - ✅ UX 優化: 移除 onRefresh()，改用 onProgramsChange 本地更新
+   - **測試結果**：
+     - ✅ 拖曳排序立即更新 UI（無頁面重整）
+     - ✅ 刷新頁面後順序正確保存
+     - ✅ orderData 值正確（連續 0,1,2,3...）
    - **完成日期**：2026-01-16
-   - **解決方案**：✅ 實作 scope-aware reorder endpoints + ProgramTreeView 內建 reorder handlers
+   - **Commit**: da4b519c "fix(reorder): 修復拖曳排序功能 - INSERT邏輯+本地狀態更新"
 
 ### Medium Priority
 1. **重構：ProgramTreeView 取代所有 RecursiveTreeAccordion 直接使用** 🔶
