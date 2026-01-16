@@ -813,7 +813,7 @@ async def list_programs(
 
         # Build response with hierarchy
         result = []
-        for program in programs:
+        for program in sorted(programs, key=lambda x: x.order_index):
             program_data = ProgramResponse(
                 id=program.id,
                 name=program.name,

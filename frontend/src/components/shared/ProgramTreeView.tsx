@@ -104,16 +104,27 @@ export function ProgramTreeView({
     level: number,
     parentId?: string | number
   ) => {
+    console.log('🔍 [ProgramTreeView] handleInternalReorder called:', { fromIndex, toIndex, level, parentId, scope, organizationId, schoolId });
     try {
       if (level === 0) {
-        // Reorder programs
-        const orderData = programs
+        // Reorder programs - use INSERT logic (splice)
+        const newPrograms = [...programs];
+        const [movedItem] = newPrograms.splice(fromIndex, 1);  // Remove from old position
+        newPrograms.splice(toIndex, 0, movedItem);             // Insert at new position
+
+        const orderData = newPrograms
           .filter((p) => p.id !== undefined)
           .map((program, index) => ({
             id: program.id!,
-            order_index: index === fromIndex ? toIndex : index === toIndex ? fromIndex : index,
+            order_index: index,  // Use the new index directly
           }));
+        console.log('📤 [ProgramTreeView] Sending reorder request:', { orderData, scope, organizationId });
         await programAPI.reorderPrograms(orderData);
+
+        // Update local state immediately (no refresh)
+        if (onProgramsChange) {
+          onProgramsChange(newPrograms);
+        }
       } else if (level === 1) {
         // Reorder lessons within a program
         const programId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
@@ -122,13 +133,26 @@ export function ProgramTreeView({
         const program = programs.find((p) => p.id === programId);
         if (!program?.lessons) throw new Error('Program or lessons not found');
 
-        const orderData = program.lessons
+        // Use INSERT logic
+        const newLessons = [...program.lessons];
+        const [movedItem] = newLessons.splice(fromIndex, 1);
+        newLessons.splice(toIndex, 0, movedItem);
+
+        const orderData = newLessons
           .filter((l) => l.id !== undefined)
           .map((lesson, index) => ({
             id: lesson.id!,
-            order_index: index === fromIndex ? toIndex : index === toIndex ? fromIndex : index,
+            order_index: index,  // Use the new index directly
           }));
         await programAPI.reorderLessons(programId, orderData);
+
+        // Update local state immediately (no refresh)
+        const updatedPrograms = programs.map(p =>
+          p.id === programId ? { ...p, lessons: newLessons } : p
+        );
+        if (onProgramsChange) {
+          onProgramsChange(updatedPrograms);
+        }
       } else if (level === 2) {
         // Reorder contents within a lesson
         const lessonId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
@@ -138,19 +162,36 @@ export function ProgramTreeView({
         const lesson = program?.lessons?.find((l) => l.id === lessonId);
         if (!lesson?.contents) throw new Error('Lesson or contents not found');
 
-        const orderData = lesson.contents
+        // Use INSERT logic
+        const newContents = [...lesson.contents];
+        const [movedItem] = newContents.splice(fromIndex, 1);
+        newContents.splice(toIndex, 0, movedItem);
+
+        const orderData = newContents
           .filter((c) => c.id !== undefined)
           .map((content, index) => ({
             id: content.id!,
-            order_index: index === fromIndex ? toIndex : index === toIndex ? fromIndex : index,
+            order_index: index,  // Use the new index directly
           }));
         await programAPI.reorderContents(lessonId, orderData);
+
+        // Update local state immediately (no refresh)
+        const updatedPrograms = programs.map(p => {
+          if (p.lessons?.some(l => l.id === lessonId)) {
+            return {
+              ...p,
+              lessons: p.lessons.map(l =>
+                l.id === lessonId ? { ...l, contents: newContents } : l
+              )
+            };
+          }
+          return p;
+        });
+        if (onProgramsChange) {
+          onProgramsChange(updatedPrograms);
+        }
       }
 
-      // Refresh data after successful reorder
-      if (onRefresh) {
-        await onRefresh();
-      }
       toast.success('順序已更新');
     } catch (error) {
       console.error('Reorder failed:', error);
