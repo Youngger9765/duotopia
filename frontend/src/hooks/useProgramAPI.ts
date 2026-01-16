@@ -2,13 +2,14 @@ import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { API_URL } from "@/config/api";
 
 interface ProgramAPIOptions {
-  scope: 'teacher' | 'organization';
+  scope: 'teacher' | 'organization' | 'school';
   organizationId?: string;
+  schoolId?: string;
 }
 
 export function useProgramAPI(options: ProgramAPIOptions) {
   const token = useTeacherAuthStore((state) => state.token);
-  const { scope, organizationId } = options;
+  const { scope, organizationId, schoolId } = options;
 
   // Build base URL with scope
   const buildURL = (path: string, additionalParams?: Record<string, string>) => {
@@ -16,6 +17,9 @@ export function useProgramAPI(options: ProgramAPIOptions) {
     params.set('scope', scope);
     if (scope === 'organization' && organizationId) {
       params.set('organization_id', organizationId);
+    }
+    if (scope === 'school' && schoolId) {
+      params.set('school_id', schoolId);
     }
     if (additionalParams) {
       Object.entries(additionalParams).forEach(([key, value]) => {
@@ -114,6 +118,37 @@ export function useProgramAPI(options: ProgramAPIOptions) {
         headers,
       });
       if (!response.ok) throw new Error('Failed to delete content');
+      return response.json();
+    },
+
+    // Reorder operations
+    reorderPrograms: async (orderData: Array<{ id: number; order_index: number }>) => {
+      const response = await fetch(buildURL('/api/programs/reorder'), {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(orderData),
+      });
+      if (!response.ok) throw new Error('Failed to reorder programs');
+      return response.json();
+    },
+
+    reorderLessons: async (programId: number, orderData: Array<{ id: number; order_index: number }>) => {
+      const response = await fetch(buildURL(`/api/programs/${programId}/lessons/reorder`), {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(orderData),
+      });
+      if (!response.ok) throw new Error('Failed to reorder lessons');
+      return response.json();
+    },
+
+    reorderContents: async (lessonId: number, orderData: Array<{ id: number; order_index: number }>) => {
+      const response = await fetch(buildURL(`/api/programs/lessons/${lessonId}/contents/reorder`), {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(orderData),
+      });
+      if (!response.ok) throw new Error('Failed to reorder contents');
       return response.json();
     },
   };
