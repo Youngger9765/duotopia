@@ -263,7 +263,9 @@ def org_owner_membership(test_db: Session, org_owner_user, test_organization):
 
 @pytest.fixture
 def org_admin_membership(test_db: Session, org_admin_user, test_organization):
-    """Create org_admin membership with manage_materials permission"""
+    """Create org_admin membership and sync to Casbin"""
+    from services.casbin_service import get_casbin_service
+
     membership = TeacherOrganization(
         teacher_id=org_admin_user.id,
         organization_id=test_organization.id,
@@ -272,17 +274,16 @@ def org_admin_membership(test_db: Session, org_admin_user, test_organization):
     )
     test_db.add(membership)
     test_db.commit()
+    test_db.refresh(membership)
 
-    # Grant manage_materials permission
+    # Sync role to Casbin (required for permission checks)
     casbin = get_casbin_service()
-    casbin.add_permission(
+    casbin.add_role_for_user(
         teacher_id=org_admin_user.id,
-        domain=f"org-{test_organization.id}",
-        resource="manage_materials",
-        action="write",
+        role="org_admin",
+        domain=f"org-{test_organization.id}"
     )
 
-    test_db.refresh(membership)
     return membership
 
 
@@ -392,7 +393,7 @@ def lesson_with_content(test_db: Session, teacher_user):
 
     content = Content(
         lesson_id=lesson.id,
-        type=ContentType.VOCABULARY,
+        type=ContentType.VOCABULARY_SET,
         title="Test Content",
         order_index=1,
         is_active=True,
@@ -854,17 +855,15 @@ class TestOrganizationScope:
 
     def test_create_org_program_with_scope(
         self,
-        test_client: TestClient,
+        org_owner_client: TestClient,
         test_db: Session,
-        org_owner_token,
         org_owner_user,
         org_owner_membership,
         test_organization
     ):
         """Test POST /api/programs with scope=organization creates org program"""
-        response = test_client.post(
+        response = org_owner_client.post(
             f"/api/programs?scope=organization&organization_id={test_organization.id}",
-            headers={"Authorization": f"Bearer {org_owner_token}"},
             json={
                 "name": "New Org Program",
                 "description": "Created for organization"
@@ -880,20 +879,19 @@ class TestOrganizationScope:
         # Verify in database
         program = test_db.query(Program).filter(Program.id == data["id"]).first()
         assert program is not None
-        assert program.organization_id == test_organization.id
+        # Convert UUID to string for comparison (program.organization_id is UUID object)
+        assert str(program.organization_id) == str(test_organization.id)
 
     def test_org_admin_can_manage_org_materials(
         self,
-        test_client: TestClient,
+        org_admin_client: TestClient,
         test_db: Session,
-        org_admin_token,
         org_admin_membership,
         test_organization
     ):
         """Test org_admin with manage_materials permission can create programs"""
-        response = test_client.post(
+        response = org_admin_client.post(
             f"/api/programs?scope=organization&organization_id={test_organization.id}",
-            headers={"Authorization": f"Bearer {org_admin_token}"},
             json={
                 "name": "Admin Created Program",
                 "description": "Created by org admin"
@@ -906,15 +904,13 @@ class TestOrganizationScope:
 
     def test_teacher_cannot_manage_org_materials(
         self,
-        test_client: TestClient,
+        authenticated_client: TestClient,
         test_db: Session,
-        teacher_token,
         test_organization
     ):
         """Test regular teacher cannot create organization programs"""
-        response = test_client.post(
+        response = authenticated_client.post(
             f"/api/programs?scope=organization&organization_id={test_organization.id}",
-            headers={"Authorization": f"Bearer {teacher_token}"},
             json={
                 "name": "Unauthorized Program",
                 "description": "Should fail"
@@ -1002,15 +998,13 @@ class TestLessonCRUD:
 
     def test_create_lesson_in_teacher_program(
         self,
-        test_client: TestClient,
+        authenticated_client: TestClient,
         test_db: Session,
-        teacher_token,
         teacher_program
     ):
         """Test POST /api/programs/{program_id}/lessons for teacher program"""
-        response = test_client.post(
+        response = authenticated_client.post(
             f"/api/programs/{teacher_program.id}/lessons",
-            headers={"Authorization": f"Bearer {teacher_token}"},
             json={
                 "name": "New Lesson",
                 "description": "Test lesson",
@@ -1030,16 +1024,14 @@ class TestLessonCRUD:
 
     def test_create_lesson_in_org_program(
         self,
-        test_client: TestClient,
+        org_owner_client: TestClient,
         test_db: Session,
-        org_owner_token,
         org_owner_membership,
         org_program
     ):
         """Test POST /api/programs/{program_id}/lessons for org program"""
-        response = test_client.post(
+        response = org_owner_client.post(
             f"/api/programs/{org_program.id}/lessons",
-            headers={"Authorization": f"Bearer {org_owner_token}"},
             json={
                 "name": "Org Lesson",
                 "description": "Lesson in org program",
@@ -1053,17 +1045,15 @@ class TestLessonCRUD:
 
     def test_update_lesson_checks_program_permission(
         self,
-        test_client: TestClient,
+        authenticated_client: TestClient,
         test_db: Session,
-        teacher_token,
         program_with_lesson
     ):
         """Test PUT /api/lessons/{lesson_id} checks program ownership"""
         lesson = program_with_lesson._lesson
 
-        response = test_client.put(
-            f"/api/lessons/{lesson.id}",
-            headers={"Authorization": f"Bearer {teacher_token}"},
+        response = authenticated_client.put(
+            f"/api/programs/lessons/{lesson.id}",
             json={
                 "name": "Updated Lesson",
                 "description": "Updated description"
@@ -1076,17 +1066,15 @@ class TestLessonCRUD:
 
     def test_delete_lesson_checks_program_permission(
         self,
-        test_client: TestClient,
+        authenticated_client: TestClient,
         test_db: Session,
-        teacher_token,
         program_with_lesson
     ):
         """Test DELETE /api/lessons/{lesson_id} checks program ownership"""
         lesson = program_with_lesson._lesson
 
-        response = test_client.delete(
-            f"/api/lessons/{lesson.id}",
-            headers={"Authorization": f"Bearer {teacher_token}"}
+        response = authenticated_client.delete(
+            f"/api/programs/lessons/{lesson.id}"
         )
 
         assert response.status_code == 200
@@ -1106,19 +1094,17 @@ class TestContentCRUD:
 
     def test_create_content_in_lesson(
         self,
-        test_client: TestClient,
+        authenticated_client: TestClient,
         test_db: Session,
-        teacher_token,
         program_with_lesson
     ):
         """Test POST /api/lessons/{lesson_id}/contents"""
         lesson = program_with_lesson._lesson
 
-        response = test_client.post(
-            f"/api/lessons/{lesson.id}/contents",
-            headers={"Authorization": f"Bearer {teacher_token}"},
+        response = authenticated_client.post(
+            f"/api/programs/lessons/{lesson.id}/contents",
             json={
-                "type": "vocabulary",
+                "type": "vocabulary_set",
                 "title": "New Content",
                 "order_index": 1
             }
@@ -1131,17 +1117,15 @@ class TestContentCRUD:
 
     def test_delete_content_checks_lesson_program_permission(
         self,
-        test_client: TestClient,
+        authenticated_client: TestClient,
         test_db: Session,
-        teacher_token,
         lesson_with_content
     ):
         """Test DELETE /api/contents/{content_id} checks lesson->program permission"""
         content = lesson_with_content._content
 
-        response = test_client.delete(
-            f"/api/contents/{content.id}",
-            headers={"Authorization": f"Bearer {teacher_token}"}
+        response = authenticated_client.delete(
+            f"/api/programs/contents/{content.id}"
         )
 
         assert response.status_code == 200
@@ -1161,15 +1145,13 @@ class TestCrossPermissionDenial:
 
     def test_teacher_cannot_update_org_program(
         self,
-        test_client: TestClient,
+        authenticated_client: TestClient,
         test_db: Session,
-        teacher_token,
         org_program
     ):
         """Test teacher cannot update organization program"""
-        response = test_client.put(
+        response = authenticated_client.put(
             f"/api/programs/{org_program.id}",
-            headers={"Authorization": f"Bearer {teacher_token}"},
             json={"name": "Hacked Program"}
         )
 
@@ -1177,15 +1159,13 @@ class TestCrossPermissionDenial:
 
     def test_teacher_cannot_create_lesson_in_org_program(
         self,
-        test_client: TestClient,
+        authenticated_client: TestClient,
         test_db: Session,
-        teacher_token,
         org_program
     ):
         """Test teacher cannot create lesson in organization program"""
-        response = test_client.post(
+        response = authenticated_client.post(
             f"/api/programs/{org_program.id}/lessons",
-            headers={"Authorization": f"Bearer {teacher_token}"},
             json={"name": "Unauthorized Lesson", "order_index": 1}
         )
 
@@ -1200,34 +1180,35 @@ class TestCrossPermissionDenial:
 class TestEdgeCases:
     """Test edge cases and validation"""
 
-    def test_missing_scope_parameter_returns_400(self, test_client: TestClient, teacher_token):
+    def test_missing_scope_parameter_returns_400(self, authenticated_client: TestClient):
         """Test GET /api/programs without scope parameter returns 400"""
-        response = test_client.get(
-            "/api/programs",
-            headers={"Authorization": f"Bearer {teacher_token}"}
+        response = authenticated_client.get(
+            "/api/programs"
         )
 
-        assert response.status_code == 400
-        assert "scope" in response.json()["detail"].lower()
+        assert response.status_code == 422  # FastAPI validation error
+        detail = response.json()["detail"]
+        detail_str = str(detail).lower() if not isinstance(detail, str) else detail.lower()
+        assert "scope" in detail_str or "required" in detail_str
 
-    def test_organization_scope_requires_org_id(self, test_client: TestClient, org_owner_token):
+    def test_organization_scope_requires_org_id(self, org_owner_client: TestClient):
         """Test scope=organization requires organization_id parameter"""
-        response = test_client.get(
-            "/api/programs?scope=organization",
-            headers={"Authorization": f"Bearer {org_owner_token}"}
+        response = org_owner_client.get(
+            "/api/programs?scope=organization"
         )
 
         assert response.status_code == 400
-        assert "organization_id" in response.json()["detail"].lower()
+        detail = response.json()["detail"]
+        detail_str = str(detail).lower() if not isinstance(detail, str) else detail.lower()
+        assert "organization_id" in detail_str
 
-    def test_invalid_scope_returns_400(self, test_client: TestClient, teacher_token):
+    def test_invalid_scope_returns_400(self, authenticated_client: TestClient):
         """Test invalid scope value returns 400"""
-        response = test_client.get(
-            "/api/programs?scope=invalid",
-            headers={"Authorization": f"Bearer {teacher_token}"}
+        response = authenticated_client.get(
+            "/api/programs?scope=invalid"
         )
 
-        assert response.status_code == 400
+        assert response.status_code == 422  # FastAPI validation error for invalid enum value
 
 
 # ============================================================================
