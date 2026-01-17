@@ -681,6 +681,143 @@ class TestTeacherScope:
         program_ids = [p["id"] for p in data]
         assert org_program.id not in program_ids
 
+    def test_update_teacher_program_with_scope(self, authenticated_client: TestClient, test_db: Session, teacher_program, teacher_user):
+        """Test PUT /api/programs/{id}?scope=teacher updates teacher program"""
+        # RED Phase: This test will FAIL because endpoint doesn't exist yet
+        response = authenticated_client.put(
+            f"/api/programs/{teacher_program.id}?scope=teacher",
+            json={
+                "name": "Updated Program Name",
+                "description": "Updated description"
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Updated Program Name"
+        assert data["description"] == "Updated description"
+        assert data["teacher_id"] == teacher_user.id
+
+        # Verify in database
+        test_db.refresh(teacher_program)
+        assert teacher_program.name == "Updated Program Name"
+        assert teacher_program.description == "Updated description"
+
+    def test_update_teacher_lesson_with_scope(
+        self,
+        authenticated_client: TestClient,
+        test_db: Session,
+        teacher_program,
+        teacher_user
+    ):
+        """Test PUT /api/programs/lessons/{id}?scope=teacher updates lesson"""
+        # RED Phase: Create a lesson first
+        lesson_response = authenticated_client.post(
+            f"/api/programs/{teacher_program.id}/lessons",
+            json={"name": "Test Lesson", "description": "Test Description"}
+        )
+        assert lesson_response.status_code == 201
+        lesson_id = lesson_response.json()["id"]
+
+        # RED Phase: This will FAIL (endpoint uses Query params, not request body)
+        response = authenticated_client.put(
+            f"/api/programs/lessons/{lesson_id}?scope=teacher",
+            json={
+                "name": "Updated Lesson Name",
+                "description": "Updated lesson description"
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Updated Lesson Name"
+        assert data["description"] == "Updated lesson description"
+
+        # Verify in database
+        from models import Lesson
+        lesson = test_db.query(Lesson).filter(Lesson.id == lesson_id).first()
+        assert lesson.name == "Updated Lesson Name"
+        assert lesson.description == "Updated lesson description"
+
+    def test_update_lesson_empty_name_validation(
+        self,
+        authenticated_client: TestClient,
+        teacher_program
+    ):
+        """Test PUT /api/programs/lessons/{id} rejects empty name"""
+        # Create a lesson first
+        lesson_response = authenticated_client.post(
+            f"/api/programs/{teacher_program.id}/lessons",
+            json={"name": "Valid Lesson", "description": "Test"}
+        )
+        assert lesson_response.status_code == 201
+        lesson_id = lesson_response.json()["id"]
+
+        # RED Phase: Try to update with empty name (whitespace only)
+        response = authenticated_client.put(
+            f"/api/programs/lessons/{lesson_id}?scope=teacher",
+            json={"name": "   ", "description": "Valid"}
+        )
+
+        # Should return 400 or 422 for validation error
+        assert response.status_code in [400, 422]
+        detail = response.json()["detail"]
+        # Detail can be string or list
+        if isinstance(detail, str):
+            assert "name" in detail.lower() or "cannot be empty" in detail.lower()
+        else:
+            # FastAPI validation returns list of errors
+            detail_str = str(detail).lower()
+            assert "name" in detail_str or "cannot be empty" in detail_str or "whitespace" in detail_str
+
+    def test_update_program_negative_estimated_hours(
+        self,
+        authenticated_client: TestClient,
+        teacher_program
+    ):
+        """Test PUT /api/programs/{id} rejects negative estimated_hours"""
+        response = authenticated_client.put(
+            f"/api/programs/{teacher_program.id}",
+            json={"estimated_hours": -5}
+        )
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert "estimated_hours" in str(detail).lower()
+
+    def test_update_program_description_too_long(
+        self,
+        authenticated_client,
+        teacher_program
+    ):
+        """Test PUT /api/programs/{id} rejects description > 1000 chars"""
+        response = authenticated_client.put(
+            f"/api/programs/{teacher_program.id}",
+            json={"description": "x" * 1001}
+        )
+        assert response.status_code == 422
+
+    def test_update_lesson_negative_estimated_minutes(
+        self,
+        authenticated_client: TestClient,
+        teacher_program
+    ):
+        """Test PUT /api/programs/lessons/{id} rejects negative estimated_minutes"""
+        # Create lesson first
+        lesson_response = authenticated_client.post(
+            f"/api/programs/{teacher_program.id}/lessons",
+            json={"name": "Test Lesson"}
+        )
+        lesson_id = lesson_response.json()["id"]
+
+        # Try negative estimated_minutes
+        response = authenticated_client.put(
+            f"/api/programs/lessons/{lesson_id}",
+            json={"estimated_minutes": -10}
+        )
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert "estimated_minutes" in str(detail).lower()
+
 
 # ============================================================================
 # Phase 2: Organization Scope Tests
@@ -786,6 +923,73 @@ class TestOrganizationScope:
 
         assert response.status_code == 403
         assert "permission" in response.json()["detail"].lower()
+
+    def test_update_org_program_with_scope(
+        self,
+        org_owner_client: TestClient,
+        test_db: Session,
+        test_organization,
+        org_program,
+        org_owner_user,
+        org_owner_membership
+    ):
+        """Test PUT /api/programs/{id}?scope=organization updates org program"""
+        # Ensure org_owner has membership for permission check
+        response = org_owner_client.put(
+            f"/api/programs/{org_program.id}?scope=organization&organization_id={test_organization.id}",
+            json={
+                "name": "Updated Org Program",
+                "description": "Updated org description"
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Updated Org Program"
+        assert data["description"] == "Updated org description"
+        assert data["organization_id"] == str(test_organization.id)
+
+        # Verify in database
+        test_db.refresh(org_program)
+        assert org_program.name == "Updated Org Program"
+        assert org_program.description == "Updated org description"
+
+    def test_update_org_lesson_with_scope(
+        self,
+        org_owner_client: TestClient,
+        test_db: Session,
+        test_organization,
+        org_program,
+        org_owner_membership
+    ):
+        """Test PUT /api/programs/lessons/{id}?scope=organization updates lesson"""
+        # RED Phase: Create a lesson first
+        lesson_response = org_owner_client.post(
+            f"/api/programs/{org_program.id}/lessons?scope=organization&organization_id={test_organization.id}",
+            json={"name": "Org Lesson", "description": "Test Description"}
+        )
+        assert lesson_response.status_code == 201
+        lesson_id = lesson_response.json()["id"]
+
+        # RED Phase: This will FAIL (endpoint uses Query params, not request body)
+        response = org_owner_client.put(
+            f"/api/programs/lessons/{lesson_id}?scope=organization&organization_id={test_organization.id}",
+            json={
+                "name": "Updated Org Lesson",
+                "description": "Updated org description"
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Updated Org Lesson"
+        assert data["description"] == "Updated org description"
+
+        # Verify in database
+        from models import Lesson
+        lesson = test_db.query(Lesson).filter(Lesson.id == lesson_id).first()
+        assert lesson.name == "Updated Org Lesson"
+        assert lesson.description == "Updated org description"
 
 
 # ============================================================================

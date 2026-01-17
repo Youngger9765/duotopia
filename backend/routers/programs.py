@@ -33,6 +33,8 @@ from schemas import (
     ProgramCopyFromClassroom,
     ProgramCopyRequest,
     LessonCreate,
+    LessonUpdate,
+    LessonResponse,
     ContentCreate,
 )
 from auth import verify_token
@@ -1292,6 +1294,40 @@ async def create_program(
         )
 
 
+@router.put("/{program_id}", response_model=ProgramResponse)
+async def update_program(
+    program_id: int,
+    payload: ProgramUpdate,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    Unified API: Update program.
+
+    Automatically checks program ownership and permissions via service layer.
+    """
+    try:
+        program = program_service.update_program(
+            program_id=program_id,
+            teacher_id=current_teacher.id,
+            data={"name": payload.name, "description": payload.description},
+            db=db,
+        )
+
+        return ProgramResponse.from_orm(program)
+
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
 # Lesson endpoints
 @router.post("/{program_id}/lessons", status_code=201)
 async def create_lesson(
@@ -1368,11 +1404,10 @@ async def create_lesson(
         )
 
 
-@router.put("/lessons/{lesson_id}")
+@router.put("/lessons/{lesson_id}", response_model=LessonResponse)
 async def update_lesson(
     lesson_id: int,
-    name: str = Query(None),
-    description: str = Query(None),
+    payload: LessonUpdate,
     db: Session = Depends(get_db),
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
@@ -1382,11 +1417,8 @@ async def update_lesson(
     Automatically checks lesson->program permission chain.
     """
     try:
-        data = {}
-        if name is not None:
-            data["name"] = name
-        if description is not None:
-            data["description"] = description
+        # Convert payload to dict, excluding unset fields
+        data = payload.dict(exclude_unset=True)
 
         lesson = program_service.update_lesson(
             lesson_id=lesson_id,
@@ -1395,14 +1427,7 @@ async def update_lesson(
             db=db,
         )
 
-        return {
-            "id": lesson.id,
-            "program_id": lesson.program_id,
-            "name": lesson.name,
-            "description": lesson.description,
-            "order_index": lesson.order_index,
-            "is_active": lesson.is_active,
-        }
+        return LessonResponse.from_orm(lesson)
 
     except PermissionError as e:
         raise HTTPException(
@@ -1411,7 +1436,7 @@ async def update_lesson(
         )
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
 

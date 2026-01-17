@@ -13,6 +13,18 @@ import { useContentEditor } from "@/hooks/useContentEditor";
 import { useProgramAPI } from "@/hooks/useProgramAPI";
 import { Content, ContentItem } from "@/types";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type TreeItem = ProgramTreeProgram | ProgramTreeLesson | Content;
 type ReadingPanelRow = {
@@ -161,6 +173,18 @@ export function ProgramTreeView({
     lessonId: number;
   } | null>(null);
 
+  // Edit dialog states
+  const [programEditDialog, setProgramEditDialog] = useState<{
+    open: boolean;
+    program: ProgramTreeProgram | null;
+  }>({ open: false, program: null });
+
+  const [lessonEditDialog, setLessonEditDialog] = useState<{
+    open: boolean;
+    lesson: ProgramTreeLesson | null;
+    programId: number | null;
+  }>({ open: false, lesson: null, programId: null });
+
   // Sync external programs to internal state
   useEffect(() => {
     setPrograms(externalPrograms);
@@ -299,25 +323,9 @@ export function ProgramTreeView({
     }
   };
 
-  const handleEditProgram = async (item: TreeItem, level: number) => {
+  const handleEditProgram = (item: TreeItem, level: number) => {
     if (level !== 0) return; // Only handle program level
-
-    const program = item as ProgramTreeProgram;
-    try {
-      await programAPI.updateProgram(program.id!, {
-        name: program.name,
-        description: program.description,
-      });
-
-      toast.success('Program updated successfully');
-
-      if (onRefresh) {
-        await onRefresh();
-      }
-    } catch (error) {
-      console.error('Failed to update program:', error);
-      toast.error('Failed to update program');
-    }
+    setProgramEditDialog({ open: true, program: item as ProgramTreeProgram });
   };
 
   const handleDeleteProgram = async (item: TreeItem, level: number) => {
@@ -360,32 +368,22 @@ export function ProgramTreeView({
     }
   };
 
-  const handleEditLesson = async (item: TreeItem, level: number, parentId?: string | number) => {
+  const handleEditLesson = (item: TreeItem, level: number, parentId?: string | number) => {
     if (level !== 1) return; // Only handle lesson level
 
     const lesson = item as ProgramTreeLesson;
-    const programId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
+    const programId = typeof parentId === 'string' ? parseInt(parentId) : (parentId ?? null);
 
     if (!programId) {
       console.error('Program ID is required for lesson edit');
       return;
     }
 
-    try {
-      await programAPI.updateLesson(lesson.id!, {
-        name: lesson.name,
-        description: lesson.description || '',
-      });
-
-      toast.success('Lesson updated successfully');
-
-      if (onRefresh) {
-        await onRefresh();
-      }
-    } catch (error) {
-      console.error('Failed to update lesson:', error);
-      toast.error('Failed to update lesson');
-    }
+    setLessonEditDialog({
+      open: true,
+      lesson,
+      programId
+    });
   };
 
   const handleDeleteLesson = async (item: TreeItem, level: number, parentId?: string | number) => {
@@ -782,6 +780,172 @@ export function ProgramTreeView({
           }}
         />
       )}
+
+      {/* Program Edit Dialog */}
+      <Dialog open={programEditDialog.open} onOpenChange={(open) => setProgramEditDialog({ open, program: null })}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>編輯 Program</DialogTitle>
+            <DialogDescription>
+              修改 Program 的名稱和描述
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="program-name">名稱</Label>
+              <Input
+                id="program-name"
+                value={programEditDialog.program?.name || ''}
+                onChange={(e) => {
+                  if (programEditDialog.program) {
+                    setProgramEditDialog({
+                      ...programEditDialog,
+                      program: {
+                        ...programEditDialog.program,
+                        name: e.target.value
+                      }
+                    });
+                  }
+                }}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="program-description">描述</Label>
+              <Textarea
+                id="program-description"
+                value={programEditDialog.program?.description || ''}
+                onChange={(e) => {
+                  if (programEditDialog.program) {
+                    setProgramEditDialog({
+                      ...programEditDialog,
+                      program: {
+                        ...programEditDialog.program,
+                        description: e.target.value
+                      }
+                    });
+                  }
+                }}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setProgramEditDialog({ open: false, program: null })}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!programEditDialog.program?.id) return;
+
+                try {
+                  await programAPI.updateProgram(programEditDialog.program.id, {
+                    name: programEditDialog.program.name,
+                    description: programEditDialog.program.description,
+                  });
+
+                  toast.success('Program 更新成功');
+                  setProgramEditDialog({ open: false, program: null });
+
+                  if (onRefresh) {
+                    await onRefresh();
+                  }
+                } catch (error) {
+                  console.error('Failed to update program:', error);
+                  toast.error('更新 Program 失敗');
+                }
+              }}
+            >
+              儲存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lesson Edit Dialog */}
+      <Dialog open={lessonEditDialog.open} onOpenChange={(open) => setLessonEditDialog({ open, lesson: null, programId: null })}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>編輯 Lesson</DialogTitle>
+            <DialogDescription>
+              修改 Lesson 的名稱和描述
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="lesson-name">名稱</Label>
+              <Input
+                id="lesson-name"
+                value={lessonEditDialog.lesson?.name || ''}
+                onChange={(e) => {
+                  if (lessonEditDialog.lesson) {
+                    setLessonEditDialog({
+                      ...lessonEditDialog,
+                      lesson: {
+                        ...lessonEditDialog.lesson,
+                        name: e.target.value
+                      }
+                    });
+                  }
+                }}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="lesson-description">描述</Label>
+              <Textarea
+                id="lesson-description"
+                value={lessonEditDialog.lesson?.description || ''}
+                onChange={(e) => {
+                  if (lessonEditDialog.lesson) {
+                    setLessonEditDialog({
+                      ...lessonEditDialog,
+                      lesson: {
+                        ...lessonEditDialog.lesson,
+                        description: e.target.value
+                      }
+                    });
+                  }
+                }}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setLessonEditDialog({ open: false, lesson: null, programId: null })}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!lessonEditDialog.lesson?.id) return;
+
+                try {
+                  await programAPI.updateLesson(lessonEditDialog.lesson.id, {
+                    name: lessonEditDialog.lesson.name,
+                    description: lessonEditDialog.lesson.description || '',
+                  });
+
+                  toast.success('Lesson 更新成功');
+                  setLessonEditDialog({ open: false, lesson: null, programId: null });
+
+                  if (onRefresh) {
+                    await onRefresh();
+                  }
+                } catch (error) {
+                  console.error('Failed to update lesson:', error);
+                  toast.error('更新 Lesson 失敗');
+                }
+              }}
+            >
+              儲存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

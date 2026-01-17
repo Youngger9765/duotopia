@@ -51,11 +51,25 @@ class ProgramCreate(ProgramBase):
 
 
 class ProgramUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = Field(None, max_length=1000)
     level: Optional[str] = None  # 改用 str，由後端轉換為 Enum
-    estimated_hours: Optional[int] = None
+    estimated_hours: Optional[int] = Field(None, ge=0)
     tags: Optional[List[str]] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def validate_fields(cls, data):
+        """Validate that name is not empty or whitespace"""
+        if isinstance(data, dict):
+            if 'name' in data and data['name'] is not None:
+                stripped = data['name'].strip()
+                if not stripped:
+                    raise ValueError('Name cannot be empty or whitespace')
+                data['name'] = stripped
+            if 'description' in data and data['description'] is not None:
+                data['description'] = data['description'].strip()
+        return data
 
 
 class ProgramResponse(ProgramBase):
@@ -129,6 +143,27 @@ class LessonBase(BaseModel):
 
 class LessonCreate(LessonBase):
     pass
+
+
+class LessonUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = Field(None, max_length=1000)
+    order_index: Optional[int] = None
+    estimated_minutes: Optional[int] = Field(None, ge=0)
+
+    @model_validator(mode='before')
+    @classmethod
+    def validate_fields(cls, data):
+        """Validate that name is not empty or whitespace"""
+        if isinstance(data, dict):
+            if 'name' in data and data['name'] is not None:
+                stripped = data['name'].strip()
+                if not stripped:
+                    raise ValueError('Name cannot be empty or whitespace')
+                data['name'] = stripped
+            if 'description' in data and data['description'] is not None:
+                data['description'] = data['description'].strip()
+        return data
 
 
 class LessonResponse(LessonBase):
