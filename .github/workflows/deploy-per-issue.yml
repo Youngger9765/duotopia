@@ -139,7 +139,8 @@ jobs:
           ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_PARTNER_KEY=${{ secrets.TAPPAY_PRODUCTION_PARTNER_KEY }}"
           ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_MERCHANT_ID=${{ secrets.TAPPAY_PRODUCTION_MERCHANT_ID }}"
 
-          gcloud run deploy "${SERVICE}" \
+          echo "🔍 DEBUG: Deploying and capturing output"
+          DEPLOY_OUTPUT=$(gcloud run deploy "${SERVICE}" \
             --image "${IMAGE}" \
             --platform managed \
             --region ${REGION} \
@@ -152,10 +153,12 @@ jobs:
             --max-instances 1 \
             --min-instances 0 \
             --set-env-vars "${ENV_VARS}" \
-            --labels "environment=preview,issue=${ISSUE}"
+            --labels "environment=preview,issue=${ISSUE}" 2>&1)
 
-          echo "🔍 DEBUG: Getting service URL"
-          URL=$(gcloud run services describe "${SERVICE}" --platform managed --region ${REGION} --format 'value(status.url)')
+          echo "$DEPLOY_OUTPUT"
+
+          echo "🔍 DEBUG: Extracting service URL from deploy output"
+          URL=$(echo "$DEPLOY_OUTPUT" | grep "Service URL:" | awk '{print $NF}')
           echo "url=${URL}" >> $GITHUB_OUTPUT
           echo "✅ Backend deployed: ${URL}"
 
@@ -201,8 +204,8 @@ jobs:
           echo "🔍 DEBUG: Pushing frontend image"
           docker push "${IMAGE}"
 
-          echo "🔍 DEBUG: Deploying frontend to Cloud Run"
-          gcloud run deploy "${SERVICE}" \
+          echo "🔍 DEBUG: Deploying frontend to Cloud Run and capturing output"
+          DEPLOY_OUTPUT=$(gcloud run deploy "${SERVICE}" \
             --image "${IMAGE}" \
             --platform managed \
             --region ${REGION} \
@@ -213,10 +216,12 @@ jobs:
             --concurrency 1 \
             --max-instances 1 \
             --min-instances 0 \
-            --labels "environment=preview,issue=${ISSUE}"
+            --labels "environment=preview,issue=${ISSUE}" 2>&1)
 
-          echo "🔍 DEBUG: Getting frontend URL"
-          URL=$(gcloud run services describe "${SERVICE}" --platform managed --region ${REGION} --format 'value(status.url)')
+          echo "$DEPLOY_OUTPUT"
+
+          echo "🔍 DEBUG: Extracting frontend URL from deploy output"
+          URL=$(echo "$DEPLOY_OUTPUT" | grep "Service URL:" | awk '{print $NF}')
           echo "url=${URL}" >> $GITHUB_OUTPUT
           echo "✅ Frontend deployed: ${URL}"
 
