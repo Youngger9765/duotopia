@@ -73,6 +73,9 @@ db.commit()
 print("\n👥 Creating teachers...")
 
 teachers_data = [
+    {"email": "demo@duotopia.com", "name": "Demo 老師", "phone": "0900-000-001", "role": "teacher", "is_demo": True},
+    {"email": "trial@duotopia.com", "name": "試用老師", "phone": "0900-000-002", "role": "teacher", "is_demo": False},
+    {"email": "expired@duotopia.com", "name": "過期老師", "phone": "0900-000-003", "role": "teacher", "is_demo": False},
     {"email": "chen@duotopia.com", "name": "陳美玲", "phone": "0912-345-678", "role": "org_admin"},
     {"email": "wang@duotopia.com", "name": "王建國", "phone": "0923-456-789", "role": "teacher"},
     {"email": "liu@duotopia.com", "name": "劉芳華", "phone": "0934-567-890", "role": "teacher"},
@@ -90,7 +93,7 @@ for teacher_data in teachers_data:
             name=teacher_data["name"],
             phone=teacher_data["phone"],
             is_active=True,
-            is_demo=False,
+            is_demo=teacher_data.get("is_demo", False),
             is_admin=False,
             email_verified=True,
             email_verified_at=datetime.now(),
@@ -321,10 +324,15 @@ print(f"  - Programs: {len(programs_data)} materials")
 print(f"  - Template Programs: {len(template_programs_data)} 公版課程")
 
 print("\n🔑 Test Accounts:")
+print("  - demo@duotopia.com / [SEED_DEFAULT_PASSWORD] (Demo 教師)")
+print("  - trial@duotopia.com / [SEED_DEFAULT_PASSWORD] (試用教師)")
+print("  - expired@duotopia.com / [SEED_DEFAULT_PASSWORD] (過期教師)")
 print("  - owner@duotopia.com / [SEED_DEFAULT_PASSWORD] (機構擁有者)")
 print("  - chen@duotopia.com / [SEED_DEFAULT_PASSWORD] (機構管理員)")
 print("  - wang@duotopia.com / [SEED_DEFAULT_PASSWORD] (教師)")
 print("  - liu@duotopia.com / [SEED_DEFAULT_PASSWORD] (教師)")
+print("  - zhang@duotopia.com / [SEED_DEFAULT_PASSWORD] (教師)")
+print("  - lee@duotopia.com / [SEED_DEFAULT_PASSWORD] (教師)")
 
 print(f"\n🌐 Visit: http://localhost:5173/organization/{org_id}")
 
