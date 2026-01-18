@@ -329,3 +329,4 @@ print("  - liu@duotopia.com / [SEED_DEFAULT_PASSWORD] (教師)")
 print(f"\n🌐 Visit: http://localhost:5173/organization/{org_id}")
 
 db.close()
+
