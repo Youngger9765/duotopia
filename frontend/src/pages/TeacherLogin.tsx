@@ -243,60 +243,6 @@ export default function TeacherLogin() {
                 </div>
 
                 <div className="space-y-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-start h-14 min-h-14 py-3"
-                    onClick={() => handleQuickLogin("demo@duotopia.com")}
-                    disabled={isLoading}
-                  >
-                    <Zap className="mr-2 h-4 w-4 text-green-600 flex-shrink-0" />
-                    <div className="flex-1 text-left">
-                      <div className="font-medium">
-                        {t("teacherLogin.demo.demoTeacher")}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {t("teacherLogin.demo.demoEmail")}
-                      </div>
-                    </div>
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-start h-14 min-h-14 py-3"
-                    onClick={() => handleQuickLogin("trial@duotopia.com")}
-                    disabled={isLoading}
-                  >
-                    <Zap className="mr-2 h-4 w-4 text-blue-600 flex-shrink-0" />
-                    <div className="flex-1 text-left">
-                      <div className="font-medium text-xs sm:text-sm truncate">
-                        {t("teacherLogin.demo.trialTeacher")}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {t("teacherLogin.demo.trialEmail")}
-                      </div>
-                    </div>
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-start h-14 min-h-14 py-3"
-                    onClick={() => handleQuickLogin("expired@duotopia.com")}
-                    disabled={isLoading}
-                  >
-                    <Zap className="mr-2 h-4 w-4 text-red-600 flex-shrink-0" />
-                    <div className="flex-1 text-left">
-                      <div className="font-medium">
-                        {t("teacherLogin.demo.expiredTeacher")}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {t("teacherLogin.demo.expiredEmail")}
-                      </div>
-                    </div>
-                  </Button>
-
                   {/* 機構測試帳號分隔線 */}
                   <div className="relative my-4">
                     <div className="absolute inset-0 flex items-center">
