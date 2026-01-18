@@ -10,10 +10,10 @@ from datetime import datetime
 import uuid
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-owner_password = os.environ.get("SEED_OWNER_PASSWORD")
+owner_password = os.environ.get("SEED_DEFAULT_PASSWORD")
 if not owner_password:
     raise ValueError(
-        "Missing SEED_OWNER_PASSWORD environment variable for seed scripts"
+        "Missing SEED_DEFAULT_PASSWORD environment variable for seed scripts"
     )
 db = SessionLocal()
 
@@ -94,7 +94,7 @@ db.commit()
 
 print("✅ Seed complete!")
 print(f"Email: owner@duotopia.com")
-print("Password: [SEED_OWNER_PASSWORD]")
+print("Password: [SEED_DEFAULT_PASSWORD]")
 print(f"Org ID: {org_id}")
 
 db.close()

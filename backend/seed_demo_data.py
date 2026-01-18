@@ -321,7 +321,7 @@ print(f"  - Programs: {len(programs_data)} materials")
 print(f"  - Template Programs: {len(template_programs_data)} 公版課程")
 
 print("\n🔑 Test Accounts:")
-print("  - owner@duotopia.com / [SEED_OWNER_PASSWORD] (機構擁有者)")
+print("  - owner@duotopia.com / [SEED_DEFAULT_PASSWORD] (機構擁有者)")
 print("  - chen@duotopia.com / [SEED_DEFAULT_PASSWORD] (機構管理員)")
 print("  - wang@duotopia.com / [SEED_DEFAULT_PASSWORD] (教師)")
 print("  - liu@duotopia.com / [SEED_DEFAULT_PASSWORD] (教師)")
