@@ -168,10 +168,10 @@ jobs:
             exit 1
           fi
 
-          # Validate URL format (Cloud Run URLs follow strict pattern)
-          if [[ ! "$URL" =~ ^https://[a-z0-9-]+\.(run\.app|a\.run\.app)$ ]]; then
+          # Validate URL format (Cloud Run URLs: https://service.region.run.app or https://service.run.app)
+          if [[ ! "$URL" =~ ^https://[a-z0-9-]+(\.[a-z0-9-]+)?\.run\.app$ ]]; then
             echo "❌ ERROR: Extracted URL has invalid format: $URL"
-            echo "Expected format: https://service-name-hash.region.run.app"
+            echo "Expected format: https://service-name-hash.region.run.app or https://service-name.run.app"
             exit 1
           fi
 
@@ -247,10 +247,10 @@ jobs:
             exit 1
           fi
 
-          # Validate URL format (Cloud Run URLs follow strict pattern)
-          if [[ ! "$URL" =~ ^https://[a-z0-9-]+\.(run\.app|a\.run\.app)$ ]]; then
+          # Validate URL format (Cloud Run URLs: https://service.region.run.app or https://service.run.app)
+          if [[ ! "$URL" =~ ^https://[a-z0-9-]+(\.[a-z0-9-]+)?\.run\.app$ ]]; then
             echo "❌ ERROR: Extracted URL has invalid format: $URL"
-            echo "Expected format: https://service-name-hash.region.run.app"
+            echo "Expected format: https://service-name-hash.region.run.app or https://service-name.run.app"
             exit 1
           fi
 
