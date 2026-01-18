@@ -213,7 +213,7 @@ async def create_assignment(
     }
 
 
-@router.get("")
+@router.get("/")
 async def get_assignments(
     classroom_id: Optional[int] = Query(None, description="Filter by classroom"),
     status: Optional[str] = Query(None, description="Filter by status"),

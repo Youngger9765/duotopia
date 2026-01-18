@@ -310,7 +310,7 @@ export default function ClassroomDetail({
   const fetchAssignments = async () => {
     try {
       const response = await apiClient.get(
-        `/api/teachers/assignments?classroom_id=${id}`,
+        `/api/teachers/assignments/?classroom_id=${id}`,
       );
       setAssignments(Array.isArray(response) ? response : []);
     } catch (err) {
