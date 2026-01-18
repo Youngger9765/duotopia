@@ -1,0 +1,211 @@
+// ============================================
+// 機構層級管理系統 - 資料模型規格
+// ============================================
+// 參照: spec/business-specs/user-roles-and-permissions.md
+// 實作基礎: backend/models/organization.py
+// 
+// 層級結構:
+//   Organization (機構)
+//     └─> School (學校/分校)
+//          └─> Classroom (班級)
+//               └─> Students (學生)
+//
+// 角色體系 (參照 user-roles-and-permissions.md):
+//   機構層級: org_owner (機構負責人), org_admin (機構管理人)
+//   學校層級: school_principal (分校校長), school_admin (分校管理人), teacher (分校老師)
+// ============================================
+
+// ============================================
+// 1. Organization (機構)
+// ============================================
+Table organizations {
+  id uuid [pk, note: "機構唯一識別碼"]
+  name varchar(100) [not null, note: "機構名稱"]
+  display_name varchar(200) [null, note: "機構顯示名稱（可為空）"]
+  description text [null, note: "機構描述"]
+  
+  // 聯絡資訊
+  contact_email varchar(200) [null, note: "機構聯絡信箱"]
+  contact_phone varchar(50) [null, note: "機構聯絡電話"]
+  address text [null, note: "機構地址"]
+  
+  // 統一編號 (QA 新增需求: 2026-01-05)
+  tax_id varchar(20) [unique, null, note: "統一編號，唯一值，待定義是否必填"]
+  
+  // 狀態
+  is_active boolean [not null, default: true, note: "機構是否啟用"]
+  
+  // 設定
+  settings jsonb [null, note: "機構層級設定（JSON 格式）"]
+  
+  // 時間戳記
+  created_at timestamp [not null, default: `now()`, note: "建立時間"]
+  updated_at timestamp [null, note: "最後更新時間"]
+  
+  indexes {
+    is_active [name: "idx_organizations_active"]
+  }
+}
+
+// ============================================
+// 2. School (學校/分校)
+// ============================================
+Table schools {
+  id uuid [pk, note: "學校唯一識別碼"]
+  organization_id uuid [not null, ref: > organizations.id, note: "所屬機構 ID，CASCADE 刪除"]
+  
+  name varchar(100) [not null, note: "學校名稱"]
+  display_name varchar(200) [null, note: "學校顯示名稱"]
+  description text [null, note: "學校描述"]
+  
+  // 聯絡資訊
+  contact_email varchar(200) [null, note: "學校聯絡信箱"]
+  contact_phone varchar(50) [null, note: "學校聯絡電話"]
+  address text [null, note: "學校地址"]
+  
+  // 狀態
+  is_active boolean [not null, default: true, note: "學校是否啟用"]
+  
+  // 設定
+  settings jsonb [null, note: "學校層級設定（JSON 格式）"]
+  
+  // 時間戳記
+  created_at timestamp [not null, default: `now()`, note: "建立時間"]
+  updated_at timestamp [null, note: "最後更新時間"]
+  
+  indexes {
+    organization_id [name: "idx_schools_org_id"]
+    is_active [name: "idx_schools_active"]
+  }
+}
+
+// ============================================
+// 3. TeacherOrganization (教師-機構成員關係)
+// ============================================
+// 用途: 記錄教師在機構層級的角色
+// 角色: org_owner (機構負責人), org_admin (機構管理人)
+Table teacher_organizations {
+  id int [pk, increment, note: "主鍵"]
+  teacher_id int [not null, ref: > teachers.id, note: "教師 ID，CASCADE 刪除"]
+  organization_id uuid [not null, ref: > organizations.id, note: "機構 ID，CASCADE 刪除"]
+  
+  // 角色 (參照 user-roles-and-permissions.md)
+  role varchar(50) [not null, default: "org_owner", note: "機構角色: org_owner（機構負責人）、org_admin（機構管理人）"]
+  
+  // 狀態
+  is_active boolean [not null, default: true, note: "成員關係是否啟用"]
+  
+  // 時間戳記
+  created_at timestamp [not null, default: `now()`, note: "建立時間"]
+  updated_at timestamp [null, note: "最後更新時間"]
+  
+  indexes {
+    teacher_id [name: "idx_teacher_orgs_teacher_id"]
+    organization_id [name: "idx_teacher_orgs_org_id"]
+    (teacher_id, organization_id, is_active) [name: "idx_teacher_orgs_active"]
+    (teacher_id, organization_id) [unique, name: "uq_teacher_organization"]
+  }
+  
+  Note: '''
+  核心規則:
+  - 一個教師在一個機構只能有一個角色關係 (UNIQUE 約束)
+  - org_owner: 機構負責人，擁有完整控制權
+    * 數量限制: 一個機構僅能有一個 org_owner
+  - org_admin: 機構管理人，協助管理機構
+  - 權限差異待定義 (參照 user-roles-and-permissions.md)
+  '''
+}
+
+// ============================================
+// 4. TeacherSchool (教師-學校成員關係)
+// ============================================
+// 用途: 記錄教師在學校層級的角色
+// 角色: school_principal (分校校長), school_admin (分校管理人), teacher (分校老師)
+Table teacher_schools {
+  id int [pk, increment, note: "主鍵"]
+  teacher_id int [not null, ref: > teachers.id, note: "教師 ID，CASCADE 刪除"]
+  school_id uuid [not null, ref: > schools.id, note: "學校 ID，CASCADE 刪除"]
+  
+  // 角色列表 (JSON 陣列，支援多重角色)
+  roles jsonb [not null, default: '[]', note: "學校角色列表（JSON 陣列）: ['school_principal', 'school_admin', 'teacher']"]
+  
+  // 自訂權限 (JSONB，覆蓋預設角色權限)
+  permissions jsonb [null, note: "自訂權限設定（JSON 格式），可覆蓋預設角色權限"]
+  
+  // 狀態
+  is_active boolean [not null, default: true, note: "成員關係是否啟用"]
+  
+  // 時間戳記
+  created_at timestamp [not null, default: `now()`, note: "建立時間"]
+  updated_at timestamp [null, note: "最後更新時間"]
+  
+  indexes {
+    teacher_id [name: "idx_teacher_schools_teacher_id"]
+    school_id [name: "idx_teacher_schools_school_id"]
+    (teacher_id, school_id, is_active) [name: "idx_teacher_schools_active"]
+    (teacher_id, school_id) [unique, name: "uq_teacher_school"]
+  }
+  
+  Note: '''
+  核心規則:
+  - 一個教師在一個學校只能有一個成員關係 (UNIQUE 約束)
+  - 支援多重角色: 同一個教師可以同時擔任多個角色
+  - school_principal (分校校長): 分校管理者
+  - school_admin (分校管理人): 協助校長管理分校
+  - teacher (分校老師): 教學執行者，管理自己的班級
+  - 角色層級: school_principal > school_admin > teacher
+  - 權限差異待定義 (參照 user-roles-and-permissions.md)
+  '''
+}
+
+// ============================================
+// 5. ClassroomSchool (班級-學校關係)
+// ============================================
+// 用途: 記錄班級屬於哪個學校
+// 向下相容: 保留 classroom.teacher_id (獨立教師)
+Table classroom_schools {
+  id int [pk, increment, note: "主鍵"]
+  classroom_id int [not null, ref: > classrooms.id, note: "班級 ID，CASCADE 刪除"]
+  school_id uuid [not null, ref: > schools.id, note: "學校 ID，CASCADE 刪除"]
+  
+  // 狀態
+  is_active boolean [not null, default: true, note: "關係是否啟用"]
+  
+  // 時間戳記
+  created_at timestamp [not null, default: `now()`, note: "建立時間"]
+  
+  indexes {
+    classroom_id [name: "idx_classroom_schools_classroom_id"]
+    school_id [name: "idx_classroom_schools_school_id"]
+    (classroom_id, school_id, is_active) [name: "idx_classroom_schools_active"]
+    classroom_id [unique, name: "uq_classroom_school"]
+  }
+  
+  Note: '''
+  核心規則:
+  - 一個班級只能屬於一個學校 (UNIQUE 約束在 classroom_id)
+  - 向下相容設計: 保留 classrooms.teacher_id 支援獨立教師
+  - 獨立教師的班級: classroom_schools 無記錄
+  - 機構教師的班級: classroom_schools 有記錄
+  '''
+}
+
+// ============================================
+// 角色權限矩陣 (參照原始規格表)
+// ============================================
+// 
+// 角色功能                         | org_owner | org_admin | school_principal | school_admin | teacher
+// --------------------------------|-----------|-----------|------------------|--------------|--------
+// 機構基本資料修改                  | ✓         | ✓         | ✗                | ✗            | ✗
+// 新增學校                         | ✓         | ✓         | ✗                | ✗            | ✗
+// 新增/刪除/編輯機構教師權限         | ✓         | ✓         | ✗                | ✗            | ✗
+// 新增/刪除/編輯學校教師權限         | ✓         | ✓         | ✓                | ✓            | ✗
+// 新增/刪除/編輯學校班級            | ✓         | ✓         | ✓                | ✓            | ✓
+// 新增/刪除/編輯學校學生            | ✓         | ✓         | ✓                | ✓            | ✗
+// 新增/刪除/編輯機構教材            | ✓         | ✓         | ✗                | ✗            | ✗
+// 指派/批改角色被分配到的學生的作業   | ✓         | ✓         | ✓                | ✓            | ✓
+//
+// 特殊規則:
+// - 機構後台與個人老師後台可以互相切換
+// - 權限實作使用 Casbin RBAC 系統 (參照 backend/docs/RBAC_PERMISSIONS.md)
+// ============================================

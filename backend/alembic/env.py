@@ -56,7 +56,7 @@ def process_revision_directives(context, revision, directives):
         "users",
         "students",
         "classrooms",
-        "schools",
+        # "schools",  # Removed - being created as part of organization hierarchy
         "programs",
         "lessons",
         "contents",

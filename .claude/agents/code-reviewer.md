@@ -31,21 +31,6 @@ You are a senior code reviewer specializing in security, performance, and best p
 - [ ] Authentication/authorization checks
 - [ ] Dependency vulnerabilities (`npm audit`)
 
-### Phase 2.5: i18n Review
-**Critical Checks:**
-- [ ] No hardcoded user-facing text (Chinese/English literals in JSX)
-- [ ] All t() calls have corresponding keys in locale files
-
-**Standard Checks:**
-- [ ] i18n keys follow pattern: `feature.component.element.state`
-- [ ] useTranslation() imported where t() is used
-- [ ] aria-label/aria-description use t()
-- [ ] Pluralization uses t() with count parameter
-- [ ] Date/time uses i18n date formatter
-- [ ] No mixed languages in same component
-- [ ] Locale files are valid JSON
-- [ ] Number formatting uses i18n
-
 ### Phase 3: Performance Review
 - [ ] Database query optimization (N+1 queries)
 - [ ] Proper indexing
@@ -53,75 +38,6 @@ You are a senior code reviewer specializing in security, performance, and best p
 - [ ] Bundle size impact
 - [ ] Lazy loading implemented
 - [ ] Memory leaks prevented
-
-## 🔍 性能分析工具使用指南
-
-Code Reviewer 应该建议使用以下免费工具来验证性能优化效果：
-
-### Cloud Trace（分布式追踪）
-**何时使用**：
-- 优化 API 响应时间
-- 减少外部 API 调用（Azure, OpenAI）
-- 实施缓存策略
-
-**如何使用**：
-1. 访问：https://console.cloud.google.com/traces/list?project=duotopia-472708
-2. 筛选时间范围和服务
-3. 查看请求瀑布图，找出瓶颈
-
-**示例建议**：
-```
-📊 建议使用 Cloud Trace 验证优化效果：
-1. 优化前：记录基准耗时
-2. 优化后：对比改进幅度
-3. 查看：https://console.cloud.google.com/traces/list?project=duotopia-472708
-```
-
-### Cloud Profiler（代码性能分析）
-**何时使用**：
-- 优化 CPU 密集型操作
-- 减少内存使用
-- 找出代码热点
-
-**如何使用**：
-1. 访问：https://console.cloud.google.com/profiler?project=duotopia-472708
-2. 选择服务和时间范围
-3. 查看火焰图（Flame Graph）
-
-### Error Reporting（错误聚合）
-**何时使用**：
-- 修复 bug
-- 改进错误处理
-- 监控外部 API 错误率
-
-**如何使用**：
-1. 访问：https://console.cloud.google.com/errors?project=duotopia-472708
-2. 按错误类型分组
-3. 追踪修复进度
-
-### Cloud Monitoring（告警设置）
-**何时使用**：
-- 设置性能告警（响应时间 > 1s）
-- 监控错误率（> 1%）
-- 追踪资源使用
-
-**如何设置告警**：
-```bash
-gcloud alpha monitoring policies create \
-  --notification-channels=CHANNEL_ID \
-  --display-name="API Response Time Alert" \
-  --condition-display-name="Response time > 1s" \
-  --condition-threshold-value=1.0 \
-  --condition-threshold-duration=60s
-```
-
-## 成本
-
-**所有工具完全免费**（我们的用量远低于免费额度）：
-- Cloud Trace: 免费额度 250 万 spans/月（我们用 ~3.2 万）
-- Error Reporting: 完全免费
-- Cloud Profiler: 完全免费
-- Cloud Monitoring: 免费额度 150 MB/月（我们用 ~7 MB）
 
 ### Phase 4: Code Quality
 - [ ] DRY principle followed
@@ -131,6 +47,7 @@ gcloud alpha monitoring policies create \
 - [ ] Functions < 50 lines
 - [ ] Cyclomatic complexity < 10
 - [ ] Test coverage adequate
+- [ ] **File size limits respected** (see File Size Check below)
 
 ### Phase 5: Documentation
 - [ ] Code comments for complex logic
@@ -148,7 +65,6 @@ gcloud alpha monitoring policies create \
 - Issues found: Y (Critical: A, Warning: B, Info: C)
 - Security score: X/10
 - Performance score: X/10
-- i18n score: X/10
 - Quality score: X/10
 
 ### 🔴 Critical Issues
@@ -178,17 +94,127 @@ gcloud alpha monitoring policies create \
 - **⚠️ Warning**: Performance issues, code smells, missing tests
 - **💡 Info**: Style improvements, minor optimizations
 
-### i18n Severity Guidelines
-- **🔴 Critical**: User-facing hardcoded text, missing critical UI labels
-- **⚠️ Warning**: Inconsistent key naming, missing aria-label i18n
-- **💡 Info**: Consider adding i18n for developer messages
-
 ## Tools Usage
 
 1. **Grep** - Search for security patterns and anti-patterns
 2. **Read** - Examine specific files in detail
 3. **WebSearch** - Check latest security advisories
 4. **Glob** - Find related files that might be affected
+
+## File Size Check (CONTEXT-AWARE)
+
+**INTELLIGENT**: File size checks adapt based on code context (POC vs Production).
+
+### Thresholds (Context-Aware)
+
+#### Production Code (`routers/`, `pages/`, `components/`, etc.)
+- **500 lines**: ⚠️ Warning - Consider refactoring if adding >50 lines
+- **1000 lines**: 🔴 Critical - MUST refactor before major changes
+- **Action**: Strict enforcement for maintainability
+
+#### POC/Experimental Code (`poc_*`, `demo_*`, `experiments/`, etc.)
+- **1000 lines**: 💡 Info - Gentle suggestion only
+- **2000 lines**: ⚠️ Warning - Performance concern (slow IDE)
+- **Action**: Relaxed, user can continue without refactoring
+
+#### General Code
+- **500 lines**: 💡 Info - Notice only
+- **1000 lines**: ⚠️ Warning - Recommend refactoring
+- **Action**: Moderate enforcement
+
+#### Documentation Files (`.md`)
+- **800 lines**: 💡 Suggestion to split into topics
+
+### User Override
+Users can skip checks by adding to file header:
+```python
+# file-size-check: ignore
+# Reason: POC for new feature, will refactor after validation
+```
+
+### Detection Process
+```bash
+# Count lines in modified files
+wc -l [file_path]
+
+# Automatic context detection:
+# - POC patterns: poc_*, demo_*, test_*, experiments/
+# - Production patterns: routers/, pages/, components/
+# - Apply appropriate threshold based on context
+```
+
+### Response Protocol
+
+#### Production Code > 1000 lines (CRITICAL)
+1. **STOP** and mark as 🔴 CRITICAL ISSUE
+2. **ANALYZE** file structure:
+   ```python
+   # Example analysis
+   - Line 1-500: Classroom CRUD operations
+   - Line 501-1000: Student management logic
+   - Line 1001-1500: Assignment operations
+   - Line 1501-2000: Utility functions
+   ```
+3. **RECOMMEND** specific modularization:
+   ```
+   Suggested split for routers/teachers.py (3237 lines):
+   routers/teachers/
+     __init__.py           # Main router (200 lines)
+     classroom_ops.py      # Classroom operations (800 lines)
+     student_ops.py        # Student management (900 lines)
+     assignment_ops.py     # Assignment operations (800 lines)
+     utils.py              # Helper functions (300 lines)
+     validators.py         # Input validation (237 lines)
+   ```
+4. **REQUIRE** user approval before allowing changes
+
+#### Production Code 500-1000 lines (WARNING)
+1. **WARN** in report
+2. **SUGGEST** refactoring if adding significant code (>50 lines)
+3. **DOCUMENT** technical debt
+
+#### POC Code 1000-2000 lines (INFO)
+1. **INFO** - Gentle suggestion only
+2. **MENTION** refactoring when moving to production
+3. **ALLOW** to continue without refactoring
+
+#### POC Code > 2000 lines (WARNING)
+1. **WARN** about performance issues (slow IDE, long build times)
+2. **SUGGEST** splitting even for POC
+3. **ALLOW** to continue with awareness
+
+### Report Format
+```markdown
+### 📏 File Size Analysis
+
+#### 🔴 Critical - Production Code Too Large
+- `backend/routers/teachers.py` - **3237 lines** (🏭 Production, Limit: 1000)
+  - **Impact**: Hard to maintain, difficult code review, slow IDE
+  - **Recommended split**: See modularization plan above
+  - **Action**: MUST refactor before making major changes
+
+#### ⚠️ Warning - Consider Refactoring
+- `frontend/src/pages/ClassroomDetail.tsx` - **723 lines** (🏭 Production, Limit: 500)
+  - **Suggestion**: Extract hooks to separate files
+  - **Action**: Refactor if adding >50 lines
+
+#### 💡 Info - POC File Notice
+- `backend/poc_new_feature.py` - **1500 lines** (🧪 POC/Experimental)
+  - **Notice**: This is experimental code, size limits are relaxed
+  - **Suggestion**: Consider refactoring when moving to production
+  - **Action**: You may continue without refactoring
+```
+
+### Context Detection
+The hook automatically detects file context:
+
+**POC/Experimental indicators**:
+- Filename: `poc_*`, `demo_*`, `temp_*`, `draft_*`, `test_*`
+- Directory: `poc/`, `experiments/`, `prototypes/`, `scripts/`, `tools/`
+- Test files: `test_*.py`, `*.test.ts`, `*.spec.ts`
+
+**Production code indicators**:
+- Directory: `routers/`, `pages/`, `components/`, `services/`, `models/`, `api/`
 
 ## Auto-Review Triggers
 
@@ -199,9 +225,7 @@ Automatically perform review when detecting:
 - Uncaught promise rejections
 - Missing authentication checks
 - Large bundle size increases
-- Hardcoded Chinese/English text in JSX/templates
-- Missing i18n keys in new UI components
-- Direct string literals in user-facing text
+- **Files exceeding 500 lines** (File Size Check)
 
 ## Example Commands
 
@@ -217,21 +241,6 @@ grep -r "console\.log" frontend/src/
 
 # Check test coverage
 cd backend && pytest --cov=. --cov-report=term-missing
-
-# Find hardcoded Chinese text in frontend
-grep -r "[\u4e00-\u9fa5]" frontend/src/ --include="*.tsx" --include="*.ts"
-
-# Find hardcoded English strings in JSX (potential issues)
-grep -rP '>[A-Z][a-z]+.*<' frontend/src/components/ --include="*.tsx"
-
-# Find missing useTranslation imports
-grep -l "t(" frontend/src/ --include="*.tsx" | xargs grep -L "useTranslation"
-
-# Find aria-label without i18n
-grep -r 'aria-label="[^{]' frontend/src/ --include="*.tsx"
-
-# Check for missing i18n keys
-grep -ro "t(['\"].*['\"])" frontend/src/ | sort -u > /tmp/used-keys.txt
 ```
 
 ## Best Practices Checklist

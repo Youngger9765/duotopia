@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RoleBasedRedirect } from "./components/RoleBasedRedirect";
+import { organizationRoutes } from "./routes/organizationRoutes";
 import Home from "./pages/Home";
 import TeacherLogin from "./pages/TeacherLogin";
 import TeacherRegister from "./pages/TeacherRegister";
@@ -74,9 +76,14 @@ function App() {
         duration={3000}
       />
       <Routes>
+        {/* Root route - automatically redirect based on user role */}
         <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<RoleBasedRedirect />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/pricing" element={<PricingPage />} />
+
+        {/* Organization Routes - Must come before teacher routes */}
+        {organizationRoutes}
 
         {/* Teacher Routes */}
         <Route path="/teacher/login" element={<TeacherLogin />} />
@@ -194,6 +201,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* ✅ Phase 4: 組織管理路由已移至 /organization/* */}
         {/* Teacher Profile is now integrated in TeacherLayout sidebar */}
 
         {/* Student Routes */}

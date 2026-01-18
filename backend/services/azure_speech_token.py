@@ -8,10 +8,10 @@ Azure Speech Token Service
 """
 
 import os
-import httpx
 import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict
+from utils.http_client import get_http_client
 
 logger = logging.getLogger(__name__)
 
@@ -66,10 +66,11 @@ class AzureSpeechTokenService:
         logger.info(f"Requesting new token from Azure (region: {self.region})")
 
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.post(url, headers=headers)
-                response.raise_for_status()
-                token = response.text
+            # Use shared http_client for connection pooling
+            client = get_http_client()
+            response = await client.post(url, headers=headers, timeout=10.0)
+            response.raise_for_status()
+            token = response.text
 
             # Cache token
             self._cached_token = token
@@ -79,13 +80,8 @@ class AzureSpeechTokenService:
 
             return {"token": token, "region": self.region, "expires_in": 600}
 
-        except httpx.HTTPStatusError as e:
-            logger.error(
-                f"Azure token request failed: {e.response.status_code} - {e.response.text}"
-            )
-            raise
         except Exception as e:
-            logger.error(f"Unexpected error requesting Azure token: {e}")
+            logger.error(f"Azure token request failed: {e}")
             raise
 
 

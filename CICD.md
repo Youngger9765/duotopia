@@ -2,6 +2,17 @@
 
 本文件規範 Duotopia 專案的 CI/CD 流程與部署準則，避免重複犯錯。
 
+---
+
+## 🔗 Related Documentation
+
+- **Git Workflow**: See [.claude/agents/git-issue-pr-flow.md](./.claude/agents/git-issue-pr-flow.md)
+- **Agent System**: See [CLAUDE.md](./CLAUDE.md)
+- **TapPay Integration**: See [docs/integrations/TAPPAY_INTEGRATION_GUIDE.md](./docs/integrations/TAPPAY_INTEGRATION_GUIDE.md)
+- **Organization Hierarchy**: See [ORG_IMPLEMENTATION_SPEC.md](./ORG_IMPLEMENTATION_SPEC.md)
+
+---
+
 ## 🔴 最高原則：使用 Supabase 免費方案
 
 ### 資料庫策略

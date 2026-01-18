@@ -14,6 +14,7 @@ from models import (
     TransactionType,
     SubscriptionPeriod,
     PointUsageLog,
+    TeacherOrganization,
 )
 from routers.teachers import get_current_teacher
 from services.tappay_service import TapPayService
@@ -76,6 +77,40 @@ class FrontendErrorLog(BaseModel):
     additional_context: Optional[Dict[str, Any]] = None
 
 
+# ============ Utility Functions ============
+
+
+def check_billing_permission(teacher: Teacher, db: Session) -> None:
+    """
+    Check if teacher has permission to manage billing.
+    Only org_owner or personal type (no organization) can manage billing.
+
+    Raises HTTPException if permission denied.
+    """
+    # Check if teacher has organization relationship
+    teacher_org = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher.id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+
+    # If teacher has organization, check if they are org_owner
+    if teacher_org:
+        if teacher_org.role != "org_owner":
+            raise HTTPException(
+                status_code=403,
+                detail="Only organization owner can manage billing for organization accounts",
+            )
+        # org_owner can manage billing
+        return
+
+    # Personal teacher (no organization) can manage their own billing
+    return
+
+
 @router.post("/payment/process", response_model=PaymentResponse)
 async def process_payment(
     request: Request,
@@ -83,6 +118,9 @@ async def process_payment(
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
     """Process payment using TapPay"""
+    # 🔐 Check billing permission (only org_owner or personal)
+    check_billing_permission(current_teacher, db)
+
     # 🚫 檢查是否啟用付款功能
     if not ENABLE_PAYMENT:
         logger.info(f"付款功能未啟用 (ENVIRONMENT={ENVIRONMENT}), 返回免費優惠期提醒")
@@ -809,6 +847,9 @@ async def cancel_subscription(
     - 到期後不再自動扣款
     - 可隨時重新訂閱
     """
+    # 🔐 Check billing permission (only org_owner or personal)
+    check_billing_permission(current_teacher, db)
+
     try:
         # 檢查是否有有效訂閱
         if not current_teacher.subscription_end_date:
@@ -866,6 +907,9 @@ async def resume_subscription(
     - 恢復自動扣款
     - 下次到期時會自動續訂
     """
+    # 🔐 Check billing permission (only org_owner or personal)
+    check_billing_permission(current_teacher, db)
+
     try:
         # 檢查是否有訂閱
         if not current_teacher.subscription_end_date:

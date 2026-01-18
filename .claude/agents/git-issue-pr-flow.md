@@ -20,7 +20,7 @@ You are the Git Issue PR Flow Agent, managing GitHub Issues through complete PDC
 1. **Never Skip Problem Reproduction** - Document with evidence before fixing
 2. **Never Skip TDD** - Every fix needs failing test first
 3. **Never Auto-Process Schema Changes** - Stop for human review
-4. **Never Use "Fixes #N" in Feature Branches** - Only "Related to #N"
+4. **Always Use "Fixes #N" in PR to Staging** - Auto-close issue when merged
 5. **Never Skip Testing Instructions** - Provide clear steps for case owners
 6. **Never Commit Without User Approval** - Wait for explicit command
 7. **Language: English or Traditional Chinese Only** - For all GitHub comments
@@ -126,7 +126,7 @@ gcloud run services list --region=asia-east1 | grep "preview-issue"  # Should be
    - Verify tests pass
 3. **Commit with Correct Message**:
    - Use `git commit -m "fix: [description] (Related to #<NUM>)"`
-   - **NEVER use "Fixes #<NUM>" in feature branch**
+   - Save "Fixes #<NUM>" for PR title/body only
 4. **Local Testing**:
    - `cd backend && pytest tests/ -v`
    - `cd frontend && npm run typecheck && npm run build`
@@ -145,10 +145,11 @@ gcloud run services list --region=asia-east1 | grep "preview-issue"  # Should be
 2. **MANDATORY: Create PR** (most critical step!):
    ```bash
    gh pr create --base staging --head fix/issue-<NUM>-<description> \
-     --title "Fix: [description]" \
-     --body "Related to #<NUM> [full engineering report]"
+     --title "Fix: [description] (Fixes #<NUM>)" \
+     --body "Fixes #<NUM>\n\n[full engineering report]"
    ```
    - PR is mandatory for Code Review + CI/CD Gate
+   - Use "Fixes #<NUM>" in PR title/body to auto-close issue
    - Never skip this step
 3. Wait for CI/CD checks in PR:
    - `gh pr checks <PR_NUMBER>`
@@ -166,34 +167,21 @@ gcloud run services list --region=asia-east1 | grep "preview-issue"  # Should be
    - 🤖 Auto-Approval Detection workflow monitors Issue comments
    - When approval keyword detected → auto-adds label `✅ tested-in-staging`
    - No manual command needed!
-7. Merge PR: `gh pr merge <PR> --squash` (use gh command, not manual merge)
+7. Merge PR to staging: `gh pr merge <PR> --squash` (use gh command, not manual merge)
 
-8. **Automated Per-Issue Test Environment Cleanup**:
+8. **Issue auto-closes** when PR merges to staging (via "Fixes #<NUM>" keyword)
+
+9. **Automated Per-Issue Test Environment Cleanup**:
    - ✅ **cleanup-per-issue-on-close.yml** automatically triggered
    - Deletes Cloud Run services (frontend + backend)
    - Deletes container images
    - Deletes feature branch
    - Posts cleanup confirmation to Issue
    - 💰 **Billing stops for test environment**
-   
-9. **Update Issue Labels After Merge**:
-   ```bash
-   # Remove in-progress labels
-   gh issue edit <NUM> --remove-label "⏳ 等待案主測試"
-   gh issue edit <NUM> --remove-label "✅ PDCA: Check"
-   gh issue edit <NUM> --remove-label "🧪 Per-Issue Test Env"
-   
-   # Add staging-ready label
-   gh issue edit <NUM> --add-label "🚀 Ready for Production"
-   ```
-   - This clearly marks which issues have been merged to staging
-   - Easy to track which issues are waiting for production release
-   
-10. **Note**: Issue will NOT auto-close (PR uses "Related to #<NUM>")
-    - Issue remains open for staging verification
-    - Will auto-close when Release PR (staging→main) merges with "Fixes #<NUM>"
 
-### Phase 4: PDCA Act (Production release)
+10. Generate completion report and post to issue (as final summary)
+
+### Phase 4: PDCA Act (Optional: Production release)
 1. **Check which Issues are ready for production**:
    ```bash
    # List all issues with "🚀 Ready for Production" label
@@ -490,6 +478,7 @@ Templates are available as reference but NOT required:
 - ✅ Complete engineering report (root cause, technical decisions, test coverage)
 - ✅ CI/CD status checks
 - ✅ Impact scope assessment
+- ✅ Use "Fixes #<NUM>" in title/body to auto-close issue when merged
 - ❌ Don't include owner approval (goes in Issue)
 
 ## Communication Templates
@@ -514,7 +503,7 @@ Templates are available as reference but NOT required:
 
 ### PR Description (Technical)
 ```markdown
-Related to #<NUM>
+Fixes #<NUM>
 
 ## 🎯 Purpose
 [One line description]
@@ -553,7 +542,7 @@ Detects approval in comments containing:
    git push origin staging
    ```
 2. **Skip PR creation** - Always create PR for code review and CI/CD
-3. **Use "Fixes #<NUM>" in feature branch** - Only use "Related to #<NUM>"
+3. **Forget "Fixes #<NUM>" in PR** - Required to auto-close issue when merged to staging
 4. **Merge without testing** - CI/CD must pass
 5. **Merge without case owner approval** - Both approvals required
 6. **Manual git merge** - Use `gh pr merge` command

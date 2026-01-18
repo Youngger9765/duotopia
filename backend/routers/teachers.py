@@ -2,7 +2,7 @@ import random
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, selectinload, joinedload
 from sqlalchemy import func, text
 from pydantic import BaseModel, Field, field_validator
 from database import get_db
@@ -22,6 +22,10 @@ from models import (
     StudentContentProgress,
     StudentItemProgress,
     ProgramLevel,
+    TeacherOrganization,
+    TeacherSchool,
+    Organization,
+    School,
 )
 from auth import (
     verify_token,
@@ -119,6 +123,21 @@ class StudentSummary(BaseModel):
     classroom_name: str
 
 
+class OrganizationInfo(BaseModel):
+    """機構資訊"""
+
+    id: str
+    name: str
+    type: str  # personal, school_group, etc.
+
+
+class SchoolInfo(BaseModel):
+    """學校資訊"""
+
+    id: str
+    name: str
+
+
 class TeacherDashboard(BaseModel):
     teacher: TeacherProfile
     classroom_count: int
@@ -132,6 +151,37 @@ class TeacherDashboard(BaseModel):
     days_remaining: int
     can_assign_homework: bool
     is_test_account: bool  # 是否為測試帳號（白名單）
+    # Organization and roles information
+    organization: Optional[OrganizationInfo] = None
+    schools: List[SchoolInfo] = []
+    roles: List[str] = []  # All unique roles from TeacherSchool and TeacherOrganization
+
+
+class OrganizationRole(BaseModel):
+    """機構角色"""
+
+    organization_id: str
+    organization_name: str
+    role: str  # org_owner, org_admin
+
+
+class SchoolRole(BaseModel):
+    """學校角色"""
+
+    school_id: str
+    school_name: str
+    organization_id: str
+    organization_name: str
+    roles: List[str]  # school_admin, teacher
+
+
+class TeacherRolesResponse(BaseModel):
+    """教師角色回應"""
+
+    teacher_id: int
+    organization_roles: List[OrganizationRole]
+    school_roles: List[SchoolRole]
+    all_roles: List[str]  # Flattened unique list of all roles
 
 
 # ============ Teacher Endpoints ============
@@ -139,6 +189,88 @@ class TeacherDashboard(BaseModel):
 async def get_teacher_profile(current_teacher: Teacher = Depends(get_current_teacher)):
     """取得教師個人資料"""
     return current_teacher
+
+
+@router.get("/me/roles", response_model=TeacherRolesResponse)
+async def get_teacher_roles(
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    取得教師在所有機構和學校的角色
+
+    Returns:
+        - organization_roles: 機構層級的角色 (org_owner, org_admin)
+        - school_roles: 學校層級的角色 (school_admin, teacher)
+        - all_roles: 所有角色的扁平化列表
+    """
+
+    organization_roles = []
+    school_roles = []
+    all_roles_set = set()
+
+    # 查詢機構角色
+    teacher_orgs = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == current_teacher.id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .all()
+    )
+
+    for to in teacher_orgs:
+        org = (
+            db.query(Organization).filter(Organization.id == to.organization_id).first()
+        )
+        if org and org.is_active:
+            organization_roles.append(
+                OrganizationRole(
+                    organization_id=str(to.organization_id),
+                    organization_name=org.display_name or org.name,
+                    role=to.role,
+                )
+            )
+            all_roles_set.add(to.role)
+
+    # 查詢學校角色
+    teacher_schools = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == current_teacher.id,
+            TeacherSchool.is_active.is_(True),
+        )
+        .all()
+    )
+
+    for ts in teacher_schools:
+        school = db.query(School).filter(School.id == ts.school_id).first()
+        if school and school.is_active:
+            org = (
+                db.query(Organization)
+                .filter(Organization.id == school.organization_id)
+                .first()
+            )
+            if org:
+                school_roles.append(
+                    SchoolRole(
+                        school_id=str(ts.school_id),
+                        school_name=school.display_name or school.name,
+                        organization_id=str(school.organization_id),
+                        organization_name=org.display_name or org.name,
+                        roles=ts.roles if ts.roles else [],
+                    )
+                )
+                # 將學校角色加入 all_roles
+                if ts.roles:
+                    all_roles_set.update(ts.roles)
+
+    return TeacherRolesResponse(
+        teacher_id=current_teacher.id,
+        organization_roles=organization_roles,
+        school_roles=school_roles,
+        all_roles=sorted(list(all_roles_set)),
+    )
 
 
 @router.put("/me", response_model=TeacherProfile)
@@ -197,6 +329,57 @@ async def get_teacher_dashboard(
     db: Session = Depends(get_db),
 ):
     """取得教師儀表板資料"""
+
+    # Query teacher's organization via TeacherOrganization (with eager loading)
+    teacher_org = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == current_teacher.id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .options(joinedload(TeacherOrganization.organization))
+        .first()
+    )
+
+    organization_info = None
+    if teacher_org and teacher_org.organization and teacher_org.organization.is_active:
+        org = teacher_org.organization
+        organization_info = OrganizationInfo(
+            id=str(org.id),
+            name=org.display_name or org.name,
+            type=org.type or "personal",
+        )
+
+    # Query teacher's schools via TeacherSchool (with eager loading)
+    teacher_schools = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == current_teacher.id,
+            TeacherSchool.is_active.is_(True),
+        )
+        .options(joinedload(TeacherSchool.school))
+        .all()
+    )
+
+    schools_info = []
+    all_roles_set = set()
+
+    # Add organization role if exists
+    if teacher_org:
+        all_roles_set.add(teacher_org.role)
+
+    # Process schools and collect roles
+    for ts in teacher_schools:
+        if ts.school and ts.school.is_active:
+            schools_info.append(
+                SchoolInfo(
+                    id=str(ts.school.id),
+                    name=ts.school.display_name or ts.school.name,
+                )
+            )
+            # Add school roles
+            if ts.roles:
+                all_roles_set.update(ts.roles)
 
     # Get classrooms with student count (only active classrooms)
     classrooms = (
@@ -282,6 +465,10 @@ async def get_teacher_dashboard(
         days_remaining=current_teacher.days_remaining,
         can_assign_homework=current_teacher.can_assign_homework,
         is_test_account=is_test_account,
+        # Organization and roles information
+        organization=organization_info,
+        schools=schools_info,
+        roles=sorted(list(all_roles_set)),
     )
 
 
