@@ -54,3 +54,23 @@ async def batch_translate(
     except Exception as e:
         print(f"Batch translation error: {e}")
         raise HTTPException(status_code=500, detail="Translation service error")
+
+
+@router.post("/generate-sentences")
+async def generate_sentences(
+    request: GenerateSentencesRequest,
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """AI 生成例句"""
+    try:
+        sentences = await translation_service.generate_sentences(
+            words=request.words,
+            level=request.level,
+            prompt=request.prompt,
+            translate_to=request.translate_to,
+            parts_of_speech=request.parts_of_speech,
+        )
+        return {"sentences": sentences}
+    except Exception as e:
+        print(f"Generate sentences error: {e}")
+        raise HTTPException(status_code=500, detail="Generate sentences failed")
