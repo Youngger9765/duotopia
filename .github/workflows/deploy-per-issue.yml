@@ -158,7 +158,23 @@ jobs:
           echo "$DEPLOY_OUTPUT"
 
           echo "🔍 DEBUG: Extracting service URL from deploy output"
-          URL=$(echo "$DEPLOY_OUTPUT" | grep "Service URL:" | awk '{print $NF}')
+          URL=$(echo "$DEPLOY_OUTPUT" | grep -F "Service URL:" | awk '{print $NF}' | xargs)
+
+          # Validate URL was extracted
+          if [ -z "$URL" ]; then
+            echo "❌ ERROR: Failed to extract service URL from deployment output"
+            echo "📋 Deploy output:"
+            echo "$DEPLOY_OUTPUT"
+            exit 1
+          fi
+
+          # Validate URL format (Cloud Run URLs follow strict pattern)
+          if [[ ! "$URL" =~ ^https://[a-z0-9-]+\.(run\.app|a\.run\.app)$ ]]; then
+            echo "❌ ERROR: Extracted URL has invalid format: $URL"
+            echo "Expected format: https://service-name-hash.region.run.app"
+            exit 1
+          fi
+
           echo "url=${URL}" >> $GITHUB_OUTPUT
           echo "✅ Backend deployed: ${URL}"
 
@@ -221,7 +237,23 @@ jobs:
           echo "$DEPLOY_OUTPUT"
 
           echo "🔍 DEBUG: Extracting frontend URL from deploy output"
-          URL=$(echo "$DEPLOY_OUTPUT" | grep "Service URL:" | awk '{print $NF}')
+          URL=$(echo "$DEPLOY_OUTPUT" | grep -F "Service URL:" | awk '{print $NF}' | xargs)
+
+          # Validate URL was extracted
+          if [ -z "$URL" ]; then
+            echo "❌ ERROR: Failed to extract service URL from deployment output"
+            echo "📋 Deploy output:"
+            echo "$DEPLOY_OUTPUT"
+            exit 1
+          fi
+
+          # Validate URL format (Cloud Run URLs follow strict pattern)
+          if [[ ! "$URL" =~ ^https://[a-z0-9-]+\.(run\.app|a\.run\.app)$ ]]; then
+            echo "❌ ERROR: Extracted URL has invalid format: $URL"
+            echo "Expected format: https://service-name-hash.region.run.app"
+            exit 1
+          fi
+
           echo "url=${URL}" >> $GITHUB_OUTPUT
           echo "✅ Frontend deployed: ${URL}"
 
