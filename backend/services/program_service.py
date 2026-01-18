@@ -29,6 +29,7 @@ from models import (
 )
 from utils.permissions import (
     has_manage_materials_permission,
+    has_school_materials_permission,
     has_program_permission,
     has_lesson_permission,
     has_content_permission,
@@ -203,16 +204,18 @@ def get_programs_by_scope(
     teacher_id: int,
     db: Session,
     organization_id: Optional[uuid.UUID] = None,
+    school_id: Optional[uuid.UUID] = None,
     include_inactive: bool = False,
 ) -> List[Program]:
     """
-    Get programs based on scope (teacher or organization).
+    Get programs based on scope (teacher, organization, or school).
 
     Args:
-        scope: 'teacher' or 'organization'
+        scope: 'teacher', 'organization', or 'school'
         teacher_id: Current teacher ID
         db: Database session
         organization_id: Required if scope='organization'
+        school_id: Required if scope='school'
         include_inactive: Include soft-deleted programs
 
     Returns:
@@ -248,8 +251,21 @@ def get_programs_by_scope(
             Program.organization_id == organization_id,
             Program.is_template.is_(True),
         )
+    elif scope == "school":
+        if not school_id:
+            raise ValueError("school_id required for school scope")
+
+        # Check permission using centralized helper
+        if not has_school_materials_permission(teacher_id, school_id, db):
+            raise PermissionError("No permission to access school materials")
+
+        # School-owned programs
+        query = query.filter(
+            Program.school_id == school_id,
+            Program.is_template.is_(True),
+        )
     else:
-        raise ValueError(f"Invalid scope: {scope}. Must be 'teacher' or 'organization'")
+        raise ValueError(f"Invalid scope: {scope}. Must be 'teacher', 'organization', or 'school'")
 
     if not include_inactive:
         query = query.filter(Program.is_active.is_(True))
@@ -263,16 +279,18 @@ def create_program(
     data: Dict[str, Any],
     db: Session,
     organization_id: Optional[uuid.UUID] = None,
+    school_id: Optional[uuid.UUID] = None,
 ) -> Program:
     """
     Create a new program.
 
     Args:
-        scope: 'teacher' or 'organization'
+        scope: 'teacher', 'organization', or 'school'
         teacher_id: Creator teacher ID
         data: Program data (name, description, etc.)
         db: Database session
         organization_id: Required if scope='organization'
+        school_id: Required if scope='school'
 
     Returns:
         Created program
@@ -299,6 +317,35 @@ def create_program(
             is_template=True,
             teacher_id=teacher_id,
             organization_id=organization_id,
+            classroom_id=None,
+            is_active=True,
+            source_metadata={"created_by": teacher_id},
+        )
+    elif scope == "school":
+        if not school_id:
+            raise ValueError("school_id required for school scope")
+
+        # Check permission using centralized helper
+        if not has_school_materials_permission(teacher_id, school_id, db):
+            raise PermissionError("No permission to create school materials")
+
+        # Get school to set organization_id
+        from models import School
+
+        school = db.query(School).filter(School.id == school_id).first()
+        if not school:
+            raise ValueError("School not found")
+
+        program = Program(
+            name=data["name"],
+            description=data.get("description"),
+            level=data.get("level"),
+            estimated_hours=data.get("estimated_hours"),
+            tags=data.get("tags"),
+            is_template=True,
+            teacher_id=teacher_id,
+            school_id=school_id,
+            organization_id=school.organization_id,
             classroom_id=None,
             is_active=True,
             source_metadata={"created_by": teacher_id},

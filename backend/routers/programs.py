@@ -785,8 +785,9 @@ from services import program_service
 
 @router.get("", response_model=List[ProgramResponse])
 async def list_programs(
-    scope: Literal["teacher", "organization"] = Query(..., description="Scope: teacher or organization"),
+    scope: Literal["teacher", "organization", "school"] = Query(..., description="Scope: teacher, organization, or school"),
     organization_id: str = Query(None, description="Required if scope=organization"),
+    school_id: str = Query(None, description="Required if scope=school"),
     db: Session = Depends(get_db),
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
@@ -795,6 +796,7 @@ async def list_programs(
 
     - scope=teacher: Returns teacher's personal programs
     - scope=organization: Returns organization programs (requires organization_id)
+    - scope=school: Returns school programs (requires school_id)
     """
     # Validate parameters
     if scope == "organization" and not organization_id:
@@ -802,15 +804,22 @@ async def list_programs(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="organization_id is required when scope=organization"
         )
+    if scope == "school" and not school_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="school_id is required when scope=school"
+        )
 
     try:
         import uuid as uuid_module
         org_uuid = uuid_module.UUID(organization_id) if organization_id else None
+        sch_uuid = uuid_module.UUID(school_id) if school_id else None
         programs = program_service.get_programs_by_scope(
             scope=scope,
             teacher_id=current_teacher.id,
             db=db,
             organization_id=org_uuid,
+            school_id=sch_uuid,
         )
 
         # Build response with hierarchy
@@ -1251,8 +1260,9 @@ async def copy_program(
 @router.post("", response_model=ProgramResponse, status_code=201)
 async def create_program(
     payload: ProgramCreate,
-    scope: Literal["teacher", "organization"] = Query(..., description="Scope: teacher or organization"),
+    scope: Literal["teacher", "organization", "school"] = Query(..., description="Scope: teacher, organization, or school"),
     organization_id: str = Query(None, description="Required if scope=organization"),
+    school_id: str = Query(None, description="Required if scope=school"),
     db: Session = Depends(get_db),
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
@@ -1261,6 +1271,7 @@ async def create_program(
 
     - scope=teacher: Creates personal program for teacher
     - scope=organization: Creates organization program (requires organization_id and permission)
+    - scope=school: Creates school program (requires school_id and permission)
     """
     # Validate parameters
     if scope == "organization" and not organization_id:
@@ -1268,16 +1279,23 @@ async def create_program(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="organization_id is required when scope=organization"
         )
+    if scope == "school" and not school_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="school_id is required when scope=school"
+        )
 
     try:
         import uuid as uuid_module
         org_uuid = uuid_module.UUID(organization_id) if organization_id else None
+        sch_uuid = uuid_module.UUID(school_id) if school_id else None
         program = program_service.create_program(
             scope=scope,
             teacher_id=current_teacher.id,
             data={"name": payload.name, "description": payload.description},
             db=db,
             organization_id=org_uuid,
+            school_id=sch_uuid,
         )
 
         return ProgramResponse.from_orm(program)

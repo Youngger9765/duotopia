@@ -50,21 +50,60 @@ def has_manage_materials_permission(
     )
 
 
+def has_school_materials_permission(
+    teacher_id: int, school_id, db: Session
+) -> bool:
+    """
+    Check if teacher can manage school materials.
+
+    Permission rules:
+    - school_admin role in the school: Has permission
+    - org-level manage_materials permission: Has permission
+    - Otherwise: No permission
+    """
+    from models import School, TeacherSchool
+
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        return False
+
+    # Check school_admin role
+    has_school_admin = db.query(TeacherSchool).filter(
+        TeacherSchool.teacher_id == teacher_id,
+        TeacherSchool.school_id == school_id,
+        TeacherSchool.roles.contains(["school_admin"]),
+        TeacherSchool.is_active.is_(True),
+    ).first() is not None
+
+    # Check org-level permission
+    has_org_permission = has_manage_materials_permission(teacher_id, school.organization_id, db)
+
+    return has_school_admin or has_org_permission
+
+
 def has_program_permission(
     db: Session, program_id: int, teacher_id: int, action: str = "write"
 ) -> bool:
     """
     Check if teacher can perform action on program.
+
+    Supports teacher-owned, organization-owned, and school-owned programs.
     """
     program = db.query(Program).filter(Program.id == program_id).first()
     if not program:
         return False
 
-    if program.teacher_id and program.organization_id is None:
+    # Teacher-owned (personal materials)
+    if program.teacher_id and program.organization_id is None and program.school_id is None:
         return program.teacher_id == teacher_id
 
-    if program.organization_id:
+    # Organization-owned
+    if program.organization_id and program.school_id is None:
         return has_manage_materials_permission(teacher_id, program.organization_id, db)
+
+    # School-owned
+    if program.school_id:
+        return has_school_materials_permission(teacher_id, program.school_id, db)
 
     return False
 
