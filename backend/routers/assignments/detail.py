@@ -163,6 +163,11 @@ async def get_assignment_detail(
             }
         )
 
+    # Get content_type from the first content
+    content_type = None
+    if contents:
+        content_type = contents[0].get("type")
+
     return {
         "id": assignment.id,
         "title": assignment.title,
@@ -175,6 +180,9 @@ async def get_assignment_detail(
         "contents": contents,
         "student_ids": student_ids,
         "students_progress": students_progress,
+        # Practice mode and content type for frontend display
+        "practice_mode": assignment.practice_mode,
+        "content_type": content_type,
     }
 
 
