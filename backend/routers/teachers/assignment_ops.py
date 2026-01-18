@@ -16,6 +16,7 @@ from models import (
     TeacherSchool,
     Organization,
     School,
+    ContentType,
 )
 from .dependencies import get_current_teacher
 from .validators import *
