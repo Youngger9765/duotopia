@@ -330,3 +330,4 @@ print(f"\n🌐 Visit: http://localhost:5173/organization/{org_id}")
 
 db.close()
 
+# Fixed URL regex validation
