@@ -155,6 +155,50 @@ async def get_classroom(
     }
 
 
+@router.get("/classrooms/{classroom_id}/students")
+async def get_classroom_students(
+    classroom_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """取得班級的學生列表"""
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id,
+            Classroom.teacher_id == current_teacher.id,
+            Classroom.is_active.is_(True),
+        )
+        .options(
+            selectinload(Classroom.students).selectinload(ClassroomStudent.student)
+        )
+        .first()
+    )
+
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+
+    return [
+        {
+            "id": cs.student.id,
+            "name": cs.student.name,
+            "email": cs.student.email,
+            "student_number": cs.student.student_number,
+            "birthdate": (
+                cs.student.birthdate.isoformat() if cs.student.birthdate else None
+            ),
+            "password_changed": cs.student.password_changed,
+            "last_login": (
+                cs.student.last_login.isoformat() if cs.student.last_login else None
+            ),
+            "phone": "",
+            "status": "active" if cs.student.is_active else "inactive",
+        }
+        for cs in classroom.students
+        if cs.is_active
+    ]
+
+
 @router.put("/classrooms/{classroom_id}")
 async def update_classroom(
     classroom_id: int,

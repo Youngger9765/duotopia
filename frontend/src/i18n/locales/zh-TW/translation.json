@@ -1,7 +1,6 @@
 {
   "common": {
     "save": "儲存",
-    "saving": "儲存中...",
     "cancel": "取消",
     "confirm": "確認",
     "delete": "刪除",
@@ -28,10 +27,53 @@
     "paste": "貼上",
     "cut": "剪下",
     "yes": "是",
-    "no": "否",
-    "active": "啟用",
-    "inactive": "停用",
-    "comingSoon": "即將推出"
+    "no": "否"
+  },
+  "rearrangement": {
+    "loading": "正在載入題目...",
+    "noQuestions": "目前沒有需要練習的題目",
+    "progress": "第 {{current}}/{{total}} 題",
+    "questionTitle": "第 {{number}} 題",
+    "hint": "提示",
+    "playAudio": "播放音檔",
+    "audioDisabledCompleted": "此題已完成，無法播放音檔",
+    "audioPrompt": "點擊播放音檔開始作答",
+    "playbackRate": "播放速度",
+    "totalScore": "目前總分",
+    "expectedScore": "預期得分",
+    "errorsRemaining": "剩餘 {{remaining}} 次錯誤機會",
+    "unlimited": "不限時",
+    "selectWordsHint": "請依序點選下方單字組成正確句子",
+    "correctAnswer": "正確答案",
+    "jumpToQuestion": "跳至第 {{number}} 題",
+    "scoreCategories": {
+      "listening": "聽力",
+      "writing": "寫作",
+      "speaking": "口說"
+    },
+    "messages": {
+      "timeout": "時間到！本題已自動結算",
+      "incorrect": "錯誤！正確答案是「{{correct}}」",
+      "incorrectSimple": "答案錯誤，請再試一次",
+      "questionComplete": "答對了！本題得 {{score}} 分",
+      "challengeFailed": "錯誤次數過多，挑戰失敗",
+      "correct": "答對了！",
+      "scoreEarned": "本題得分：{{score}} 分",
+      "tooManyErrors": "錯誤次數過多",
+      "tryAgain": "點擊下方按鈕重新挑戰",
+      "retryPenalty": "因已看過答案，重試後滿分為 60 分",
+      "allComplete": "全部完成！得 {{score}} 分"
+    },
+    "buttons": {
+      "retry": "重新挑戰",
+      "next": "下一題",
+      "finish": "完成"
+    },
+    "errors": {
+      "loadFailed": "載入題目失敗",
+      "submitFailed": "提交答案失敗",
+      "retryFailed": "重新挑戰失敗"
+    }
   },
   "nav": {
     "home": "首頁",
@@ -72,7 +114,7 @@
     "dueDate": "截止日期",
     "status": "狀態",
     "notStarted": "未開始",
-    "inProgress": "進行中",
+    "inProgress": "待完成",
     "completed": "已完成",
     "submitted": "已提交",
     "graded": "已評分",
@@ -93,26 +135,23 @@
     "deleteConfirm": "確定要刪除此錄音嗎？"
   },
   "home": {
-    "header": {
-      "logo": "Duotopia"
-    },
     "hero": {
       "badge": "AI 驅動的英語學習革命",
-      "tagline": "AI 驅動的英語學習革命",
-      "brand": "Duotopia",
       "title": "Duotopia",
-      "subtitle": "多元智能英語學習平台",
-      "description": "透過 AI 語音辨識與即時回饋，為 6-15 歲學生打造個人化的英語口說學習體驗。讓每個孩子都能自信開口說英語！",
-      "benefit1": "AI 語音辨識，精準評估發音與流暢度",
-      "benefit2": "多元智能學習，全方位提升英語能力",
-      "benefit3": "遊戲化激勵，提高學習動機與參與度",
+      "subtitle": "英文聽說讀寫 AI 智能遊戲作業批改平台",
+      "description": "Duotopia 為 6-18 歲親師生打造個人化的智慧遊戲作業平台，讓每位學生都能自信開口說英文！",
       "freeTrial": "免費試用",
-      "freeTrialBtn": "免費體驗 14 天",
       "watchVideo": "觀看介紹影片",
       "trustedBy": "超過 {{count}}+ 教師信賴",
-      "trustedTeachers": "已有 500+ 教師選擇 Duotopia",
       "studentsUsing": "{{count}}+ 學生正在使用",
-      "studentsImproved": "幫助 10,000+ 學生提升英語口說能力"
+      "tagline": "AI 英文學習智慧作業批改新選擇",
+      "brand": "Duotopia",
+      "benefit1": "幫助 ESL 老師們通過 AI 備課以及批改作業解放教師時間；",
+      "benefit2": "學生們透過各種遊戲化的資源活動有效練習，提升學習成果；",
+      "benefit3": "親師通過數據分析建立信任與高效正向溝通。",
+      "trustedTeachers": "超過 1,000+ ESL 老師信賴",
+      "studentsImproved": "已提升 10,000,000+ 學生口說能力",
+      "freeTrialBtn": "免費體驗"
     },
     "stats": {
       "satisfaction": "學生滿意度",
@@ -192,18 +231,6 @@
       "studentLogin": "學生登入",
       "benefits": "無需信用卡 • 永久免費方案 • 5 分鐘快速上手"
     },
-    "cta2": {
-      "title": "準備好開始了嗎？",
-      "subtitle": "立即免費體驗 Duotopia，無需信用卡",
-      "button": "免費體驗 14 天",
-      "noCreditCard": "無需信用卡 • 隨時可取消"
-    },
-    "steps": {
-      "title": "簡單三步驟，開始學習之旅",
-      "step1": "免費註冊帳號",
-      "step2": "建立班級並邀請學生",
-      "step3": "派發作業，開始教學"
-    },
     "loginOptions": {
       "title": "快速登入通道",
       "teacher": {
@@ -237,6 +264,21 @@
       "privacy": "隱私政策",
       "terms": "使用條款",
       "copyright": "© 2025 Duotopia. All rights reserved."
+    },
+    "header": {
+      "logo": "Duotopia"
+    },
+    "cta2": {
+      "title": "準備好重獲老師的自由時光?",
+      "subtitle": "開始英文學習新革命，用 DUOTOPIA 幫助學生浸潤式學習英語",
+      "button": "開始體驗 1 秒批改作業",
+      "noCreditCard": "無須綁定信用卡"
+    },
+    "steps": {
+      "title": "快速三步驟，簡單開始",
+      "step1": "1 秒建立班級",
+      "step2": "2 秒匯入學生",
+      "step3": "3 秒貼上教材"
     }
   },
   "pricing": {
@@ -543,27 +585,31 @@
     },
     "flowStatus": {
       "title": "作業進度流程",
-      "notStarted": "未開始",
-      "inProgress": "進行中",
+      "todo": "待完成",
       "submitted": "已提交",
-      "returned": "退回訂正",
-      "resubmitted": "重新提交",
+      "returned": "待訂正",
+      "resubmitted": "已訂正",
       "graded": "已完成"
     },
     "status": {
       "notStarted": "未開始",
-      "inProgress": "進行中",
+      "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已評分",
-      "returned": "已退回",
-      "resubmitted": "重新提交"
+      "returned": "待訂正",
+      "resubmitted": "已訂正"
     },
     "progress": {
       "title": "完成進度",
       "activities": "{{completed}} / {{total}} 個活動"
     },
     "contentType": {
-      "default": "朗讀練習"
+      "default": "練習"
+    },
+    "contentTypes": {
+      "VOCABULARY_SET": "單字集",
+      "SPEAKING": "例句朗讀",
+      "REARRANGEMENT": "例句重組"
     },
     "dueDate": {
       "overdue": "已逾期 {{days}} 天",
@@ -581,13 +627,9 @@
       "resubmit": "開始訂正"
     },
     "emptyStates": {
-      "notStarted": {
-        "title": "沒有未開始的作業",
-        "description": "所有作業都已經開始了！"
-      },
-      "inProgress": {
-        "title": "沒有進行中的作業",
-        "description": "開始練習作業吧！"
+      "todo": {
+        "title": "沒有待完成的作業",
+        "description": "所有作業都已完成或提交！"
       },
       "submitted": {
         "title": "沒有待批改的作業",
@@ -602,8 +644,8 @@
         "description": "需要重做的作業會顯示在這裡。"
       },
       "resubmitted": {
-        "title": "沒有重新提交的作業",
-        "description": "重新提交的作業會顯示在這裡。"
+        "title": "沒有已訂正的作業",
+        "description": "已訂正的作業會顯示在這裡。"
       }
     }
   },
@@ -650,11 +692,11 @@
     },
     "status": {
       "notStarted": "未開始",
-      "inProgress": "進行中",
+      "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已評分",
-      "returned": "已退回",
-      "resubmitted": "重新提交"
+      "returned": "待訂正",
+      "resubmitted": "已訂正"
     },
     "dueDate": {
       "overdue": "已逾期 {{days}} 天",
@@ -670,13 +712,15 @@
     "messages": {
       "noActivities": "此作業尚無題目",
       "submitSuccess": "作業提交成功！",
+      "submittingWithPending": "作業已提交！還有 {{count}} 題正在背景分析中，請稍後查看完整結果。",
       "analyzingRecording": "正在分析錄音",
       "batchAnalyzing": "正在分析第 {{current}}/{{total}} 題",
       "pleaseWait": "請稍候...",
       "doNotSwitchQuestions": "請勿切換題目",
       "doNotLeave": "請勿離開此頁面",
       "batchAnalysisComplete": "已完成 {{count}} 題分析",
-      "batchAnalysisFailed": "自動分析失敗，請稍後再試"
+      "batchAnalysisFailed": "自動分析失敗，請稍後再試",
+      "submittingAssignment": "正在提交作業..."
     },
     "errors": {
       "loadFailed": "無法載入題目，請稍後再試",
@@ -698,6 +742,7 @@
       "title": "尚未完成的項目",
       "incompleteItems": "以下項目尚未錄音，請先完成後再提交：",
       "notRecorded": "（未錄音）",
+      "notUploaded": "（尚未完成上傳）",
       "notAnalyzed": "（未分析）",
       "itemNumber": "第 {{number}} 題"
     },
@@ -707,7 +752,8 @@
       "itemCountSingular": "{{count}}題"
     },
     "activityTypes": {
-      "reading": "朗讀練習"
+      "reading": "例句朗讀",
+      "rearrangement": "例句重組"
     },
     "stats": {
       "minutes": "分鐘",
@@ -729,7 +775,9 @@
       "cannotValidate": "無法驗證錄音，請重新錄音",
       "complete": "錄音完成",
       "duration": "錄音時長 {{duration}} 秒",
-      "completePreview": "錄音完成（預覽模式，不會儲存）"
+      "completePreview": "錄音完成（預覽模式，不會儲存）",
+      "uploading": "正在上傳錄音...",
+      "uploadSuccess": "上傳完成，可以點擊分析按鈕"
     },
     "preview": {
       "cannotSubmit": "預覽模式下無法提交作業"
@@ -862,7 +910,15 @@
     },
     "errors": {
       "loginFailed": "登入失敗，請檢查帳號密碼",
-      "quickLoginFailed": "{{email}} 帳號登入失敗"
+      "quickLoginFailed": "{{email}} 帳號登入失敗",
+      "accountNotVerified": "帳號尚未驗證，請先驗證您的 Email 信箱"
+    },
+    "resend": {
+      "button": "重新發送驗證郵件",
+      "success": "驗證郵件已重新發送！請檢查您的信箱",
+      "failed": "發送失敗，請稍後再試",
+      "cooldown": "請等待 {{seconds}} 秒後再重新發送",
+      "noEmail": "沒有收到郵件？"
     }
   },
   "studentLogin": {
@@ -890,6 +946,8 @@
       "placeholder": "請輸入你的密碼",
       "login": "登入",
       "selectOther": "選擇其他學生",
+      "passwordHint": "首次登入請輸入西元生日年月日，如: 2012 年 1 月 1 日，密碼為 20120101",
+      "forgotPassword": "若忘記密碼，請聯繫教師恢復預設密碼",
       "demoHint": "💡 測試提示",
       "demoPassword": "Demo 學生預設密碼：",
       "passwordFormat": "正式使用時，密碼為學生的生日 (格式：YYYYMMDD)"
@@ -966,10 +1024,10 @@
     },
     "status": {
       "notStarted": "待完成",
-      "inProgress": "進行中",
+      "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已評分",
-      "returned": "已退回"
+      "returned": "待訂正"
     },
     "errors": {
       "loadAssignments": "無法載入作業列表",
@@ -1108,8 +1166,9 @@
       "title": "指派新作業",
       "steps": {
         "selectContent": "選擇內容",
+        "practiceMode": "練習模式",
         "selectStudents": "選擇學生",
-        "assignmentDetails": "作業詳情"
+        "details": "作業詳情"
       },
       "quota": {
         "remaining": "配額餘額",
@@ -1136,7 +1195,8 @@
         "loadingLabel": "載入中...",
         "selectAll": "全選",
         "deselectAll": "取消全選",
-        "items": "題"
+        "items": "題",
+        "clearAll": "清除全部"
       },
       "selectStudents": {
         "description": "選擇要接收作業的學生",
@@ -1184,17 +1244,23 @@
         "noStudentSelected": "請至少選擇一位學生",
         "createFailed": "創建作業失敗",
         "loadProgramsFailed": "載入課程失敗",
+        "loadTemplateFailed": "載入公版課程失敗",
+        "loadClassroomProgramsFailed": "載入班級課程失敗",
         "loadLessonsFailed": "載入單元失敗",
         "loadContentsFailed": "載入內容失敗",
         "quotaExceeded": "配額不足，無法派發作業",
-        "quotaExceededDesc": "請升級方案或等待下個計費週期"
+        "quotaExceededDesc": "請升級方案或等待下個計費週期",
+        "missingAudio": "選擇的內容缺少音檔",
+        "missingAudioDesc": "此練習模式需要音檔，請先回到內容管理頁面產生 TTS 音檔"
       },
       "success": {
         "created": "成功創建作業，已指派給 {{count}} 位學生"
       },
       "contentTypes": {
-        "reading_assessment": "朗讀評測",
-        "READING_ASSESSMENT": "朗讀評測",
+        "reading_assessment": "例句集",
+        "READING_ASSESSMENT": "例句集",
+        "example_sentences": "例句集",
+        "EXAMPLE_SENTENCES": "例句集",
         "speaking_practice": "口說練習",
         "speaking_scenario": "情境對話",
         "listening_cloze": "聽力填空",
@@ -1204,10 +1270,28 @@
       "actions": {
         "viewPlans": "查看方案"
       },
-      "steps": {
-        "selectContent": "選擇內容",
-        "selectStudents": "選擇學生",
-        "details": "作業詳情"
+      "practiceMode": {
+        "title": "練習模式設定",
+        "description": "選擇學生練習的模式和相關設定",
+        "advancedSettings": "進階設定",
+        "reading": "例句朗讀",
+        "readingDesc": "學生朗讀例句，系統評分發音",
+        "rearrangement": "例句重組",
+        "rearrangementDesc": "學生將打散的單字重新排列成正確句子",
+        "timeLimit": "單題作答時間限制",
+        "seconds": "秒",
+        "unlimited": "不限時",
+        "default": "預設",
+        "shuffleQuestions": "隨機題目順序",
+        "shuffleQuestionsDesc": "每次練習時隨機排列題目順序",
+        "showAnswer": "顯示答案",
+        "showAnswerDesc": "答題結束後顯示正確答案",
+        "playAudio": "播放音檔",
+        "playAudioYes": "是（聽力練習）",
+        "playAudioNo": "否（寫作練習）",
+        "scoreListening": "計分類別：聽力",
+        "scoreWriting": "計分類別：寫作",
+        "scoreSpeaking": "計分類別：口說"
       }
     },
     "classroomAssignDialog": {
@@ -1228,31 +1312,35 @@
       "comingSoon": "即將推出",
       "cancel": "取消",
       "types": {
+        "example_sentences": {
+          "name": "例句集",
+          "description": "建立例句供學生練習朗讀或重組（2-25個單字）",
+          "recommended": "推薦"
+        },
+        "vocabulary_set": {
+          "name": "單字集",
+          "description": "建立單字集供學生記憶練習",
+          "comingSoon": "即將推出"
+        },
+        "multiple_choice": {
+          "name": "單選題庫",
+          "description": "建立單選題目供學生測驗",
+          "comingSoon": "即將推出"
+        },
+        "scenario_dialogue": {
+          "name": "情境對話",
+          "description": "建立情境對話供學生練習",
+          "comingSoon": "即將推出"
+        },
         "reading_assessment": {
           "name": "朗讀錄音",
           "description": "學生朗讀課文並錄音",
-          "recommended": "推薦"
-        },
-        "speaking_practice": {
-          "name": "口說練習",
-          "description": "自由口說練習，AI 提供即時回饋",
-          "comingSoon": "即將推出"
-        },
-        "speaking_scenario": {
-          "name": "情境對話",
-          "description": "在特定情境下進行對話練習"
-        },
-        "listening_cloze": {
-          "name": "聽力填空",
-          "description": "聽音檔後填入缺少的單字"
+          "deprecated": true
         },
         "sentence_making": {
           "name": "造句練習",
-          "description": "使用指定單字或句型造句"
-        },
-        "speaking_quiz": {
-          "name": "口說測驗",
-          "description": "回答問題測試口說能力"
+          "description": "使用指定單字或句型造句",
+          "deprecated": true
         }
       },
       "buttons": {
@@ -1681,7 +1769,7 @@
     "summary": {
       "total": "總人數",
       "notStarted": "未開始",
-      "inProgress": "進行中",
+      "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已批改"
     },
@@ -1691,7 +1779,7 @@
     "statusFilter": {
       "all": "全部狀態",
       "notStarted": "未開始",
-      "inProgress": "進行中",
+      "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已批改"
     },
@@ -1723,7 +1811,7 @@
     },
     "total": "共 {{count}} 位學生",
     "columns": {
-      "id": "ID",
+      "studentNumber": "學號",
       "studentName": "學生姓名",
       "contactInfo": "聯絡資訊",
       "passwordStatus": "密碼狀態",
@@ -1764,7 +1852,8 @@
       "phone": "電話:",
       "classroom": "班級:",
       "password": "密碼:",
-      "lastLogin": "最後登入:"
+      "lastLogin": "最後登入:",
+      "studentNumber": "學號:"
     }
   },
   "subscriptionProgressBanner": {
@@ -1779,10 +1868,6 @@
   "teacherLayout": {
     "title": "Duotopia",
     "subtitle": "教師後台",
-    "tabs": {
-      "teaching": "教學管理",
-      "organization": "組織管理"
-    },
     "nav": {
       "dashboard": "儀表板",
       "myClassrooms": "我的班級",
@@ -1877,14 +1962,16 @@
   "readingAssessmentPanel": {
     "title": "標題",
     "titleRequired": "請輸入內容標題",
-    "defaultTitle": "朗讀評測內容",
+    "defaultTitle": "",
     "batchActions": {
       "batchPaste": "批次貼上",
       "batchPasteTooltip": "批次貼上素材，每行一個項目",
-      "batchGenerateTTS": "批次生成TTS",
+      "batchGenerateTTS": "批次生成音檔",
       "batchGenerateTTSTooltip": "使用免費的 Microsoft Edge TTS 生成語音",
       "batchGenerateTranslation": "批次生成翻譯",
-      "batchGenerateTranslationTooltip": "批次生成翻譯（根據各行語言設定）"
+      "batchGenerateTranslationTooltip": "批次生成翻譯（根據各行語言設定）",
+      "generatingTTS": "生成中...",
+      "generatingTranslation": "翻譯中..."
     },
     "row": {
       "dragToReorder": "拖曳以重新排序",
@@ -1904,7 +1991,12 @@
       "delete": "刪除",
       "addItem": "新增項目",
       "maxRowsReached": "最多只能新增 15 列",
-      "minRowsRequired": "至少需要保留 1 列"
+      "minRowsRequired": "至少需要保留 1 列",
+      "cannotDeleteWithProgress": "此題目有學生進度，無法刪除"
+    },
+    "assignmentCopyWarning": {
+      "title": "注意：此為作業副本",
+      "message": "有學生進度的題目無法刪除（刪除按鈕已被禁用）。您可以修改題目內容，但不能移除已作答的題目。"
     },
     "ttsModal": {
       "title": "音檔設定",
@@ -1965,11 +2057,11 @@
     },
     "batchPasteDialog": {
       "title": "批次貼上素材",
-      "description": "每行一個項目，支援自動生成 TTS 與翻譯",
+      "description": "每行一個項目，支援自動生成音檔與翻譯",
       "inputLabel": "請貼上內容：",
       "inputPlaceholder": "put\nPut it away.\nIt's time to put everything away. Right now.",
       "itemCount": "{{count}} 個項目",
-      "autoGenerateTTS": "自動生成 TTS",
+      "autoGenerateTTS": "自動生成音檔",
       "autoTranslate": "自動翻譯",
       "cancel": "取消",
       "confirmPaste": "確認貼上",
@@ -2051,6 +2143,7 @@
       "createProgram": "建立課程",
       "assignNewHomework": "指派新作業",
       "viewDetails": "查看詳情",
+      "editContent": "編輯內容",
       "previewDemo": "預覽示範",
       "viewSubmissions": "查看學生提交",
       "editAssignment": "編輯作業",
@@ -2066,7 +2159,7 @@
       "level": "等級",
       "totalAssignments": "總作業數",
       "completedAssignments": "已完成",
-      "inProgressAssignments": "進行中",
+      "inProgressAssignments": "待完成",
       "overdueAssignments": "已逾期"
     },
     "tabs": {
@@ -2106,20 +2199,30 @@
       "noDescription": "無說明",
       "unknownType": "未知類型",
       "notSet": "未設定",
-      "readingAssessmentSettings": "朗讀評測設定",
+      "readingAssessmentSettings": "新增例句集",
       "subscriptionExpiredWarning": "⚠️ 訂閱已過期",
       "daysRemaining": "剩餘 {{days}} 天",
       "requiresSubscription": "需要訂閱才能指派作業",
       "estimatedTime": "{{time}} 分鐘",
-      "itemsCount": "{{count}} 個項目"
+      "itemsCount": "{{count}} 個項目",
+      "editContent": "編輯內容"
     },
     "contentTypes": {
-      "readingAssessment": "朗讀評測",
+      "VOCABULARY_SET": "單字集",
+      "SPEAKING": "例句朗讀",
+      "REARRANGEMENT": "例句重組",
       "speakingPractice": "口說練習",
+      "speaking_practice": "口說練習",
+      "SPEAKING_PRACTICE": "口說練習",
       "speakingScenario": "情境對話",
+      "speaking_scenario": "情境對話",
+      "SPEAKING_SCENARIO": "情境對話",
       "listeningCloze": "聽力填空",
-      "sentenceMaking": "造句練習",
+      "listening_cloze": "聽力填空",
+      "LISTENING_CLOZE": "聽力填空",
       "speakingQuiz": "口說測驗",
+      "speaking_quiz": "口說測驗",
+      "SPEAKING_QUIZ": "口說測驗",
       "readingRecordingPractice": "朗讀錄音練習",
       "newContent": "新內容"
     },
@@ -2153,6 +2256,7 @@
       "questions": "題",
       "giveScore": "給分",
       "scoreRange": "0-100 分",
+      "usingAverageScore": "（採用平均分數）",
       "selectGradingStatus": "選擇批改狀態",
       "referenceAudio": "參考音檔",
       "transcription": "語音辨識結果",
@@ -2203,16 +2307,22 @@
       "pronunciationClear": "發音清晰",
       "fluencyGood": "流暢度佳",
       "accuracyHigh": "準確度高",
-      "completenessGood": "完整度好"
+      "completenessGood": "完整度好",
+      "aiGrading": "AI 批改中...",
+      "aiGradingComplete": "AI 批改完成！",
+      "aiGradingFailed": "AI 批改失敗，請稍後再試",
+      "noStudentToGrade": "沒有可批改的學生（狀態須為已提交或已訂正）",
+      "audioUploadFailed": "錄音檔案上傳異常",
+      "audioUploadFailedDetail": "有分析結果，但錄音檔案未成功上傳"
     },
     "status": {
       "notStarted": "未開始",
-      "inProgress": "進行中",
+      "inProgress": "待完成",
       "submitted": "已提交",
       "graded": "已批改",
-      "returned": "已發還",
-      "resubmitted": "重新提交",
-      "resubmittedShort": "重交",
+      "returned": "待訂正",
+      "resubmitted": "已訂正",
+      "resubmittedShort": "已訂正",
       "notAssigned": "未指派"
     }
   },
@@ -2235,6 +2345,7 @@
     "buttons": {
       "backToList": "返回作業列表",
       "gradeAssignment": "批改作業",
+      "batchGrade": "AI批改",
       "cancel": "取消",
       "save": "儲存",
       "edit": "編輯",
@@ -2260,10 +2371,10 @@
       "studentName": "學生姓名",
       "assigned": "已指派",
       "notStarted": "未開始",
-      "inProgress": "進行中",
+      "inProgress": "待完成",
       "submitted": "已提交",
       "returned": "待訂正",
-      "resubmitted": "重新提交",
+      "resubmitted": "已訂正",
       "graded": "已完成",
       "score": "分數",
       "actions": "操作",
@@ -2274,21 +2385,90 @@
       "instructionsPlaceholder": "輸入作業說明...",
       "noInstructions": "無說明",
       "notSet": "未設定",
-      "people": "人"
+      "people": "人",
+      "editContent": "編輯內容"
     },
     "contentTypes": {
-      "READING_ASSESSMENT": "朗讀評測",
+      "readingAssessment": "例句集",
+      "reading_assessment": "例句集",
+      "READING_ASSESSMENT": "例句集",
+      "EXAMPLE_SENTENCES": "例句集",
+      "speakingPractice": "口說練習",
+      "speaking_practice": "口說練習",
       "SPEAKING_PRACTICE": "口說練習",
+      "speakingScenario": "情境對話",
+      "speaking_scenario": "情境對話",
       "SPEAKING_SCENARIO": "情境對話",
+      "listeningCloze": "聽力填空",
+      "listening_cloze": "聽力填空",
       "LISTENING_CLOZE": "聽力填空",
-      "SENTENCE_MAKING": "造句練習",
-      "SPEAKING_QUIZ": "口說測驗"
+      "sentenceMaking": "單字集",
+      "sentence_making": "單字集",
+      "SENTENCE_MAKING": "單字集",
+      "VOCABULARY_SET": "單字集",
+      "speakingQuiz": "口說測驗",
+      "speaking_quiz": "口說測驗",
+      "SPEAKING_QUIZ": "口說測驗",
+      "MULTIPLE_CHOICE": "選擇題",
+      "SCENARIO_DIALOGUE": "情境對話"
+    }
+  },
+  "batchGrading": {
+    "title": "AI批改",
+    "progress": "批改中... ({{current}}/{{total}} 位學生)",
+    "studentName": "學生姓名",
+    "accuracy": "準確度",
+    "fluency": "流暢度",
+    "pronunciation": "總體發音",
+    "completeness": "完整度",
+    "totalScore": "總分",
+    "missingItems": "缺漏題數",
+    "decision": "狀態決定",
+    "action": "操作",
+    "decisionGraded": "完成批改",
+    "decisionReturned": "退回訂正",
+    "decisionPending": "待決定",
+    "submitSingle": "送出",
+    "submitAll": "全部送出",
+    "selectAllGraded": "全選：完成批改",
+    "selectAllReturned": "全選：退回訂正",
+    "clearAll": "清除所有選擇",
+    "selectDecisionFirst": "請先選擇狀態（退回或完成）",
+    "singleSubmitSuccess": "已完成批改：{{name}}",
+    "allSubmitSuccess": "已完成批改：{{graded}} 位完成，{{returned}} 位退回，{{unchanged}} 位待決定",
+    "returnForCorrection": "退回訂正",
+    "averageAccuracy": "平均準確度",
+    "averageFluency": "平均流暢度",
+    "averagePronunciation": "平均總體發音",
+    "averageCompleteness": "平均完整度",
+    "pause": "暫停",
+    "close": "關閉",
+    "selectedForReturn": "已選擇 {{count}} 位學生退回訂正",
+    "confirmButton": "確認",
+    "confirmGrading": "確認批改",
+    "processing": "處理中...",
+    "helperText": "點擊「確認」後，僅將勾選的學生退回訂正，其餘保持原狀態",
+    "successReturned": "已退回 {{count}} 位學生訂正",
+    "successNoAction": "未處理任何學生",
+    "successDescription": "已批改 {{graded}} 位學生，退回 {{returned}} 位學生訂正",
+    "errorDescription": "批改失敗，請稍後重試",
+    "messages": {
+      "success": "成功批改 {{count}} 位學生",
+      "error": "批改失敗，請稍後再試",
+      "returnSuccess": "已標記 {{count}} 位學生為待訂正",
+      "returnError": "更新訂正狀態失敗"
+    },
+    "aria": {
+      "markAsGraded": "標記{{name}}為完成批改",
+      "markAsReturned": "標記{{name}}為退回訂正",
+      "markAsPending": "標記{{name}}為待定"
     }
   },
   "previewPage": {
     "loading": "載入預覽中...",
     "messages": {
-      "loadError": "無法載入預覽資料"
+      "loadError": "無法載入預覽資料",
+      "previewComplete": "預覽完成"
     },
     "buttons": {
       "backToList": "返回作業列表"
@@ -2434,7 +2614,7 @@
       "featureInDevelopment": "{{type}} 功能開發中"
     },
     "dialogs": {
-      "addReadingTitle": "新增朗讀內容",
+      "addReadingTitle": "新增例句集",
       "editContentTitle": "編輯內容"
     }
   },
@@ -2931,14 +3111,20 @@
       "custom": "自建課程"
     },
     "template": {
+      "search": "搜尋公版課程模板...",
       "searchPlaceholder": "搜尋公版課程模板...",
       "selected": "已選擇 {{count}} / {{total}} 個模板",
       "selectAll": "全選",
       "clear": "清除",
       "loading": "載入中...",
+      "empty": "沒有可用的公版課程模板",
       "noTemplates": "沒有可用的公版課程模板",
+      "duplicate": "⚠️ 已有此課程，重複建立可能造成混淆",
       "duplicateWarning": "已有此課程，重複建立可能造成混淆",
       "confirmDuplicate": "⚠️ 警告：以下課程已存在於班級中：\n\n{{names}}\n\n重複建立可能造成混淆，確定要繼續嗎？",
+      "nameLabel": "新課程名稱（選填，留空使用原名）",
+      "namePlaceholder": "{{originalName}}",
+      "multipleNote": "已選擇 {{count}} 個模板，將使用原始名稱建立課程",
       "nameOptional": "新課程名稱（選填，留空使用原名）",
       "multipleSelected": "已選擇 {{count}} 個模板，將使用原始名稱建立課程"
     },
@@ -3088,6 +3274,7 @@
       "saveFailed": "儲存失敗，請稍後再試",
       "deleteFailed": "刪除失敗，請稍後再試",
       "emailInUse": "Email已被使用，請使用其他Email",
+      "studentNumberDuplicate": "此學號已存在於該班級中，請使用其他學號",
       "invalidBirthdate": "生日格式錯誤，請使用YYYY-MM-DD格式",
       "requiredFields": "請填寫所有必填欄位",
       "nameRequired": "姓名為必填",
@@ -3225,7 +3412,9 @@
       "passed": "通過",
       "notPassed": "未通過",
       "uploadAndAnalyze": "上傳並分析",
-      "analyzing": "上傳並分析中",
+      "analyzing": "分析中...",
+      "analyzed": "已分析",
+      "analysisFailed": "分析失敗（點擊重試）",
       "aiAnalyzing": "AI 正在分析中...",
       "pleaseWait": "請稍候片刻",
       "clickToAssess": "點擊上方按鈕開始評估",
@@ -3390,6 +3579,173 @@
       "linkExpiredDetail": "密碼重設連結已過期或無效，請重新申請"
     }
   },
+  "contentEditor": {
+    "labels": {
+      "title": "標題",
+      "pasteContent": "請貼上內容："
+    },
+    "placeholders": {
+      "enterContentTitle": "請輸入內容標題",
+      "enterText": "輸入文本"
+    },
+    "buttons": {
+      "save": "儲存",
+      "cancel": "取消",
+      "addItem": "新增項目",
+      "confirmPaste": "確認貼上",
+      "processing": "處理中...",
+      "startRecording": "開始錄音",
+      "stopRecording": "停止錄音",
+      "rerecord": "重新錄製"
+    },
+    "modals": {
+      "audioSettings": "音檔設定",
+      "batchPasteTitle": "批次貼上素材",
+      "batchPasteSubtitle": "每行一個項目，支援自動生成音檔與翻譯"
+    },
+    "checkboxes": {
+      "autoGenerateTTS": "自動生成音檔",
+      "autoTranslate": "自動翻譯"
+    },
+    "tooltips": {
+      "dragToReorder": "拖曳以重新排序",
+      "playAudio": "播放音檔",
+      "removeAudio": "移除音檔",
+      "duplicate": "複製",
+      "delete": "刪除",
+      "cannotDeleteWithProgress": "此題目有學生進度，無法刪除",
+      "openTTSRecording": "開啟 TTS/錄音",
+      "rerecordOrGenerate": "重新錄製/生成",
+      "ttsMicrosoftEdge": "使用免費的 Microsoft Edge TTS 生成語音",
+      "playGeneratedAudio": "播放生成的音檔"
+    },
+    "audioSources": {
+      "tts": "TTS 語音",
+      "aiGenerated": "AI 生成",
+      "recording": "錄音檔案",
+      "teacherRecorded": "教師錄製"
+    },
+    "messages": {
+      "loading": "載入中...",
+      "savingSuccess": "儲存成功",
+      "savingFailed": "儲存失敗",
+      "contentCreatedSuccess": "內容已成功創建",
+      "creatingContentFailed": "創建內容失敗",
+      "loadingContentFailed": "載入內容失敗",
+      "enterTitle": "請輸入標題",
+      "addAtLeastOneItem": "請至少新增一個內容項目",
+      "maxRowsReached": "最多只能新增 15 列",
+      "minRowsRequired": "至少需要保留 1 列",
+      "cannotDeleteWithProgress": "此題目有學生進度，無法刪除",
+      "audioRemoved": "已移除音檔",
+      "removeAudioFailed": "移除音檔失敗",
+      "audioGeneratedSuccess": "音檔生成成功！點擊播放按鈕試聽",
+      "generationFailed": "生成失敗，請重試",
+      "maxRecordingTimeReached": "已達到最長錄音時間 30 秒",
+      "recordingFileTooLarge": "錄音檔案太大，請縮短錄音時間",
+      "recordingFailed": "錄音失敗，請檢查麥克風權限",
+      "recordingComplete": "錄音完成！可以試聽或重新錄製",
+      "recordingStarted": "開始錄音",
+      "cannotStartRecording": "無法啟動錄音，請檢查麥克風權限",
+      "selectAudioSource": "請選擇要使用的音源（TTS 或錄音）",
+      "uploadRetrying": "上傳失敗，正在重試...",
+      "uploadFailed": "上傳失敗，請檢查網路連線後重試",
+      "generateOrRecordFirst": "請先生成或錄製音檔",
+      "ttsAudioDeleted": "已刪除 TTS 音檔",
+      "recordingDeleted": "已刪除錄音檔案",
+      "noRecordingToPlay": "沒有錄音可播放",
+      "cannotPlayRecording": "無法播放錄音",
+      "selectAudioSourceToUse": "您有兩種音源可選擇，請選擇要使用的音檔：",
+      "maxRecordingTime": "最長錄音時間 30 秒",
+      "uploadingRecording": "正在上傳錄音檔案...",
+      "recordingFileReady": "錄音檔案已準備 ({{duration}}秒)",
+      "audioGenerated": "音檔已生成！點擊播放按鈕試聽",
+      "ttsAudioReady": "TTS 音檔已準備",
+      "allItemsHaveAudio": "所有項目都已有音檔",
+      "generatingAudioFiles": "正在生成 {{count}} 個音檔...",
+      "audioGeneratedSuccessfully": "成功生成 {{count}} 個音檔！音檔將在儲存內容時一併上傳。",
+      "audioGeneratedAndSaved": "成功生成並儲存 {{count}} 個音檔！",
+      "savingFailedButAudioGenerated": "儲存失敗，但音檔已生成",
+      "batchGenerationFailed": "批次生成失敗，請重試",
+      "enterTextFirst": "請先輸入文本",
+      "generatingTranslation": "生成翻譯中...",
+      "translationComplete": "翻譯生成完成",
+      "translationFailed": "翻譯失敗，請稍後再試",
+      "noItemsNeedTranslation": "沒有需要翻譯的項目",
+      "startingBatchTranslation": "開始批次生成翻譯...",
+      "batchTranslationComplete": "批次翻譯完成！處理了 {{count}} 個項目",
+      "batchTranslationFailed": "批次翻譯失敗，請稍後再試",
+      "enterContent": "請輸入內容",
+      "processingItems": "正在處理 {{count}} 個項目...",
+      "batchProcessingFailed": "批次處理失敗",
+      "itemsAddedAndSaved": "已新增 {{added}} 個項目並儲存（共 {{total}} 個）",
+      "itemsAddedSaveToComplete": "已新增 {{added}} 個項目（共 {{total}} 個），請按「儲存」完成創建",
+      "updateFailedButAudioGenerated": "更新失敗，但音檔已生成",
+      "items": "個項目"
+    },
+    "translationLanguages": {
+      "chinese": "中文",
+      "english": "英文",
+      "japanese": "日文",
+      "korean": "韓文"
+    },
+    "warnings": {
+      "assignmentCopy": "注意：此為作業副本",
+      "assignmentCopyDescription": "有學生進度的題目無法刪除（刪除按鈕已被禁用）。您可以修改題目內容，但不能移除已作答的題目。"
+    },
+    "ttsSettings": {
+      "title": "音檔設定",
+      "accent": "口音",
+      "gender": "性別",
+      "speed": "語速"
+    }
+  },
+  "sentenceMakingPanel": {
+    "placeholders": {
+      "enterEnglishWord": "輸入英文單字",
+      "enterEnglishSentence": "輸入英文例句",
+      "aiPromptExample": "例如：請生成與日常生活相關的例句"
+    },
+    "tooltips": {
+      "generateExampleSentence": "AI 生成例句",
+      "batchAIGenerateExamples": "批次 AI 生成例句"
+    },
+    "buttons": {
+      "batchAIGenerateExamples": "批次AI生成例句",
+      "generate": "生成",
+      "generating": "生成中..."
+    },
+    "modals": {
+      "aiGenerateExamplesTitle": "AI 生成例句"
+    },
+    "labels": {
+      "difficultyLevel": "難度等級",
+      "aiPrompt": "給 AI 的提示 (選填)",
+      "translateTo": "翻譯成"
+    },
+    "messages": {
+      "allItemsHaveAudioOrEmpty": "所有項目都已有音檔，或例句為空",
+      "generatingExampleAudio": "正在生成 {{count}} 個例句音檔...",
+      "translationAndPOSComplete": "翻譯及詞性辨識完成",
+      "enterExampleFirst": "請先輸入例句",
+      "generatingExampleTranslation": "生成例句翻譯中...",
+      "exampleTranslationComplete": "例句翻譯生成完成",
+      "exampleTranslationFailed": "例句翻譯失敗，請稍後再試",
+      "noItemsForExampleGeneration": "沒有可生成例句的項目（請先輸入單字）",
+      "generatingExamples": "正在生成 {{count}} 個例句...",
+      "examplesGeneratedSuccess": "成功生成 {{count}} 個例句！",
+      "exampleGenerationFailed": "AI 生成例句失敗，請稍後再試",
+      "willRegenerateFor": "將為「{{word}}」重新生成例句",
+      "existingWillBeOverwritten": "現有例句將被覆蓋",
+      "wordsWillRegenerate": "將為 {{count}} 個單字重新生成例句",
+      "allExistingExamples": "所有現有例句",
+      "andTranslations": "及翻譯",
+      "willBeOverwritten": "將被覆蓋",
+      "translationFieldsCleared": "翻譯欄位將被清空",
+      "itemsAddedAndCreated": "已新增 {{count}} 個項目並創建內容",
+      "itemsAdded": "已新增 {{added}} 個項目（共 {{total}} 個）"
+    }
+  },
   "organizationHub": {
     "title": "組織管理",
     "search": "搜尋機構或學校...",
@@ -3433,12 +3789,11 @@
     },
     "addSchoolDialog": {
       "title": "新增學校",
-      "description": "在此機構下新增一所學校",
+      "description": "學校描述",
       "name": "學校名稱",
       "namePlaceholder": "例如：taipei-branch",
       "displayName": "顯示名稱",
       "displayNamePlaceholder": "例如：台北分校",
-      "description": "學校描述",
       "descriptionPlaceholder": "簡短描述這所學校...",
       "contactEmail": "聯絡信箱",
       "contactPhone": "聯絡電話",

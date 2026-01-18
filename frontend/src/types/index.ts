@@ -48,6 +48,7 @@ export interface Classroom {
 
 // ============ Content Types ============
 export interface ContentItem {
+  id?: number | string;
   text: string;
   translation?: string;
   definition?: string;

@@ -39,8 +39,10 @@ class Organization(Base):
     display_name = Column(String(200), nullable=True)
     description = Column(Text, nullable=True)
 
-    # 統一編號 (Taiwan Business ID) - unique, required for business orgs
-    tax_id = Column(String(20), unique=True, nullable=True, index=True)
+    # 統一編號 (Taiwan Business ID)
+    # Note: Uniqueness enforced by partial index (uq_organizations_tax_id_active)
+    #       in database for active organizations only, allowing reuse after soft delete
+    tax_id = Column(String(20), nullable=True, index=True)
 
     # 聯絡資訊
     contact_email = Column(String(200), nullable=True)
@@ -49,6 +51,9 @@ class Organization(Base):
 
     # 狀態
     is_active = Column(Boolean, nullable=False, default=True, index=True)
+
+    # 授權限制
+    teacher_limit = Column(Integer, nullable=True)  # 教師授權數上限（NULL = 無限制）
 
     # 設定
     settings = Column(JSONType, nullable=True)  # 機構層級設定

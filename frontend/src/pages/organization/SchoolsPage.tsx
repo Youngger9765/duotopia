@@ -7,6 +7,8 @@ import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { SchoolEditDialog } from "@/components/organization/SchoolEditDialog";
+import { AssignPrincipalDialog } from "@/components/organization/AssignPrincipalDialog";
+import { SchoolListTable } from "@/components/organization/SchoolListTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,15 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { School, Plus, Edit2, Trash2, Loader2 } from "lucide-react";
+import { School, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface SchoolData {
@@ -40,6 +34,10 @@ interface SchoolData {
   contact_email?: string;
   is_active: boolean;
   created_at: string;
+  principal_name?: string;
+  principal_email?: string;
+  admin_name?: string;
+  admin_email?: string;
 }
 
 interface FormData {
@@ -61,11 +59,12 @@ export default function SchoolsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showAssignPrincipalDialog, setShowAssignPrincipalDialog] = useState(false);
   const [editingSchool, setEditingSchool] = useState<SchoolData | null>(null);
+  const [selectedSchool, setSelectedSchool] = useState<SchoolData | null>(null);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [organization, setOrganization] = useState<{ name: string } | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     name: "",
@@ -77,6 +76,26 @@ export default function SchoolsPage() {
   const effectiveOrgId =
     orgId ||
     (selectedNode?.type === "organization" ? selectedNode.id : undefined);
+
+  useEffect(() => {
+    const fetchOrg = async () => {
+      if (!effectiveOrgId || !token) return;
+      try {
+        const res = await fetch(`${API_URL}/api/organizations/${effectiveOrgId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setOrganization(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch organization:', error);
+      }
+    };
+    if (effectiveOrgId && token) {
+      fetchOrg();
+    }
+  }, [effectiveOrgId, token]);
 
   useEffect(() => {
     if (effectiveOrgId) {
@@ -99,7 +118,12 @@ export default function SchoolsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setSchools(data);
+        const mappedSchools = data.map((school: SchoolData) => ({
+          ...school,
+          principal_name: school.principal_name ?? school.admin_name,
+          principal_email: school.principal_email ?? school.admin_email,
+        }));
+        setSchools(mappedSchools);
       } else {
         setError(`載入學校列表失敗：${response.status}`);
         toast.error("載入學校列表失敗");
@@ -131,6 +155,19 @@ export default function SchoolsPage() {
     setEditingSchool(school);
     setShowEditDialog(true);
   };
+
+  const handleAssignPrincipal = (school: SchoolData) => {
+    setSelectedSchool(school);
+    setShowAssignPrincipalDialog(true);
+  };
+
+  const handleAssignPrincipalSuccess = useCallback(() => {
+    fetchSchools();
+    // Also refresh the sidebar's schools data in OrganizationContext
+    if (effectiveOrgId && token) {
+      refreshSchools(token, effectiveOrgId);
+    }
+  }, [effectiveOrgId, token, refreshSchools]);
 
   const handleEditSuccess = useCallback(() => {
     // Refetch local state for this page
@@ -182,39 +219,6 @@ export default function SchoolsPage() {
     }
   };
 
-  const handleDelete = async (schoolId: string) => {
-    if (!deleteConfirmId) {
-      setDeleteConfirmId(schoolId);
-      return;
-    }
-
-    setDeleting(true);
-    try {
-      const response = await fetch(`${API_URL}/api/schools/${schoolId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        toast.success("學校刪除成功");
-        setDeleteConfirmId(null);
-        fetchSchools();
-        // Also refresh the sidebar's schools data in OrganizationContext
-        if (effectiveOrgId && token) {
-          refreshSchools(token, effectiveOrgId);
-        }
-      } else {
-        const error = await response.json();
-        toast.error(error.detail || "刪除失敗");
-      }
-    } catch (error) {
-      console.error("Failed to delete school:", error);
-      toast.error("網路錯誤");
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   if (!effectiveOrgId) {
     return (
       <div className="p-8 text-center">
@@ -227,7 +231,11 @@ export default function SchoolsPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb items={[{ label: "組織管理" }, { label: "學校管理" }]} />
+      <Breadcrumb items={[
+        { label: "組織管理" },
+        { label: organization?.name || "...", href: `/organization/${orgId}` },
+        { label: "學校管理" }
+      ]} />
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -265,65 +273,11 @@ export default function SchoolsPage() {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>學校名稱</TableHead>
-                  <TableHead>顯示名稱</TableHead>
-                  <TableHead>描述</TableHead>
-                  <TableHead>聯絡信箱</TableHead>
-                  <TableHead>狀態</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {schools.map((school) => (
-                  <TableRow key={school.id}>
-                    <TableCell className="font-medium">{school.name}</TableCell>
-                    <TableCell>{school.display_name || "-"}</TableCell>
-                    <TableCell className="max-w-xs truncate">
-                      {school.description || "-"}
-                    </TableCell>
-                    <TableCell>{school.contact_email || "-"}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          school.is_active
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {school.is_active ? "啟用" : "停用"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(school)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(school.id)}
-                          disabled={deleting}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          {deleting && deleteConfirmId === school.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <SchoolListTable
+              schools={schools}
+              onEdit={handleEdit}
+              onAssignPrincipal={handleAssignPrincipal}
+            />
           )}
         </CardContent>
       </Card>
@@ -413,6 +367,17 @@ export default function SchoolsPage() {
         }}
         onSuccess={handleEditSuccess}
       />
+
+      {/* Assign Principal Dialog */}
+      {selectedSchool && effectiveOrgId && (
+        <AssignPrincipalDialog
+          schoolId={selectedSchool.id}
+          organizationId={effectiveOrgId}
+          open={showAssignPrincipalDialog}
+          onOpenChange={setShowAssignPrincipalDialog}
+          onSuccess={handleAssignPrincipalSuccess}
+        />
+      )}
     </div>
   );
 }

@@ -109,10 +109,15 @@ class TransactionStatus(str, enum.Enum):
 
 
 class ContentType(str, enum.Enum):
-    READING_ASSESSMENT = "reading_assessment"  # Phase 1 只有這個
-    # Phase 2 擴展
+    # ===== Phase 1 - 已啟用 =====
+    READING_ASSESSMENT = "reading_assessment"  # Legacy name (kept for backward compatibility)
+    EXAMPLE_SENTENCES = "example_sentences"  # 例句集 (new name for reading_assessment)
+    VOCABULARY_SET = "vocabulary_set"  # 單字集
+    SINGLE_CHOICE_QUIZ = "single_choice_quiz"  # 單選題庫
+    SCENARIO_DIALOGUE = "scenario_dialogue"  # 情境對話
+
+    # ===== Phase 2 - 未來擴展 =====
     # SPEAKING_PRACTICE = "speaking_practice"
-    # SPEAKING_SCENARIO = "speaking_scenario"
     # LISTENING_CLOZE = "listening_cloze"
-    # SENTENCE_MAKING = "sentence_making"
+    # SENTENCE_MAKING = "sentence_making"  # Legacy - replaced by VOCABULARY_SET
     # SPEAKING_QUIZ = "speaking_quiz"

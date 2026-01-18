@@ -275,11 +275,22 @@ function RecursiveTreeNode({
                     {/* More menu (⋯) with edit/delete */}
                     {(config.canEdit || config.canDelete) && (
                       <DropdownMenu>
-                        <DropdownMenuTrigger
-                          onClick={(e) => e.stopPropagation()}
-                          className="h-7 w-7 sm:h-8 sm:w-8 inline-flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        >
-                          <MoreHorizontal className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                        <DropdownMenuTrigger asChild>
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                (e.currentTarget as HTMLDivElement).click();
+                              }
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            className="h-7 w-7 sm:h-8 sm:w-8 inline-flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                          >
+                            <MoreHorizontal className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                          </div>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
@@ -720,7 +731,7 @@ export function RecursiveTreeAccordion({
       </div>
 
       {/* Drag overlay for visual feedback */}
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeItem && activeConfig ? (
           <div className="bg-blue-500 text-white px-3 py-2 rounded-lg shadow-lg text-sm font-medium">
             移動:{" "}

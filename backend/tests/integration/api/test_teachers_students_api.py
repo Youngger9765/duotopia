@@ -244,3 +244,82 @@ class TestTeachersStudentsAPI:
         assert "student_number" in data
         assert "student_id" not in data
         assert data["student_number"] is None
+
+    def test_get_classroom_students_endpoint(
+        self, test_client, demo_teacher, demo_student, shared_test_session
+    ):
+        """
+        Test: GET /api/teachers/classrooms/{classroom_id}/students
+
+        Given: A classroom with students
+        When: Teacher fetches classroom students
+        Then: Response should return list of students with correct fields
+        """
+        # Arrange
+        classroom = Classroom(
+            name="測試班級5",
+            teacher_id=demo_teacher.id,
+            level="A1",
+            is_active=True,
+        )
+        shared_test_session.add(classroom)
+        shared_test_session.commit()
+
+        demo_student.student_number = "TEST005"
+        shared_test_session.commit()
+
+        enrollment = ClassroomStudent(
+            classroom_id=classroom.id,
+            student_id=demo_student.id,
+            is_active=True,
+        )
+        shared_test_session.add(enrollment)
+        shared_test_session.commit()
+
+        access_token = create_access_token(
+            data={"sub": str(demo_teacher.id), "type": "teacher"}
+        )
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Act
+        response = test_client.get(
+            f"/api/teachers/classrooms/{classroom.id}/students",
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) > 0
+
+        test_student = next((s for s in data if s["id"] == demo_student.id), None)
+        assert test_student is not None
+        assert "student_number" in test_student
+        assert test_student["student_number"] == "TEST005"
+        assert "name" in test_student
+        assert "email" in test_student
+
+    def test_get_classroom_students_not_found(
+        self, test_client, demo_teacher, shared_test_session
+    ):
+        """
+        Test: GET /api/teachers/classrooms/{classroom_id}/students returns 404
+
+        Given: Non-existent classroom
+        When: Teacher fetches classroom students
+        Then: Response should be 404
+        """
+        access_token = create_access_token(
+            data={"sub": str(demo_teacher.id), "type": "teacher"}
+        )
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Act
+        response = test_client.get(
+            "/api/teachers/classrooms/99999/students",
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == status.HTTP_404_NOT_FOUND
