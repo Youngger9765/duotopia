@@ -86,6 +86,18 @@ async def create_assignment(
         teacher_id=current_teacher.id,
         due_date=request.due_date,
         is_active=True,
+        # 例句集作答模式設定
+        answer_mode=request.answer_mode,
+        practice_mode=request.practice_mode,
+        time_limit_per_question=request.time_limit_per_question,
+        shuffle_questions=request.shuffle_questions,
+        play_audio=request.play_audio,
+        show_answer=request.show_answer,
+        # Phase 2: 單字集作答模式設定
+        target_proficiency=request.target_proficiency,
+        show_translation=request.show_translation,
+        show_word=request.show_word,
+        show_image=request.show_image,
     )
     db.add(assignment)
     db.flush()  # 取得 assignment.id

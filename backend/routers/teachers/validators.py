@@ -203,6 +203,14 @@ class BatchTranslateRequest(BaseModel):
     target_lang: str = "zh-TW"
 
 
+class GenerateSentencesRequest(BaseModel):
+    words: List[str]
+    level: Optional[str] = "A1"
+    prompt: Optional[str] = None
+    translate_to: Optional[str] = None  # zh-TW, ja, ko
+    parts_of_speech: Optional[List[List[str]]] = None
+
+
 class TTSRequest(BaseModel):
     text: str
     voice: Optional[str] = "en-US-JennyNeural"

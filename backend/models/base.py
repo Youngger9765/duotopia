@@ -110,9 +110,32 @@ class TransactionStatus(str, enum.Enum):
 
 class ContentType(str, enum.Enum):
     READING_ASSESSMENT = "reading_assessment"  # Phase 1 只有這個
+    EXAMPLE_SENTENCES = "EXAMPLE_SENTENCES"  # 例句集（新名稱）
+    VOCABULARY_SET = "VOCABULARY_SET"  # 單字集（Phase 2）
     # Phase 2 擴展
     # SPEAKING_PRACTICE = "speaking_practice"
     # SPEAKING_SCENARIO = "speaking_scenario"
     # LISTENING_CLOZE = "listening_cloze"
     # SENTENCE_MAKING = "sentence_making"
     # SPEAKING_QUIZ = "speaking_quiz"
+
+
+class PracticeMode(str, enum.Enum):
+    """作答模式"""
+
+    # 例句集 (EXAMPLE_SENTENCES)
+    READING = "reading"  # 例句朗讀 -> 口說分類
+    REARRANGEMENT = "rearrangement"  # 例句重組 -> 聽力/寫作分類
+
+    # 單字集 (VOCABULARY_SET) - Phase 2
+    WORD_READING = "word_reading"  # 單字朗讀 -> 口說分類
+    WORD_SELECTION = "word_selection"  # 單字選擇 -> 艾賓浩斯記憶曲線
+
+
+class ScoreCategory(str, enum.Enum):
+    """分數記錄分類"""
+
+    SPEAKING = "speaking"  # 口說
+    LISTENING = "listening"  # 聽力
+    WRITING = "writing"  # 寫作
+    VOCABULARY = "vocabulary"  # 單字（Phase 2 新增）

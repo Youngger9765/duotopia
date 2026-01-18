@@ -287,7 +287,10 @@ function RecursiveTreeNode({
                         >
                           {config.canEdit && onEdit && (
                             <DropdownMenuItem
-                              onClick={() => onEdit(data, level, parentId)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(data, level, parentId);
+                              }}
                               className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                             >
                               <Edit className="h-4 w-4 mr-2" />
@@ -296,7 +299,10 @@ function RecursiveTreeNode({
                           )}
                           {config.canDelete && onDelete && (
                             <DropdownMenuItem
-                              onClick={() => onDelete(data, level, parentId)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(data, level, parentId);
+                              }}
                               className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 focus:text-red-600"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
@@ -503,7 +509,10 @@ function RecursiveTreeNode({
                     className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                   >
                     <DropdownMenuItem
-                      onClick={() => onDelete(data, level, parentId)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(data, level, parentId);
+                      }}
                       className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 focus:text-red-600"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />

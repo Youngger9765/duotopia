@@ -16,6 +16,39 @@ class CreateAssignmentRequest(BaseModel):
     content_ids: List[int]  # 支援多個內容
     student_ids: List[int] = []  # 空陣列 = 全班
     due_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None  # 開始日期
+
+    # Legacy: 舊版造句練習答題模式（保留向後相容）
+    answer_mode: str = "writing"  # @deprecated: 請使用 practice_mode 和 play_audio
+
+    # ===== 例句集作答模式設定 =====
+    # 作答模式：'reading' (例句朗讀) / 'rearrangement' (例句重組)
+    practice_mode: str = "reading"
+
+    # 每題時間限制（秒）：0（不限時）/10/20/30/40
+    time_limit_per_question: int = 30
+
+    # 是否打亂題目順序
+    shuffle_questions: bool = False
+
+    # 是否播放音檔（例句重組專用）
+    play_audio: bool = False
+
+    # 答題結束後是否顯示正確答案（例句重組專用）
+    show_answer: bool = False
+
+    # ===== Phase 2: 單字集作答模式設定 =====
+    # 達標熟悉度（百分比，預設 80%）- 單字選擇模式專用
+    target_proficiency: int = 80
+
+    # 是否顯示翻譯（預設 true）- 單字朗讀模式可選擇隱藏
+    show_translation: bool = True
+
+    # 是否顯示單字（預設 true）- 單字選擇模式可選擇隱藏（只播音檔）
+    show_word: bool = True
+
+    # 是否顯示圖片（預設 true）- 單字集專用
+    show_image: bool = True
 
 
 class UpdateAssignmentRequest(BaseModel):

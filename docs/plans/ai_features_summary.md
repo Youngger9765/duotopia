@@ -38,7 +38,7 @@ prompt = (
 ```
 
 **API 設定**:
-- Model: `gpt-3.5-turbo`
+- Model: `gpt-4o-mini`
 - Temperature: `0.3` (低隨機性，翻譯一致)
 - Max Tokens: `100`
 

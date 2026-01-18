@@ -791,14 +791,10 @@ async def recording_error_report_cron(
             "success_count": success_count_24h,
         }
 
-        # 使用 OpenAI 生成摘要（如果有錯誤）
+        # 使用 AI 生成摘要（如果有錯誤）- 支援 Vertex AI 或 OpenAI
         ai_summary = ""
         if total_errors_24h > 0:
             try:
-                import openai
-
-                openai.api_key = os.getenv("OPENAI_API_KEY")
-
                 # 準備錯誤資料給 AI
                 error_data = []
                 for row in results_24h[:10]:  # 只取前 10 個最嚴重的錯誤
@@ -828,14 +824,31 @@ async def recording_error_report_cron(
 請用專業但易懂的語言，不要使用 Markdown 格式。
 """
 
-                response = openai.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=300,
-                    temperature=0.7,
-                )
+                use_vertex_ai = os.getenv("USE_VERTEX_AI", "false").lower() == "true"
 
-                ai_summary = response.choices[0].message.content.strip()
+                if use_vertex_ai:
+                    # Use Vertex AI (Gemini)
+                    from services.vertex_ai import get_vertex_ai_service
+
+                    vertex_ai = get_vertex_ai_service()
+                    ai_summary = vertex_ai.generate_text_sync(
+                        prompt=prompt,
+                        model_type="flash",
+                        max_tokens=300,
+                        temperature=0.7,
+                    )
+                else:
+                    # Use OpenAI
+                    import openai
+
+                    openai.api_key = os.getenv("OPENAI_API_KEY")
+                    response = openai.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=300,
+                        temperature=0.7,
+                    )
+                    ai_summary = response.choices[0].message.content.strip()
 
             except Exception as e:
                 logger.warning(f"Failed to generate AI summary: {str(e)}")

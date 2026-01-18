@@ -18,34 +18,42 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Add tax_id column to organizations table
-    # Nullable initially to support existing data
-    op.add_column(
-        "organizations",
-        sa.Column("tax_id", sa.String(20), nullable=True),
-    )
+    # Add tax_id column to organizations table (if table exists)
+    # Skip if table doesn't exist (develop environment)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'organizations') THEN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                              WHERE table_name = 'organizations' AND column_name = 'tax_id') THEN
+                    ALTER TABLE organizations ADD COLUMN tax_id VARCHAR(20);
+                END IF;
 
-    # Create unique constraint on tax_id
-    op.create_unique_constraint(
-        "uq_organizations_tax_id",
-        "organizations",
-        ["tax_id"],
-    )
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_organizations_tax_id') THEN
+                    ALTER TABLE organizations ADD CONSTRAINT uq_organizations_tax_id UNIQUE (tax_id);
+                END IF;
 
-    # Create index for faster lookups
-    op.create_index(
-        "ix_organizations_tax_id",
-        "organizations",
-        ["tax_id"],
+                IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'ix_organizations_tax_id') THEN
+                    CREATE INDEX ix_organizations_tax_id ON organizations (tax_id);
+                END IF;
+            END IF;
+        END $$;
+    """
     )
 
 
 def downgrade() -> None:
-    # Remove index
-    op.drop_index("ix_organizations_tax_id", table_name="organizations")
-
-    # Remove unique constraint
-    op.drop_constraint("uq_organizations_tax_id", "organizations", type_="unique")
-
-    # Remove column
-    op.drop_column("organizations", "tax_id")
+    # Remove index, constraint, and column (if table exists)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'organizations') THEN
+                DROP INDEX IF EXISTS ix_organizations_tax_id;
+                ALTER TABLE organizations DROP CONSTRAINT IF EXISTS uq_organizations_tax_id;
+                ALTER TABLE organizations DROP COLUMN IF EXISTS tax_id;
+            END IF;
+        END $$;
+    """
+    )

@@ -171,6 +171,34 @@ class ContentItem(Base):
     text = Column(Text, nullable=False)
     translation = Column(Text)
     audio_url = Column(Text)  # Example audio file
+
+    # Example sentence fields (Phase 1)
+    example_sentence = Column(Text, nullable=True)  # Example sentence in English
+    example_sentence_translation = Column(
+        Text, nullable=True
+    )  # Chinese translation of example
+    example_sentence_definition = Column(
+        Text, nullable=True
+    )  # English definition of example
+
+    # ===== 例句重組相關欄位 =====
+    # 單字數量（建立時自動計算）
+    word_count = Column(Integer, nullable=True)
+
+    # 允許錯誤次數（根據 word_count 自動計算：2-10 字 → 3 次，11-25 字 → 5 次）
+    max_errors = Column(Integer, nullable=True)
+
+    # ===== Phase 2: 單字集相關欄位 =====
+    # 單字圖片 URL（用於視覺輔助記憶）
+    image_url = Column(Text, nullable=True)
+
+    # 詞性（n., v., adj., adv., prep., conj., etc.）
+    part_of_speech = Column(String(20), nullable=True)
+
+    # 預生成的干擾選項（單字選擇練習用）
+    # 儲存格式: ["干擾項1", "干擾項2", "干擾項3"]
+    distractors = Column(JSON, nullable=True)
+
     item_metadata = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(

@@ -16,6 +16,7 @@ interface ContentType {
   description: string;
   icon: string;
   recommended?: boolean;
+  isNew?: boolean;
   disabled?: boolean;
 }
 
@@ -55,10 +56,9 @@ export default function ContentTypeDialog({
         "dialogs.contentTypeDialog.types.example_sentences.description",
       ),
       icon: "📝",
-      recommended: true,
       disabled: false,
     },
-    // ===== Phase 2 - 暫時禁用 =====
+    // ===== Phase 2 - 啟用 =====
     {
       type: "vocabulary_set",
       name: t("dialogs.contentTypeDialog.types.vocabulary_set.name"),
@@ -66,7 +66,8 @@ export default function ContentTypeDialog({
         "dialogs.contentTypeDialog.types.vocabulary_set.description",
       ),
       icon: "📚",
-      disabled: true,
+      isNew: true,
+      disabled: false,
     },
     {
       type: "multiple_choice",
@@ -157,6 +158,11 @@ export default function ContentTypeDialog({
                       {contentType.recommended && !contentType.disabled && (
                         <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
                           {t("dialogs.contentTypeDialog.recommended")}
+                        </span>
+                      )}
+                      {contentType.isNew && !contentType.disabled && (
+                        <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                          {t("dialogs.contentTypeDialog.new")}
                         </span>
                       )}
                       {contentType.disabled && (

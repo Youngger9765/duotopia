@@ -32,7 +32,7 @@ class TestTranslationService:
         """測試初始化"""
         service = TranslationService()
         assert service.client is None
-        assert service.model == "gpt-3.5-turbo"
+        assert service.model == "gpt-4o-mini"
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
     @patch("services.translation.OpenAI")
@@ -80,7 +80,7 @@ class TestTranslationService:
 
         # 檢查呼叫參數
         call_args = service.client.chat.completions.create.call_args
-        assert call_args.kwargs["model"] == "gpt-3.5-turbo"
+        assert call_args.kwargs["model"] == "gpt-4o-mini"
         assert call_args.kwargs["temperature"] == 0.3
         assert call_args.kwargs["max_tokens"] == 100
 
@@ -392,7 +392,7 @@ class TestTranslationService:
         from services.translation import translation_service
 
         assert isinstance(translation_service, TranslationService)
-        assert translation_service.model == "gpt-3.5-turbo"
+        assert translation_service.model == "gpt-4o-mini"
 
     # ===== Cache Tests (Issue #88) =====
 

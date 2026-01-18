@@ -1,6 +1,8 @@
 # Develop 測試環境實作計劃
 
-> **目標**：新增一個 `develop` 測試環境，用於長期功能開發測試，與 staging 環境共用資料庫但獨立部署。
+> **目標**：新增一個 `develop` 測試環境，用於長期功能開發測試，獨立部署且使用獨立資料庫。
+>
+> ⚠️ **2026-01 更新**：Develop 和 Staging 現已使用**獨立的 Supabase project**，不再共用資料庫。
 
 ---
 
@@ -28,17 +30,17 @@
 **解決方案**：
 - 新增 `develop` 環境作為長期功能測試環境
 - `staging` 保持為快速發布環境
-- `develop` 與 `staging` 共用資料庫（降低成本）
+- ~~`develop` 與 `staging` 共用資料庫（降低成本）~~ → **已改為獨立資料庫**
 
 ### 1.2 技術需求
 
 | 項目 | 需求 |
 |-----|------|
 | **Cloud Run 服務** | 新增 `duotopia-backend-develop` 和 `duotopia-frontend-develop` |
-| **資料庫** | 共用 `staging` 的 Supabase 資料庫 |
+| **資料庫** | ~~共用 `staging` 的 Supabase 資料庫~~ → **獨立 Supabase project** |
 | **分支策略** | `staging` → `develop` → `feature-sentence` merge |
 | **部署觸發** | Push 到 `develop` 分支自動部署 |
-| **Migration** | 必須向前相容（forward-compatible） |
+| **Migration** | 必須是 Idempotent（冪等），見 [CLAUDE.md](../CLAUDE.md#database-migration-鐵則) |
 
 ---
 
@@ -59,13 +61,15 @@ Production 環境 (main 分支)
 Staging 環境 (staging 分支) ⚡ 快速發布
   ├─ Cloud Run: duotopia-backend-staging
   ├─ Cloud Run: duotopia-frontend-staging
-  └─ Database: Staging Supabase ◄─┐
-                                   │
-Develop 環境 (develop 分支) 🧪 長期測試  │ 共用
-  ├─ Cloud Run: duotopia-backend-develop  │
-  ├─ Cloud Run: duotopia-frontend-develop │
-  └─ Database: Staging Supabase ◄─────────┘
+  └─ Database: Staging Supabase (獨立)
+
+Develop 環境 (develop 分支) 🧪 長期測試
+  ├─ Cloud Run: duotopia-backend-develop
+  ├─ Cloud Run: duotopia-frontend-develop
+  └─ Database: Develop Supabase (獨立)
 ```
+
+> **2026-01 更新**：每個環境現已使用獨立的 Supabase project，避免 migration 衝突。
 
 ### 2.2 分支策略
 
@@ -89,11 +93,20 @@ feature-sentence (造句功能開發)
 
 ## 3. Migration 相容性策略
 
-### 3.1 核心挑戰
+> ⚠️ **2026-01 更新**：Develop 和 Staging 現已使用獨立資料庫，但 migration 仍需遵循 Idempotent 原則。
 
-**問題**：develop 和 staging 共用同一個資料庫，但可能有不同的 migration 版本。
+### 3.1 核心原則
 
-**場景分析**：
+~~**問題**：develop 和 staging 共用同一個資料庫，但可能有不同的 migration 版本。~~ (已解決)
+
+**現行策略**：所有 migration 必須是 **Idempotent（冪等）**，確保：
+1. 同一 migration 可在不同環境安全執行
+2. 重複執行不會報錯
+3. 合併分支時不會有 schema 衝突
+
+詳細規則見 [CLAUDE.md - Database Migration 鐵則](../CLAUDE.md#database-migration-鐵則)
+
+### 3.2 歷史場景分析（僅供參考）
 
 | 場景 | Develop Migration | Staging Migration | 資料庫 Schema | 結果 |
 |-----|-------------------|-------------------|---------------|------|

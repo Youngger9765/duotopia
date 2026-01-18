@@ -7,7 +7,7 @@ import { ProgramDialog } from "@/components/ProgramDialog";
 import { LessonDialog } from "@/components/LessonDialog";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
-import SentenceMakingPanel from "@/components/SentenceMakingPanel";
+import VocabularySetPanel from "@/components/VocabularySetPanel";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { apiClient } from "@/lib/api";
@@ -50,12 +50,11 @@ export default function TeacherTemplateProgramsNew() {
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
 
   // Sentence Making Editor state
-  const [showSentenceMakingEditor, setShowSentenceMakingEditor] =
-    useState(false);
-  const [sentenceMakingLessonId, setSentenceMakingLessonId] = useState<
+  const [showVocabularySetEditor, setShowVocabularySetEditor] = useState(false);
+  const [vocabularySetLessonId, setVocabularySetLessonId] = useState<
     number | null
   >(null);
-  const [sentenceMakingContentId, setSentenceMakingContentId] = useState<
+  const [vocabularySetContentId, setVocabularySetContentId] = useState<
     number | null
   >(null);
 
@@ -226,10 +225,10 @@ export default function TeacherTemplateProgramsNew() {
       contentType === "sentence_making" ||
       contentType === "vocabulary_set"
     ) {
-      // 編輯句子模組/單字集內容
-      setSentenceMakingLessonId(content.lesson_id || null);
-      setSentenceMakingContentId(content.id);
-      setShowSentenceMakingEditor(true);
+      // 編輯單字集內容
+      setVocabularySetLessonId(content.lesson_id || null);
+      setVocabularySetContentId(content.id);
+      setShowVocabularySetEditor(true);
     }
   };
 
@@ -690,48 +689,50 @@ export default function TeacherTemplateProgramsNew() {
           )}
 
         {/* Sentence Making Editor (新增模式 - 彈窗) */}
-        {showSentenceMakingEditor &&
-          sentenceMakingLessonId &&
-          !sentenceMakingContentId && (
+        {showVocabularySetEditor &&
+          vocabularySetLessonId &&
+          !vocabularySetContentId && (
             <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
               <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-2xl font-bold">句子模組設定</h2>
+                  <h2 className="text-2xl font-bold">
+                    {t("vocabularySet.dialogTitle")}
+                  </h2>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => {
-                      setShowSentenceMakingEditor(false);
-                      setSentenceMakingLessonId(null);
-                      setSentenceMakingContentId(null);
+                      setShowVocabularySetEditor(false);
+                      setVocabularySetLessonId(null);
+                      setVocabularySetContentId(null);
                     }}
                   >
                     <X className="h-5 w-5" />
                   </Button>
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <SentenceMakingPanel
+                  <VocabularySetPanel
                     content={undefined}
                     editingContent={{
-                      id: sentenceMakingContentId || undefined,
+                      id: vocabularySetContentId || undefined,
                     }}
-                    lessonId={sentenceMakingLessonId}
+                    lessonId={vocabularySetLessonId}
                     onUpdateContent={(updatedContent) => {
                       console.log("Content updated:", updatedContent);
                     }}
                     onSave={async () => {
-                      setShowSentenceMakingEditor(false);
-                      setSentenceMakingLessonId(null);
-                      setSentenceMakingContentId(null);
+                      setShowVocabularySetEditor(false);
+                      setVocabularySetLessonId(null);
+                      setVocabularySetContentId(null);
                       await fetchTemplatePrograms();
                       toast.success("內容已成功儲存");
                     }}
                     onCancel={() => {
-                      setShowSentenceMakingEditor(false);
-                      setSentenceMakingLessonId(null);
-                      setSentenceMakingContentId(null);
+                      setShowVocabularySetEditor(false);
+                      setVocabularySetLessonId(null);
+                      setVocabularySetContentId(null);
                     }}
-                    isCreating={!sentenceMakingContentId}
+                    isCreating={!vocabularySetContentId}
                   />
                 </div>
               </div>
@@ -739,17 +740,17 @@ export default function TeacherTemplateProgramsNew() {
           )}
 
         {/* Sentence Making Editor (編輯模式 - 側邊欄) */}
-        {showSentenceMakingEditor &&
-          sentenceMakingLessonId &&
-          sentenceMakingContentId && (
+        {showVocabularySetEditor &&
+          vocabularySetLessonId &&
+          vocabularySetContentId && (
             <>
               {/* Backdrop */}
               <div
                 className="fixed inset-0 bg-black bg-opacity-20 z-40 transition-opacity"
                 onClick={() => {
-                  setShowSentenceMakingEditor(false);
-                  setSentenceMakingLessonId(null);
-                  setSentenceMakingContentId(null);
+                  setShowVocabularySetEditor(false);
+                  setVocabularySetLessonId(null);
+                  setVocabularySetContentId(null);
                 }}
               />
 
@@ -757,13 +758,13 @@ export default function TeacherTemplateProgramsNew() {
               <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
                   <h2 className="text-lg font-semibold text-gray-900">
-                    編輯句子模組內容
+                    {t("vocabularySet.editTitle")}
                   </h2>
                   <button
                     onClick={() => {
-                      setShowSentenceMakingEditor(false);
-                      setSentenceMakingLessonId(null);
-                      setSentenceMakingContentId(null);
+                      setShowVocabularySetEditor(false);
+                      setVocabularySetLessonId(null);
+                      setVocabularySetContentId(null);
                     }}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                     aria-label="關閉"
@@ -773,24 +774,24 @@ export default function TeacherTemplateProgramsNew() {
                 </div>
 
                 <div className="p-6">
-                  <SentenceMakingPanel
-                    content={{ id: sentenceMakingContentId }}
-                    editingContent={{ id: sentenceMakingContentId }}
-                    lessonId={sentenceMakingLessonId}
+                  <VocabularySetPanel
+                    content={{ id: vocabularySetContentId }}
+                    editingContent={{ id: vocabularySetContentId }}
+                    lessonId={vocabularySetLessonId}
                     onUpdateContent={(updatedContent) => {
                       console.log("Content updated:", updatedContent);
                     }}
                     onSave={async () => {
-                      setShowSentenceMakingEditor(false);
-                      setSentenceMakingLessonId(null);
-                      setSentenceMakingContentId(null);
+                      setShowVocabularySetEditor(false);
+                      setVocabularySetLessonId(null);
+                      setVocabularySetContentId(null);
                       await fetchTemplatePrograms();
                       toast.success("內容已成功儲存");
                     }}
                     onCancel={() => {
-                      setShowSentenceMakingEditor(false);
-                      setSentenceMakingLessonId(null);
-                      setSentenceMakingContentId(null);
+                      setShowVocabularySetEditor(false);
+                      setVocabularySetLessonId(null);
+                      setVocabularySetContentId(null);
                     }}
                     isCreating={false}
                   />
@@ -856,9 +857,9 @@ export default function TeacherTemplateProgramsNew() {
                 selection.type === "VOCABULARY_SET"
               ) {
                 // For sentence_making/vocabulary_set, use popup for new content creation
-                setSentenceMakingLessonId(selection.lessonId);
-                setSentenceMakingContentId(null); // null for new content
-                setShowSentenceMakingEditor(true);
+                setVocabularySetLessonId(selection.lessonId);
+                setVocabularySetContentId(null); // null for new content
+                setShowVocabularySetEditor(true);
               } else {
                 toast.info(
                   `${t("teacherTemplatePrograms.messages.featureInDevelopment", { type: selection.type })}`,

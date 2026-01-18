@@ -622,11 +622,11 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({
     window.addEventListener("touchend", onEnd);
   };
 
-  const startResizeDice = (
+  const startResize = (
     e: React.MouseEvent | React.TouchEvent,
     setScale: (scale: number) => void,
     currentScale: number,
-    direction: number = 1,
+    direction: number = 1, // use -1 for left handles so pulling outward increases size
   ) => {
     e.stopPropagation();
     const clientX = (e as React.TouchEvent).touches
@@ -643,7 +643,7 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({
       const moveX = (moveEvent as TouchEvent).touches
         ? (moveEvent as TouchEvent).touches[0].clientX
         : (moveEvent as MouseEvent).clientX;
-      const delta = direction * (moveX - startX) * 0.005;
+      const delta = (moveX - startX) * 0.005 * direction;
 
       if (frameId) cancelAnimationFrame(frameId);
       frameId = requestAnimationFrame(() => {
@@ -688,26 +688,26 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({
         <div
           className="resize-handle pointer-events-auto absolute top-0 left-0 w-[5px] h-[5px] rounded-full bg-blue-500 shadow-sm cursor-nwse-resize"
           style={handleTransform(-50, -50, 0)}
-          onMouseDown={(e) => startResizeDice(e, setDiceScale, diceScale)}
-          onTouchStart={(e) => startResizeDice(e, setDiceScale, diceScale)}
+          onMouseDown={(e) => startResize(e, setDiceScale, diceScale, -1)}
+          onTouchStart={(e) => startResize(e, setDiceScale, diceScale, -1)}
         />
         <div
           className="resize-handle pointer-events-auto absolute top-0 right-0 w-[5px] h-[5px] rounded-full bg-blue-500 shadow-sm cursor-nesw-resize"
           style={handleTransform(50, -50, 0)}
-          onMouseDown={(e) => startResizeDice(e, setDiceScale, diceScale)}
-          onTouchStart={(e) => startResizeDice(e, setDiceScale, diceScale)}
+          onMouseDown={(e) => startResize(e, setDiceScale, diceScale)}
+          onTouchStart={(e) => startResize(e, setDiceScale, diceScale)}
         />
         <div
           className="resize-handle pointer-events-auto absolute bottom-0 left-0 w-[5px] h-[5px] rounded-full bg-blue-500 shadow-sm cursor-nesw-resize"
           style={handleTransform(-50, 50, 60)}
-          onMouseDown={(e) => startResizeDice(e, setDiceScale, diceScale)}
-          onTouchStart={(e) => startResizeDice(e, setDiceScale, diceScale)}
+          onMouseDown={(e) => startResize(e, setDiceScale, diceScale, -1)}
+          onTouchStart={(e) => startResize(e, setDiceScale, diceScale, -1)}
         />
         <div
           className="resize-handle pointer-events-auto absolute bottom-0 right-0 w-[5px] h-[5px] rounded-full bg-blue-500 shadow-sm cursor-nwse-resize"
           style={handleTransform(50, 50, 60)}
-          onMouseDown={(e) => startResizeDice(e, setDiceScale, diceScale)}
-          onTouchStart={(e) => startResizeDice(e, setDiceScale, diceScale)}
+          onMouseDown={(e) => startResize(e, setDiceScale, diceScale)}
+          onTouchStart={(e) => startResize(e, setDiceScale, diceScale)}
         />
       </div>
       <div className="w-full flex justify-between items-center px-4 py-1 opacity-0 group-hover:opacity-100">

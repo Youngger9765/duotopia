@@ -14,6 +14,8 @@ from .base import (
     TransactionType,
     TransactionStatus,
     ContentType,
+    PracticeMode,
+    ScoreCategory,
 )
 
 # User models
@@ -46,7 +48,12 @@ from .program import Program, Lesson, Content, ContentItem
 from .assignment import Assignment, AssignmentContent, StudentAssignment
 
 # Progress models
-from .progress import StudentContentProgress, StudentItemProgress
+from .progress import (
+    StudentContentProgress,
+    StudentItemProgress,
+    PracticeSession,
+    PracticeAnswer,
+)
 
 __all__ = [
     # Base
@@ -60,6 +67,8 @@ __all__ = [
     "TransactionType",
     "TransactionStatus",
     "ContentType",
+    "PracticeMode",
+    "ScoreCategory",
     # Users
     "Teacher",
     "Student",
@@ -89,4 +98,6 @@ __all__ = [
     # Progress
     "StudentContentProgress",
     "StudentItemProgress",
+    "PracticeSession",
+    "PracticeAnswer",
 ]

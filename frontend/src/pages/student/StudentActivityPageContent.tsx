@@ -28,6 +28,8 @@ import RearrangementActivity, {
   type RearrangementQuestion,
   type RearrangementQuestionState,
 } from "@/components/activities/RearrangementActivity";
+import WordReadingActivity from "@/components/activities/WordReadingActivity";
+import WordSelectionActivity from "@/components/activities/WordSelectionActivity";
 import {
   ChevronLeft,
   ChevronRight,
@@ -1576,7 +1578,7 @@ export default function StudentActivityPageContent({
     if (isVocabularySetType(type)) {
       return (
         <Badge variant="outline">
-          {t("studentActivityPage.activityTypes.sentence")}
+          {t("studentActivityPage.activityTypes.vocabulary")}
         </Badge>
       );
     }
@@ -1832,6 +1834,43 @@ export default function StudentActivityPageContent({
 
     // 單字集類型（包含 SENTENCE_MAKING 和 VOCABULARY_SET）
     if (isVocabularySetType(activity.type)) {
+      // Check practice mode for vocabulary set
+      if (practiceMode === "word_reading") {
+        // Phase 2-2: 單字朗讀練習
+        return (
+          <WordReadingActivity
+            assignmentId={assignmentId}
+            isPreviewMode={isPreviewMode}
+            authToken={authToken}
+            onComplete={() => {
+              toast.success(t("wordReading.toast.completed") || "作業已完成！");
+              if (onSubmit) {
+                onSubmit({ answers: [] });
+              }
+            }}
+          />
+        );
+      }
+
+      if (practiceMode === "word_selection") {
+        // Phase 2-3: 單字選擇練習
+        // 🔥 注意：不呼叫 onSubmit，因為後端在每次作答時已自動同步狀態到 GRADED
+        // 呼叫 onSubmit 會觸發 /submit API，把狀態覆蓋成 SUBMITTED
+        return (
+          <WordSelectionActivity
+            assignmentId={assignmentId}
+            isPreviewMode={isPreviewMode}
+            onComplete={() => {
+              toast.success(
+                t("wordSelection.toast.completed") || "作業已完成！",
+              );
+              // 導航回作業列表
+              window.location.href = "/student/assignments";
+            }}
+          />
+        );
+      }
+
       // 造句練習：使用艾賓浩斯記憶曲線系統
       return (
         <SentenceMakingActivity
@@ -1943,31 +1982,47 @@ export default function StudentActivityPageContent({
 
       {/* Header with progress */}
       <div className="sticky top-0 bg-white border-b z-10">
-        <div className="max-w-6xl mx-auto px-2 sm:px-4 py-2">
+        {/* 🎯 單字選擇預覽模式：使用 max-w-7xl px-4 對齊預覽頁的藍色提示條 */}
+        <div
+          className={
+            practiceMode === "word_selection" && isPreviewMode
+              ? "max-w-7xl mx-auto px-4 py-2"
+              : "max-w-6xl mx-auto px-2 sm:px-4 py-2"
+          }
+        >
           {/* Mobile header layout */}
           <div className="flex flex-row items-center justify-between gap-2 mb-2">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-              {onBack && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onBack}
-                  className="flex-shrink-0 px-2 sm:px-3"
-                >
-                  <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  <span className="hidden sm:inline">
-                    {t("studentActivityPage.buttons.back")}
-                  </span>
-                  <span className="sm:hidden">
-                    {t("studentActivityPage.buttons.backShort")}
-                  </span>
-                </Button>
-              )}
-              <div className="h-4 sm:h-6 w-px bg-gray-300 flex-shrink-0" />
+            {/* 🎯 單字選擇預覽模式：只顯示標題（外層已有返回按鈕）；學生端保留返回按鈕 */}
+            {practiceMode === "word_selection" && isPreviewMode ? (
               <h1 className="text-sm sm:text-base font-semibold truncate min-w-0">
                 {assignmentTitle}
               </h1>
-            </div>
+            ) : (
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                {onBack && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onBack}
+                    className="flex-shrink-0 px-2 sm:px-3"
+                  >
+                    <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                    <span className="hidden sm:inline">
+                      {t("studentActivityPage.buttons.back")}
+                    </span>
+                    <span className="sm:hidden">
+                      {t("studentActivityPage.buttons.backShort")}
+                    </span>
+                  </Button>
+                )}
+                {onBack && (
+                  <div className="h-4 sm:h-6 w-px bg-gray-300 flex-shrink-0" />
+                )}
+                <h1 className="text-sm sm:text-base font-semibold truncate min-w-0">
+                  {assignmentTitle}
+                </h1>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 sm:gap-3 justify-end flex-shrink-0">
               {saving && (
@@ -1981,10 +2036,12 @@ export default function StudentActivityPageContent({
                   </span>
                 </div>
               )}
-              {/* Issue #110: 例句重組模式不在 header 顯示提交按鈕（避免誤觸） */}
+              {/* Issue #110: 例句重組模式不在 header 顯示提交按鈕（避免誤觸）
+                  單字選擇模式也不需要（自動根據熟悉度完成） */}
               {!isReadOnly &&
                 !isPreviewMode &&
-                practiceMode !== "rearrangement" && (
+                practiceMode !== "rearrangement" &&
+                practiceMode !== "word_selection" && (
                   <Button
                     onClick={handleSubmit}
                     disabled={submitting}
@@ -2018,204 +2075,233 @@ export default function StudentActivityPageContent({
             </div>
           </div>
 
-          {/* Activity navigation */}
-          <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            {/* 例句重組模式：所有題目合併顯示，不分 activity */}
-            {practiceMode === "rearrangement" &&
-            rearrangementQuestions.length > 0 ? (
-              <div className="flex gap-0.5 sm:gap-1 flex-wrap">
-                {rearrangementQuestions.map((q, qIndex) => {
-                  const state = rearrangementQuestionStates.get(
-                    q.content_item_id,
-                  );
-                  const isActiveItem = rearrangementQuestionIndex === qIndex;
-                  const isCompleted = state?.completed;
-                  const isFailed = state?.challengeFailed;
+          {/* Activity navigation - 單字選擇模式不顯示此區塊 */}
+          {!isVocabularySetType(currentActivity?.type || "") && (
+            <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              {/* 例句重組模式：所有題目合併顯示，不分 activity */}
+              {practiceMode === "rearrangement" &&
+              rearrangementQuestions.length > 0 ? (
+                <div className="flex gap-0.5 sm:gap-1 flex-wrap">
+                  {rearrangementQuestions.map((q, qIndex) => {
+                    const state = rearrangementQuestionStates.get(
+                      q.content_item_id,
+                    );
+                    const isActiveItem = rearrangementQuestionIndex === qIndex;
+                    const isCompleted = state?.completed;
+                    const isFailed = state?.challengeFailed;
 
-                  return (
-                    <button
-                      key={q.content_item_id}
-                      onClick={() => setRearrangementQuestionIndex(qIndex)}
-                      className={cn(
-                        "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
-                        "flex items-center justify-center text-sm sm:text-xs font-medium",
-                        "min-w-[32px] sm:min-w-[32px]",
-                        isCompleted
-                          ? "bg-green-100 text-green-800 border-green-400"
-                          : isFailed
-                            ? "bg-red-100 text-red-800 border-red-400"
-                            : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
-                        isActiveItem && "border-2 border-blue-600",
-                      )}
-                      title={
-                        isCompleted
-                          ? "已完成"
-                          : isFailed
-                            ? "挑戰失敗"
-                            : "未完成"
-                      }
-                    >
-                      {qIndex + 1}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              /* 其他模式：保持原來的 activities.map 邏輯 */
-              activities.map((activity, activityIndex) => {
-                const answer = answers.get(activity.id);
-                const isActiveActivity = activityIndex === currentActivityIndex;
+                    return (
+                      <button
+                        key={q.content_item_id}
+                        onClick={() => setRearrangementQuestionIndex(qIndex)}
+                        className={cn(
+                          "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
+                          "flex items-center justify-center text-sm sm:text-xs font-medium",
+                          "min-w-[32px] sm:min-w-[32px]",
+                          isCompleted
+                            ? "bg-green-100 text-green-800 border-green-400"
+                            : isFailed
+                              ? "bg-red-100 text-red-800 border-red-400"
+                              : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
+                          isActiveItem && "border-2 border-blue-600",
+                        )}
+                        title={
+                          isCompleted
+                            ? "已完成"
+                            : isFailed
+                              ? "挑戰失敗"
+                              : "未完成"
+                        }
+                      >
+                        {qIndex + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* 其他模式：保持原來的 activities.map 邏輯 */
+                activities.map((activity, activityIndex) => {
+                  const answer = answers.get(activity.id);
+                  const isActiveActivity =
+                    activityIndex === currentActivityIndex;
 
-                if (activity.items && activity.items.length > 0) {
-                  return (
-                    <div
-                      key={activity.id}
-                      className="flex items-center gap-1 sm:gap-2 flex-shrink-0"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm sm:text-xs font-medium text-gray-600 whitespace-nowrap max-w-[120px] sm:max-w-none truncate sm:truncate-none">
-                          {activity.title}
-                        </span>
-                        <Badge
-                          variant="outline"
-                          className="text-sm sm:text-xs px-1.5 sm:px-1 py-0 h-5 sm:h-5 min-w-[35px] sm:min-w-[30px] text-center"
-                        >
-                          {t("studentActivityPage.labels.itemCount", {
-                            count: activity.items.length,
-                          })}
-                        </Badge>
-                      </div>
+                  // 🎯 Issue #147: 單字選擇模式不顯示題號指示器（練習是輪次制，與 items 不對應）
+                  if (
+                    activity.items &&
+                    activity.items.length > 0 &&
+                    !isVocabularySetType(activity.type)
+                  ) {
+                    return (
+                      <div
+                        key={activity.id}
+                        className="flex items-center gap-1 sm:gap-2 flex-shrink-0"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm sm:text-xs font-medium text-gray-600 whitespace-nowrap max-w-[120px] sm:max-w-none truncate sm:truncate-none">
+                            {activity.title}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="text-sm sm:text-xs px-1.5 sm:px-1 py-0 h-5 sm:h-5 min-w-[35px] sm:min-w-[30px] text-center"
+                          >
+                            {t("studentActivityPage.labels.itemCount", {
+                              count: activity.items.length,
+                            })}
+                          </Badge>
+                        </div>
 
-                      <div className="flex gap-0.5 sm:gap-1">
-                        {activity.items.map((item, itemIndex) => {
-                          const isActiveItem =
-                            isActiveActivity &&
-                            currentSubQuestionIndex === itemIndex;
+                        <div className="flex gap-0.5 sm:gap-1">
+                          {activity.items.map((item, itemIndex) => {
+                            const isActiveItem =
+                              isActiveActivity &&
+                              currentSubQuestionIndex === itemIndex;
 
-                          const isCompleted =
-                            ("recording_url" in item && item.recording_url) ||
-                            activity.answers?.[itemIndex];
-                          const teacherFeedback =
-                            "teacher_feedback" in item
-                              ? item.teacher_feedback
-                              : undefined;
-                          const teacherPassed =
-                            "teacher_passed" in item
-                              ? item.teacher_passed
-                              : undefined;
+                            const isCompleted =
+                              ("recording_url" in item && item.recording_url) ||
+                              activity.answers?.[itemIndex];
+                            const teacherFeedback =
+                              "teacher_feedback" in item
+                                ? item.teacher_feedback
+                                : undefined;
+                            const teacherPassed =
+                              "teacher_passed" in item
+                                ? item.teacher_passed
+                                : undefined;
 
-                          const hasTeacherGraded =
-                            teacherFeedback !== undefined &&
-                            teacherFeedback !== null;
-                          const isTeacherPassed =
-                            hasTeacherGraded && teacherPassed === true;
-                          const needsCorrection =
-                            hasTeacherGraded && teacherPassed === false;
+                            const hasTeacherGraded =
+                              teacherFeedback !== undefined &&
+                              teacherFeedback !== null;
+                            const isTeacherPassed =
+                              hasTeacherGraded && teacherPassed === true;
+                            const needsCorrection =
+                              hasTeacherGraded && teacherPassed === false;
 
-                          // 🎯 Issue #118: 判斷是否為例句朗讀模式（禁止跳題）
-                          const isReadingMode =
-                            isExampleSentencesType(activity.type) &&
-                            practiceMode !== "rearrangement";
+                            // 🎯 Issue #118: 判斷是否為例句朗讀模式（禁止跳題）
+                            const isReadingMode =
+                              isExampleSentencesType(activity.type) &&
+                              practiceMode !== "rearrangement";
 
-                          // 🎯 Issue #118: 檢查當前題目是否已分析（用於顯示狀態）
-                          const hasAssessment = !!item?.ai_assessment;
+                            // 🎯 Issue #147: 判斷是否為單字選擇模式（禁止跳題）
+                            const isWordSelectionMode = isVocabularySetType(
+                              activity.type,
+                            );
 
-                          return (
-                            <button
-                              key={itemIndex}
-                              onClick={async () => {
-                                // 🔒 分析中或錄音中禁止切換
-                                if (
+                            // 🎯 Issue #118: 檢查當前題目是否已分析（用於顯示狀態）
+                            const hasAssessment = !!item?.ai_assessment;
+
+                            return (
+                              <button
+                                key={itemIndex}
+                                onClick={async () => {
+                                  // 🔒 單字選擇模式禁止跳題
+                                  if (isWordSelectionMode) return;
+                                  // 🔒 分析中或錄音中禁止切換
+                                  if (
+                                    isAnalyzing ||
+                                    isAutoAnalyzing ||
+                                    isRecording
+                                  )
+                                    return;
+                                  // 🎯 Issue #141: 使用新的跳題邏輯（會自動分析未分析的錄音）
+                                  await handleQuestionJump(
+                                    activityIndex,
+                                    itemIndex,
+                                  );
+                                }}
+                                disabled={
+                                  isWordSelectionMode ||
                                   isAnalyzing ||
                                   isAutoAnalyzing ||
                                   isRecording
-                                )
-                                  return;
-                                // 🎯 Issue #141: 使用新的跳題邏輯（會自動分析未分析的錄音）
-                                await handleQuestionJump(
-                                  activityIndex,
-                                  itemIndex,
-                                );
-                              }}
-                              disabled={
-                                isAnalyzing || isAutoAnalyzing || isRecording
-                              } // 🔒 分析中或錄音中禁用
-                              className={cn(
-                                "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
-                                "flex items-center justify-center text-sm sm:text-xs font-medium",
-                                "min-w-[32px] sm:min-w-[32px]",
-                                // 保持學生原本的完成狀態樣式
-                                // 🎯 Issue #118: 例句朗讀模式顯示分析狀態（綠色=已分析）
-                                isReadingMode
-                                  ? hasAssessment
-                                    ? "bg-green-100 text-green-800 border-green-400 hover:border-blue-400"
-                                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
-                                  : isCompleted
-                                    ? "bg-green-100 text-green-800 border-green-400"
-                                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
-                                isActiveItem && "border-2 border-blue-600",
-                              )}
-                              title={
-                                isReadingMode
-                                  ? hasAssessment
-                                    ? `第 ${itemIndex + 1} 題 (已分析)`
-                                    : `第 ${itemIndex + 1} 題 (未分析)`
-                                  : needsCorrection
-                                    ? "老師要求訂正"
-                                    : isTeacherPassed
-                                      ? "老師已通過"
+                                } // 🔒 單字選擇模式、分析中或錄音中禁用
+                                className={cn(
+                                  "relative w-8 h-8 sm:w-8 sm:h-8 rounded border transition-all",
+                                  "flex items-center justify-center text-sm sm:text-xs font-medium",
+                                  "min-w-[32px] sm:min-w-[32px]",
+                                  // 保持學生原本的完成狀態樣式
+                                  // 🎯 Issue #147: 單字選擇模式只顯示狀態，不能點擊
+                                  isWordSelectionMode
+                                    ? isCompleted
+                                      ? "bg-green-100 text-green-800 border-green-400 cursor-default"
+                                      : "bg-white text-gray-600 border-gray-300 cursor-default"
+                                    : // 🎯 Issue #118: 例句朗讀模式顯示分析狀態（綠色=已分析）
+                                      isReadingMode
+                                      ? hasAssessment
+                                        ? "bg-green-100 text-green-800 border-green-400 hover:border-blue-400"
+                                        : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
                                       : isCompleted
-                                        ? "已完成"
-                                        : "未完成"
-                              }
-                            >
-                              {itemIndex + 1}
-                              {/* 老師評分圖標 - 右上角圓點徽章 */}
-                              {hasTeacherGraded && (
-                                <span
-                                  className={cn(
-                                    "absolute top-0 right-0 w-3 h-3 rounded-full border border-white",
-                                    teacherPassed
-                                      ? "bg-green-500"
-                                      : "bg-red-500",
-                                  )}
-                                  aria-label={
-                                    teacherPassed
-                                      ? t("studentActivityPage.feedback.passed")
-                                      : t("studentActivityPage.feedback.failed")
-                                  }
-                                />
-                              )}
-                            </button>
-                          );
-                        })}
+                                        ? "bg-green-100 text-green-800 border-green-400"
+                                        : "bg-white text-gray-600 border-gray-300 hover:border-blue-400",
+                                  isActiveItem && "border-2 border-blue-600",
+                                )}
+                                title={
+                                  isWordSelectionMode
+                                    ? `第 ${itemIndex + 1} 題`
+                                    : isReadingMode
+                                      ? hasAssessment
+                                        ? `第 ${itemIndex + 1} 題 (已分析)`
+                                        : `第 ${itemIndex + 1} 題 (未分析)`
+                                      : needsCorrection
+                                        ? "老師要求訂正"
+                                        : isTeacherPassed
+                                          ? "老師已通過"
+                                          : isCompleted
+                                            ? "已完成"
+                                            : "未完成"
+                                }
+                              >
+                                {itemIndex + 1}
+                                {/* 老師評分圖標 - 右上角圓點徽章 */}
+                                {hasTeacherGraded && (
+                                  <span
+                                    className={cn(
+                                      "absolute top-0 right-0 w-3 h-3 rounded-full border border-white",
+                                      teacherPassed
+                                        ? "bg-green-500"
+                                        : "bg-red-500",
+                                    )}
+                                    aria-label={
+                                      teacherPassed
+                                        ? t(
+                                            "studentActivityPage.feedback.passed",
+                                          )
+                                        : t(
+                                            "studentActivityPage.feedback.failed",
+                                          )
+                                    }
+                                  />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {activityIndex < activities.length - 1 && (
+                          <div className="w-px h-8 bg-gray-300 ml-2" />
+                        )}
                       </div>
+                    );
+                  }
 
-                      {activityIndex < activities.length - 1 && (
-                        <div className="w-px h-8 bg-gray-300 ml-2" />
-                      )}
-                    </div>
+                  return (
+                    <Button
+                      key={activity.id}
+                      variant={isActiveActivity ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleActivitySelect(activityIndex)}
+                      disabled={isAnalyzing} // 🔒 分析中禁用
+                      className="flex-shrink-0 h-8"
+                    >
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(activity, answer)}
+                        <span className="text-xs">{activity.title}</span>
+                      </div>
+                    </Button>
                   );
-                }
-
-                return (
-                  <Button
-                    key={activity.id}
-                    variant={isActiveActivity ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleActivitySelect(activityIndex)}
-                    disabled={isAnalyzing} // 🔒 分析中禁用
-                    className="flex-shrink-0 h-8"
-                  >
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(activity, answer)}
-                      <span className="text-xs">{activity.title}</span>
-                    </div>
-                  </Button>
-                );
-              })
-            )}
-          </div>
+                })
+              )}
+            </div>
+          )}
 
           <Progress value={progress} className="h-1 mt-1" />
         </div>
@@ -2224,23 +2310,31 @@ export default function StudentActivityPageContent({
       {/* Main content */}
       <div className="w-full px-2 sm:px-4 mt-3">
         <Card>
-          <CardHeader className="py-2 sm:py-3">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0">
-              <CardTitle className="text-base sm:text-lg leading-tight">
-                {t("studentActivityPage.labels.questionNumber", {
-                  number: currentActivity.order,
-                })}{" "}
-                {currentActivity.title}
-              </CardTitle>
-              {getActivityTypeBadge(currentActivity.type)}
-            </div>
-          </CardHeader>
+          {/* CardHeader - 單字選擇模式不顯示（WordSelectionActivity 自帶 header） */}
+          {!isVocabularySetType(currentActivity?.type || "") && (
+            <CardHeader className="py-2 sm:py-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0">
+                <CardTitle className="text-base sm:text-lg leading-tight">
+                  {t("studentActivityPage.labels.questionNumber", {
+                    number: currentActivity.order,
+                  })}{" "}
+                  {currentActivity.title}
+                </CardTitle>
+                {getActivityTypeBadge(currentActivity.type)}
+              </div>
+            </CardHeader>
+          )}
 
           <CardContent className="p-2 sm:p-3">
             {renderActivityContent(currentActivity)}
 
             {/* Navigation buttons */}
             {(() => {
+              // 🎯 單字選擇模式：WordSelectionActivity 自帶導航，不顯示外部導航按鈕
+              if (practiceMode === "word_selection") {
+                return null;
+              }
+
               let isAssessed = false;
 
               if (currentActivity.items && currentActivity.items.length > 0) {
@@ -2446,50 +2540,6 @@ export default function StudentActivityPageContent({
                 </div>
               );
             })()}
-          </CardContent>
-        </Card>
-
-        {/* Status summary */}
-        <Card className="mt-4 sm:mt-6">
-          <CardContent className="pt-4 sm:pt-6">
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
-              <div>
-                <div className="text-xl sm:text-2xl font-bold text-green-600">
-                  {
-                    Array.from(answers.values()).filter(
-                      (a) => a.status === "completed",
-                    ).length
-                  }
-                </div>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  {t("studentActivityPage.status.completed")}
-                </p>
-              </div>
-              <div>
-                <div className="text-xl sm:text-2xl font-bold text-yellow-600">
-                  {
-                    Array.from(answers.values()).filter(
-                      (a) => a.status === "in_progress",
-                    ).length
-                  }
-                </div>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  {t("studentActivityPage.status.inProgress")}
-                </p>
-              </div>
-              <div>
-                <div className="text-xl sm:text-2xl font-bold text-gray-400">
-                  {
-                    Array.from(answers.values()).filter(
-                      (a) => a.status === "not_started",
-                    ).length
-                  }
-                </div>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  {t("studentActivityPage.status.notStarted")}
-                </p>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>
