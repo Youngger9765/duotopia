@@ -119,6 +119,11 @@ backend/patch_content_create.py
 backend/temp_add_endpoint.py
 backend/test_api_manual.py
 backend/test_duplicate_lesson.py
+# Task implementation temporary scripts
+backend/execute_task*.py
+backend/implement_task*.py
+backend/temp_*.sh
+backend/update_*.py
 
 # MCP Server screenshots and temporary files
 mcp-servers/browser/screenshots/
