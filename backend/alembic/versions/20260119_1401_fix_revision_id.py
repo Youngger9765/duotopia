@@ -22,32 +22,18 @@ depends_on = None
 
 def upgrade() -> None:
     """
-    Fix the alembic_version table to use the correct revision ID.
+    This migration does nothing. It's a transition step.
 
-    The database currently has '7f8g9h0i1j2k' recorded, but the actual
-    migration file uses '7f8e9d0c1b2a'. This migration updates the
-    alembic_version table to reflect the correct ID.
+    Alembic automatically updates alembic_version table when
+    running migrations. We don't need to do it manually.
     """
 
-    # Update alembic_version table directly
-    op.execute(
-        """
-        UPDATE alembic_version
-        SET version_num = '9a8b7c6d5e4f'
-        WHERE version_num = '7f8g9h0i1j2k'
-        """
-    )
+    pass
 
 
 def downgrade() -> None:
     """
-    Revert to the incorrect revision ID (not recommended).
+    This migration does nothing.
     """
 
-    op.execute(
-        """
-        UPDATE alembic_version
-        SET version_num = '7f8g9h0i1j2k'
-        WHERE version_num = '9a8b7c6d5e4f'
-        """
-    )
+    pass
