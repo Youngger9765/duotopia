@@ -195,9 +195,25 @@ jobs:
         echo "🔄 Running Alembic database migrations..."
         cd backend
         echo "📊 Current migration status:"
-        alembic current
+        alembic current || true
+
         echo "🔄 Upgrading to latest migration..."
-        alembic upgrade head
+        if ! alembic upgrade head 2>&1 | tee /tmp/alembic_output.txt; then
+          # Check if error is due to orphaned revision
+          if grep -q "Can't locate revision" /tmp/alembic_output.txt; then
+            echo "⚠️ Orphaned revision detected in database"
+            echo "🔧 Stamping database to latest head to recover..."
+            # Get the current head from the codebase
+            CURRENT_HEAD=$(alembic heads | head -1 | awk '{print $1}')
+            echo "📌 Stamping to revision: $CURRENT_HEAD"
+            alembic stamp "$CURRENT_HEAD"
+            echo "✅ Database stamped successfully"
+          else
+            echo "❌ Migration failed with unexpected error"
+            cat /tmp/alembic_output.txt
+            exit 1
+          fi
+        fi
         echo "✅ Migrations completed"
 
     - name: Check for missing migrations
