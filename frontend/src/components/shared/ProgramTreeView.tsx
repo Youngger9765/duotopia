@@ -219,6 +219,7 @@ export function ProgramTreeView({
         await programAPI.reorderPrograms(orderData);
 
         // Update local state immediately (no refresh)
+        setPrograms(newPrograms);
         if (onProgramsChange) {
           onProgramsChange(newPrograms);
         }
@@ -247,6 +248,7 @@ export function ProgramTreeView({
         const updatedPrograms = programs.map(p =>
           p.id === programId ? { ...p, lessons: newLessons } : p
         );
+        setPrograms(updatedPrograms);
         if (onProgramsChange) {
           onProgramsChange(updatedPrograms);
         }
@@ -284,6 +286,7 @@ export function ProgramTreeView({
           }
           return p;
         });
+        setPrograms(updatedPrograms);
         if (onProgramsChange) {
           onProgramsChange(updatedPrograms);
         }
@@ -332,8 +335,9 @@ export function ProgramTreeView({
       toast.success('Program deleted successfully');
 
       // Local update: remove from programs array
+      const updatedPrograms = programs.filter((p) => p.id !== program.id);
+      setPrograms(updatedPrograms);
       if (onProgramsChange) {
-        const updatedPrograms = programs.filter((p) => p.id !== program.id);
         onProgramsChange(updatedPrograms);
       }
     } catch (error) {
@@ -398,16 +402,17 @@ export function ProgramTreeView({
       toast.success('Lesson deleted successfully');
 
       // Local update: remove lesson from program
+      const updatedPrograms = programs.map((program) => {
+        if (program.id === programId) {
+          return {
+            ...program,
+            lessons: program.lessons?.filter((l) => l.id !== lesson.id) || [],
+          };
+        }
+        return program;
+      });
+      setPrograms(updatedPrograms);
       if (onProgramsChange) {
-        const updatedPrograms = programs.map((program) => {
-          if (program.id === programId) {
-            return {
-              ...program,
-              lessons: program.lessons?.filter((l) => l.id !== lesson.id) || [],
-            };
-          }
-          return program;
-        });
         onProgramsChange(updatedPrograms);
       }
     } catch (error) {
@@ -441,19 +446,20 @@ export function ProgramTreeView({
       toast.success('Content deleted successfully');
 
       // Local update: remove content from lesson
-      if (onProgramsChange) {
-        const updatedPrograms = programs.map((program) => {
-          const updatedLessons = program.lessons?.map((lesson) => {
-            if (lesson.id === lessonId) {
-              return {
-                ...lesson,
-                contents: lesson.contents?.filter((c) => c.id !== content.id) || [],
-              };
-            }
-            return lesson;
-          });
-          return { ...program, lessons: updatedLessons };
+      const updatedPrograms = programs.map((program) => {
+        const updatedLessons = program.lessons?.map((lesson) => {
+          if (lesson.id === lessonId) {
+            return {
+              ...lesson,
+              contents: lesson.contents?.filter((c) => c.id !== content.id) || [],
+            };
+          }
+          return lesson;
         });
+        return { ...program, lessons: updatedLessons };
+      });
+      setPrograms(updatedPrograms);
+      if (onProgramsChange) {
         onProgramsChange(updatedPrograms);
       }
     } catch (error) {
@@ -625,9 +631,8 @@ export function ProgramTreeView({
                     if (newContent && editorLessonId) {
                       addContentToLesson(editorLessonId, newContent);
                     }
-                    // Keep editor open after save for continued editing
                     toast.success("內容已儲存");
-                    // Local update already done by addContentToLesson, no need to refresh
+                    closeReadingEditor();  // Close dialog after save to prevent duplicate creation
                   }}
                   onCancel={closeReadingEditor}
                 />
@@ -877,10 +882,11 @@ export function ProgramTreeView({
                     toast.success('教材更新成功');
 
                     // Local update: replace updated program in array
+                    const updatedPrograms = programs.map((p) =>
+                      p.id === programEditDialog.program!.id ? { ...p, ...updatedProgram } : p
+                    );
+                    setPrograms(updatedPrograms);
                     if (onProgramsChange) {
-                      const updatedPrograms = programs.map((p) =>
-                        p.id === programEditDialog.program!.id ? { ...p, ...updatedProgram } : p
-                      );
                       onProgramsChange(updatedPrograms);
                     }
                   } else {
@@ -892,8 +898,9 @@ export function ProgramTreeView({
                     toast.success('教材建立成功');
 
                     // Local update: append new program to end
+                    const updatedPrograms = [...programs, newProgram];
+                    setPrograms(updatedPrograms);  // Update internal state
                     if (onProgramsChange) {
-                      const updatedPrograms = [...programs, newProgram];
                       onProgramsChange(updatedPrograms);
                     }
                   }
@@ -980,18 +987,19 @@ export function ProgramTreeView({
                     toast.success('課程更新成功');
 
                     // Local update: replace updated lesson in program
+                    const updatedPrograms = programs.map((program) => {
+                      if (program.id === lessonEditDialog.programId) {
+                        return {
+                          ...program,
+                          lessons: (program.lessons || []).map((lesson) =>
+                            lesson.id === lessonEditDialog.lesson!.id ? { ...lesson, ...updatedLesson } : lesson
+                          ),
+                        };
+                      }
+                      return program;
+                    });
+                    setPrograms(updatedPrograms);
                     if (onProgramsChange) {
-                      const updatedPrograms = programs.map((program) => {
-                        if (program.id === lessonEditDialog.programId) {
-                          return {
-                            ...program,
-                            lessons: (program.lessons || []).map((lesson) =>
-                              lesson.id === lessonEditDialog.lesson!.id ? { ...lesson, ...updatedLesson } : lesson
-                            ),
-                          };
-                        }
-                        return program;
-                      });
                       onProgramsChange(updatedPrograms);
                     }
                   } else {
@@ -1003,16 +1011,17 @@ export function ProgramTreeView({
                     toast.success('課程建立成功');
 
                     // Local update: add new lesson to program
+                    const updatedPrograms = programs.map((program) => {
+                      if (program.id === lessonEditDialog.programId) {
+                        return {
+                          ...program,
+                          lessons: [...(program.lessons || []), newLesson],
+                        };
+                      }
+                      return program;
+                    });
+                    setPrograms(updatedPrograms);
                     if (onProgramsChange) {
-                      const updatedPrograms = programs.map((program) => {
-                        if (program.id === lessonEditDialog.programId) {
-                          return {
-                            ...program,
-                            lessons: [...(program.lessons || []), newLesson],
-                          };
-                        }
-                        return program;
-                      });
                       onProgramsChange(updatedPrograms);
                     }
                   }
