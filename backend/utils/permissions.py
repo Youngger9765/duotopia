@@ -68,10 +68,11 @@ def has_school_materials_permission(
         return False
 
     # Check school_admin role
+    # Use PostgreSQL JSONB '?' operator to check if array contains element
     has_school_admin = db.query(TeacherSchool).filter(
         TeacherSchool.teacher_id == teacher_id,
         TeacherSchool.school_id == school_id,
-        TeacherSchool.roles.contains(["school_admin"]),
+        TeacherSchool.roles.op('?')('school_admin'),
         TeacherSchool.is_active.is_(True),
     ).first() is not None
 

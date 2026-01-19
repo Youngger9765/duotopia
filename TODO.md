@@ -1,8 +1,65 @@
 # TODO - Duotopia Project Tasks
 
-**Last Updated**: 2026-01-16
+**Last Updated**: 2026-01-19
 **Current Branch**: `feat/issue-112-org-hierarchy`
-**Focus**: Organization Materials Management - Reorder Functionality
+**Focus**: Organization Materials Management - Bug Fixes & Permission Issues
+
+---
+
+## 🚨 Urgent - Awaiting Commit
+
+### Critical Fixes (Staged, Not Committed)
+
+1. **學校教材建立權限修復** 🔴 CRITICAL
+   - **問題**: School materials creation 失敗 "Failed to fetch"
+   - **Root Cause**: `backend/utils/permissions.py:74` JSONB 查詢錯誤
+     ```python
+     # ❌ 錯誤：產生 LIKE operator (PostgreSQL JSONB 不支援)
+     TeacherSchool.roles.contains(["school_admin"])
+
+     # ✅ 正確：使用 PostgreSQL JSONB ? operator
+     TeacherSchool.roles.op('?')('school_admin')
+     ```
+   - **Error**: `psycopg2.errors.UndefinedFunction: operator does not exist: jsonb ~~ text`
+   - **Status**: ✅ 已修復，**⚠️ 待 COMMIT**
+   - **影響檔案**: `backend/utils/permissions.py` (line 74-77)
+   - **驗證**: ✅ 權限檢查測試通過 (`/tmp/test_permission.py`)
+   - **待執行**: `git commit -m "fix(permissions): Use JSONB ? operator for school_admin role check"`
+
+---
+
+## ✅ Recently Completed (2026-01-19)
+
+### Bug Fixes - Content Editor & API
+
+1. **內容更新 API 修復** ✅ **已完成**
+   - **問題**: ReadingAssessmentPanel 儲存失敗 "Failed to fetch"
+   - **Root Causes** (2 個同時發現):
+     - Port 不符: Frontend `VITE_API_URL=http://localhost:8000`，Backend 預設 8080
+     - Missing import: `content_ops.py` 使用 `text()` 但未 import `from sqlalchemy import text`
+   - **解決方案**:
+     - ✅ `backend/.env`: 新增 `PORT=8000`
+     - ✅ `backend/routers/teachers/content_ops.py`: 新增 `from sqlalchemy import text`
+     - ✅ 新增 IntegrityError handling for DELETE operations
+   - **完成日期**: 2026-01-19
+   - **Commit**: eeb799c1 "fix(api): Fix content update API - port config + missing import + error handling"
+
+2. **編輯器 UX 改善** ✅ **已完成**
+   - **需求**: 儲存後不要關閉編輯器，保持開啟以便繼續編輯
+   - **實作**:
+     - ✅ `ProgramTreeView.tsx`: 移除 `closeReadingEditor()` calls (lines 628, 675)
+     - ✅ 保留 toast.success 通知
+     - ✅ 本地狀態已由 addContentToLesson/updateProgramContent 更新
+   - **完成日期**: 2026-01-19
+   - **Commit**: eeb799c1
+
+3. **TypeScript 型別改善** ✅ **已完成**
+   - **問題**: Code review warnings (type strictness)
+   - **解決方案**:
+     - ✅ `api.ts`: 將 `[key: string]: any` 替換為明確的 optional fields
+     - ✅ 新增所有可能的 content_items 欄位型別定義
+   - **完成日期**: 2026-01-19
+   - **Commit**: eeb799c1
 
 ---
 
