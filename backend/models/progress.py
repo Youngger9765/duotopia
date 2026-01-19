@@ -215,7 +215,9 @@ class PracticeSession(Base):
     )
 
     # 練習模式
-    practice_mode = Column(String(20), nullable=False)  # 'listening', 'writing', 'word_selection'
+    practice_mode = Column(
+        String(20), nullable=False
+    )  # 'listening', 'writing', 'word_selection'
 
     # 本次練習統計
     words_practiced = Column(

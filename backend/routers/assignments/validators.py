@@ -18,7 +18,9 @@ class CreateAssignmentRequest(BaseModel):
     due_date: Optional[datetime] = None
     start_date: Optional[datetime] = None
     # 作答模式設定
-    practice_mode: Optional[str] = None  # reading, rearrangement, word_reading, word_selection
+    practice_mode: Optional[
+        str
+    ] = None  # reading, rearrangement, word_reading, word_selection
     answer_mode: Optional[str] = None  # speaking, listening, writing
     time_limit_per_question: Optional[int] = None
     shuffle_questions: Optional[bool] = False

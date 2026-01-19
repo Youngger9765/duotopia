@@ -140,14 +140,18 @@ async def create_content(
         order_index = content_data.order_index
 
     # 解析 content type
-    content_type_str = content_data.type.upper() if content_data.type else "EXAMPLE_SENTENCES"
+    content_type_str = (
+        content_data.type.upper() if content_data.type else "EXAMPLE_SENTENCES"
+    )
     # 處理 legacy values
     type_mapping = {
         "READING_ASSESSMENT": ContentType.EXAMPLE_SENTENCES,
         "SENTENCE_MAKING": ContentType.VOCABULARY_SET,
     }
     try:
-        content_type = type_mapping.get(content_type_str) or ContentType(content_type_str)
+        content_type = type_mapping.get(content_type_str) or ContentType(
+            content_type_str
+        )
     except ValueError:
         content_type = ContentType.EXAMPLE_SENTENCES
 
@@ -191,8 +195,12 @@ async def create_content(
                 audio_url=item_data.get("audio_url"),
                 # 例句相關欄位
                 example_sentence=example_sentence or None,
-                example_sentence_translation=item_data.get("example_sentence_translation"),
-                example_sentence_definition=item_data.get("example_sentence_definition"),
+                example_sentence_translation=item_data.get(
+                    "example_sentence_translation"
+                ),
+                example_sentence_definition=item_data.get(
+                    "example_sentence_definition"
+                ),
                 word_count=word_count,
                 max_errors=max_errors,
                 # 單字集相關欄位
@@ -420,8 +428,12 @@ async def update_content(
                     audio_url=item_data.get("audio_url"),
                     # 例句相關欄位
                     example_sentence=example_sentence or None,
-                    example_sentence_translation=item_data.get("example_sentence_translation"),
-                    example_sentence_definition=item_data.get("example_sentence_definition"),
+                    example_sentence_translation=item_data.get(
+                        "example_sentence_translation"
+                    ),
+                    example_sentence_definition=item_data.get(
+                        "example_sentence_definition"
+                    ),
                     word_count=word_count,
                     max_errors=max_errors,
                     # 單字集相關欄位

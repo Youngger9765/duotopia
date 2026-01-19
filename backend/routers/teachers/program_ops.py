@@ -390,7 +390,8 @@ async def get_program(
                     for content in sorted(
                         lesson.contents or [], key=lambda x: x.order_index
                     )
-                    if content.is_active and not content.is_assignment_copy  # Filter out assignment copies
+                    if content.is_active
+                    and not content.is_assignment_copy  # Filter out assignment copies
                 ],
             }
             for lesson in sorted(program.lessons or [], key=lambda x: x.order_index)

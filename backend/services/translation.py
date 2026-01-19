@@ -39,7 +39,9 @@ class TranslationService:
                         "OPENAI_API_KEY not found in environment variables"
                     )
                 # Use shared http_client for connection pooling
-                self.client = AsyncOpenAI(api_key=api_key, http_client=get_http_client())
+                self.client = AsyncOpenAI(
+                    api_key=api_key, http_client=get_http_client()
+                )
                 logger.info("Using OpenAI for translation")
 
     async def translate_text(self, text: str, target_lang: str = "zh-TW") -> str:

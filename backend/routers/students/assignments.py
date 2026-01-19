@@ -650,7 +650,11 @@ async def get_practice_words(
 
     return PracticeWordsResponse(
         session_id=practice_session.id,
-        answer_mode=answer_mode_value if isinstance(answer_mode_value, str) else answer_mode_value.value if hasattr(answer_mode_value, 'value') else "listening",
+        answer_mode=answer_mode_value
+        if isinstance(answer_mode_value, str)
+        else answer_mode_value.value
+        if hasattr(answer_mode_value, "value")
+        else "listening",
         words=words,
     )
 
