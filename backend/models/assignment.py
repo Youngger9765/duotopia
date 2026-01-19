@@ -36,8 +36,47 @@ class Assignment(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    # 指派設定
-    # 移除 assign_to_all，改為透過 StudentAssignment 記錄實際指派的學生
+    # Legacy: 造句練習答題模式（只對舊 SENTENCE_MAKING 類型有效）
+    # @deprecated: 請使用 practice_mode 和 play_audio 替代
+    # Note: 保持 nullable=True 以兼容現有數據庫 schema
+    answer_mode = Column(
+        String(20),
+        default="writing",
+        server_default="writing",
+        nullable=True,
+    )
+
+    # ===== 例句集作答模式設定 =====
+    # 作答模式：'reading' (例句朗讀) / 'rearrangement' (例句重組)
+    practice_mode = Column(String(20), default="reading")
+
+    # 每題時間限制（秒）：0（不限時）/10/20/30/40
+    time_limit_per_question = Column(Integer, default=30)
+
+    # 是否打亂題目順序
+    shuffle_questions = Column(Boolean, default=False)
+
+    # 是否播放音檔（例句重組專用）
+    play_audio = Column(Boolean, default=False)
+
+    # 答題結束後是否顯示正確答案（例句重組專用）
+    show_answer = Column(Boolean, default=False)
+
+    # 分數記錄分類：'speaking' / 'listening' / 'writing' / 'vocabulary'
+    score_category = Column(String(20), default=None)
+
+    # ===== Phase 2: 單字集作答模式設定 =====
+    # 達標熟悉度（百分比，預設 80%）- 單字選擇模式專用
+    target_proficiency = Column(Integer, default=80)
+
+    # 是否顯示翻譯（預設 true）- 單字朗讀模式可選擇隱藏
+    show_translation = Column(Boolean, default=True)
+
+    # 是否顯示單字（預設 true）- 單字選擇模式可選擇隱藏（只播音檔）
+    show_word = Column(Boolean, default=True)
+
+    # 是否顯示圖片（預設 true）- 單字集專用
+    show_image = Column(Boolean, default=True)
 
     # 軟刪除標記
     is_active = Column(Boolean, default=True)

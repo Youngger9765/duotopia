@@ -501,6 +501,53 @@ async def reset_student_password(
     }
 
 
+@router.get("/classrooms/{classroom_id}/students")
+async def get_classroom_students(
+    classroom_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """取得班級的學生列表"""
+    # 驗證班級存在且屬於當前教師
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id,
+            Classroom.teacher_id == current_teacher.id,
+            Classroom.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not classroom:
+        raise HTTPException(
+            status_code=404, detail="Classroom not found or you don't have permission"
+        )
+
+    # 取得班級學生
+    students = (
+        db.query(Student)
+        .join(ClassroomStudent)
+        .filter(
+            ClassroomStudent.classroom_id == classroom_id,
+            Student.is_active.is_(True),
+            ClassroomStudent.is_active.is_(True),
+        )
+        .all()
+    )
+
+    return [
+        {
+            "id": s.id,
+            "name": s.name,
+            "email": s.email,
+            "student_number": s.student_number,
+            "birthdate": s.birthdate.isoformat() if s.birthdate else None,
+        }
+        for s in students
+    ]
+
+
 @router.post("/classrooms/{classroom_id}/students/batch")
 async def batch_create_students(
     classroom_id: int,

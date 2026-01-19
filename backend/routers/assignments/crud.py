@@ -86,6 +86,19 @@ async def create_assignment(
         teacher_id=current_teacher.id,
         due_date=request.due_date,
         is_active=True,
+        # 作答模式設定
+        practice_mode=request.practice_mode,
+        answer_mode=request.answer_mode,
+        time_limit_per_question=request.time_limit_per_question,
+        shuffle_questions=request.shuffle_questions or False,
+        show_answer=request.show_answer or False,
+        play_audio=request.play_audio or False,
+        # 單字選擇模式設定
+        target_proficiency=request.target_proficiency,
+        show_word=request.show_word,
+        show_image=request.show_image,
+        show_translation=request.show_translation,
+        score_category=request.score_category,
     )
     db.add(assignment)
     db.flush()  # 取得 assignment.id
@@ -237,6 +250,21 @@ async def get_assignments(
     )
     content_count_map = {row.assignment_id: row.count for row in content_counts}
 
+    # Batch-load first content type for each assignment (avoid N+1)
+    first_contents = (
+        db.query(AssignmentContent.assignment_id, Content.type)
+        .join(Content, AssignmentContent.content_id == Content.id)
+        .filter(
+            AssignmentContent.assignment_id.in_(assignment_ids),
+            AssignmentContent.order_index == 1,
+        )
+        .all()
+    )
+    content_type_map = {
+        row.assignment_id: row.type.value if row.type else None
+        for row in first_contents
+    }
+
     # Batch-load all student assignments (avoid N+1)
     all_student_assignments = (
         db.query(StudentAssignment)
@@ -281,6 +309,9 @@ async def get_assignments(
             int((completed / total_students * 100)) if total_students > 0 else 0
         )
 
+        # Get content_type from preloaded map
+        content_type = content_type_map.get(assignment.id)
+
         result.append(
             {
                 "id": assignment.id,
@@ -297,6 +328,10 @@ async def get_assignments(
                 ),
                 "completion_rate": completion_rate,
                 "status_distribution": status_counts,
+                # 內容類型與作答模式
+                "content_type": content_type,
+                "practice_mode": assignment.practice_mode,
+                "answer_mode": assignment.answer_mode,
             }
         )
 

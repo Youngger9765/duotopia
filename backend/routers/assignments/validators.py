@@ -16,6 +16,22 @@ class CreateAssignmentRequest(BaseModel):
     content_ids: List[int]  # 支援多個內容
     student_ids: List[int] = []  # 空陣列 = 全班
     due_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    # 作答模式設定
+    practice_mode: Optional[
+        str
+    ] = None  # reading, rearrangement, word_reading, word_selection
+    answer_mode: Optional[str] = None  # speaking, listening, writing
+    time_limit_per_question: Optional[int] = None
+    shuffle_questions: Optional[bool] = False
+    show_answer: Optional[bool] = False
+    play_audio: Optional[bool] = False
+    # 單字選擇模式設定
+    target_proficiency: Optional[int] = None
+    show_word: Optional[bool] = None
+    show_image: Optional[bool] = None
+    show_translation: Optional[bool] = None
+    score_category: Optional[str] = None
 
 
 class UpdateAssignmentRequest(BaseModel):

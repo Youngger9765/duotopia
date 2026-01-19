@@ -19,7 +19,7 @@ import { LessonDialog } from "@/components/LessonDialog";
 import CreateProgramDialog from "@/components/CreateProgramDialog";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
-import SentenceMakingPanel from "@/components/SentenceMakingPanel";
+import VocabularySetPanel from "@/components/VocabularySetPanel";
 import { AssignmentDialog } from "@/components/AssignmentDialog";
 import BatchGradingModal from "@/components/BatchGradingModal";
 import { StudentCompletionDashboard } from "@/components/StudentCompletionDashboard";
@@ -137,13 +137,12 @@ export default function ClassroomDetail({
   const [editorLessonId, setEditorLessonId] = useState<number | null>(null);
   const [editorContentId, setEditorContentId] = useState<number | null>(null);
 
-  // Sentence Making Editor state
-  const [showSentenceMakingEditor, setShowSentenceMakingEditor] =
-    useState(false);
-  const [sentenceMakingLessonId, setSentenceMakingLessonId] = useState<
+  // Vocabulary Set Editor state
+  const [showVocabularySetEditor, setShowVocabularySetEditor] = useState(false);
+  const [vocabularySetLessonId, setVocabularySetLessonId] = useState<
     number | null
   >(null);
-  const [sentenceMakingContentId, setSentenceMakingContentId] = useState<
+  const [vocabularySetContentId, setVocabularySetContentId] = useState<
     number | null
   >(null);
 
@@ -311,7 +310,7 @@ export default function ClassroomDetail({
   const fetchAssignments = async () => {
     try {
       const response = await apiClient.get(
-        `/api/teachers/assignments?classroom_id=${id}`,
+        `/api/teachers/assignments/?classroom_id=${id}`,
       );
       setAssignments(Array.isArray(response) ? response : []);
     } catch (err) {
@@ -410,7 +409,7 @@ export default function ClassroomDetail({
       });
       setIsPanelOpen(true);
     } else if (contentType === "sentence_making") {
-      // For SENTENCE_MAKING type, use side panel with SentenceMakingPanel
+      // For SENTENCE_MAKING type, use side panel with VocabularySetPanel
       setSelectedContent(content);
       setEditingContent({
         id: content.id,
@@ -808,7 +807,6 @@ export default function ClassroomDetail({
         order_index: index + 1,
       }));
       await apiClient.reorderPrograms(orderData);
-      console.log("Programs reordered and saved");
     } catch (error) {
       console.error("Failed to save program order:", error);
       // 可選：恢復原始順序
@@ -846,7 +844,6 @@ export default function ClassroomDetail({
           order_index: index + 1,
         }));
         await apiClient.reorderLessons(programId, orderData);
-        console.log(`Lessons reordered and saved for program ${programId}`);
       } catch (error) {
         console.error("Failed to save lesson order:", error);
         // 可選：恢復原始順序
@@ -950,9 +947,9 @@ export default function ClassroomDetail({
       selection.type === "VOCABULARY_SET"
     ) {
       // For sentence_making/vocabulary_set, use popup for new content creation
-      setSentenceMakingLessonId(selection.lessonId);
-      setSentenceMakingContentId(null); // null for new content
-      setShowSentenceMakingEditor(true);
+      setVocabularySetLessonId(selection.lessonId);
+      setVocabularySetContentId(null); // null for new content
+      setShowVocabularySetEditor(true);
       setShowContentTypeDialog(false);
     } else {
       // For other content types, create directly
@@ -1408,17 +1405,27 @@ export default function ClassroomDetail({
                                 assignment.content_type?.toUpperCase();
                               const practiceMode = assignment.practice_mode;
 
-                              // VOCABULARY_SET 或 SENTENCE_MAKING → 單字集
+                              // VOCABULARY_SET 或 SENTENCE_MAKING → 根據 practice_mode
                               if (
                                 contentType === "VOCABULARY_SET" ||
                                 contentType === "SENTENCE_MAKING"
                               ) {
+                                if (practiceMode === "word_selection") {
+                                  return {
+                                    label: t(
+                                      "classroomDetail.contentTypes.WORD_SELECTION",
+                                    ),
+                                    color:
+                                      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                  };
+                                }
+                                // default: word_reading
                                 return {
                                   label: t(
-                                    "classroomDetail.contentTypes.VOCABULARY_SET",
+                                    "classroomDetail.contentTypes.WORD_READING",
                                   ),
                                   color:
-                                    "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
                                 };
                               }
 
@@ -1509,29 +1516,31 @@ export default function ClassroomDetail({
                                       {typeInfo.label}
                                     </span>
                                   </div>
-                                  {/* 🆕 rearrangement 模式不顯示 AI 批改按鈕（提交後直接完成） */}
+                                  {/* 🆕 rearrangement / word_selection 模式不顯示 AI 批改按鈕 */}
                                   {assignment.practice_mode !==
-                                    "rearrangement" && (
-                                    <Button
-                                      variant="default"
-                                      size="sm"
-                                      className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-3 flex-shrink-0 gap-1.5"
-                                      onClick={() => {
-                                        setBatchGradingModal({
-                                          open: true,
-                                          assignmentId: assignment.id,
-                                          classroomId: Number(id),
-                                        });
-                                      }}
-                                    >
-                                      <Sparkles className="w-5 h-5" />
-                                      <span className="text-sm font-medium">
-                                        {t(
-                                          "assignmentDetail.buttons.batchGrade",
-                                        )}
-                                      </span>
-                                    </Button>
-                                  )}
+                                    "rearrangement" &&
+                                    assignment.practice_mode !==
+                                      "word_selection" && (
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-3 flex-shrink-0 gap-1.5"
+                                        onClick={() => {
+                                          setBatchGradingModal({
+                                            open: true,
+                                            assignmentId: assignment.id,
+                                            classroomId: Number(id),
+                                          });
+                                        }}
+                                      >
+                                        <Sparkles className="w-5 h-5" />
+                                        <span className="text-sm font-medium">
+                                          {t(
+                                            "assignmentDetail.buttons.batchGrade",
+                                          )}
+                                        </span>
+                                      </Button>
+                                    )}
                                 </div>
 
                                 {/* Description */}
@@ -1657,17 +1666,27 @@ export default function ClassroomDetail({
                                     assignment.content_type?.toUpperCase();
                                   const practiceMode = assignment.practice_mode;
 
-                                  // VOCABULARY_SET 或 SENTENCE_MAKING → 單字集
+                                  // VOCABULARY_SET 或 SENTENCE_MAKING → 根據 practice_mode
                                   if (
                                     contentType === "VOCABULARY_SET" ||
                                     contentType === "SENTENCE_MAKING"
                                   ) {
+                                    if (practiceMode === "word_selection") {
+                                      return {
+                                        label: t(
+                                          "classroomDetail.contentTypes.WORD_SELECTION",
+                                        ),
+                                        color:
+                                          "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                      };
+                                    }
+                                    // default: word_reading
                                     return {
                                       label: t(
-                                        "classroomDetail.contentTypes.VOCABULARY_SET",
+                                        "classroomDetail.contentTypes.WORD_READING",
                                       ),
                                       color:
-                                        "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
                                     };
                                   }
 
@@ -1823,27 +1842,29 @@ export default function ClassroomDetail({
                                             "classroomDetail.buttons.previewDemo",
                                           )}
                                         </Button>
-                                        {/* 🆕 rearrangement 模式不顯示 AI 批改按鈕 */}
+                                        {/* 🆕 rearrangement / word_selection 模式不顯示 AI 批改按鈕 */}
                                         {assignment.practice_mode !==
-                                          "rearrangement" && (
-                                          <Button
-                                            variant="default"
-                                            size="sm"
-                                            className="bg-purple-600 hover:bg-purple-700 text-white h-10 min-h-10"
-                                            onClick={() => {
-                                              setBatchGradingModal({
-                                                open: true,
-                                                assignmentId: assignment.id,
-                                                classroomId: Number(id),
-                                              });
-                                            }}
-                                          >
-                                            <Sparkles className="w-4 h-4 mr-1" />
-                                            {t(
-                                              "assignmentDetail.buttons.batchGrade",
-                                            )}
-                                          </Button>
-                                        )}
+                                          "rearrangement" &&
+                                          assignment.practice_mode !==
+                                            "word_selection" && (
+                                            <Button
+                                              variant="default"
+                                              size="sm"
+                                              className="bg-purple-600 hover:bg-purple-700 text-white h-10 min-h-10"
+                                              onClick={() => {
+                                                setBatchGradingModal({
+                                                  open: true,
+                                                  assignmentId: assignment.id,
+                                                  classroomId: Number(id),
+                                                });
+                                              }}
+                                            >
+                                              <Sparkles className="w-4 h-4 mr-1" />
+                                              {t(
+                                                "assignmentDetail.buttons.batchGrade",
+                                              )}
+                                            </Button>
+                                          )}
                                       </div>
                                     </td>
                                   </tr>
@@ -1908,8 +1929,8 @@ export default function ClassroomDetail({
                   />
                 ) : selectedContent.type?.toLowerCase() === "sentence_making" ||
                   selectedContent.type?.toLowerCase() === "vocabulary_set" ? (
-                  /* SentenceMakingPanel has its own save button */
-                  <SentenceMakingPanel
+                  /* VocabularySetPanel has its own save button */
+                  <VocabularySetPanel
                     content={selectedContent as ReadingAssessmentContent}
                     editingContent={
                       editingContent as ReadingAssessmentContent | undefined
@@ -2377,10 +2398,7 @@ export default function ClassroomDetail({
                 content={undefined}
                 editingContent={{ id: editorContentId || undefined }}
                 lessonId={editorLessonId}
-                onUpdateContent={(updatedContent) => {
-                  // Handle content update if needed
-                  console.log("Content updated:", updatedContent);
-                }}
+                onUpdateContent={() => {}}
                 onSave={async () => {
                   // ReadingAssessmentPanel handles save internally
                   // Just close the editor on successful save
@@ -2403,47 +2421,46 @@ export default function ClassroomDetail({
       )}
 
       {/* Sentence Making Editor */}
-      {showSentenceMakingEditor && sentenceMakingLessonId && (
+      {showVocabularySetEditor && vocabularySetLessonId && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">句子模組設定</h2>
+              <h2 className="text-2xl font-bold">
+                {t("vocabularySet.dialogTitle")}
+              </h2>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => {
-                  setShowSentenceMakingEditor(false);
-                  setSentenceMakingLessonId(null);
-                  setSentenceMakingContentId(null);
+                  setShowVocabularySetEditor(false);
+                  setVocabularySetLessonId(null);
+                  setVocabularySetContentId(null);
                 }}
               >
                 <X className="h-5 w-5" />
               </Button>
             </div>
             <div className="flex-1 overflow-hidden">
-              <SentenceMakingPanel
+              <VocabularySetPanel
                 content={undefined}
-                editingContent={{ id: sentenceMakingContentId ?? undefined }}
-                lessonId={sentenceMakingLessonId}
-                onUpdateContent={(updatedContent) => {
-                  // Handle content update if needed
-                  console.log("Content updated:", updatedContent);
-                }}
+                editingContent={{ id: vocabularySetContentId ?? undefined }}
+                lessonId={vocabularySetLessonId}
+                onUpdateContent={() => {}}
                 onSave={async () => {
-                  // SentenceMakingPanel handles save internally
+                  // VocabularySetPanel handles save internally
                   // Just close the editor on successful save
-                  setShowSentenceMakingEditor(false);
-                  setSentenceMakingLessonId(null);
-                  setSentenceMakingContentId(null);
+                  setShowVocabularySetEditor(false);
+                  setVocabularySetLessonId(null);
+                  setVocabularySetContentId(null);
                   await refreshPrograms();
                   toast.success("內容已成功儲存");
                 }}
                 onCancel={() => {
-                  setShowSentenceMakingEditor(false);
-                  setSentenceMakingLessonId(null);
-                  setSentenceMakingContentId(null);
+                  setShowVocabularySetEditor(false);
+                  setVocabularySetLessonId(null);
+                  setVocabularySetContentId(null);
                 }}
-                isCreating={!sentenceMakingContentId}
+                isCreating={!vocabularySetContentId}
               />
             </div>
           </div>

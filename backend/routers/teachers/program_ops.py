@@ -85,7 +85,7 @@ async def get_teacher_programs(
                 contents_data = []
                 if lesson.contents:
                     for content in sorted(lesson.contents, key=lambda x: x.order_index):
-                        if content.is_active:
+                        if content.is_active and not content.is_assignment_copy:
                             # 將 content_items 轉換成舊格式 items
                             items_data = []
                             if content.content_items:
@@ -390,7 +390,8 @@ async def get_program(
                     for content in sorted(
                         lesson.contents or [], key=lambda x: x.order_index
                     )
-                    if content.is_active  # Filter by is_active
+                    if content.is_active
+                    and not content.is_assignment_copy  # Filter out assignment copies
                 ],
             }
             for lesson in sorted(program.lessons or [], key=lambda x: x.order_index)

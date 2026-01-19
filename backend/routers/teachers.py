@@ -1,4 +1,5 @@
 import random
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, selectinload, joinedload
@@ -36,6 +37,8 @@ from typing import List, Optional, Dict, Any  # noqa: F401
 from datetime import date, datetime, timedelta, timezone  # noqa: F401
 from services.translation import translation_service
 from services.quota_analytics_service import QuotaAnalyticsService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/teachers", tags=["teachers"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
@@ -2624,18 +2627,43 @@ async def create_content(
             word_count = count_words(item_text)
             max_errors = calculate_max_errors(word_count)
 
+            # 準備 item_metadata（只儲存附加資訊，不重複儲存翻譯文字）
+            # - translation 欄位是翻譯的唯一來源
+            # - metadata 只存語言資訊和詞性等附加欄位
+            metadata = {}
+            if "parts_of_speech" in item_data:
+                metadata["parts_of_speech"] = item_data["parts_of_speech"]
+            if "vocabulary_translation_lang" in item_data:
+                metadata["vocabulary_translation_lang"] = item_data[
+                    "vocabulary_translation_lang"
+                ]
+            if "example_sentence_translation_lang" in item_data:
+                metadata["example_sentence_translation_lang"] = item_data[
+                    "example_sentence_translation_lang"
+                ]
+            # 英文釋義（雙語支援：當主翻譯是中文時，額外儲存英文釋義）
+            if "english_definition" in item_data and item_data["english_definition"]:
+                metadata["english_definition"] = item_data["english_definition"]
+
+            # 取得翻譯值（優先使用 definition，向後相容 translation）
+            translation_value = item_data.get("definition") or item_data.get(
+                "translation", ""
+            )
+
             content_item = ContentItem(
                 content_id=content.id,
                 order_index=idx,
                 text=item_text,
-                translation=item_data.get("translation", ""),
+                translation=translation_value,
                 audio_url=item_data.get("audio_url"),
+                image_url=item_data.get("image_url"),
                 example_sentence=item_data.get("example_sentence"),
                 example_sentence_translation=item_data.get(
                     "example_sentence_translation"
                 ),
                 word_count=word_count,
                 max_errors=max_errors,
+                item_metadata=metadata,
             )
             db.add(content_item)
             items_created.append(
@@ -2648,6 +2676,49 @@ async def create_content(
                     "max_errors": max_errors,
                 }
             )
+
+    # 🔥 Phase 2: 單字集建立時預先生成干擾選項
+    if content_type == ContentType.VOCABULARY_SET and content_data.items:
+        # Flush to ensure content items have IDs
+        db.flush()
+
+        # Fetch all content items with translations
+        items_for_distractors = (
+            db.query(ContentItem)
+            .filter(ContentItem.content_id == content.id)
+            .filter(ContentItem.translation.isnot(None))
+            .filter(ContentItem.translation != "")
+            .order_by(ContentItem.order_index)
+            .all()
+        )
+
+        if items_for_distractors:
+            # Prepare words data for batch generation
+            words_data = [
+                {"word": item.text, "translation": item.translation}
+                for item in items_for_distractors
+            ]
+
+            try:
+                # Generate distractors in batch using OpenAI (2個AI生成，1個從同作業其他單字取)
+                all_distractors = await translation_service.batch_generate_distractors(
+                    words_data, count=2
+                )
+
+                # Update each content item with its distractors
+                for i, item in enumerate(items_for_distractors):
+                    if i < len(all_distractors):
+                        item.distractors = all_distractors[i]
+
+                logger.info(
+                    f"Generated distractors for {len(items_for_distractors)} vocabulary items "
+                    f"in new content {content.id}"
+                )
+            except Exception as e:
+                logger.error(
+                    f"Failed to generate distractors for new content {content.id}: {e}"
+                )
+                # Continue without distractors - students.py will fallback to runtime generation
 
     db.commit()
 
@@ -2749,7 +2820,24 @@ async def get_content_detail(
                 )
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
+                # 新的統一翻譯欄位
+                "vocabulary_translation": item.item_metadata.get(
+                    "vocabulary_translation", ""
+                )
+                if item.item_metadata
+                else "",
+                "vocabulary_translation_lang": item.item_metadata.get(
+                    "vocabulary_translation_lang", "chinese"
+                )
+                if item.item_metadata
+                else "chinese",
+                "example_sentence_translation_lang": item.item_metadata.get(
+                    "example_sentence_translation_lang", "chinese"
+                )
+                if item.item_metadata
+                else "chinese",
                 "audio_url": item.audio_url,
+                "image_url": item.image_url,
                 "example_sentence": item.example_sentence,
                 "example_sentence_translation": item.example_sentence_translation,
                 "created_at": item.created_at.isoformat() if item.created_at else None,
@@ -2922,7 +3010,9 @@ async def update_content(
                 if not isinstance(item_data, dict):
                     continue
 
-                # 準備 metadata
+                # 準備 metadata（只儲存附加資訊，不重複儲存翻譯文字）
+                # - translation 欄位是翻譯的唯一來源
+                # - metadata 只存語言資訊、詞性、選項等附加欄位
                 metadata = {}
                 if "options" in item_data:
                     metadata["options"] = item_data["options"]
@@ -2930,17 +3020,22 @@ async def update_content(
                     metadata["correct_answer"] = item_data["correct_answer"]
                 if "question_type" in item_data:
                     metadata["question_type"] = item_data["question_type"]
-
-                # 處理雙語翻譯支援
-                if "definition" in item_data:
-                    metadata["chinese_translation"] = item_data["definition"]
-                if "translation" in item_data and item_data["translation"]:
-                    if item_data.get("selectedLanguage") == "english":
-                        metadata["english_definition"] = item_data["translation"]
-                if "english_definition" in item_data:
+                if "parts_of_speech" in item_data:
+                    metadata["parts_of_speech"] = item_data["parts_of_speech"]
+                if "vocabulary_translation_lang" in item_data:
+                    metadata["vocabulary_translation_lang"] = item_data[
+                        "vocabulary_translation_lang"
+                    ]
+                if "example_sentence_translation_lang" in item_data:
+                    metadata["example_sentence_translation_lang"] = item_data[
+                        "example_sentence_translation_lang"
+                    ]
+                # 英文釋義（雙語支援：當主翻譯是中文時，額外儲存英文釋義）
+                if (
+                    "english_definition" in item_data
+                    and item_data["english_definition"]
+                ):
                     metadata["english_definition"] = item_data["english_definition"]
-                if "selectedLanguage" in item_data:
-                    metadata["selected_language"] = item_data["selectedLanguage"]
 
                 translation_value = item_data.get("definition") or item_data.get(
                     "translation", ""
@@ -2983,6 +3078,7 @@ async def update_content(
                     matched_item.text = new_text
                     matched_item.translation = translation_value
                     matched_item.audio_url = new_audio_url
+                    matched_item.image_url = item_data.get("image_url")
                     matched_item.example_sentence = item_data.get("example_sentence")
                     matched_item.example_sentence_translation = item_data.get(
                         "example_sentence_translation"
@@ -2996,6 +3092,7 @@ async def update_content(
                         text=new_text,
                         translation=translation_value,
                         audio_url=new_audio_url,
+                        image_url=item_data.get("image_url"),
                         example_sentence=item_data.get("example_sentence"),
                         example_sentence_translation=item_data.get(
                             "example_sentence_translation"
@@ -3073,7 +3170,7 @@ async def update_content(
             # 創建新的 ContentItem
             for idx, item_data in enumerate(update_data.items):
                 if isinstance(item_data, dict):
-                    # Store additional fields in item_metadata
+                    # 準備 metadata（只儲存附加資訊，不重複儲存翻譯文字）
                     metadata = {}
                     if "options" in item_data:
                         metadata["options"] = item_data["options"]
@@ -3081,17 +3178,22 @@ async def update_content(
                         metadata["correct_answer"] = item_data["correct_answer"]
                     if "question_type" in item_data:
                         metadata["question_type"] = item_data["question_type"]
-
-                    # 處理雙語翻譯支援
-                    if "definition" in item_data:
-                        metadata["chinese_translation"] = item_data["definition"]
-                    if "translation" in item_data and item_data["translation"]:
-                        if item_data.get("selectedLanguage") == "english":
-                            metadata["english_definition"] = item_data["translation"]
-                    if "english_definition" in item_data:
+                    if "parts_of_speech" in item_data:
+                        metadata["parts_of_speech"] = item_data["parts_of_speech"]
+                    if "vocabulary_translation_lang" in item_data:
+                        metadata["vocabulary_translation_lang"] = item_data[
+                            "vocabulary_translation_lang"
+                        ]
+                    if "example_sentence_translation_lang" in item_data:
+                        metadata["example_sentence_translation_lang"] = item_data[
+                            "example_sentence_translation_lang"
+                        ]
+                    # 英文釋義（雙語支援）
+                    if (
+                        "english_definition" in item_data
+                        and item_data["english_definition"]
+                    ):
                         metadata["english_definition"] = item_data["english_definition"]
-                    if "selectedLanguage" in item_data:
-                        metadata["selected_language"] = item_data["selectedLanguage"]
 
                     translation_value = item_data.get("definition") or item_data.get(
                         "translation", ""
@@ -3103,6 +3205,11 @@ async def update_content(
                         text=item_data.get("text", ""),
                         translation=translation_value,
                         audio_url=item_data.get("audio_url"),
+                        image_url=item_data.get("image_url"),
+                        example_sentence=item_data.get("example_sentence"),
+                        example_sentence_translation=item_data.get(
+                            "example_sentence_translation"
+                        ),
                         item_metadata=metadata,
                     )
                     db.add(content_item)
@@ -3118,6 +3225,50 @@ async def update_content(
         content.level = update_data.level
     if update_data.tags is not None:
         content.tags = update_data.tags
+
+    # 🔥 Phase 2: 單字集儲存時預先生成干擾選項
+    # 這樣學生作答時就不需要等待 OpenAI API (2-8 秒)
+    if content.type == ContentType.VOCABULARY_SET and update_data.items is not None:
+        # Flush to ensure content items have IDs
+        db.flush()
+
+        # Fetch all content items with translations
+        items_for_distractors = (
+            db.query(ContentItem)
+            .filter(ContentItem.content_id == content.id)
+            .filter(ContentItem.translation.isnot(None))
+            .filter(ContentItem.translation != "")
+            .order_by(ContentItem.order_index)
+            .all()
+        )
+
+        if items_for_distractors:
+            # Prepare words data for batch generation
+            words_data = [
+                {"word": item.text, "translation": item.translation}
+                for item in items_for_distractors
+            ]
+
+            try:
+                # Generate distractors in batch using OpenAI (2個AI生成，1個從同作業其他單字取)
+                all_distractors = await translation_service.batch_generate_distractors(
+                    words_data, count=2
+                )
+
+                # Update each content item with its distractors
+                for i, item in enumerate(items_for_distractors):
+                    if i < len(all_distractors):
+                        item.distractors = all_distractors[i]
+
+                logger.info(
+                    f"Generated distractors for {len(items_for_distractors)} vocabulary items "
+                    f"in content {content.id}"
+                )
+            except Exception as e:
+                logger.error(
+                    f"Failed to generate distractors for content {content.id}: {e}"
+                )
+                # Continue without distractors - students.py will fallback to runtime generation
 
     db.commit()
     db.refresh(content)
@@ -3143,7 +3294,24 @@ async def update_content(
                 )
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
+                # 新的統一翻譯欄位
+                "vocabulary_translation": item.item_metadata.get(
+                    "vocabulary_translation", ""
+                )
+                if item.item_metadata
+                else "",
+                "vocabulary_translation_lang": item.item_metadata.get(
+                    "vocabulary_translation_lang", "chinese"
+                )
+                if item.item_metadata
+                else "chinese",
+                "example_sentence_translation_lang": item.item_metadata.get(
+                    "example_sentence_translation_lang", "chinese"
+                )
+                if item.item_metadata
+                else "chinese",
                 "audio_url": item.audio_url,
+                "image_url": item.image_url,
                 "example_sentence": item.example_sentence,
                 "example_sentence_translation": item.example_sentence_translation,
                 "options": item.item_metadata.get("options", [])
@@ -3244,7 +3412,7 @@ async def translate_text(
         )
         return {"original": request.text, "translation": translation}
     except Exception as e:
-        print(f"Translation error: {e}")
+        logger.error("Translation error: %s", e)
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
@@ -3263,7 +3431,7 @@ async def translate_with_pos(
             "parts_of_speech": result["parts_of_speech"],
         }
     except Exception as e:
-        print(f"Translate with POS error: {e}")
+        logger.error("Translate with POS error: %s", e)
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
@@ -3279,7 +3447,7 @@ async def batch_translate(
         )
         return {"originals": request.texts, "translations": translations}
     except Exception as e:
-        print(f"Batch translation error: {e}")
+        logger.error("Batch translation error: %s", e)
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
@@ -3295,7 +3463,7 @@ async def batch_translate_with_pos(
         )
         return {"originals": request.texts, "results": results}
     except Exception as e:
-        print(f"Batch translate with POS error: {e}")
+        logger.error("Batch translate with POS error: %s", e)
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
@@ -3324,7 +3492,7 @@ async def generate_sentences(
         )
         return {"sentences": sentences}
     except Exception as e:
-        print(f"Generate sentences error: {e}")
+        logger.error("Generate sentences error: %s", e)
         raise HTTPException(status_code=500, detail="Generate sentences failed")
 
 
@@ -3363,7 +3531,7 @@ async def generate_tts(
 
         return {"audio_url": audio_url}
     except Exception as e:
-        print(f"TTS error: {e}")
+        logger.error("TTS error: %s", e)
         raise HTTPException(status_code=500, detail="TTS generation failed")
 
 
@@ -3391,8 +3559,8 @@ async def batch_generate_tts(
         import traceback
 
         error_trace = traceback.format_exc()
-        print(f"Batch TTS error: {e}")
-        print(f"Traceback: {error_trace}")
+        logger.error("Batch TTS error: %s", e)
+        logger.error("Traceback: %s", error_trace)
         # 返回更詳細的錯誤訊息（僅在開發環境）
         import os
 
@@ -3419,7 +3587,7 @@ async def get_tts_voices(
 
         return {"voices": voices}
     except Exception as e:
-        print(f"Get voices error: {e}")
+        logger.error("Get voices error: %s", e)
         raise HTTPException(status_code=500, detail="Failed to get voices")
 
 
@@ -3486,8 +3654,75 @@ async def upload_audio(
     except HTTPException as e:
         raise e
     except Exception as e:
-        print(f"Audio upload error: {e}")
+        logger.error("Audio upload error: %s", e)
         raise HTTPException(status_code=500, detail="Audio upload failed")
+
+
+# ============ Image Upload Endpoints ============
+@router.post("/upload/image")
+async def upload_image(
+    file: UploadFile = File(...),
+    content_id: Optional[int] = Form(None),
+    item_index: Optional[int] = Form(None),
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """Upload image file for vocabulary set items
+
+    Args:
+        file: Image file (jpg, png, gif, webp)
+        content_id: Content ID (for tracking which vocabulary set)
+        item_index: Item index (for tracking which word)
+    """
+    try:
+        from services.image_upload import get_image_upload_service
+
+        image_service = get_image_upload_service()
+
+        # If content_id is provided, verify teacher owns this content
+        if content_id:
+            content = (
+                db.query(Content)
+                .filter(
+                    Content.id == content_id,
+                    Content.lesson.has(
+                        Lesson.program.has(Program.teacher_id == current_teacher.id)
+                    ),
+                )
+                .first()
+            )
+
+            if not content:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Content not found or access denied",
+                )
+
+            # If updating existing item, delete old image
+            if item_index is not None:
+                content_items = (
+                    db.query(ContentItem)
+                    .filter(ContentItem.content_id == content_id)
+                    .order_by(ContentItem.order_index)
+                    .all()
+                )
+
+                if content_items and item_index < len(content_items):
+                    old_image_url = content_items[item_index].image_url
+                    if old_image_url:
+                        image_service.delete_image(old_image_url)
+
+        # Upload new image
+        image_url = await image_service.upload_image(
+            file, content_id=content_id, item_index=item_index
+        )
+
+        return {"image_url": image_url}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error("Image upload error: %s", e)
+        raise HTTPException(status_code=500, detail="Image upload failed")
 
 
 # ============ Teacher Assignment Preview API ============
@@ -3574,6 +3809,9 @@ async def get_assignment_preview(
                     "text": item.text,
                     "translation": item.translation,
                     "audio_url": item.audio_url,
+                    "image_url": item.image_url,  # 修復：添加圖片 URL
+                    "part_of_speech": item.part_of_speech,
+                    "order_index": item.order_index,
                     "example_sentence": item.example_sentence,
                     "example_sentence_translation": item.example_sentence_translation,
                     "recording_url": None,  # 預覽模式沒有學生錄音
@@ -4101,3 +4339,305 @@ async def get_quota_usage_analytics(
     )
 
     return analytics
+
+
+# ============ Word Reading Preview API ============
+
+
+@router.get("/assignments/{assignment_id}/preview/vocabulary/activities")
+async def preview_vocabulary_activities(
+    assignment_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    預覽模式專用：取得單字朗讀練習資料
+
+    - 供老師預覽示範用
+    - 不需要 StudentAssignment，直接從 Assignment 讀取
+    - 返回格式與學生端 API 相同
+    """
+    # 取得作業（確認老師有權限）
+    assignment = (
+        db.query(Assignment)
+        .join(Classroom)
+        .filter(
+            Assignment.id == assignment_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 確認是單字朗讀模式
+    if assignment.practice_mode != "word_reading":
+        raise HTTPException(
+            status_code=400, detail="This assignment is not in word_reading mode"
+        )
+
+    # 取得所有內容項目
+    content_items = (
+        db.query(ContentItem)
+        .join(Content)
+        .join(AssignmentContent)
+        .filter(AssignmentContent.assignment_id == assignment.id)
+        .order_by(ContentItem.order_index)
+        .all()
+    )
+
+    # 構建 items 資料（預覽模式沒有學生進度）
+    items = []
+    for item in content_items:
+        item_data = {
+            "id": item.id,
+            "text": item.text,
+            "translation": item.translation,
+            "audio_url": item.audio_url,
+            "image_url": item.image_url,
+            "part_of_speech": item.part_of_speech,
+            "order_index": item.order_index,
+            "recording_url": None,  # 預覽模式沒有學生錄音
+        }
+        items.append(item_data)
+
+    return {
+        "assignment_id": assignment_id,
+        "title": assignment.title,
+        "status": "preview",
+        "practice_mode": "word_reading",
+        "show_translation": assignment.show_translation
+        if assignment.show_translation is not None
+        else True,
+        "show_image": assignment.show_image
+        if assignment.show_image is not None
+        else True,
+        "time_limit_per_question": assignment.time_limit_per_question or 0,
+        "total_items": len(items),
+        "items": items,
+    }
+
+
+# ============ Word Selection Preview API ============
+
+
+@router.get("/assignments/{assignment_id}/preview/word-selection-start")
+async def preview_word_selection_start(
+    assignment_id: int,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    預覽模式專用：取得單字選擇練習資料
+
+    - 供老師預覽示範用
+    - 不需要 StudentAssignment，直接從 Assignment 讀取
+    - 使用預生成的干擾選項（如果有的話）
+    """
+    from services.translation import translation_service
+
+    # 取得作業（確認老師有權限）
+    assignment = (
+        db.query(Assignment)
+        .join(Classroom)
+        .filter(
+            Assignment.id == assignment_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # 確認是單字選擇模式
+    if assignment.practice_mode != "word_selection":
+        raise HTTPException(
+            status_code=400, detail="This assignment is not in word_selection mode"
+        )
+
+    # 取得所有內容項目
+    content_items = (
+        db.query(ContentItem)
+        .join(Content)
+        .join(AssignmentContent)
+        .filter(AssignmentContent.assignment_id == assignment.id)
+        .order_by(ContentItem.order_index)
+        .all()
+    )
+
+    if not content_items:
+        raise HTTPException(
+            status_code=404, detail="No vocabulary items found for this assignment"
+        )
+
+    # 記錄作業總單字數（在限制之前）
+    total_words_in_assignment = len(content_items)
+
+    # 如果需要打亂順序
+    if assignment.shuffle_questions:
+        random.shuffle(content_items)
+
+    # 限制為 10 個單字（與學生端一致）
+    content_items = content_items[:10]
+
+    # 收集需要生成干擾選項的項目
+    items_needing_generation = [item for item in content_items if not item.distractors]
+
+    # 如果有需要生成的，批量生成
+    if items_needing_generation:
+        words_for_distractors = [
+            {"word": item.text, "translation": item.translation or ""}
+            for item in items_needing_generation
+        ]
+        try:
+            # 2個AI生成，1個從同作業其他單字取
+            generated = await translation_service.batch_generate_distractors(
+                words_for_distractors, count=2
+            )
+            for i, item in enumerate(items_needing_generation):
+                if i < len(generated):
+                    item._generated_distractors = generated[i]
+        except Exception as e:
+            logger.error(f"Failed to generate distractors for preview: {e}")
+            for item in items_needing_generation:
+                item._generated_distractors = ["選項A", "選項B", "選項C"]
+
+    # 建立回應資料
+    words_with_options = []
+
+    # 收集所有單字的翻譯，用於交叉干擾（從同作業其他單字取翻譯）
+    all_translations = {
+        item.translation.lower().strip(): item.translation
+        for item in content_items
+        if item.translation
+    }
+
+    for item in content_items:
+        correct_answer = item.translation or ""
+
+        # 使用預生成的或剛生成的干擾選項
+        if item.distractors:
+            ai_distractors = item.distractors
+        elif hasattr(item, "_generated_distractors"):
+            ai_distractors = item._generated_distractors
+        else:
+            ai_distractors = []
+
+        # 用於去重的集合
+        seen = {correct_answer.lower().strip()}
+        final_distractors = []
+
+        # Step 1: 從同作業其他單字隨機抽取 1 個翻譯作為干擾項
+        other_translations = [
+            t
+            for key, t in all_translations.items()
+            if key != correct_answer.lower().strip()
+        ]
+        if other_translations:
+            sibling_distractor = random.choice(other_translations)
+            if sibling_distractor.lower().strip() not in seen:
+                final_distractors.append(sibling_distractor)
+                seen.add(sibling_distractor.lower().strip())
+
+        # Step 2: 加入 AI 生成的干擾項（最多 2 個）
+        for d in ai_distractors:
+            d_normalized = d.lower().strip()
+            if d_normalized not in seen and d.strip():
+                seen.add(d_normalized)
+                final_distractors.append(d)
+            if len(final_distractors) >= 3:
+                break
+
+        # Step 3: Fallback 確保有 3 個干擾選項
+        fallback_options = ["選項A", "選項B", "選項C", "選項D", "選項E"]
+        fallback_idx = 0
+        while len(final_distractors) < 3:
+            fallback = fallback_options[fallback_idx]
+            if fallback.lower() not in seen:
+                final_distractors.append(fallback)
+                seen.add(fallback.lower())
+            fallback_idx += 1
+
+        # 建立選項陣列並打亂
+        options = [correct_answer] + final_distractors[:3]
+        random.shuffle(options)
+
+        words_with_options.append(
+            {
+                "content_item_id": item.id,
+                "text": item.text,
+                "translation": correct_answer,
+                "audio_url": item.audio_url,
+                "image_url": item.image_url,
+                "memory_strength": 0,
+                "options": options,
+            }
+        )
+
+    return {
+        "session_id": None,  # 預覽模式不建立 session
+        "words": words_with_options,
+        "total_words": total_words_in_assignment,  # 作業總單字數，非當次練習數
+        "current_proficiency": 0,
+        "target_proficiency": assignment.target_proficiency or 80,
+        "show_word": assignment.show_word if assignment.show_word is not None else True,
+        "show_image": (
+            assignment.show_image if assignment.show_image is not None else True
+        ),
+        "play_audio": assignment.play_audio or False,
+        "time_limit_per_question": assignment.time_limit_per_question,
+    }
+
+
+@router.post("/assignments/{assignment_id}/preview/word-selection-answer")
+async def preview_word_selection_answer(
+    assignment_id: int,
+    request: dict,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    預覽模式專用：提交單字選擇答案（不儲存）
+
+    - 只驗證答案是否正確
+    - 不更新任何資料庫記錄
+    - 回傳模擬的結果
+    """
+    # 取得作業（確認老師有權限）
+    assignment = (
+        db.query(Assignment)
+        .join(Classroom)
+        .filter(
+            Assignment.id == assignment_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    content_item_id = request.get("content_item_id")
+    selected_answer = request.get("selected_answer")
+
+    # 取得 content item 驗證答案
+    content_item = (
+        db.query(ContentItem).filter(ContentItem.id == content_item_id).first()
+    )
+
+    if not content_item:
+        raise HTTPException(status_code=404, detail="Content item not found")
+
+    is_correct = selected_answer == content_item.translation
+
+    # 回傳模擬結果（預覽模式不更新 memory_strength）
+    return {
+        "is_correct": is_correct,
+        "correct_answer": content_item.translation,
+        "new_memory_strength": 0.5 if is_correct else 0,  # 模擬值
+        "current_mastery": 50.0,  # 模擬值
+        "target_mastery": assignment.target_proficiency or 80,
+        "achieved": False,
+    }

@@ -286,26 +286,30 @@ export default function StudentAssignmentList() {
         </CardHeader>
 
         <CardContent className="p-4 sm:p-5 pt-0 space-y-4">
-          {/* Progress */}
-          {assignment.status !== "NOT_STARTED" && (
-            <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                <span className="text-sm sm:text-base text-gray-600 font-medium">
-                  {t("studentAssignmentList.progress.title")}
-                </span>
-                <span className="text-sm sm:text-base font-semibold text-gray-900">
-                  {t("studentAssignmentList.progress.activities", {
-                    completed: assignment.completed_count || 0,
-                    total: assignment.content_count || 1,
-                  })}
-                </span>
+          {/* Progress - 單字選擇已完成時不顯示（熟悉度已在下方顯示） */}
+          {assignment.status !== "NOT_STARTED" &&
+            !(
+              assignment.practice_mode === "word_selection" &&
+              assignment.status === "GRADED"
+            ) && (
+              <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                  <span className="text-sm sm:text-base text-gray-600 font-medium">
+                    {t("studentAssignmentList.progress.title")}
+                  </span>
+                  <span className="text-sm sm:text-base font-semibold text-gray-900">
+                    {t("studentAssignmentList.progress.activities", {
+                      completed: assignment.completed_count || 0,
+                      total: assignment.content_count || 1,
+                    })}
+                  </span>
+                </div>
+                <Progress
+                  value={assignment.progress_percentage || 0}
+                  className="h-2.5 bg-gray-200"
+                />
               </div>
-              <Progress
-                value={assignment.progress_percentage || 0}
-                className="h-2.5 bg-gray-200"
-              />
-            </div>
-          )}
+            )}
 
           {/* Details */}
           <div className="flex flex-col sm:flex-row flex-wrap gap-3">
@@ -362,62 +366,71 @@ export default function StudentAssignmentList() {
             )}
           </div>
 
-          {/* Score */}
+          {/* Score / Proficiency */}
           {assignment.score !== undefined && assignment.status === "GRADED" && (
             <div className="flex items-center gap-2 pt-2">
               <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
               <span className="text-sm sm:text-base font-medium text-green-600">
-                {t("studentAssignmentList.score.label", {
-                  score: assignment.score,
-                })}
+                {assignment.practice_mode === "word_selection"
+                  ? t("studentAssignmentList.proficiency.label", {
+                      proficiency: assignment.score.toFixed(1),
+                    })
+                  : t("studentAssignmentList.score.label", {
+                      score: assignment.score,
+                    })}
               </span>
             </div>
           )}
 
-          {/* Action Button */}
-          <div className="pt-4 mt-3 border-t border-gray-100">
-            <Button
-              onClick={() => handleStartAssignment(assignment.id)}
-              disabled={
-                !canStart &&
-                assignment.status !== "GRADED" &&
-                assignment.status !== "SUBMITTED" &&
-                assignment.status !== "RETURNED" &&
-                assignment.status !== "RESUBMITTED"
-              }
-              className={`w-full py-2.5 sm:py-3 text-sm sm:text-base font-medium transition-all ${
-                canStart || assignment.status === "RETURNED"
-                  ? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white shadow-sm hover:shadow-md"
-                  : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-              }`}
-              data-testid="assignment-action-button"
-            >
-              {assignment.status === "NOT_STARTED" && (
-                <>
-                  {t("studentAssignmentList.buttons.start")}{" "}
-                  <ChevronRight className="ml-1 h-4 w-4 inline" />
-                </>
-              )}
-              {assignment.status === "IN_PROGRESS" && (
-                <>
-                  {t("studentAssignmentList.buttons.continue")}{" "}
-                  <ChevronRight className="ml-1 h-4 w-4 inline" />
-                </>
-              )}
-              {assignment.status === "SUBMITTED" &&
-                t("studentAssignmentList.buttons.view")}
-              {assignment.status === "GRADED" &&
-                t("studentAssignmentList.buttons.viewResults")}
-              {assignment.status === "RETURNED" && (
-                <>
-                  {t("studentAssignmentList.buttons.resubmit")}{" "}
-                  <AlertCircle className="ml-1 h-4 w-4 inline" />
-                </>
-              )}
-              {assignment.status === "RESUBMITTED" &&
-                t("studentAssignmentList.buttons.view")}
-            </Button>
-          </div>
+          {/* Action Button - 單字選擇已完成時不顯示按鈕 */}
+          {!(
+            assignment.status === "GRADED" &&
+            assignment.practice_mode === "word_selection"
+          ) && (
+            <div className="pt-4 mt-3 border-t border-gray-100">
+              <Button
+                onClick={() => handleStartAssignment(assignment.id)}
+                disabled={
+                  !canStart &&
+                  assignment.status !== "GRADED" &&
+                  assignment.status !== "SUBMITTED" &&
+                  assignment.status !== "RETURNED" &&
+                  assignment.status !== "RESUBMITTED"
+                }
+                className={`w-full py-2.5 sm:py-3 text-sm sm:text-base font-medium transition-all ${
+                  canStart || assignment.status === "RETURNED"
+                    ? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white shadow-sm hover:shadow-md"
+                    : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                }`}
+                data-testid="assignment-action-button"
+              >
+                {assignment.status === "NOT_STARTED" && (
+                  <>
+                    {t("studentAssignmentList.buttons.start")}{" "}
+                    <ChevronRight className="ml-1 h-4 w-4 inline" />
+                  </>
+                )}
+                {assignment.status === "IN_PROGRESS" && (
+                  <>
+                    {t("studentAssignmentList.buttons.continue")}{" "}
+                    <ChevronRight className="ml-1 h-4 w-4 inline" />
+                  </>
+                )}
+                {assignment.status === "SUBMITTED" &&
+                  t("studentAssignmentList.buttons.view")}
+                {assignment.status === "GRADED" &&
+                  t("studentAssignmentList.buttons.viewResults")}
+                {assignment.status === "RETURNED" && (
+                  <>
+                    {t("studentAssignmentList.buttons.resubmit")}{" "}
+                    <AlertCircle className="ml-1 h-4 w-4 inline" />
+                  </>
+                )}
+                {assignment.status === "RESUBMITTED" &&
+                  t("studentAssignmentList.buttons.view")}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     );

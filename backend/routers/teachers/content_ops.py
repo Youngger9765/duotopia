@@ -1,9 +1,9 @@
 """
 Content Ops operations for teachers.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, Form, UploadFile
 from sqlalchemy.orm import Session, selectinload, joinedload
-from sqlalchemy import func
+from sqlalchemy import func, text
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 
@@ -45,7 +45,11 @@ async def get_lesson_contents(
 
     contents = (
         db.query(Content)
-        .filter(Content.lesson_id == lesson_id, Content.is_active.is_(True))
+        .filter(
+            Content.lesson_id == lesson_id,
+            Content.is_active.is_(True),
+            Content.is_assignment_copy.is_(False),  # 只返回模板內容
+        )
         .options(selectinload(Content.content_items))  # 🔥 Eager load items
         .order_by(Content.order_index)
         .all()
@@ -62,6 +66,17 @@ async def get_lesson_contents(
                 "text": item.text,
                 "translation": item.translation,
                 "audio_url": item.audio_url,
+                # 例句相關欄位
+                "example_sentence": item.example_sentence,
+                "example_sentence_translation": item.example_sentence_translation,
+                "example_sentence_definition": item.example_sentence_definition,
+                # 例句重組欄位
+                "word_count": item.word_count,
+                "max_errors": item.max_errors,
+                # 單字集相關欄位
+                "image_url": item.image_url,
+                "part_of_speech": item.part_of_speech,
+                "distractors": item.distractors,
             }
             for item in content_items
         ]
@@ -69,12 +84,15 @@ async def get_lesson_contents(
         result.append(
             {
                 "id": content.id,
-                "type": content.type.value if content.type else "reading_assessment",
+                "type": content.type.value if content.type else "EXAMPLE_SENTENCES",
                 "title": content.title,
                 "items": items_data,
                 "target_wpm": content.target_wpm,
                 "target_accuracy": content.target_accuracy,
                 "order_index": content.order_index,
+                "level": content.level,
+                "tags": content.tags,
+                "is_public": content.is_public,
             }
         )
 
@@ -121,12 +139,27 @@ async def create_content(
     else:
         order_index = content_data.order_index
 
+    # 解析 content type
+    content_type_str = (
+        content_data.type.upper() if content_data.type else "EXAMPLE_SENTENCES"
+    )
+    # 處理 legacy values
+    type_mapping = {
+        "READING_ASSESSMENT": ContentType.EXAMPLE_SENTENCES,
+        "SENTENCE_MAKING": ContentType.VOCABULARY_SET,
+    }
+    try:
+        content_type = type_mapping.get(content_type_str) or ContentType(
+            content_type_str
+        )
+    except ValueError:
+        content_type = ContentType.EXAMPLE_SENTENCES
+
     # 建立 Content（不再使用 items 欄位）
     content = Content(
         lesson_id=lesson_id,
-        type=ContentType.READING_ASSESSMENT,  # Phase 1 only has this type
+        type=content_type,
         title=content_data.title,
-        # items=content_data.items,  # REMOVED - 使用 ContentItem 表
         target_wpm=content_data.target_wpm,
         target_accuracy=content_data.target_accuracy,
         order_index=order_index,
@@ -141,16 +174,48 @@ async def create_content(
     items_created = []
     if content_data.items:
         for idx, item_data in enumerate(content_data.items):
+            # 計算 word_count（如果有 example_sentence）
+            example_sentence = item_data.get("example_sentence", "")
+            word_count = len(example_sentence.split()) if example_sentence else None
+            # 根據 word_count 計算 max_errors
+            max_errors = None
+            if word_count:
+                if word_count <= 10:
+                    max_errors = 3
+                elif word_count <= 25:
+                    max_errors = 5
+                else:
+                    max_errors = 7
+
             content_item = ContentItem(
                 content_id=content.id,
                 order_index=idx,
                 text=item_data.get("text", ""),
                 translation=item_data.get("translation", ""),
                 audio_url=item_data.get("audio_url"),
+                # 例句相關欄位
+                example_sentence=example_sentence or None,
+                example_sentence_translation=item_data.get(
+                    "example_sentence_translation"
+                ),
+                example_sentence_definition=item_data.get(
+                    "example_sentence_definition"
+                ),
+                word_count=word_count,
+                max_errors=max_errors,
+                # 單字集相關欄位
+                image_url=item_data.get("image_url"),
+                part_of_speech=item_data.get("part_of_speech"),
+                distractors=item_data.get("distractors"),
             )
             db.add(content_item)
             items_created.append(
-                {"text": content_item.text, "translation": content_item.translation}
+                {
+                    "text": content_item.text,
+                    "translation": content_item.translation,
+                    "image_url": content_item.image_url,
+                    "part_of_speech": content_item.part_of_speech,
+                }
             )
 
     db.commit()
@@ -216,6 +281,13 @@ async def get_content_detail(
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
                 "audio_url": item.audio_url,
+                # 單字集相關欄位
+                "example_sentence": item.example_sentence,
+                "example_sentence_translation": item.example_sentence_translation,
+                "image_url": item.image_url,
+                "part_of_speech": item.part_of_speech,
+                "distractors": item.distractors,
+                # 時間戳記
                 "created_at": item.created_at.isoformat() if item.created_at else None,
                 "updated_at": item.updated_at.isoformat() if item.updated_at else None,
                 "content_id": item.content_id,
@@ -335,12 +407,39 @@ async def update_content(
                     "translation", ""
                 )
 
+                # 計算 word_count（如果有 example_sentence）
+                example_sentence = item_data.get("example_sentence", "")
+                word_count = len(example_sentence.split()) if example_sentence else None
+                # 根據 word_count 計算 max_errors
+                max_errors = None
+                if word_count:
+                    if word_count <= 10:
+                        max_errors = 3
+                    elif word_count <= 25:
+                        max_errors = 5
+                    else:
+                        max_errors = 7
+
                 content_item = ContentItem(
                     content_id=content.id,
                     order_index=idx,
                     text=item_data.get("text", ""),
                     translation=translation_value,
                     audio_url=item_data.get("audio_url"),
+                    # 例句相關欄位
+                    example_sentence=example_sentence or None,
+                    example_sentence_translation=item_data.get(
+                        "example_sentence_translation"
+                    ),
+                    example_sentence_definition=item_data.get(
+                        "example_sentence_definition"
+                    ),
+                    word_count=word_count,
+                    max_errors=max_errors,
+                    # 單字集相關欄位
+                    image_url=item_data.get("image_url"),
+                    part_of_speech=item_data.get("part_of_speech"),
+                    distractors=item_data.get("distractors"),
                     item_metadata=metadata,
                 )
                 db.add(content_item)
@@ -382,6 +481,17 @@ async def update_content(
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
                 "audio_url": item.audio_url,
+                # 例句相關欄位
+                "example_sentence": item.example_sentence,
+                "example_sentence_translation": item.example_sentence_translation,
+                "example_sentence_definition": item.example_sentence_definition,
+                "word_count": item.word_count,
+                "max_errors": item.max_errors,
+                # 單字集相關欄位
+                "image_url": item.image_url,
+                "part_of_speech": item.part_of_speech,
+                "distractors": item.distractors,
+                # 其他欄位
                 "options": item.item_metadata.get("options", [])
                 if item.item_metadata
                 else [],
@@ -451,3 +561,70 @@ async def delete_content(
             "note": "內容已停用但資料保留，相關作業仍可查看",
         },
     }
+
+
+# ============ Image Upload Endpoints ============
+@router.post("/upload/image")
+async def upload_image(
+    file: UploadFile = File(...),
+    content_id: Optional[int] = Form(None),
+    item_index: Optional[int] = Form(None),
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """Upload image file for vocabulary set items
+
+    Args:
+        file: Image file (jpg, png, gif, webp)
+        content_id: Content ID (for tracking which vocabulary set)
+        item_index: Item index (for tracking which word)
+    """
+    try:
+        from services.image_upload import get_image_upload_service
+
+        image_service = get_image_upload_service()
+
+        # If content_id is provided, verify teacher owns this content
+        if content_id:
+            content = (
+                db.query(Content)
+                .filter(
+                    Content.id == content_id,
+                    Content.lesson.has(
+                        Lesson.program.has(Program.teacher_id == current_teacher.id)
+                    ),
+                )
+                .first()
+            )
+
+            if not content:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Content not found or access denied",
+                )
+
+            # If updating existing item, delete old image
+            if item_index is not None:
+                content_items = (
+                    db.query(ContentItem)
+                    .filter(ContentItem.content_id == content_id)
+                    .order_by(ContentItem.order_index)
+                    .all()
+                )
+
+                if content_items and item_index < len(content_items):
+                    old_image_url = content_items[item_index].image_url
+                    if old_image_url:
+                        image_service.delete_image(old_image_url)
+
+        # Upload new image
+        image_url = await image_service.upload_image(
+            file, content_id=content_id, item_index=item_index
+        )
+
+        return {"image_url": image_url}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Image upload error: {e}")
+        raise HTTPException(status_code=500, detail="Image upload failed")

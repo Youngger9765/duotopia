@@ -14,6 +14,7 @@ from sqlalchemy import (
     Enum,
     Float,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -127,7 +128,7 @@ class Content(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False)
-    type = Column(Enum(ContentType), default=ContentType.READING_ASSESSMENT)
+    type = Column(Enum(ContentType), default=ContentType.EXAMPLE_SENTENCES)
     title = Column(String(200), nullable=False)
     order_index = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)  # 軟刪除標記
@@ -145,6 +146,14 @@ class Content(Base):
     tags = Column(JSON, default=list)  # 標籤列表
     is_public = Column(Boolean, default=False)  # 是否公開（給其他老師使用）
 
+    # 作業副本機制欄位
+    is_assignment_copy = Column(
+        Boolean, nullable=False, server_default=text("false"), default=False, index=True
+    )  # 標記是否為作業副本
+    source_content_id = Column(
+        Integer, ForeignKey("contents.id"), nullable=True, index=True
+    )  # 原始內容 ID（如果是副本）
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -153,6 +162,9 @@ class Content(Base):
     content_items = relationship(
         "ContentItem", back_populates="content", cascade="all, delete-orphan"
     )
+    source_content = relationship(
+        "Content", remote_side=[id], foreign_keys=[source_content_id]
+    )  # 原始內容（如果是副本）
 
     def __repr__(self):
         return f"<Content {self.title}>"
@@ -171,6 +183,34 @@ class ContentItem(Base):
     text = Column(Text, nullable=False)
     translation = Column(Text)
     audio_url = Column(Text)  # Example audio file
+
+    # Example sentence fields (Phase 1)
+    example_sentence = Column(Text, nullable=True)  # Example sentence in English
+    example_sentence_translation = Column(
+        Text, nullable=True
+    )  # Chinese translation of example
+    example_sentence_definition = Column(
+        Text, nullable=True
+    )  # English definition of example
+
+    # ===== 例句重組相關欄位 =====
+    # 單字數量（建立時自動計算）
+    word_count = Column(Integer, nullable=True)
+
+    # 允許錯誤次數（根據 word_count 自動計算：2-10 字 → 3 次，11-25 字 → 5 次）
+    max_errors = Column(Integer, nullable=True)
+
+    # ===== Phase 2: 單字集相關欄位 =====
+    # 單字圖片 URL（用於視覺輔助記憶）
+    image_url = Column(Text, nullable=True)
+
+    # 詞性（n., v., adj., adv., prep., conj., etc.）
+    part_of_speech = Column(String(20), nullable=True)
+
+    # 預生成的干擾選項（單字選擇練習用）
+    # 儲存格式: ["干擾項1", "干擾項2", "干擾項3"]
+    distractors = Column(JSON, nullable=True)
+
     item_metadata = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
