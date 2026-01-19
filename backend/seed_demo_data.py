@@ -8,7 +8,7 @@ sys.path.insert(0, '.')
 
 from database import SessionLocal
 from models.user import Teacher
-from models.organization import Organization, TeacherOrganization, School
+from models.organization import Organization, TeacherOrganization, School, TeacherSchool
 from models.program import Program
 from models.base import ProgramLevel
 from passlib.context import CryptContext
@@ -66,6 +66,37 @@ for school_data in schools_data:
     else:
         schools.append(existing)
         print(f"  ✓ School exists: {existing.name}")
+
+db.commit()
+
+# ========== Link owner teacher to schools ==========
+print("\n🔗 Linking owner to schools...")
+
+owner_teacher = db.query(Teacher).filter(Teacher.email == "owner@duotopia.com").first()
+if not owner_teacher:
+    print("❌ Owner teacher not found! Run seed_local_org.py first")
+    exit(1)
+
+for school in schools:
+    existing_link = db.query(TeacherSchool).filter(
+        TeacherSchool.teacher_id == owner_teacher.id,
+        TeacherSchool.school_id == school.id
+    ).first()
+
+    if not existing_link:
+        teacher_school = TeacherSchool(
+            teacher_id=owner_teacher.id,
+            school_id=school.id,
+            roles=["school_admin"],
+            is_active=True,
+            created_at=datetime.now()
+        )
+        db.add(teacher_school)
+        print(f"  ➕ Linked owner to {school.name} as school_admin")
+    else:
+        existing_link.roles = ["school_admin"]
+        existing_link.is_active = True
+        print(f"  ✓ Owner already linked to {school.name}")
 
 db.commit()
 
