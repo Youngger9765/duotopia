@@ -22,7 +22,14 @@ from models import (
     ClassroomStudent,
     Assignment,
 )
+from models.base import ProgramLevel
 from auth import verify_token
+from utils.permissions import has_school_materials_permission
+from routers.schemas.classroom import (
+    SchoolClassroomCreate,
+    SchoolClassroomUpdate,
+    AssignTeacherRequest
+)
 
 
 router = APIRouter(tags=["classroom-schools"])
@@ -395,3 +402,231 @@ async def list_school_classrooms(
         )
 
     return result
+
+
+@router.post(
+    "/api/schools/{school_id}/classrooms",
+    status_code=status.HTTP_201_CREATED,
+    response_model=ClassroomInfo
+)
+async def create_school_classroom(
+    school_id: uuid.UUID,
+    classroom_data: SchoolClassroomCreate,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Create a new classroom in school.
+    Requires school_admin role or org-level manage_materials permission.
+    """
+    # Check permission
+    if not has_school_materials_permission(teacher.id, school_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to create classroom in this school"
+        )
+
+    # Verify school exists
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="School not found"
+        )
+
+    # Verify teacher exists if provided
+    if classroom_data.teacher_id:
+        assigned_teacher = db.query(Teacher).filter(
+            Teacher.id == classroom_data.teacher_id,
+            Teacher.is_active.is_(True)
+        ).first()
+        if not assigned_teacher:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Assigned teacher not found"
+            )
+
+    # Convert level string to ProgramLevel enum
+    # Map API level strings to enum values (PREA -> PRE_A, etc.)
+    level_upper = classroom_data.level.upper()
+    level_map = {
+        "PREA": ProgramLevel.PRE_A,
+        "PRE_A": ProgramLevel.PRE_A,
+        "A1": ProgramLevel.A1,
+        "A2": ProgramLevel.A2,
+        "B1": ProgramLevel.B1,
+        "B2": ProgramLevel.B2,
+        "C1": ProgramLevel.C1,
+        "C2": ProgramLevel.C2,
+    }
+    program_level = level_map.get(level_upper, ProgramLevel.A1)
+
+    # Create classroom
+    classroom = Classroom(
+        name=classroom_data.name,
+        description=classroom_data.description,
+        level=program_level,
+        teacher_id=classroom_data.teacher_id,
+        is_active=True
+    )
+    db.add(classroom)
+    db.flush()  # Get classroom ID without committing
+
+    # Link to school
+    link = ClassroomSchool(
+        classroom_id=classroom.id,
+        school_id=school_id,
+        is_active=True
+    )
+    db.add(link)
+    db.commit()
+    db.refresh(classroom)
+
+    # Return with counts (0 for new classroom)
+    return ClassroomInfo.from_orm_with_counts(classroom, 0, 0)
+
+
+@router.put(
+    "/api/classrooms/{classroom_id}/teacher",
+    response_model=ClassroomInfo
+)
+async def assign_teacher_to_classroom(
+    classroom_id: int,
+    request: AssignTeacherRequest,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Assign or reassign teacher to classroom.
+    Classroom must belong to a school.
+    Requires school_admin or org-level permissions.
+    """
+    # Get classroom and verify it belongs to a school
+    link = db.query(ClassroomSchool).filter(
+        ClassroomSchool.classroom_id == classroom_id,
+        ClassroomSchool.is_active.is_(True)
+    ).first()
+
+    if not link:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Classroom not found in any school"
+        )
+
+    # Check permission
+    if not has_school_materials_permission(teacher.id, link.school_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to assign teacher"
+        )
+
+    classroom = db.query(Classroom).filter(Classroom.id == classroom_id).first()
+    if not classroom:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Classroom not found"
+        )
+
+    # Verify new teacher exists if provided
+    if request.teacher_id:
+        new_teacher = db.query(Teacher).filter(
+            Teacher.id == request.teacher_id,
+            Teacher.is_active.is_(True)
+        ).first()
+        if not new_teacher:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Teacher not found"
+            )
+
+    # Update assignment
+    classroom.teacher_id = request.teacher_id
+    db.commit()
+    db.refresh(classroom)
+
+    # Get counts
+    student_count = db.query(ClassroomStudent).filter(
+        ClassroomStudent.classroom_id == classroom_id
+    ).count()
+    assignment_count = db.query(Assignment).filter(
+        Assignment.classroom_id == classroom_id
+    ).count()
+
+    return ClassroomInfo.from_orm_with_counts(classroom, student_count, assignment_count)
+
+
+@router.put(
+    "/api/classrooms/{classroom_id}",
+    response_model=ClassroomInfo
+)
+async def update_classroom(
+    classroom_id: int,
+    update_data: SchoolClassroomUpdate,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Update classroom details.
+    Classroom must belong to a school.
+    Requires school_admin or org-level permissions.
+    """
+    # Get classroom and verify it belongs to a school
+    link = db.query(ClassroomSchool).filter(
+        ClassroomSchool.classroom_id == classroom_id,
+        ClassroomSchool.is_active.is_(True)
+    ).first()
+
+    if not link:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Classroom not found in any school"
+        )
+
+    # Check permission
+    if not has_school_materials_permission(teacher.id, link.school_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to update classroom"
+        )
+
+    classroom = db.query(Classroom).filter(Classroom.id == classroom_id).first()
+    if not classroom:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Classroom not found"
+        )
+
+    # Update fields
+    if update_data.name is not None:
+        classroom.name = update_data.name
+    if update_data.description is not None:
+        classroom.description = update_data.description
+    if update_data.level is not None:
+        # Convert level string to ProgramLevel enum
+        level_upper = update_data.level.upper()
+        level_map = {
+            "PREA": ProgramLevel.PRE_A,
+            "PRE_A": ProgramLevel.PRE_A,
+            "A1": ProgramLevel.A1,
+            "A2": ProgramLevel.A2,
+            "B1": ProgramLevel.B1,
+            "B2": ProgramLevel.B2,
+            "C1": ProgramLevel.C1,
+            "C2": ProgramLevel.C2,
+        }
+        classroom.level = level_map.get(level_upper, classroom.level)
+    if update_data.is_active is not None:
+        classroom.is_active = update_data.is_active
+
+    db.commit()
+    db.refresh(classroom)
+
+    # Get counts
+    student_count = db.query(ClassroomStudent).filter(
+        ClassroomStudent.classroom_id == classroom_id
+    ).count()
+    assignment_count = db.query(Assignment).filter(
+        Assignment.classroom_id == classroom_id
+    ).count()
+
+    return ClassroomInfo.from_orm_with_counts(classroom, student_count, assignment_count)

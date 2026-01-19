@@ -8,6 +8,8 @@ import MaterialsPage from "@/pages/organization/MaterialsPage";
 import OrganizationEditPage from "@/pages/organization/OrganizationEditPage";
 import SchoolDetailPage from "@/pages/organization/SchoolDetailPage";
 import SchoolMaterialsPage from "@/pages/organization/SchoolMaterialsPage";
+import SchoolClassroomsPage from "@/pages/organization/SchoolClassroomsPage";
+import SchoolTeachersPage from "@/pages/organization/SchoolTeachersPage";
 import OrganizationsListPage from "@/pages/organization/OrganizationsListPage";
 
 /**
@@ -52,6 +54,12 @@ export const organizationRoutes = (
 
     {/* School detail page */}
     <Route path="schools/:schoolId" element={<SchoolDetailPage />} />
+
+    {/* School classrooms page */}
+    <Route path="schools/:schoolId/classrooms" element={<SchoolClassroomsPage />} />
+
+    {/* School teachers page */}
+    <Route path="schools/:schoolId/teachers" element={<SchoolTeachersPage />} />
 
     {/* School materials page */}
     <Route path="schools/:schoolId/materials" element={<SchoolMaterialsPage />} />

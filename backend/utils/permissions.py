@@ -62,19 +62,34 @@ def has_school_materials_permission(
     - Otherwise: No permission
     """
     from models import School, TeacherSchool
+    from sqlalchemy import inspect
 
     school = db.query(School).filter(School.id == school_id).first()
     if not school:
         return False
 
     # Check school_admin role
-    # Use PostgreSQL JSONB '?' operator to check if array contains element
-    has_school_admin = db.query(TeacherSchool).filter(
+    # Support both PostgreSQL (JSONB) and SQLite (JSON/text) by checking in Python
+    membership = db.query(TeacherSchool).filter(
         TeacherSchool.teacher_id == teacher_id,
         TeacherSchool.school_id == school_id,
-        TeacherSchool.roles.op('?')('school_admin'),
         TeacherSchool.is_active.is_(True),
-    ).first() is not None
+    ).first()
+
+    has_school_admin = False
+    if membership and membership.roles:
+        # Check if 'school_admin' is in the roles array
+        # roles can be a list or JSON string depending on DB
+        if isinstance(membership.roles, list):
+            has_school_admin = "school_admin" in membership.roles
+        else:
+            # For JSON string (SQLite), parse it
+            import json
+            try:
+                roles_list = json.loads(membership.roles) if isinstance(membership.roles, str) else membership.roles
+                has_school_admin = "school_admin" in roles_list
+            except (json.JSONDecodeError, TypeError):
+                has_school_admin = False
 
     # Check org-level permission
     has_org_permission = has_manage_materials_permission(teacher_id, school.organization_id, db)

@@ -469,6 +469,47 @@ class ApiClient {
     });
   }
 
+  // ============ School Classroom Methods ============
+  async createSchoolClassroom(
+    schoolId: string,
+    data: {
+      name: string;
+      description?: string;
+      level: string;
+      teacher_id?: number | null;
+    }
+  ) {
+    return this.request(`/api/schools/${schoolId}/classrooms`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSchoolClassroom(
+    classroomId: number,
+    data: {
+      name?: string;
+      description?: string;
+      level?: string;
+      is_active?: boolean;
+    }
+  ) {
+    return this.request(`/api/classrooms/${classroomId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async assignTeacherToClassroom(
+    classroomId: number,
+    teacherId: number | null
+  ) {
+    return this.request(`/api/classrooms/${classroomId}/teacher`, {
+      method: "PUT",
+      body: JSON.stringify({ teacher_id: teacherId }),
+    });
+  }
+
   // ============ Student CRUD Methods ============
   async createStudent(data: {
     name: string;

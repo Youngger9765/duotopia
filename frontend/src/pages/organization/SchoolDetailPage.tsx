@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit2, School as SchoolIcon, Users, UserPlus, BookOpen, ArrowRight } from "lucide-react";
+import { Edit2, School as SchoolIcon, Users, UserPlus, BookOpen, ArrowRight, GraduationCap } from "lucide-react";
 
 interface School {
   id: string;
@@ -48,6 +48,18 @@ interface Teacher {
   created_at: string;
 }
 
+interface Classroom {
+  id: string;
+  name: string;
+  program_level: string;
+  is_active: boolean;
+  created_at: string;
+  teacher_name: string | null;
+  teacher_email: string | null;
+  student_count: number;
+  assignment_count: number;
+}
+
 export default function SchoolDetailPage() {
   const { schoolId } = useParams<{ schoolId: string }>();
   const navigate = useNavigate();
@@ -56,6 +68,7 @@ export default function SchoolDetailPage() {
   const [school, setSchool] = useState<School | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -89,9 +102,10 @@ export default function SchoolDetailPage() {
           return Array.from(newExpanded);
         });
 
-        // Fetch organization info and teachers
+        // Fetch organization info, teachers, and classrooms
         fetchOrganization(data.organization_id);
         fetchTeachers();
+        fetchClassrooms();
       } else {
         setError(`載入學校失敗：${response.status}`);
       }
@@ -146,6 +160,24 @@ export default function SchoolDetailPage() {
       }
     } catch (error) {
       console.error("Failed to fetch teachers:", error);
+    }
+  };
+
+  const fetchClassrooms = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/schools/${schoolId}/classrooms`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setClassrooms(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch classrooms:", error);
     }
   };
 
@@ -307,26 +339,68 @@ export default function SchoolDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Materials Section - Link to materials page */}
-      <Card className="hover:shadow-md transition-shadow cursor-pointer">
-        <CardContent
-          className="p-6"
-          onClick={() => navigate(`/organization/schools/${schoolId}/materials`)}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <BookOpen className="h-5 w-5 text-blue-600" />
+      {/* Quick Actions Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent
+            className="p-6"
+            onClick={() => navigate(`/organization/schools/${schoolId}/classrooms`)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <GraduationCap className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">班級管理</h3>
+                  <p className="text-sm text-gray-500">{classrooms.length} 個班級</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">學校教材</h3>
-                <p className="text-sm text-gray-500">管理學校層級的教材與課程</p>
-              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
             </div>
-            <ArrowRight className="h-5 w-5 text-gray-400" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent
+            className="p-6"
+            onClick={() => navigate(`/organization/schools/${schoolId}/teachers`)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Users className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">教師管理</h3>
+                  <p className="text-sm text-gray-500">{teachers.length} 位教師</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent
+            className="p-6"
+            onClick={() => navigate(`/organization/schools/${schoolId}/materials`)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <BookOpen className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">學校教材</h3>
+                  <p className="text-sm text-gray-500">教材與課程</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Teachers/Staff Table */}
       <Card>
