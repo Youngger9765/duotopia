@@ -562,8 +562,6 @@ async def submit_assignment(
 # Practice Words API (艾賓浩斯記憶曲線)
 # =============================================================================
 
-from .validators import PracticeWord, PracticeWordsResponse
-
 
 @router.get(
     "/assignments/{student_assignment_id}/practice-words",

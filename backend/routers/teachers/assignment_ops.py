@@ -18,7 +18,6 @@ from models import (
     TeacherSchool,
     Organization,
     School,
-    ContentType,
 )
 from .dependencies import get_current_teacher
 from .validators import *
@@ -705,8 +704,6 @@ async def preview_rearrangement_complete(
     - Does not update any database records
     - Returns simulated completion response
     """
-    from datetime import datetime
-
     # Get assignment (verify teacher has permission)
     assignment = (
         db.query(Assignment)
