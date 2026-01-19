@@ -8,9 +8,8 @@ import os
 import asyncio
 import logging
 from typing import List, Dict, Optional  # noqa: F401
-from openai import AsyncOpenAI
+from openai import OpenAI
 from dotenv import load_dotenv
-from utils.http_client import get_http_client
 
 load_dotenv()
 

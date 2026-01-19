@@ -17,6 +17,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Index,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -199,7 +200,7 @@ class StudentItemProgress(Base):
 
 
 class PracticeSession(Base):
-    """Practice session record - each practice session"""
+    """練習記錄 - 每次練習 session"""
 
     __tablename__ = "practice_sessions"
 
@@ -213,21 +214,21 @@ class PracticeSession(Base):
         nullable=False,
     )
 
-    # Practice mode
+    # 練習模式
     practice_mode = Column(String(20), nullable=False)  # 'listening', 'writing', 'word_selection'
 
-    # Session statistics
+    # 本次練習統計
     words_practiced = Column(
         Integer, default=0, server_default="0", nullable=False
-    )  # Words practiced in this session
+    )  # 本次練習單字數
     correct_count = Column(
         Integer, default=0, server_default="0", nullable=False
-    )  # Correct answers in this session
+    )  # 本次答對題數
     total_time_seconds = Column(
         Integer, default=0, server_default="0", nullable=False
-    )  # Total time spent (seconds)
+    )  # 總花費時間（秒）
 
-    # Timestamps
+    # 時間戳記
     started_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -243,7 +244,7 @@ class PracticeSession(Base):
         "PracticeAnswer", back_populates="session", cascade="all, delete-orphan"
     )
 
-    # Constraints - match existing database indexes
+    # Constraints - 匹配現有資料庫索引
     __table_args__ = (
         Index("idx_practice_sessions_student", "student_id", "student_assignment_id"),
         Index("idx_practice_sessions_started", "started_at"),
@@ -257,28 +258,25 @@ class PracticeSession(Base):
 
 
 class PracticeAnswer(Base):
-    """Practice answer detail record"""
+    """答題詳細記錄"""
 
     __tablename__ = "practice_answers"
 
     id = Column(Integer, primary_key=True)
-    session_id = Column(
-        Integer,
-        ForeignKey("practice_sessions.id", ondelete="CASCADE"),
-        nullable=False,
+    practice_session_id = Column(
+        Integer, ForeignKey("practice_sessions.id", ondelete="CASCADE"), nullable=False
     )
-    content_item_id = Column(
-        Integer, ForeignKey("content_items.id", ondelete="CASCADE"), nullable=False
-    )
+    content_item_id = Column(Integer, ForeignKey("content_items.id"), nullable=False)
 
-    # Answer details
+    # 答題結果
     is_correct = Column(Boolean, nullable=False)
-    selected_answer = Column(String(255))  # For multiple choice
-    user_input = Column(Text)  # For writing exercises
-    time_spent_seconds = Column(Integer, default=0)
+    time_spent_seconds = Column(Integer, default=0, server_default="0", nullable=False)
 
-    # Timestamps
-    answered_at = Column(
+    # 學生答案（JSONB 格式儲存，兼容現有數據庫 schema）
+    answer_data = Column(JSONB)  # {"selected_words": [...], "attempts": 3}
+
+    # 時間戳記
+    created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
@@ -286,14 +284,14 @@ class PracticeAnswer(Base):
     session = relationship("PracticeSession", back_populates="answers")
     content_item = relationship("ContentItem")
 
-    # Constraints
+    # Constraints - 匹配現有資料庫索引
     __table_args__ = (
-        Index("idx_practice_answers_session", "session_id"),
+        Index("idx_practice_answers_session", "practice_session_id"),
         Index("idx_practice_answers_item", "content_item_id"),
     )
 
     def __repr__(self):
         return (
-            f"<PracticeAnswer session={self.session_id} item={self.content_item_id} "
-            f"correct={self.is_correct}>"
+            f"<PracticeAnswer session={self.practice_session_id} "
+            f"item={self.content_item_id} correct={self.is_correct}>"
         )

@@ -38,6 +38,7 @@ class Assignment(Base):
 
     # Legacy: 造句練習答題模式（只對舊 SENTENCE_MAKING 類型有效）
     # @deprecated: 請使用 practice_mode 和 play_audio 替代
+    # Note: 保持 nullable=True 以兼容現有數據庫 schema
     answer_mode = Column(
         String(20),
         default="writing",

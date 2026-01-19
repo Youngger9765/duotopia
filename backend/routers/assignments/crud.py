@@ -250,20 +250,20 @@ async def get_assignments(
     )
     content_count_map = {row.assignment_id: row.count for row in content_counts}
 
-    # Batch-load first content for each assignment to get content_type (avoid N+1)
-    # Get first AssignmentContent (order_index=1) for each assignment
+    # Batch-load first content type for each assignment (avoid N+1)
     first_contents = (
-        db.query(AssignmentContent, Content)
+        db.query(AssignmentContent.assignment_id, Content.type)
         .join(Content, AssignmentContent.content_id == Content.id)
-        .filter(AssignmentContent.assignment_id.in_(assignment_ids))
-        .order_by(AssignmentContent.assignment_id, AssignmentContent.order_index)
+        .filter(
+            AssignmentContent.assignment_id.in_(assignment_ids),
+            AssignmentContent.order_index == 1,
+        )
         .all()
     )
-    # Build map: assignment_id -> content_type (from first content)
-    content_type_map = {}
-    for ac, content in first_contents:
-        if ac.assignment_id not in content_type_map:
-            content_type_map[ac.assignment_id] = content.type.value if content.type else None
+    content_type_map = {
+        row.assignment_id: row.type.value if row.type else None
+        for row in first_contents
+    }
 
     # Batch-load all student assignments (avoid N+1)
     all_student_assignments = (

@@ -49,7 +49,12 @@ from .program import Program, Lesson, Content, ContentItem
 from .assignment import Assignment, AssignmentContent, StudentAssignment
 
 # Progress models
-from .progress import StudentContentProgress, StudentItemProgress, PracticeSession, PracticeAnswer
+from .progress import (
+    StudentContentProgress,
+    StudentItemProgress,
+    PracticeSession,
+    PracticeAnswer,
+)
 
 __all__ = [
     # Base
