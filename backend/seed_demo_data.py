@@ -1,6 +1,8 @@
 """
 Seed demo data for local development
 Creates: Schools, Teachers, Programs (Materials)
+
+Fixed: TeacherSchool records now created for owner
 """
 import os
 import sys
