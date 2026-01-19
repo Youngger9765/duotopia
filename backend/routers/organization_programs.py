@@ -675,6 +675,11 @@ async def copy_material_to_classroom(
         )
 
     # Verify teacher is member of classroom (owns it or is assigned)
+    if classroom.teacher_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Classroom has no assigned teacher",
+        )
     if classroom.teacher_id != current_teacher.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -26,8 +26,20 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Revert teacher_id to non-nullable
-    # WARNING: This will fail if there are classrooms with NULL teacher_id
+    # Check for NULL teacher_id values before enforcing non-null constraint
+    connection = op.get_bind()
+    result = connection.execute(
+        sa.text("SELECT COUNT(*) FROM classrooms WHERE teacher_id IS NULL")
+    )
+    count = result.scalar()
+
+    if count > 0:
+        raise Exception(
+            f"Cannot downgrade: {count} classrooms have NULL teacher_id. "
+            "Please assign teachers to these classrooms before downgrading."
+        )
+
+    # Safe to make non-nullable since we verified no NULL values exist
     op.alter_column('classrooms', 'teacher_id',
                     existing_type=sa.INTEGER(),
                     nullable=False)

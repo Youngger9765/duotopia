@@ -1065,11 +1065,17 @@ async def copy_program(
             "program_name": source_program.name,
         }
     elif source_scope == "classroom":
-        if source_program.classroom and source_program.classroom.teacher_id != current_teacher.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No permission to copy this classroom program",
-            )
+        if source_program.classroom:
+            if source_program.classroom.teacher_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Classroom has no assigned teacher",
+                )
+            if source_program.classroom.teacher_id != current_teacher.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="No permission to copy this classroom program",
+                )
 
         if payload.target_scope not in ["teacher", "classroom"]:
             raise HTTPException(
@@ -1130,6 +1136,11 @@ async def copy_program(
             if not target_classroom:
                 raise HTTPException(status_code=404, detail="Classroom not found")
 
+            if target_classroom.teacher_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Classroom has no assigned teacher",
+                )
             if target_classroom.teacher_id != current_teacher.id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
