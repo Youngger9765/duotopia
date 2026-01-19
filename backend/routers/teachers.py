@@ -3412,7 +3412,7 @@ async def translate_text(
         )
         return {"original": request.text, "translation": translation}
     except Exception as e:
-        print(f"Translation error: {e}")
+        logger.error("Translation error: %s", e)
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
@@ -3431,7 +3431,7 @@ async def translate_with_pos(
             "parts_of_speech": result["parts_of_speech"],
         }
     except Exception as e:
-        print(f"Translate with POS error: {e}")
+        logger.error("Translate with POS error: %s", e)
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
@@ -3447,7 +3447,7 @@ async def batch_translate(
         )
         return {"originals": request.texts, "translations": translations}
     except Exception as e:
-        print(f"Batch translation error: {e}")
+        logger.error("Batch translation error: %s", e)
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
@@ -3463,7 +3463,7 @@ async def batch_translate_with_pos(
         )
         return {"originals": request.texts, "results": results}
     except Exception as e:
-        print(f"Batch translate with POS error: {e}")
+        logger.error("Batch translate with POS error: %s", e)
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
@@ -3492,7 +3492,7 @@ async def generate_sentences(
         )
         return {"sentences": sentences}
     except Exception as e:
-        print(f"Generate sentences error: {e}")
+        logger.error("Generate sentences error: %s", e)
         raise HTTPException(status_code=500, detail="Generate sentences failed")
 
 
@@ -3531,7 +3531,7 @@ async def generate_tts(
 
         return {"audio_url": audio_url}
     except Exception as e:
-        print(f"TTS error: {e}")
+        logger.error("TTS error: %s", e)
         raise HTTPException(status_code=500, detail="TTS generation failed")
 
 
@@ -3559,8 +3559,8 @@ async def batch_generate_tts(
         import traceback
 
         error_trace = traceback.format_exc()
-        print(f"Batch TTS error: {e}")
-        print(f"Traceback: {error_trace}")
+        logger.error("Batch TTS error: %s", e)
+        logger.error("Traceback: %s", error_trace)
         # 返回更詳細的錯誤訊息（僅在開發環境）
         import os
 
@@ -3587,7 +3587,7 @@ async def get_tts_voices(
 
         return {"voices": voices}
     except Exception as e:
-        print(f"Get voices error: {e}")
+        logger.error("Get voices error: %s", e)
         raise HTTPException(status_code=500, detail="Failed to get voices")
 
 
@@ -3654,7 +3654,7 @@ async def upload_audio(
     except HTTPException as e:
         raise e
     except Exception as e:
-        print(f"Audio upload error: {e}")
+        logger.error("Audio upload error: %s", e)
         raise HTTPException(status_code=500, detail="Audio upload failed")
 
 
@@ -3721,7 +3721,7 @@ async def upload_image(
     except HTTPException as e:
         raise e
     except Exception as e:
-        print(f"Image upload error: {e}")
+        logger.error("Image upload error: %s", e)
         raise HTTPException(status_code=500, detail="Image upload failed")
 
 

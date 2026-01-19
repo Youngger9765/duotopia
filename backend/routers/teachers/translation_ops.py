@@ -1,6 +1,8 @@
 """
 Translation Ops operations for teachers.
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload, joinedload
 from sqlalchemy import func
@@ -22,6 +24,8 @@ from .validators import *
 from .utils import TEST_SUBSCRIPTION_WHITELIST, parse_birthdate
 from services.translation import translation_service
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -36,7 +40,7 @@ async def translate_text(
         )
         return {"original": request.text, "translation": translation}
     except Exception as e:
-        print(f"Translation error: {e}")
+        logger.error("Translation error: %s", e)
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
@@ -55,7 +59,7 @@ async def translate_with_pos(
             "parts_of_speech": result["parts_of_speech"],
         }
     except Exception as e:
-        print(f"Translate with POS error: {e}")
+        logger.error("Translate with POS error: %s", e)
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
@@ -71,7 +75,7 @@ async def batch_translate_with_pos(
         )
         return {"originals": request.texts, "results": results}
     except Exception as e:
-        print(f"Batch translate with POS error: {e}")
+        logger.error("Batch translate with POS error: %s", e)
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
@@ -87,7 +91,7 @@ async def batch_translate(
         )
         return {"originals": request.texts, "translations": translations}
     except Exception as e:
-        print(f"Batch translation error: {e}")
+        logger.error("Batch translation error: %s", e)
         raise HTTPException(status_code=500, detail="Translation service error")
 
 
@@ -107,5 +111,5 @@ async def generate_sentences(
         )
         return {"sentences": sentences}
     except Exception as e:
-        print(f"Generate sentences error: {e}")
+        logger.error("Generate sentences error: %s", e)
         raise HTTPException(status_code=500, detail="Generate sentences failed")
