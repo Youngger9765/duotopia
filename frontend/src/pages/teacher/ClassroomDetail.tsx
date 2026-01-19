@@ -807,7 +807,6 @@ export default function ClassroomDetail({
         order_index: index + 1,
       }));
       await apiClient.reorderPrograms(orderData);
-      console.log("Programs reordered and saved");
     } catch (error) {
       console.error("Failed to save program order:", error);
       // 可選：恢復原始順序
@@ -845,7 +844,6 @@ export default function ClassroomDetail({
           order_index: index + 1,
         }));
         await apiClient.reorderLessons(programId, orderData);
-        console.log(`Lessons reordered and saved for program ${programId}`);
       } catch (error) {
         console.error("Failed to save lesson order:", error);
         // 可選：恢復原始順序
@@ -2400,10 +2398,7 @@ export default function ClassroomDetail({
                 content={undefined}
                 editingContent={{ id: editorContentId || undefined }}
                 lessonId={editorLessonId}
-                onUpdateContent={(updatedContent) => {
-                  // Handle content update if needed
-                  console.log("Content updated:", updatedContent);
-                }}
+                onUpdateContent={() => {}}
                 onSave={async () => {
                   // ReadingAssessmentPanel handles save internally
                   // Just close the editor on successful save
@@ -2450,10 +2445,7 @@ export default function ClassroomDetail({
                 content={undefined}
                 editingContent={{ id: vocabularySetContentId ?? undefined }}
                 lessonId={vocabularySetLessonId}
-                onUpdateContent={(updatedContent) => {
-                  // Handle content update if needed
-                  console.log("Content updated:", updatedContent);
-                }}
+                onUpdateContent={() => {}}
                 onSave={async () => {
                   // VocabularySetPanel handles save internally
                   // Just close the editor on successful save

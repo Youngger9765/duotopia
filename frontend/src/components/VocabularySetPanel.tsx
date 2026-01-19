@@ -272,7 +272,6 @@ const TTSModal = ({
         }
       }
 
-      console.log("Using MIME type:", mimeType);
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
         audioBitsPerSecond: 128000, // 設定位元率
@@ -1904,10 +1903,6 @@ export default function VocabularySetPanel({
               items,
             });
           }
-          console.log(
-            "Audio URL saved locally (will upload on final save):",
-            audioUrl,
-          );
         } else if (editingContent?.id) {
           // 編輯模式：直接呼叫 API 更新
           try {
@@ -1916,7 +1911,6 @@ export default function VocabularySetPanel({
               items,
             };
 
-            console.log("Updating content with new audio:", audioUrl);
             await apiClient.updateContent(editingContent.id, updateData);
 
             // 更新成功後，重新從後端載入內容以確保同步
@@ -1941,7 +1935,6 @@ export default function VocabularySetPanel({
                 }),
               );
               setRows(updatedRows);
-              console.log("Updated rows with new audio URLs:", updatedRows);
             }
 
             // 更新本地狀態
@@ -1958,12 +1951,6 @@ export default function VocabularySetPanel({
               t("contentEditor.messages.updateFailedButAudioGenerated"),
             );
           }
-        } else {
-          // 沒有 content ID，音檔將在儲存時上傳
-          console.log(
-            "Audio URL saved locally (will upload on final save):",
-            audioUrl,
-          );
         }
 
         // 關閉 modal 但不要關閉 panel
@@ -2003,13 +1990,7 @@ export default function VocabularySetPanel({
       }
     });
 
-    console.log(
-      "[autoGenerateTranslationsSilently] itemsToTranslate:",
-      itemsToTranslate,
-    );
-
     if (itemsToTranslate.length === 0) {
-      console.log("[autoGenerateTranslationsSilently] No translations needed");
       return { success: true, updatedRows: currentRows };
     }
 
@@ -2035,19 +2016,11 @@ export default function VocabularySetPanel({
           textsForPOS,
           "zh-TW",
         );
-        console.log(
-          "[autoGenerateTranslationsSilently] posResponse:",
-          posResponse,
-        );
         const results = posResponse.results || [];
 
         needsPOS.forEach((item, idx) => {
           if (results[idx]) {
             newRows[item.index].definition = results[idx].translation;
-            console.log(
-              `[autoGenerateTranslationsSilently] Set definition for row ${item.index}:`,
-              results[idx].translation,
-            );
             // 自動填入詞性（轉換縮寫為完整名稱）
             if (
               results[idx].parts_of_speech &&
@@ -2079,14 +2052,6 @@ export default function VocabularySetPanel({
         });
       }
 
-      console.log(
-        "[autoGenerateTranslationsSilently] Final newRows:",
-        newRows.map((r) => ({
-          text: r.text,
-          definition: r.definition,
-          partsOfSpeech: r.partsOfSpeech,
-        })),
-      );
       return { success: true, updatedRows: newRows };
     } catch (error) {
       console.error("Auto translation error:", error);
@@ -2108,13 +2073,7 @@ export default function VocabularySetPanel({
       .filter((row) => row.text && row.text.trim() && !row.audioUrl)
       .map((row) => row.text.trim());
 
-    console.log(
-      "[autoGenerateAudioSilently] textsToGenerate:",
-      textsToGenerate,
-    );
-
     if (textsToGenerate.length === 0) {
-      console.log("[autoGenerateAudioSilently] No audio to generate");
       return { success: true, updatedRows: currentRows };
     }
 
@@ -2126,8 +2085,6 @@ export default function VocabularySetPanel({
         "+0%",
         "+0%",
       );
-
-      console.log("[autoGenerateAudioSilently] TTS result:", result);
 
       if (
         result &&
@@ -2150,10 +2107,6 @@ export default function VocabularySetPanel({
             newRows[i].audioUrl = audioUrl.startsWith("http")
               ? audioUrl
               : `${import.meta.env.VITE_API_URL}${audioUrl}`;
-            console.log(
-              `[autoGenerateAudioSilently] Set audioUrl for row ${i}:`,
-              newRows[i].audioUrl,
-            );
             audioIndex++;
           }
         }
@@ -2161,9 +2114,6 @@ export default function VocabularySetPanel({
         return { success: true, updatedRows: newRows };
       }
 
-      console.log(
-        "[autoGenerateAudioSilently] No audio_urls in result, returning currentRows",
-      );
       return { success: true, updatedRows: currentRows };
     } catch (error) {
       console.error("Auto TTS generation failed:", error);
@@ -3168,14 +3118,6 @@ export default function VocabularySetPanel({
 
               try {
                 // ========== Step 1: 自動生成缺少的翻譯 ==========
-                console.log(
-                  "[Save] Before translation - validRows:",
-                  validRows.map((r) => ({
-                    text: r.text,
-                    definition: r.definition,
-                    audioUrl: r.audioUrl,
-                  })),
-                );
                 const translationResult =
                   await autoGenerateTranslationsSilently(validRows);
                 if (!translationResult.success) {
@@ -3184,14 +3126,6 @@ export default function VocabularySetPanel({
                   return;
                 }
                 validRows = translationResult.updatedRows;
-                console.log(
-                  "[Save] After translation - validRows:",
-                  validRows.map((r) => ({
-                    text: r.text,
-                    definition: r.definition,
-                    audioUrl: r.audioUrl,
-                  })),
-                );
 
                 // ========== Step 2: 自動生成缺少的音檔 ==========
                 const audioResult = await autoGenerateAudioSilently(validRows);
@@ -3201,14 +3135,6 @@ export default function VocabularySetPanel({
                   return;
                 }
                 validRows = audioResult.updatedRows;
-                console.log(
-                  "[Save] After audio - validRows:",
-                  validRows.map((r) => ({
-                    text: r.text,
-                    definition: r.definition,
-                    audioUrl: r.audioUrl,
-                  })),
-                );
 
                 // 更新 rows state（讓 UI 顯示生成的內容）
                 setRows(
@@ -3220,16 +3146,6 @@ export default function VocabularySetPanel({
 
                 // ========== Step 3: 準備並儲存資料 ==========
                 // 注意：例句為選填，不檢查是否缺少
-                console.log(
-                  "[Save] Creating saveData from validRows:",
-                  validRows.map((r) => ({
-                    id: r.id,
-                    text: r.text,
-                    definition: r.definition,
-                    selectedWordLanguage: r.selectedWordLanguage,
-                    audioUrl: r.audioUrl,
-                  })),
-                );
                 const saveData = {
                   title: title,
                   items: validRows.map((row) => {
@@ -3245,9 +3161,6 @@ export default function VocabularySetPanel({
                     } else if (wordLang === "korean") {
                       vocabularyTranslation = row.korean_translation || "";
                     }
-                    console.log(
-                      `[Save] Row ${row.text}: wordLang=${wordLang}, definition=${row.definition}, vocabularyTranslation=${vocabularyTranslation}`,
-                    );
 
                     // 根據選擇的語言取得對應的例句翻譯
                     const sentenceLang =
@@ -3286,8 +3199,6 @@ export default function VocabularySetPanel({
                   target_accuracy: 0.8,
                   time_limit_seconds: 180,
                 };
-
-                console.log("Saving data:", saveData);
 
                 const existingContentId = editingContent?.id || content?.id;
 

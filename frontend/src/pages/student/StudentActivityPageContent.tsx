@@ -435,11 +435,6 @@ export default function StudentActivityPageContent({
           return;
         }
 
-        // ✅ 至少一個通過 - 記錄診斷資訊
-        console.log(
-          `✅ Recording size check passed: chunks=${chunksSize}B, blob=${blobSize}B (min: ${strategy.minFileSize}B)`,
-        );
-
         // 使用策略驗證 duration
         try {
           const validationResult = await validateDuration(
@@ -858,9 +853,7 @@ export default function StudentActivityPageContent({
 
               return await uploadResponse.json();
             },
-            (attempt, error) => {
-              console.log(`上傳重試 (${attempt}):`, error);
-            },
+            () => {},
           )
             .then((uploadResult) => {
               toast.success(t("studentActivityPage.recording.uploadSuccess"));
@@ -990,7 +983,6 @@ export default function StudentActivityPageContent({
         currentState?.status === "analyzing" ||
         currentState?.status === "analyzed"
       ) {
-        console.log(`Item ${itemKey} already ${currentState.status}, skipping`);
         return;
       }
 
@@ -1050,9 +1042,7 @@ export default function StudentActivityPageContent({
 
                 return await uploadResponse.json();
               },
-              (attempt, error) => {
-                console.log(`Background upload retrying (${attempt}):`, error);
-              },
+              () => {},
             );
 
             if (uploadResult) {
@@ -1132,8 +1122,6 @@ export default function StudentActivityPageContent({
           pendingAnalysisRef.current.delete(itemKey);
           failedItemsRef.current.delete(itemKey);
           setPendingAnalysisCount(pendingAnalysisRef.current.size); // 🔒 更新計數
-
-          console.log(`✅ Background analysis completed for ${itemKey}`);
         } catch (error) {
           console.error(`❌ Background analysis failed for ${itemKey}:`, error);
 
@@ -1439,9 +1427,6 @@ export default function StudentActivityPageContent({
 
       // 逐一分析未分析的錄音
       if (unanalyzedItems.length > 0) {
-        console.log(
-          `Issue #141: 提交前分析 ${unanalyzedItems.length} 個未分析的錄音`,
-        );
         setSubmitting(true);
 
         for (const { activity, itemIndex, item } of unanalyzedItems) {
@@ -1451,9 +1436,6 @@ export default function StudentActivityPageContent({
             const contentItemId = item.id;
 
             if (targetText && item.recording_url) {
-              console.log(
-                `Analyzing item ${itemIndex + 1} of activity ${activity.id}...`,
-              );
               const result = await analyzeAndUpload(
                 item.recording_url,
                 targetText,
@@ -1509,20 +1491,7 @@ export default function StudentActivityPageContent({
         // 🎯 Issue #118: Retry any pending uploads before submitting
         const pendingCount = azureSpeechService.getPendingUploadCount();
         if (pendingCount > 0) {
-          console.log(
-            `Retrying ${pendingCount} pending uploads before submit...`,
-          );
-          const retryResult = await azureSpeechService.retryPendingUploads();
-          if (retryResult.failed.length > 0) {
-            console.warn(
-              `${retryResult.failed.length} uploads still failed after retry`,
-            );
-          }
-          if (retryResult.success.length > 0) {
-            console.log(
-              `Successfully uploaded ${retryResult.success.length} pending files`,
-            );
-          }
+          await azureSpeechService.retryPendingUploads();
         }
 
         await onSubmit({
