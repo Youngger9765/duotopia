@@ -104,7 +104,7 @@ class TranslationService:
                 return response.choices[0].message.content.strip()
 
         except Exception as e:
-            print(f"Translation error: {e}")
+            logger.error("Translation error: %s", e)
             # 如果翻譯失敗，返回原文
             return text
 
@@ -216,7 +216,7 @@ Only reply with JSON, no other text."""
                 "parts_of_speech": result.get("parts_of_speech", []),
             }
         except Exception as e:
-            print(f"Translate with POS error: {e}")
+            logger.error("Translate with POS error: %s", e)
             # Fallback: 只返回翻譯
             translation = await self.translate_text(text, target_lang)
             return {"translation": translation, "parts_of_speech": []}
@@ -334,31 +334,28 @@ Required: Return format must be ["translation1", "translation2", ...]"""
                     if len(manual) == len(texts):
                         translations = manual
                     else:
-                        print(
-                            f"Warning: Expected {len(texts)} translations, got {len(translations)}"
-                        )
                         logger.warning(
                             "Batch translation count mismatch "
-                            f"(expected {len(texts)}, got {len(translations)}), "
-                            "falling back to individual translation."
+                            "(expected %d, got %d), "
+                            "falling back to individual translation.",
+                            len(texts),
+                            len(translations),
                         )
                         return texts
                 else:
-                    print(
-                        f"Warning: Expected {len(texts)} translations, got {len(translations)}"
-                    )
                     logger.warning(
                         "Batch translation count mismatch "
-                        f"(expected {len(texts)}, got {len(translations)}), "
-                        "falling back to individual translation."
+                        "(expected %d, got %d), "
+                        "falling back to individual translation.",
+                        len(texts),
+                        len(translations),
                     )
                     return texts
 
             return translations
         except Exception as e:
-            print(f"Batch translation error: {e}")
             logger.error(
-                f"Batch translation error: {e}. Falling back to individual translation."
+                "Batch translation error: %s. Falling back to individual translation.", e
             )
             return texts
 
@@ -467,8 +464,8 @@ Only reply with JSON array, no other text."""
 
             # 確保返回數量正確
             if len(results) != len(texts):
-                print(
-                    f"Warning: Expected {len(texts)} results, got {len(results)}. Falling back."
+                logger.warning(
+                    "Expected %d results, got %d. Falling back.", len(texts), len(results)
                 )
                 # Fallback: 逐個處理
                 tasks = [self.translate_with_pos(text, target_lang) for text in texts]
@@ -476,7 +473,7 @@ Only reply with JSON array, no other text."""
 
             return results
         except Exception as e:
-            print(f"Batch translate with POS error: {e}. Falling back.")
+            logger.error("Batch translate with POS error: %s. Falling back.", e)
             # Fallback: 逐個處理
             tasks = [self.translate_with_pos(text, target_lang) for text in texts]
             results = await asyncio.gather(*tasks)
@@ -610,8 +607,8 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
 
             # 確保返回數量正確
             if len(sentences) != len(words):
-                print(
-                    f"Warning: Expected {len(words)} sentences, got {len(sentences)}."
+                logger.warning(
+                    "Expected %d sentences, got %d.", len(words), len(sentences)
                 )
                 # 補齊或截斷
                 while len(sentences) < len(words):
@@ -623,7 +620,7 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
             return sentences
 
         except Exception as e:
-            print(f"Generate sentences error: {e}")
+            logger.error("Generate sentences error: %s", e)
             # Fallback: 返回簡單的預設例句
             return [{"sentence": f"This is an example with {word}."} for word in words]
 

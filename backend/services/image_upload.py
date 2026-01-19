@@ -2,6 +2,7 @@
 Image upload service for vocabulary set images
 """
 
+import logging
 import os
 import uuid
 import json
@@ -9,6 +10,8 @@ from datetime import datetime
 from typing import Optional
 from fastapi import UploadFile, HTTPException
 from google.cloud import storage
+
+logger = logging.getLogger(__name__)
 
 
 class ImageUploadService:
@@ -56,27 +59,27 @@ class ImageUploadService:
                             self.storage_client = (
                                 storage.Client.from_service_account_json(key_path)
                             )
-                            print(
+                            logger.info(
                                 "Image Upload GCS client initialized with service account key"
                             )
                             return self.storage_client
                         except Exception as e:
-                            print(f"Failed to use service account key: {e}")
+                            logger.warning("Failed to use service account key: %s", e)
                     else:
-                        print("Service account key file is empty, skipping")
+                        logger.warning("Service account key file is empty, skipping")
                 except (json.JSONDecodeError, ValueError) as e:
-                    print(f"Service account key file is invalid JSON: {e}, skipping")
+                    logger.warning("Service account key file is invalid JSON: %s, skipping", e)
 
             # Method 2: Use Application Default Credentials (local development)
             original_creds = os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
             try:
                 self.storage_client = storage.Client()
-                print(
+                logger.info(
                     "Image Upload GCS client initialized with Application Default Credentials"
                 )
                 return self.storage_client
             except Exception as e:
-                print(f"Image Upload GCS client initialization failed: {e}")
+                logger.error("Image Upload GCS client initialization failed: %s", e)
                 if original_creds:
                     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = original_creds
                 return None
@@ -171,7 +174,7 @@ class ImageUploadService:
                 blob.make_public()
 
                 image_url = blob.public_url
-                print(f"Image uploaded to GCS: {image_url}")
+                logger.info("Image uploaded to GCS: %s", image_url)
             else:
                 # Local storage (development)
                 local_path = os.path.join(self.local_image_dir, filename)
@@ -181,14 +184,14 @@ class ImageUploadService:
                 # Return local URL - always use full URL for cross-origin compatibility
                 backend_url = self.backend_url or "http://localhost:8080"
                 image_url = f"{backend_url}/static/images/{filename}"
-                print(f"Image saved locally: {image_url}")
+                logger.info("Image saved locally: %s", image_url)
 
             return image_url
 
         except HTTPException:
             raise
         except Exception as e:
-            print(f"Image upload failed: {e}")
+            logger.error("Image upload failed: %s", e)
             raise HTTPException(
                 status_code=500,
                 detail=f"Image upload failed: {str(e)}",
@@ -227,7 +230,7 @@ class ImageUploadService:
 
                 if blob.exists():
                     blob.delete()
-                    print(f"Image deleted from GCS: {blob_name}")
+                    logger.info("Image deleted from GCS: %s", blob_name)
                     return True
                 return False
 
@@ -239,7 +242,7 @@ class ImageUploadService:
 
                 if os.path.exists(file_path):
                     os.remove(file_path)
-                    print(f"Image deleted locally: {file_path}")
+                    logger.info("Image deleted locally: %s", file_path)
                     return True
                 return False
 
@@ -247,7 +250,7 @@ class ImageUploadService:
                 return False
 
         except Exception as e:
-            print(f"Image deletion failed: {e}")
+            logger.error("Image deletion failed: %s", e)
             return False
 
 
