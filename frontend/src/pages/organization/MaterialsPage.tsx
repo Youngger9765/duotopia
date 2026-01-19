@@ -188,6 +188,7 @@ export default function MaterialsPage() {
               <ProgramTreeView
                 programs={programs}
                 onProgramsChange={handleProgramsChange}
+                onRefresh={fetchPrograms}
                 showCreateButton={canManageMaterials}
                 createButtonText="新增教材"
                 scope="organization"

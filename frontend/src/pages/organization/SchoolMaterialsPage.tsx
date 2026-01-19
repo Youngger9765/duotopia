@@ -224,6 +224,7 @@ export default function SchoolMaterialsPage() {
               <ProgramTreeView
                 programs={programs}
                 onProgramsChange={handleProgramsChange}
+                onRefresh={fetchData}
                 showCreateButton={canManageMaterials}
                 createButtonText="新增教材"
                 scope="school"

@@ -156,6 +156,16 @@ class ApiClient {
         `Bearer ${currentToken}`;
     }
 
+    // DIAGNOSTIC: Log request details before sending
+    if (DEBUG) {
+      console.log("🔍 [DEBUG] Request details:", {
+        url,
+        method: options.method || "GET",
+        headers,
+        body: options.body ? JSON.parse(options.body as string) : undefined,
+      });
+    }
+
     try {
       const response = await fetch(url, {
         ...options,
@@ -711,6 +721,11 @@ class ApiClient {
       items?: Array<{
         text: string;
         translation?: string;
+        definition?: string;
+        english_definition?: string;
+        selectedLanguage?: string;
+        audio_url?: string;
+        [key: string]: any; // Allow additional fields
       }>;
       target_wpm?: number;
       target_accuracy?: number;

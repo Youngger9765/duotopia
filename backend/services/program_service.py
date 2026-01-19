@@ -12,6 +12,7 @@ Service Architecture:
 
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func
 from typing import List, Optional, Dict, Any
 import uuid
 import logging
@@ -308,6 +309,13 @@ def create_program(
         if not org:
             raise ValueError("Organization not found")
 
+        # Calculate next order_index (put at end)
+        max_order = db.query(func.max(Program.order_index)).filter(
+            Program.organization_id == organization_id,
+            Program.is_template == True,
+            Program.is_active == True
+        ).scalar() or 0
+
         program = Program(
             name=data["name"],
             description=data.get("description"),
@@ -319,6 +327,7 @@ def create_program(
             organization_id=organization_id,
             classroom_id=None,
             is_active=True,
+            order_index=max_order + 1,
             source_metadata={"created_by": teacher_id},
         )
     elif scope == "school":
@@ -336,6 +345,13 @@ def create_program(
         if not school:
             raise ValueError("School not found")
 
+        # Calculate next order_index (put at end)
+        max_order = db.query(func.max(Program.order_index)).filter(
+            Program.school_id == school_id,
+            Program.is_template == True,
+            Program.is_active == True
+        ).scalar() or 0
+
         program = Program(
             name=data["name"],
             description=data.get("description"),
@@ -348,9 +364,18 @@ def create_program(
             organization_id=school.organization_id,
             classroom_id=None,
             is_active=True,
+            order_index=max_order + 1,
             source_metadata={"created_by": teacher_id},
         )
     elif scope == "teacher":
+        # Calculate next order_index (put at end)
+        max_order = db.query(func.max(Program.order_index)).filter(
+            Program.teacher_id == teacher_id,
+            Program.is_template == True,
+            Program.is_active == True,
+            Program.organization_id.is_(None)
+        ).scalar() or 0
+
         program = Program(
             name=data["name"],
             description=data.get("description"),
@@ -362,6 +387,7 @@ def create_program(
             organization_id=None,
             classroom_id=None,
             is_active=True,
+            order_index=max_order + 1,
         )
     else:
         raise ValueError(f"Invalid scope: {scope}")
@@ -446,11 +472,17 @@ def create_lesson(
 
     logger.info(f"[SERVICE_CREATE_LESSON] Permission check passed. Creating lesson object...")
 
+    # Calculate next order_index (put at end)
+    max_order = db.query(func.max(Lesson.order_index)).filter(
+        Lesson.program_id == program_id,
+        Lesson.is_active == True
+    ).scalar() or 0
+
     lesson = Lesson(
         program_id=program_id,
         name=data["name"],
         description=data.get("description"),
-        order_index=data.get("order_index", 1),
+        order_index=max_order + 1,
         estimated_minutes=data.get("estimated_minutes"),
         is_active=True,
     )
@@ -549,11 +581,17 @@ def create_content(
     if not has_lesson_permission(db, lesson_id, teacher_id, "write"):
         raise PermissionError("No permission to create contents in this lesson")
 
+    # Calculate next order_index (put at end)
+    max_order = db.query(func.max(Content.order_index)).filter(
+        Content.lesson_id == lesson_id,
+        Content.is_active == True
+    ).scalar() or 0
+
     content = Content(
         lesson_id=lesson_id,
         type=data["type"],
         title=data["title"],
-        order_index=data.get("order_index", 1),
+        order_index=max_order + 1,
         is_active=True,
     )
 
