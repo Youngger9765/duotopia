@@ -355,7 +355,8 @@ Required: Return format must be ["translation1", "translation2", ...]"""
             return translations
         except Exception as e:
             logger.error(
-                "Batch translation error: %s. Falling back to individual translation.", e
+                "Batch translation error: %s. Falling back to individual translation.",
+                e,
             )
             return texts
 
@@ -465,7 +466,9 @@ Only reply with JSON array, no other text."""
             # 確保返回數量正確
             if len(results) != len(texts):
                 logger.warning(
-                    "Expected %d results, got %d. Falling back.", len(texts), len(results)
+                    "Expected %d results, got %d. Falling back.",
+                    len(texts),
+                    len(results),
                 )
                 # Fallback: 逐個處理
                 tasks = [self.translate_with_pos(text, target_lang) for text in texts]

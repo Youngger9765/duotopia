@@ -68,7 +68,9 @@ class ImageUploadService:
                     else:
                         logger.warning("Service account key file is empty, skipping")
                 except (json.JSONDecodeError, ValueError) as e:
-                    logger.warning("Service account key file is invalid JSON: %s, skipping", e)
+                    logger.warning(
+                        "Service account key file is invalid JSON: %s, skipping", e
+                    )
 
             # Method 2: Use Application Default Credentials (local development)
             original_creds = os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
