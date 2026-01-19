@@ -73,3 +73,26 @@ deploy-feature <issue>
 2. **TapPay 金流整合** - 見 `TAPPAY_INTEGRATION_GUIDE.md`
 3. **Per-Issue Test Environment** - 每個 issue 有獨立測試環境
 4. **Use feature branches** - 不直接 commit 到 staging
+
+### 🚨 Database Migration 規則 (CRITICAL)
+
+**絕對禁止未經許可創建 Migrations：**
+
+- ❌ **禁止** 未經明確許可創建任何 `backend/alembic/versions/*.py` files
+- ❌ **禁止** 執行 `alembic revision` without asking first
+- ✅ **必須** 在創建 migration 前明確詢問：「需要創建 DB migration，是否允許？」
+
+**原因：**
+- Alembic migration chain 在 merge 時會衝突
+- 多個 feature branches 同時有 migrations → 難以 merge
+- Production database schema 變更需要謹慎規劃
+
+**替代方案（Preview/Dev 環境）：**
+```python
+# 使用 seed scripts with IF NOT EXISTS：
+op.execute("""
+    CREATE TABLE IF NOT EXISTS teacher_schools (
+        ...
+    )
+""")
+```
