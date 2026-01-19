@@ -725,7 +725,12 @@ class ApiClient {
         english_definition?: string;
         selectedLanguage?: string;
         audio_url?: string;
-        [key: string]: any; // Allow additional fields
+        // Explicit optional fields for backend compatibility
+        options?: any[];
+        correct_answer?: any;
+        question_type?: string;
+        example_sentence?: string;
+        example_sentence_translation?: string;
       }>;
       target_wpm?: number;
       target_accuracy?: number;
