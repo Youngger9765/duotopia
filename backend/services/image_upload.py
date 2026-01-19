@@ -178,11 +178,9 @@ class ImageUploadService:
                 with open(local_path, "wb") as f:
                     f.write(content)
 
-                # Return local URL
-                if self.backend_url:
-                    image_url = f"{self.backend_url}/static/images/{filename}"
-                else:
-                    image_url = f"/static/images/{filename}"
+                # Return local URL - always use full URL for cross-origin compatibility
+                backend_url = self.backend_url or "http://localhost:8080"
+                image_url = f"{backend_url}/static/images/{filename}"
                 print(f"Image saved locally: {image_url}")
 
             return image_url

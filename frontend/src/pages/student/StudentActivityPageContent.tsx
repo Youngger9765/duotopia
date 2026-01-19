@@ -2330,8 +2330,11 @@ export default function StudentActivityPageContent({
 
             {/* Navigation buttons */}
             {(() => {
-              // 🎯 單字選擇模式：WordSelectionActivity 自帶導航，不顯示外部導航按鈕
-              if (practiceMode === "word_selection") {
+              // 🎯 單字選擇/朗讀模式：WordSelectionActivity/WordReadingActivity 自帶導航，不顯示外部導航按鈕
+              if (
+                practiceMode === "word_selection" ||
+                practiceMode === "word_reading"
+              ) {
                 return null;
               }
 
