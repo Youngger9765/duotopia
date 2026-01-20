@@ -54,10 +54,11 @@ export function AssignTeacherDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (classroom) {
+    if (classroom && open) {
+      // 當對話框打開時，設置當前導師為預設值
       setSelectedTeacherId(classroom.teacher_id || null);
     }
-  }, [classroom]);
+  }, [classroom, open]);
 
   const handleClose = () => {
     setSelectedTeacherId(null);
@@ -127,6 +128,15 @@ export function AssignTeacherDialog({
                     {teacher.name} ({teacher.email})
                   </SelectItem>
                 ))}
+                {/* 如果當前導師不在列表中，也要顯示 */}
+                {classroom.teacher_id &&
+                  !teachers.find((t) => t.id === classroom.teacher_id) && (
+                    <SelectItem
+                      value={classroom.teacher_id.toString()}
+                    >
+                      {classroom.teacher_name || "當前導師"}
+                    </SelectItem>
+                  )}
               </SelectContent>
             </Select>
           </div>

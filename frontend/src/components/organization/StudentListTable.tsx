@@ -47,7 +47,7 @@ export function StudentListTable({
           <TableHead>生日</TableHead>
           <TableHead>班級</TableHead>
           <TableHead>狀態</TableHead>
-          {(onEdit || onAssignClassroom || onRemove) && (
+          {(onEdit || onRemove) && (
             <TableHead className="text-right">操作</TableHead>
           )}
         </TableRow>
@@ -67,32 +67,45 @@ export function StudentListTable({
               <TableCell>{student.email || "-"}</TableCell>
               <TableCell>{student.birthdate}</TableCell>
               <TableCell>
-                {student.classrooms && student.classrooms.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {student.classrooms.map((classroom) => (
-                      <span
-                        key={classroom.id}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800"
-                      >
-                        {classroom.name}
-                        {onRemoveFromClassroom && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onRemoveFromClassroom(student.id, classroom.id);
-                            }}
-                            className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"
-                            aria-label={`從 ${classroom.name} 移除`}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-gray-400">未分配</span>
-                )}
+                <div className="flex flex-col gap-2">
+                  {student.classrooms && student.classrooms.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {student.classrooms.map((classroom) => (
+                        <span
+                          key={classroom.id}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800"
+                        >
+                          {classroom.name}
+                          {onRemoveFromClassroom && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRemoveFromClassroom(student.id, classroom.id);
+                              }}
+                              className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"
+                              aria-label={`從 ${classroom.name} 移除`}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">未分配</span>
+                  )}
+                  {onAssignClassroom && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onAssignClassroom(student)}
+                      className="w-fit h-7 text-xs gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    >
+                      <UserPlus className="h-3 w-3" />
+                      加入班級
+                    </Button>
+                  )}
+                </div>
               </TableCell>
               <TableCell>
                 <span
@@ -105,7 +118,7 @@ export function StudentListTable({
                   {student.is_active ? "啟用" : "停用"}
                 </span>
               </TableCell>
-              {(onEdit || onAssignClassroom || onRemove) && (
+              {(onEdit || onRemove) && (
                 <TableCell>
                   <div className="flex items-center justify-end gap-2">
                     {onEdit && (
@@ -117,17 +130,6 @@ export function StudentListTable({
                       >
                         <Edit2 className="h-4 w-4" />
                         編輯
-                      </Button>
-                    )}
-                    {onAssignClassroom && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onAssignClassroom(student)}
-                        className="gap-1"
-                      >
-                        <UserPlus className="h-4 w-4" />
-                        指派班級
                       </Button>
                     )}
                     {onRemove && (

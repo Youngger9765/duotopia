@@ -185,7 +185,11 @@ export default function SchoolTeachersPage() {
               <p className="text-sm text-gray-400">點擊上方按鈕邀請教師加入</p>
             </div>
           ) : (
-            <TeacherListTable teachers={teachers} />
+            <TeacherListTable 
+              teachers={teachers} 
+              schoolId={schoolId || ""}
+              onRoleUpdated={fetchTeachers}
+            />
           )}
         </CardContent>
       </Card>

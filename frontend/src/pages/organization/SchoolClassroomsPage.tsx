@@ -10,6 +10,8 @@ import { ClassroomListTable } from "@/components/organization/ClassroomListTable
 import { CreateClassroomDialog } from "@/components/organization/CreateClassroomDialog";
 import { EditClassroomDialog } from "@/components/organization/EditClassroomDialog";
 import { AssignTeacherDialog } from "@/components/organization/AssignTeacherDialog";
+import { ClassroomStudentsSidebar } from "@/components/organization/ClassroomStudentsSidebar";
+import { ClassroomMaterialsSidebar } from "@/components/organization/ClassroomMaterialsSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, Plus } from "lucide-react";
@@ -56,8 +58,11 @@ export default function SchoolClassroomsPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [showStudentsSidebar, setShowStudentsSidebar] = useState(false);
+  const [showMaterialsSidebar, setShowMaterialsSidebar] = useState(false);
   const [editingClassroom, setEditingClassroom] = useState<Classroom | null>(null);
   const [assigningClassroom, setAssigningClassroom] = useState<Classroom | null>(null);
+  const [viewingClassroom, setViewingClassroom] = useState<Classroom | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
 
   useEffect(() => {
@@ -160,6 +165,16 @@ export default function SchoolClassroomsPage() {
     setShowAssignDialog(true);
   };
 
+  const handleViewStudents = (classroom: Classroom) => {
+    setViewingClassroom(classroom);
+    setShowStudentsSidebar(true);
+  };
+
+  const handleViewMaterials = (classroom: Classroom) => {
+    setViewingClassroom(classroom);
+    setShowMaterialsSidebar(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -226,6 +241,8 @@ export default function SchoolClassroomsPage() {
               classrooms={classrooms}
               onEdit={handleEdit}
               onAssignTeacher={handleAssignTeacher}
+              onViewStudents={handleViewStudents}
+              onViewMaterials={handleViewMaterials}
             />
           )}
         </CardContent>
@@ -256,6 +273,31 @@ export default function SchoolClassroomsPage() {
         teachers={teachers}
         onSuccess={fetchClassrooms}
       />
+
+      {/* Classroom Students Sidebar */}
+      {viewingClassroom && (
+        <ClassroomStudentsSidebar
+          open={showStudentsSidebar}
+          onOpenChange={setShowStudentsSidebar}
+          classroomId={parseInt(viewingClassroom.id)}
+          classroomName={viewingClassroom.name}
+          schoolId={schoolId || ""}
+          onSuccess={fetchClassrooms}
+        />
+      )}
+
+      {/* Classroom Materials Sidebar */}
+      {viewingClassroom && school && (
+        <ClassroomMaterialsSidebar
+          open={showMaterialsSidebar}
+          onOpenChange={setShowMaterialsSidebar}
+          classroomId={parseInt(viewingClassroom.id)}
+          classroomName={viewingClassroom.name}
+          schoolId={schoolId || ""}
+          organizationId={school.organization_id}
+          onSuccess={fetchClassrooms}
+        />
+      )}
     </div>
   );
 }

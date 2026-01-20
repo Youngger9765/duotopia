@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, Edit2, UserPlus } from "lucide-react";
+import { Users, Edit2, UserPlus, BookOpen } from "lucide-react";
 
 export interface Classroom {
   id: string;
@@ -27,12 +27,16 @@ interface ClassroomListTableProps {
   classrooms: Classroom[];
   onEdit?: (classroom: Classroom) => void;
   onAssignTeacher?: (classroom: Classroom) => void;
+  onViewStudents?: (classroom: Classroom) => void;
+  onViewMaterials?: (classroom: Classroom) => void;
 }
 
 export function ClassroomListTable({
   classrooms,
   onEdit,
   onAssignTeacher,
+  onViewStudents,
+  onViewMaterials,
 }: ClassroomListTableProps) {
   const navigate = useNavigate();
 
@@ -64,8 +68,9 @@ export function ClassroomListTable({
           <TableHead>語言程度</TableHead>
           <TableHead>導師</TableHead>
           <TableHead>學生數量</TableHead>
+          <TableHead>教材清單</TableHead>
           <TableHead>狀態</TableHead>
-          {(onEdit || onAssignTeacher) && <TableHead>操作</TableHead>}
+          {onEdit && <TableHead>操作</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -84,16 +89,40 @@ export function ClassroomListTable({
             <TableCell>{getLevelBadge(classroom.program_level)}</TableCell>
             <TableCell>
               {classroom.teacher_name ? (
-                <span className="text-gray-900">{classroom.teacher_name}</span>
+                <button
+                  onClick={() => onAssignTeacher?.(classroom)}
+                  className="flex items-center gap-1.5 text-gray-900 hover:text-blue-600 transition-colors group"
+                >
+                  <span>{classroom.teacher_name}</span>
+                  <Edit2 className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
               ) : (
-                <span className="text-gray-400">未指派</span>
+                <button
+                  onClick={() => onAssignTeacher?.(classroom)}
+                  className="text-blue-600 hover:text-blue-800 hover:underline transition-colors flex items-center gap-1"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  <span>指派導師</span>
+                </button>
               )}
             </TableCell>
             <TableCell>
-              <div className="flex items-center gap-1">
-                <Users className="h-4 w-4 text-gray-400" />
+              <button
+                onClick={() => onViewStudents?.(classroom)}
+                className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+              >
+                <Users className="h-4 w-4" />
                 <span>{classroom.student_count}</span>
-              </div>
+              </button>
+            </TableCell>
+            <TableCell>
+              <button
+                onClick={() => onViewMaterials?.(classroom)}
+                className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+              >
+                <BookOpen className="h-4 w-4" />
+                <span>查看</span>
+              </button>
             </TableCell>
             <TableCell>
               <span
@@ -106,32 +135,17 @@ export function ClassroomListTable({
                 {classroom.is_active ? "啟用" : "停用"}
               </span>
             </TableCell>
-            {(onEdit || onAssignTeacher) && (
+            {onEdit && (
               <TableCell>
-                <div className="flex items-center gap-2">
-                  {onEdit && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEdit(classroom)}
-                      className="gap-1"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                      編輯
-                    </Button>
-                  )}
-                  {onAssignTeacher && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onAssignTeacher(classroom)}
-                      className="gap-1"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      {classroom.teacher_name ? "更換導師" : "指派導師"}
-                    </Button>
-                  )}
-                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEdit(classroom)}
+                  className="gap-1"
+                >
+                  <Edit2 className="h-4 w-4" />
+                  編輯
+                </Button>
               </TableCell>
             )}
           </TableRow>

@@ -62,13 +62,9 @@ export function AssignClassroomDialog({
   }, [open, schoolId]);
 
   useEffect(() => {
-    if (student && student.classrooms && student.classrooms.length > 0) {
-      // 預設選擇第一個班級（如果有的話）
-      setSelectedClassroomId(student.classrooms[0].id);
-    } else {
-      setSelectedClassroomId(null);
-    }
-  }, [student]);
+    // 重置選擇，因為可用班級列表會根據學生已加入的班級動態變化
+    setSelectedClassroomId(null);
+  }, [student, classrooms]);
 
   const token = useTeacherAuthStore((state) => state.token);
 
@@ -134,9 +130,12 @@ export function AssignClassroomDialog({
 
   if (!student) return null;
 
-  // 檢查學生是否已在這個班級
-  const isAlreadyInClassroom = student.classrooms?.some(
-    (c) => c.id === selectedClassroomId
+  // 過濾掉學生已經加入的班級
+  const studentClassroomIds = new Set(
+    student.classrooms?.map((c) => c.id) || []
+  );
+  const availableClassrooms = classrooms.filter(
+    (classroom) => !studentClassroomIds.has(classroom.id)
   );
 
   return (
@@ -165,20 +164,26 @@ export function AssignClassroomDialog({
                   <SelectValue placeholder="選擇班級" />
                 </SelectTrigger>
                 <SelectContent>
-                  {classrooms.map((classroom) => (
-                    <SelectItem
-                      key={classroom.id}
-                      value={classroom.id.toString()}
-                    >
-                      {classroom.name}
-                    </SelectItem>
-                  ))}
+                  {availableClassrooms.length === 0 ? (
+                    <div className="px-2 py-1.5 text-sm text-gray-500 text-center">
+                      沒有可用的班級
+                    </div>
+                  ) : (
+                    availableClassrooms.map((classroom) => (
+                      <SelectItem
+                        key={classroom.id}
+                        value={classroom.id.toString()}
+                      >
+                        {classroom.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             )}
-            {isAlreadyInClassroom && (
-              <p className="text-sm text-yellow-600">
-                此學生已經在此班級中
+            {availableClassrooms.length === 0 && !loading && (
+              <p className="text-sm text-gray-500">
+                此學生已加入所有班級
               </p>
             )}
           </div>
@@ -193,7 +198,12 @@ export function AssignClassroomDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isSubmitting || !selectedClassroomId || loading}
+            disabled={
+              isSubmitting ||
+              !selectedClassroomId ||
+              loading ||
+              availableClassrooms.length === 0
+            }
           >
             {isSubmitting ? "處理中..." : "確認"}
           </Button>
