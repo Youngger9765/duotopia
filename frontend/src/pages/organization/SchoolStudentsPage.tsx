@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { apiClient } from "@/lib/api";
+import { API_URL } from "@/config/api";
 import { logError } from "@/utils/errorLogger";
 import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
@@ -63,33 +64,43 @@ export default function SchoolStudentsPage() {
     if (!schoolId) return;
 
     try {
-      const response = await fetch(`${apiClient.baseURL}/api/schools/${schoolId}`, {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/api/schools/${schoolId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
         const data = await response.json();
         setSchool(data);
-        fetchOrganization(data.organization_id);
-        fetchStudents();
+        // 確保立即獲取組織信息
+        if (data.organization_id) {
+          await fetchOrganization(data.organization_id);
+        }
+        await fetchStudents();
       } else {
         setError(`載入學校失敗：${response.status}`);
       }
     } catch (error) {
       logError("Failed to fetch school", error, { schoolId });
       setError("網路連線錯誤");
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchOrganization = async (orgId: string) => {
+    if (!orgId) return;
+    
     try {
-      const response = await fetch(`${apiClient.baseURL}/api/organizations/${orgId}`, {
+      const response = await fetch(`${API_URL}/api/organizations/${orgId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
         const data = await response.json();
         setOrganization(data);
+      } else {
+        logError("Failed to fetch organization", new Error(response.statusText), { orgId });
       }
     } catch (error) {
       logError("Failed to fetch organization", error, { orgId });
@@ -100,7 +111,6 @@ export default function SchoolStudentsPage() {
     if (!schoolId) return;
 
     try {
-      setLoading(true);
       setError(null);
 
       const params: any = {};
@@ -113,8 +123,6 @@ export default function SchoolStudentsPage() {
     } catch (error) {
       logError("Failed to fetch students", error, { schoolId });
       setError("載入學生列表失敗");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -209,7 +217,14 @@ export default function SchoolStudentsPage() {
                   href: `/organization/${organization.id}`,
                 },
               ]
-            : []),
+            : school?.organization_id
+              ? [
+                  {
+                    label: "...",
+                    href: `/organization/${school.organization_id}`,
+                  },
+                ]
+              : []),
           ...(school
             ? [
                 {

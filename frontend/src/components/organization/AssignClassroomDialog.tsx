@@ -58,13 +58,10 @@ export function AssignClassroomDialog({
   useEffect(() => {
     if (open && schoolId) {
       fetchClassrooms();
+      // 重置選擇
+      setSelectedClassroomId(null);
     }
-  }, [open, schoolId]);
-
-  useEffect(() => {
-    // 重置選擇，因為可用班級列表會根據學生已加入的班級動態變化
-    setSelectedClassroomId(null);
-  }, [student, classrooms]);
+  }, [open, schoolId, student?.id]);
 
   const token = useTeacherAuthStore((state) => state.token);
 
@@ -130,13 +127,25 @@ export function AssignClassroomDialog({
 
   if (!student) return null;
 
-  // 過濾掉學生已經加入的班級
+  // 過濾掉學生已經加入的班級（只顯示尚未被指派過的班級）
+  // 確保 ID 類型一致（都轉換為數字進行比較）
   const studentClassroomIds = new Set(
-    student.classrooms?.map((c) => c.id) || []
+    student.classrooms?.map((c) => Number(c.id)) || []
   );
   const availableClassrooms = classrooms.filter(
-    (classroom) => !studentClassroomIds.has(classroom.id)
+    (classroom) => !studentClassroomIds.has(Number(classroom.id))
   );
+
+  // Debug: Log filtering results (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[AssignClassroomDialog] Filtering:', {
+      studentId: student.id,
+      studentClassrooms: student.classrooms,
+      studentClassroomIds: Array.from(studentClassroomIds),
+      allClassrooms: classrooms.map(c => ({ id: c.id, name: c.name })),
+      availableClassrooms: availableClassrooms.map(c => ({ id: c.id, name: c.name })),
+    });
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
