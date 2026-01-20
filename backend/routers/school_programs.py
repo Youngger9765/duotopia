@@ -913,7 +913,10 @@ async def copy_material_to_classroom(
             detail="Source material not found or doesn't belong to school",
         )
 
-    # Verify classroom exists and teacher owns it
+    # Verify classroom exists and belongs to school
+    from utils.permissions import check_classroom_in_school
+    from models import ClassroomSchool
+    
     classroom = db.query(Classroom).filter(Classroom.id == payload.classroom_id).first()
 
     if not classroom:
@@ -921,16 +924,29 @@ async def copy_material_to_classroom(
             status_code=status.HTTP_404_NOT_FOUND, detail="Classroom not found"
         )
 
+    # Verify classroom belongs to school
+    if not check_classroom_in_school(payload.classroom_id, school_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Classroom not found in this school",
+        )
+
     if classroom.teacher_id is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Classroom has no assigned teacher",
         )
+    
+    # Allow if teacher owns classroom OR has school management permission
+    from utils.permissions import has_school_materials_permission
+    
     if classroom.teacher_id != current_teacher.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not the teacher of this classroom",
-        )
+        # Check if teacher has school management permission
+        if not has_school_materials_permission(current_teacher.id, school_id, db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not the teacher of this classroom and do not have school management permission",
+            )
 
     # Deep copy
     try:

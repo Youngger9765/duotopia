@@ -27,6 +27,7 @@ interface Classroom {
   teacher_id?: number | null;
   student_count: number;
   assignment_count: number;
+  program_count: number;
 }
 
 interface Teacher {

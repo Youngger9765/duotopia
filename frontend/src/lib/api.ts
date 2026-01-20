@@ -435,6 +435,10 @@ class ApiClient {
     return this.request(`/api/programs/classroom/${classroomId}`);
   }
 
+  async getSchoolClassroomPrograms(schoolId: string, classroomId: number) {
+    return this.request(`/api/schools/${schoolId}/classrooms/${classroomId}/programs`);
+  }
+
   async softDeleteProgram(programId: number) {
     return this.request(`/api/programs/${programId}`, {
       method: "DELETE",

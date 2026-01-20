@@ -21,10 +21,12 @@ from models import (
     ClassroomSchool,
     ClassroomStudent,
     Assignment,
+    Program,
 )
 from models.base import ProgramLevel
 from auth import verify_token
-from utils.permissions import has_school_materials_permission
+from utils.permissions import has_school_materials_permission, check_classroom_in_school
+from schemas import ProgramResponse
 from routers.schemas.classroom import (
     SchoolClassroomCreate,
     SchoolClassroomUpdate,
@@ -141,7 +143,7 @@ class ClassroomInfo(BaseModel):
 
     @classmethod
     def from_orm_with_counts(
-        cls, classroom: Classroom, student_count: int, assignment_count: int
+        cls, classroom: Classroom, student_count: int, assignment_count: int, program_count: int = 0
     ):
         return cls(
             id=str(classroom.id),
@@ -153,6 +155,7 @@ class ClassroomInfo(BaseModel):
             teacher_email=classroom.teacher.email if classroom.teacher else None,
             student_count=student_count,
             assignment_count=assignment_count,
+            program_count=program_count,
         )
 
 
@@ -362,19 +365,41 @@ async def list_school_classrooms(
 
     classroom_ids = db.query(classroom_ids_subq.c.classroom_id).scalar_subquery()
 
-    # Create subqueries for counts
+    # Create subqueries for counts - optimized to avoid N+1
+    # Only count active student enrollments
     student_counts = (
         db.query(
             ClassroomStudent.classroom_id,
             func.count(ClassroomStudent.student_id).label("count"),
         )
+        .filter(
+            ClassroomStudent.classroom_id.in_(classroom_ids),
+            ClassroomStudent.is_active.is_(True),
+        )
         .group_by(ClassroomStudent.classroom_id)
         .subquery()
     )
 
+    # Only count active assignments
     assignment_counts = (
         db.query(Assignment.classroom_id, func.count(Assignment.id).label("count"))
+        .filter(
+            Assignment.classroom_id.in_(classroom_ids),
+            Assignment.is_active.is_(True),
+        )
         .group_by(Assignment.classroom_id)
+        .subquery()
+    )
+    
+    # Count programs for classrooms
+    program_counts = (
+        db.query(Program.classroom_id, func.count(Program.id).label("count"))
+        .filter(
+            Program.classroom_id.in_(classroom_ids),
+            Program.is_active.is_(True),
+            Program.deleted_at.is_(None),
+        )
+        .group_by(Program.classroom_id)
         .subquery()
     )
 
@@ -384,20 +409,22 @@ async def list_school_classrooms(
             Classroom,
             func.coalesce(student_counts.c.count, 0).label("student_count"),
             func.coalesce(assignment_counts.c.count, 0).label("assignment_count"),
+            func.coalesce(program_counts.c.count, 0).label("program_count"),
         )
         .options(joinedload(Classroom.teacher))
         .outerjoin(student_counts, Classroom.id == student_counts.c.classroom_id)
         .outerjoin(assignment_counts, Classroom.id == assignment_counts.c.classroom_id)
+        .outerjoin(program_counts, Classroom.id == program_counts.c.classroom_id)
         .filter(Classroom.id.in_(classroom_ids), Classroom.is_active.is_(True))
         .all()
     )
 
     # Build result
     result = []
-    for classroom, student_count, assignment_count in classrooms_query:
+    for classroom, student_count, assignment_count, program_count in classrooms_query:
         result.append(
             ClassroomInfo.from_orm_with_counts(
-                classroom, student_count, assignment_count
+                classroom, student_count, assignment_count, program_count
             )
         )
 
@@ -483,7 +510,7 @@ async def create_school_classroom(
     db.refresh(classroom)
 
     # Return with counts (0 for new classroom)
-    return ClassroomInfo.from_orm_with_counts(classroom, 0, 0)
+    return ClassroomInfo.from_orm_with_counts(classroom, 0, 0, 0)
 
 
 @router.put(
@@ -546,13 +573,20 @@ async def assign_teacher_to_classroom(
 
     # Get counts
     student_count = db.query(ClassroomStudent).filter(
-        ClassroomStudent.classroom_id == classroom_id
+        ClassroomStudent.classroom_id == classroom_id,
+        ClassroomStudent.is_active.is_(True),
     ).count()
     assignment_count = db.query(Assignment).filter(
-        Assignment.classroom_id == classroom_id
+        Assignment.classroom_id == classroom_id,
+        Assignment.is_active.is_(True),
+    ).count()
+    program_count = db.query(Program).filter(
+        Program.classroom_id == classroom_id,
+        Program.is_active.is_(True),
+        Program.deleted_at.is_(None),
     ).count()
 
-    return ClassroomInfo.from_orm_with_counts(classroom, student_count, assignment_count)
+    return ClassroomInfo.from_orm_with_counts(classroom, student_count, assignment_count, program_count)
 
 
 @router.put(
@@ -623,10 +657,98 @@ async def update_classroom(
 
     # Get counts
     student_count = db.query(ClassroomStudent).filter(
-        ClassroomStudent.classroom_id == classroom_id
+        ClassroomStudent.classroom_id == classroom_id,
+        ClassroomStudent.is_active.is_(True),
     ).count()
     assignment_count = db.query(Assignment).filter(
-        Assignment.classroom_id == classroom_id
+        Assignment.classroom_id == classroom_id,
+        Assignment.is_active.is_(True),
+    ).count()
+    program_count = db.query(Program).filter(
+        Program.classroom_id == classroom_id,
+        Program.is_active.is_(True),
+        Program.deleted_at.is_(None),
     ).count()
 
-    return ClassroomInfo.from_orm_with_counts(classroom, student_count, assignment_count)
+    return ClassroomInfo.from_orm_with_counts(classroom, student_count, assignment_count, program_count)
+
+
+@router.get("/api/schools/{school_id}/classrooms/{classroom_id}/programs", response_model=List[ProgramResponse])
+async def get_school_classroom_programs(
+    school_id: uuid.UUID,
+    classroom_id: int,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Get all programs for a classroom in a school.
+    
+    Permission: Must have access to the school and classroom must belong to the school.
+    """
+    from datetime import datetime
+    
+    # Verify school exists and teacher has access
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="School not found"
+        )
+    
+    if not has_school_materials_permission(teacher.id, school_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to access this school"
+        )
+    
+    # Verify classroom belongs to school
+    if not check_classroom_in_school(classroom_id, school_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Classroom not found in this school"
+        )
+    
+    # Query programs for the classroom
+    programs = (
+        db.query(Program)
+        .filter(
+            Program.classroom_id == classroom_id,
+            Program.is_active.is_(True),
+            Program.deleted_at.is_(None),
+        )
+        .order_by(Program.order_index, Program.created_at)
+        .all()
+    )
+    
+    # Convert to response models
+    result = []
+    for program in programs:
+        result.append(
+            ProgramResponse(
+                id=program.id,
+                name=program.name,
+                description=program.description,
+                level=program.level,
+                estimated_hours=program.estimated_hours,
+                tags=program.tags,
+                is_template=program.is_template,
+                classroom_id=program.classroom_id,
+                teacher_id=program.teacher_id,
+                organization_id=str(program.organization_id)
+                if program.organization_id
+                else None,
+                school_id=str(program.school_id) if program.school_id else None,
+                source_type=program.source_type,
+                source_metadata=program.source_metadata,
+                is_active=program.is_active,
+                created_at=program.created_at or datetime.now(),
+                updated_at=program.updated_at,
+                classroom_name=getattr(program, "classroom_name", None),
+                teacher_name=getattr(program, "teacher_name", None),
+                lesson_count=len(program.lessons) if program.lessons else 0,
+                is_duplicate=getattr(program, "is_duplicate", None),
+                lessons=[],
+            )
+        )
+    
+    return result

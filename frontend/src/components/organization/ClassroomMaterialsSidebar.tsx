@@ -16,7 +16,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Plus, Search, Check } from "lucide-react";
 import { toast } from "sonner";
-import { useProgramCopy } from "@/hooks/useProgramCopy";
 
 interface Program {
   id: number;
@@ -45,7 +44,6 @@ export function ClassroomMaterialsSidebar({
   onSuccess,
 }: ClassroomMaterialsSidebarProps) {
   const token = useTeacherAuthStore((state) => state.token);
-  const { copyProgram } = useProgramCopy();
   
   const [classroomPrograms, setClassroomPrograms] = useState<Program[]>([]);
   const [schoolPrograms, setSchoolPrograms] = useState<Program[]>([]);
@@ -64,13 +62,14 @@ export function ClassroomMaterialsSidebar({
   const fetchClassroomPrograms = async () => {
     try {
       setLoading(true);
-      const programs = await apiClient.getClassroomPrograms(classroomId);
+      // Use school-level endpoint for organization admin access
+      const programs = await apiClient.getSchoolClassroomPrograms(schoolId, classroomId);
       const classroomProgramsData = programs || [];
       setClassroomPrograms(classroomProgramsData);
       // 獲取班級教材後，立即更新可用教材列表
       await fetchSchoolPrograms(classroomProgramsData);
     } catch (error) {
-      logError("Failed to fetch classroom programs", error, { classroomId });
+      logError("Failed to fetch classroom programs", error, { schoolId, classroomId });
       toast.error("載入班級教材失敗");
     } finally {
       setLoading(false);
@@ -105,13 +104,26 @@ export function ClassroomMaterialsSidebar({
     }
 
     try {
-      // 使用 copyProgram hook 複製教材到班級
+      // 使用學校層級的複製 endpoint，支持組織管理員權限
       for (const programId of selectedProgramIds) {
-        await copyProgram({
-          programId,
-          targetScope: "classroom",
-          targetId: classroomId.toString(),
-        });
+        const response = await fetch(
+          `${API_URL}/api/schools/${schoolId}/programs/${programId}/copy-to-classroom`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              classroom_id: classroomId,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || "複製教材失敗");
+        }
       }
       
       toast.success("教材已成功加入班級");
@@ -120,10 +132,11 @@ export function ClassroomMaterialsSidebar({
       onSuccess?.();
     } catch (error) {
       logError("Failed to add programs to classroom", error, {
+        schoolId,
         classroomId,
         programIds: Array.from(selectedProgramIds),
       });
-      toast.error("加入教材失敗");
+      toast.error(error instanceof Error ? error.message : "加入教材失敗");
     }
   };
 

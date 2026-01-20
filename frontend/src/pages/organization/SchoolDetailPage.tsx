@@ -7,18 +7,9 @@ import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { SchoolEditDialog } from "@/components/organization/SchoolEditDialog";
-import { InviteTeacherToSchoolDialog } from "@/components/organization/InviteTeacherToSchoolDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Edit2, School as SchoolIcon, Users, UserPlus, BookOpen, ArrowRight, GraduationCap, UserCheck } from "lucide-react";
+import { Edit2, School as SchoolIcon, Users, BookOpen, ArrowRight, GraduationCap, UserCheck } from "lucide-react";
 
 interface School {
   id: string;
@@ -72,7 +63,6 @@ export default function SchoolDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (schoolId) {
@@ -187,28 +177,6 @@ export default function SchoolDetailPage() {
 
   const handleEditSuccess = () => {
     fetchSchool();
-  };
-
-  const handleInviteSuccess = () => {
-    fetchTeachers();
-  };
-
-  const getRoleBadgeColor = (roles: string[]) => {
-    if (roles.includes("school_admin")) {
-      return "bg-purple-100 text-purple-800";
-    } else if (roles.includes("school_director")) {
-      return "bg-amber-100 text-amber-800";
-    } else if (roles.includes("teacher")) {
-      return "bg-gray-100 text-gray-800";
-    }
-    return "bg-gray-100 text-gray-800";
-  };
-
-  const getRoleLabel = (roles: string[]) => {
-    if (roles.includes("school_admin")) return "校長";
-    if (roles.includes("school_director")) return "主任";
-    if (roles.includes("teacher")) return "教師";
-    return roles.join(", ");
   };
 
   if (loading) {
@@ -422,77 +390,6 @@ export default function SchoolDetailPage() {
         </Card>
       </div>
 
-      {/* Teachers/Staff Table */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-purple-100 rounded-lg">
-              <Users className="h-4 w-4 text-purple-600" />
-            </div>
-            <CardTitle className="text-base">教師團隊</CardTitle>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => setInviteDialogOpen(true)}
-          >
-            <UserPlus className="h-4 w-4" />
-            邀請教師
-          </Button>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {teachers.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <p className="text-gray-500 mb-2">尚無教師</p>
-              <p className="text-sm text-gray-400">點擊上方按鈕邀請教師加入</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>姓名</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>角色</TableHead>
-                  <TableHead>狀態</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {teachers.map((teacher) => (
-                  <TableRow key={teacher.id}>
-                    <TableCell className="font-medium">
-                      {teacher.name}
-                    </TableCell>
-                    <TableCell>{teacher.email}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(
-                          teacher.roles,
-                        )}`}
-                      >
-                        {getRoleLabel(teacher.roles)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          teacher.is_active
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {teacher.is_active ? "啟用" : "停用"}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Edit School Dialog */}
       <SchoolEditDialog
         school={school}
@@ -501,16 +398,6 @@ export default function SchoolDetailPage() {
         onSuccess={handleEditSuccess}
       />
 
-      {/* Invite Teacher Dialog */}
-      {school.organization_id && (
-        <InviteTeacherToSchoolDialog
-          schoolId={school.id}
-          organizationId={school.organization_id}
-          open={inviteDialogOpen}
-          onOpenChange={setInviteDialogOpen}
-          onSuccess={handleInviteSuccess}
-        />
-      )}
     </div>
   );
 }

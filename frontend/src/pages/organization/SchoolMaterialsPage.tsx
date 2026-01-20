@@ -6,6 +6,7 @@ import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { ProgramTreeView } from "@/components/shared/ProgramTreeView";
+import { SchoolProgramCreateDialog } from "@/components/shared/SchoolProgramCreateDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen } from "lucide-react";
 import { toast } from "sonner";
@@ -44,6 +45,7 @@ export default function SchoolMaterialsPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   // Memoized callback to prevent infinite loop
   const handleProgramsChange = useCallback(
@@ -119,6 +121,14 @@ export default function SchoolMaterialsPage() {
     user?.role === "org_admin" ||
     user?.role === "school_admin" ||
     user?.role === "school_director";
+
+  const handleCreateClick = () => {
+    setShowCreateDialog(true);
+  };
+
+  const handleCreateSuccess = () => {
+    fetchData();
+  };
 
   if (loading) {
     return (
@@ -229,11 +239,24 @@ export default function SchoolMaterialsPage() {
                 createButtonText="新增教材"
                 scope="school"
                 schoolId={schoolId}
+                onCreateClick={handleCreateClick}
               />
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Create Program Dialog */}
+      {school && schoolId && (
+        <SchoolProgramCreateDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          schoolId={schoolId}
+          schoolName={school.name}
+          organizationId={school.organization_id}
+          onSuccess={handleCreateSuccess}
+        />
+      )}
     </div>
   );
 }

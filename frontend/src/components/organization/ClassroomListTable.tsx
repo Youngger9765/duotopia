@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -21,6 +20,7 @@ export interface Classroom {
   teacher_id?: number | null;
   student_count: number;
   assignment_count: number;
+  program_count: number;
 }
 
 interface ClassroomListTableProps {
@@ -38,7 +38,6 @@ export function ClassroomListTable({
   onViewStudents,
   onViewMaterials,
 }: ClassroomListTableProps) {
-  const navigate = useNavigate();
 
   const getLevelBadge = (level: string) => {
     const levelColors: Record<string, string> = {
@@ -77,14 +76,7 @@ export function ClassroomListTable({
         {classrooms.map((classroom) => (
           <TableRow key={classroom.id}>
             <TableCell className="font-medium">
-              <button
-                onClick={() =>
-                  navigate(`/teacher/classroom/${classroom.id}`)
-                }
-                className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-              >
-                {classroom.name}
-              </button>
+              {classroom.name}
             </TableCell>
             <TableCell>{getLevelBadge(classroom.program_level)}</TableCell>
             <TableCell>
@@ -121,7 +113,7 @@ export function ClassroomListTable({
                 className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline transition-colors"
               >
                 <BookOpen className="h-4 w-4" />
-                <span>查看</span>
+                <span>{classroom.program_count || 0}</span>
               </button>
             </TableCell>
             <TableCell>
