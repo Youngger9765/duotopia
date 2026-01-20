@@ -136,3 +136,56 @@ class AIGradingResponse(BaseModel):
     detailed_feedback: List[Dict[str, Any]]
     graded_at: datetime
     processing_time_seconds: float
+
+
+# ============ Batch Grading Models ============
+
+
+class BatchGradingRequest(BaseModel):
+    """批次批改請求（第一階段：AI 計算分數）"""
+
+    classroom_id: int
+    student_ids: Optional[List[int]] = None  # Optional: Filter specific students
+
+
+class StudentBatchGradingResult(BaseModel):
+    """單個學生的批改結果"""
+
+    student_id: int
+    student_name: str
+    total_score: float
+    missing_items: int
+    total_items: int  # Total items in assignment
+    completed_items: int  # Items with recordings
+    avg_pronunciation: float
+    avg_accuracy: float
+    avg_fluency: float
+    avg_completeness: float
+    feedback: Optional[str] = None  # Assignment feedback
+    status: str
+
+
+class BatchGradingResponse(BaseModel):
+    """批次批改回應"""
+
+    total_students: int
+    processed: int
+    results: List[StudentBatchGradingResult]
+
+
+class BatchGradeFinalizeRequest(BaseModel):
+    """批次批改完成請求（第二階段：決定狀態）"""
+
+    classroom_id: int
+    teacher_decisions: Dict[
+        str, Optional[str]
+    ]  # student_id -> "RETURNED" | "GRADED" | None
+
+
+class BatchGradeFinalizeResponse(BaseModel):
+    """批次批改完成回應"""
+
+    returned_count: int
+    graded_count: int
+    unchanged_count: int
+    total_count: int
