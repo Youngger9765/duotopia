@@ -1,4 +1,4 @@
-import { Edit2, UserPlus, Trash2 } from "lucide-react";
+import { Edit2, UserPlus, Trash2, X } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -27,6 +27,7 @@ interface StudentListTableProps {
   onEdit?: (student: Student) => void;
   onAssignClassroom?: (student: Student) => void;
   onRemove?: (studentId: number) => void;
+  onRemoveFromClassroom?: (studentId: number, classroomId: number) => void;
 }
 
 export function StudentListTable({
@@ -34,6 +35,7 @@ export function StudentListTable({
   onEdit,
   onAssignClassroom,
   onRemove,
+  onRemoveFromClassroom,
 }: StudentListTableProps) {
   return (
     <Table>
@@ -70,9 +72,21 @@ export function StudentListTable({
                     {student.classrooms.map((classroom) => (
                       <span
                         key={classroom.id}
-                        className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800"
                       >
                         {classroom.name}
+                        {onRemoveFromClassroom && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRemoveFromClassroom(student.id, classroom.id);
+                            }}
+                            className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"
+                            aria-label={`從 ${classroom.name} 移除`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
                       </span>
                     ))}
                   </div>

@@ -8,11 +8,14 @@ import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { StudentListTable, Student } from "@/components/organization/StudentListTable";
 import { CreateStudentDialog } from "@/components/organization/CreateStudentDialog";
+import { EditStudentDialog } from "@/components/organization/EditStudentDialog";
 import { AssignClassroomDialog } from "@/components/organization/AssignClassroomDialog";
+import { ImportStudentsDialog } from "@/components/organization/ImportStudentsDialog";
+import { ConfirmDialog } from "@/components/organization/ConfirmDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Plus, Search } from "lucide-react";
+import { Users, Plus, Search, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 interface School {
@@ -36,8 +39,17 @@ export default function SchoolStudentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [showRemoveFromClassroomConfirm, setShowRemoveFromClassroomConfirm] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [pendingRemoveStudentId, setPendingRemoveStudentId] = useState<number | null>(null);
+  const [pendingRemoveFromClassroom, setPendingRemoveFromClassroom] = useState<{
+    studentId: number;
+    classroomId: number;
+  } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -122,8 +134,8 @@ export default function SchoolStudentsPage() {
   };
 
   const handleEdit = (student: Student) => {
-    toast.info("編輯功能開發中");
-    // TODO: 實現編輯對話框
+    setSelectedStudent(student);
+    setShowEditDialog(true);
   };
 
   const handleAssignClassroom = (student: Student) => {
@@ -131,20 +143,52 @@ export default function SchoolStudentsPage() {
     setShowAssignDialog(true);
   };
 
-  const handleRemove = async (studentId: number) => {
-    if (!schoolId) return;
+  const handleRemove = (studentId: number) => {
+    setPendingRemoveStudentId(studentId);
+    setShowRemoveConfirm(true);
+  };
 
-    if (!confirm("確定要將此學生從學校移除嗎？")) {
-      return;
-    }
+  const confirmRemove = async () => {
+    if (!schoolId || !pendingRemoveStudentId) return;
 
     try {
-      await apiClient.removeStudentFromSchool(schoolId, studentId);
+      await apiClient.removeStudentFromSchool(schoolId, pendingRemoveStudentId);
       toast.success("學生已從學校移除");
       fetchStudents();
     } catch (error) {
-      logError("Failed to remove student from school", error, { schoolId, studentId });
+      logError("Failed to remove student from school", error, {
+        schoolId,
+        studentId: pendingRemoveStudentId,
+      });
       toast.error("移除學生失敗，請稍後再試");
+    } finally {
+      setPendingRemoveStudentId(null);
+    }
+  };
+
+  const handleRemoveFromClassroom = (studentId: number, classroomId: number) => {
+    setPendingRemoveFromClassroom({ studentId, classroomId });
+    setShowRemoveFromClassroomConfirm(true);
+  };
+
+  const confirmRemoveFromClassroom = async () => {
+    if (!schoolId || !pendingRemoveFromClassroom) return;
+
+    const { studentId, classroomId } = pendingRemoveFromClassroom;
+
+    try {
+      await apiClient.removeStudentFromClassroom(schoolId, studentId, classroomId);
+      toast.success("學生已從班級移除");
+      fetchStudents();
+    } catch (error) {
+      logError("Failed to remove student from classroom", error, {
+        schoolId,
+        studentId,
+        classroomId,
+      });
+      toast.error("移除失敗，請稍後再試");
+    } finally {
+      setPendingRemoveFromClassroom(null);
     }
   };
 
@@ -188,10 +232,19 @@ export default function SchoolStudentsPage() {
                 {school?.name ? `${school.name} 的學生名冊` : "學生管理"}
               </CardTitle>
             </div>
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              建立學生
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowImportDialog(true)}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                批量匯入
+              </Button>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                建立學生
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -218,6 +271,7 @@ export default function SchoolStudentsPage() {
               onEdit={handleEdit}
               onAssignClassroom={handleAssignClassroom}
               onRemove={handleRemove}
+              onRemoveFromClassroom={handleRemoveFromClassroom}
             />
           )}
         </CardContent>
@@ -231,6 +285,17 @@ export default function SchoolStudentsPage() {
         onSuccess={handleCreateSuccess}
       />
 
+      {/* Edit Student Dialog */}
+      {selectedStudent && schoolId && (
+        <EditStudentDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          student={selectedStudent}
+          schoolId={schoolId}
+          onSuccess={handleCreateSuccess}
+        />
+      )}
+
       {/* Assign Classroom Dialog */}
       {selectedStudent && schoolId && (
         <AssignClassroomDialog
@@ -239,6 +304,50 @@ export default function SchoolStudentsPage() {
           student={selectedStudent}
           schoolId={schoolId}
           onSuccess={handleCreateSuccess}
+        />
+      )}
+
+      {/* Import Students Dialog */}
+      {schoolId && (
+        <ImportStudentsDialog
+          open={showImportDialog}
+          onOpenChange={setShowImportDialog}
+          schoolId={schoolId}
+          onSuccess={handleCreateSuccess}
+        />
+      )}
+
+      {/* Remove Student Confirmation Dialog */}
+      <ConfirmDialog
+        open={showRemoveConfirm}
+        onOpenChange={setShowRemoveConfirm}
+        title="移除學生"
+        description="確定要將此學生從學校移除嗎？"
+        confirmText="確定移除"
+        cancelText="取消"
+        variant="destructive"
+        onConfirm={confirmRemove}
+      />
+
+      {/* Remove From Classroom Confirmation Dialog */}
+      {pendingRemoveFromClassroom && (
+        <ConfirmDialog
+          open={showRemoveFromClassroomConfirm}
+          onOpenChange={setShowRemoveFromClassroomConfirm}
+          title="從班級移除學生"
+          description={`確定要將 ${
+            students.find((s) => s.id === pendingRemoveFromClassroom.studentId)?.name ||
+            "此學生"
+          } 從 ${
+            students
+              .find((s) => s.id === pendingRemoveFromClassroom.studentId)
+              ?.classrooms?.find((c) => c.id === pendingRemoveFromClassroom.classroomId)?.name ||
+            "此班級"
+          } 移除嗎？`}
+          confirmText="確定移除"
+          cancelText="取消"
+          variant="default"
+          onConfirm={confirmRemoveFromClassroom}
         />
       )}
     </div>

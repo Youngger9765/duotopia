@@ -7,6 +7,7 @@ import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { StaffTable, StaffMember } from "@/components/organization/StaffTable";
+import { InviteTeacherDialog } from "@/components/organization/InviteTeacherDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, UserPlus } from "lucide-react";
@@ -26,6 +27,7 @@ export default function TeachersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [organization, setOrganization] = useState<{ name: string } | null>(null);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   const effectiveOrgId =
     orgId ||
@@ -113,7 +115,7 @@ export default function TeachersPage() {
           <h1 className="text-3xl font-bold text-gray-900">人員管理</h1>
           <p className="text-gray-600 mt-2">管理組織內的教師成員</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setInviteDialogOpen(true)}>
           <UserPlus className="h-4 w-4" />
           邀請教師
         </Button>
@@ -179,7 +181,7 @@ export default function TeachersPage() {
               <p className="text-gray-500 mb-2">此組織尚無教師</p>
               <Button
                 variant="outline"
-                onClick={() => toast.info("邀請教師功能開發中")}
+                onClick={() => setInviteDialogOpen(true)}
                 className="mt-4 gap-2"
               >
                 <UserPlus className="h-4 w-4" />
@@ -196,6 +198,16 @@ export default function TeachersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Invite Teacher Dialog */}
+      {effectiveOrgId && (
+        <InviteTeacherDialog
+          organizationId={effectiveOrgId}
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+          onSuccess={fetchTeachers}
+        />
+      )}
     </div>
   );
 }
