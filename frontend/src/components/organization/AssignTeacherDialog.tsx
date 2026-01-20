@@ -111,9 +111,9 @@ export function AssignTeacherDialog({
           <div className="space-y-2">
             <Label htmlFor="teacher-select">選擇導師</Label>
             <Select
-              value={selectedTeacherId?.toString() || ""}
+              value={selectedTeacherId?.toString() || "none"}
               onValueChange={(value) =>
-                setSelectedTeacherId(value ? parseInt(value) : null)
+                setSelectedTeacherId(value === "none" ? null : parseInt(value))
               }
               disabled={isSubmitting}
             >
@@ -121,7 +121,7 @@ export function AssignTeacherDialog({
                 <SelectValue placeholder="選擇導師（可選）" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">未指派</SelectItem>
+                <SelectItem value="none">未指派</SelectItem>
                 {teachers.map((teacher) => (
                   <SelectItem key={teacher.id} value={teacher.id.toString()}>
                     {teacher.name} ({teacher.email})

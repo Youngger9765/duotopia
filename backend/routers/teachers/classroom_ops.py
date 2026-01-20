@@ -207,6 +207,8 @@ async def update_classroom(
     db: Session = Depends(get_db),
 ):
     """更新班級資料"""
+    from utils.permissions import check_classroom_is_personal
+    
     classroom = (
         db.query(Classroom)
         .filter(
@@ -217,6 +219,13 @@ async def update_classroom(
 
     if not classroom:
         raise HTTPException(status_code=404, detail="Classroom not found")
+    
+    # Check if classroom belongs to school (should not be allowed)
+    if not check_classroom_is_personal(classroom.id, db):
+        raise HTTPException(
+            status_code=403,
+            detail="此班級屬於學校，請通過學校後台編輯"
+        )
 
     if update_data.name is not None:
         classroom.name = update_data.name
@@ -245,6 +254,8 @@ async def delete_classroom(
     db: Session = Depends(get_db),
 ):
     """刪除班級"""
+    from utils.permissions import check_classroom_is_personal
+    
     classroom = (
         db.query(Classroom)
         .filter(
@@ -255,6 +266,13 @@ async def delete_classroom(
 
     if not classroom:
         raise HTTPException(status_code=404, detail="Classroom not found")
+    
+    # Check if classroom belongs to school (should not be allowed)
+    if not check_classroom_is_personal(classroom.id, db):
+        raise HTTPException(
+            status_code=403,
+            detail="此班級屬於學校，請通過學校後台刪除"
+        )
 
     # Soft delete by setting is_active = False
     classroom.is_active = False

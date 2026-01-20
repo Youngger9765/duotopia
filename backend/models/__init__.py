@@ -34,6 +34,7 @@ from .organization import (
     TeacherOrganization,
     TeacherSchool,
     ClassroomSchool,
+    StudentSchool,
 )
 
 # Classroom models
@@ -74,6 +75,7 @@ __all__ = [
     "TeacherOrganization",
     "TeacherSchool",
     "ClassroomSchool",
+    "StudentSchool",
     # Classrooms
     "Classroom",
     "ClassroomStudent",

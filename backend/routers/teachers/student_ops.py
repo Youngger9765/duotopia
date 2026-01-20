@@ -142,6 +142,9 @@ async def create_student(
     """創建新學生"""
     # Verify classroom belongs to teacher (only if classroom_id is provided)
     if student_data.classroom_id:
+        from utils.permissions import check_classroom_is_personal
+        from models import ClassroomSchool
+        
         classroom = (
             db.query(Classroom)
             .filter(
@@ -153,6 +156,13 @@ async def create_student(
 
         if not classroom:
             raise HTTPException(status_code=404, detail="Classroom not found")
+        
+        # Check if classroom belongs to school (should not be allowed)
+        if not check_classroom_is_personal(classroom.id, db):
+            raise HTTPException(
+                status_code=403,
+                detail="此班級屬於學校，請通過學校管理頁面創建學生"
+            )
 
     # Parse birthdate with error handling
     try:

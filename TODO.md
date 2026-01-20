@@ -28,6 +28,45 @@
 
 ---
 
+## 🚧 In Progress / Next Up
+
+### 學校學生管理功能（待開始）
+
+**設計狀態**: ✅ 已完成（見 `docs/plans/2026-01-19-school-student-management-complete.md`）  
+**核心設計**:
+- 學生與學校：多對多關係（`StudentSchool` 關聯表）
+- 學生與班級：多對多關係（`ClassroomStudent` 關聯表）
+- 流程：先在學校建立學生名冊 → 再分配到班級
+
+**實現計劃**:
+1. ⏰ **Phase 1: 數據模型修改**
+   - Task 1: 創建 `StudentSchool` 關聯表 Migration
+   - 更新 `Student` 和 `School` 模型
+
+2. ⏰ **Phase 2: Backend API (Tasks 2-7)**
+   - Task 2: 創建 Schemas
+   - Task 3: 實現權限檢查函數
+   - Task 4: 實現 GET 端點
+   - Task 5: 實現 POST 端點
+   - Task 6: 實現 PUT/POST/DELETE 端點
+   - Task 7: 實現 DELETE 端點
+
+3. ⏰ **Phase 3: Frontend (Tasks 8-11)**
+   - Task 8: 創建 API Client 方法
+   - Task 9: 創建學校學生管理頁面
+   - Task 10: 創建對話框組件
+   - Task 11: 更新現有頁面
+
+4. ⏰ **Phase 4: Testing (Tasks 12-13)**
+   - Task 12: 編寫 Backend 測試
+   - Task 13: 前端整合測試
+
+**預估時間**: 9-11 天  
+**優先級**: 🔵 MEDIUM  
+**參考文檔**: `docs/plans/2026-01-19-school-student-management-complete.md`
+
+---
+
 ## ✅ Recently Completed (2026-01-19)
 
 ### Bug Fixes - Content Editor & API

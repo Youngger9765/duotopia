@@ -11,7 +11,10 @@ from fastapi import HTTPException
 import uuid
 
 from services.casbin_service import get_casbin_service
-from models import Teacher, Program, Lesson, Content, TeacherOrganization
+from models import (
+    Teacher, Program, Lesson, Content, TeacherOrganization,
+    Student, StudentSchool, ClassroomSchool, School
+)
 
 
 def has_manage_materials_permission(
@@ -308,3 +311,140 @@ def check_content_access(
     program, lesson = check_lesson_access(db, content.lesson_id, current_teacher, require_owner)
 
     return program, lesson, content
+
+
+def check_school_student_permission(
+    teacher_id: int,
+    school_id: uuid.UUID,
+    db: Session
+) -> bool:
+    """
+    Check if teacher has permission to manage students in school.
+    
+    Permission rules:
+    - school_admin role in the school: Has permission
+    - org_owner or org_admin role in the organization: Has permission
+    - Otherwise: No permission
+    """
+    from models import School, TeacherSchool, TeacherOrganization
+    
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        return False
+    
+    # Check school_admin role
+    membership = db.query(TeacherSchool).filter(
+        TeacherSchool.teacher_id == teacher_id,
+        TeacherSchool.school_id == school_id,
+        TeacherSchool.is_active.is_(True),
+    ).first()
+    
+    has_school_admin = False
+    if membership and membership.roles:
+        if isinstance(membership.roles, list):
+            has_school_admin = "school_admin" in membership.roles
+        else:
+            import json
+            try:
+                roles_list = json.loads(membership.roles) if isinstance(membership.roles, str) else membership.roles
+                has_school_admin = "school_admin" in roles_list
+            except (json.JSONDecodeError, TypeError):
+                has_school_admin = False
+    
+    if has_school_admin:
+        return True
+    
+    # Check org_owner/org_admin role
+    org_membership = db.query(TeacherOrganization).filter(
+        TeacherOrganization.teacher_id == teacher_id,
+        TeacherOrganization.organization_id == school.organization_id,
+        TeacherOrganization.is_active.is_(True),
+    ).first()
+    
+    if org_membership and org_membership.role in ["org_owner", "org_admin"]:
+        return True
+    
+    return False
+
+
+def check_student_in_school(
+    student_id: int,
+    school_id: uuid.UUID,
+    db: Session
+) -> bool:
+    """
+    Check if student belongs to school (many-to-many relationship).
+    
+    Returns:
+        True if student has active enrollment in school, False otherwise
+    """
+    student_school = db.query(StudentSchool).filter(
+        StudentSchool.student_id == student_id,
+        StudentSchool.school_id == school_id,
+        StudentSchool.is_active.is_(True)
+    ).first()
+    return student_school is not None
+
+
+def check_classroom_in_school(
+    classroom_id: int,
+    school_id: uuid.UUID,
+    db: Session
+) -> bool:
+    """
+    Check if classroom belongs to school.
+    
+    Returns:
+        True if classroom is in school, False otherwise
+    """
+    classroom_school = db.query(ClassroomSchool).filter(
+        ClassroomSchool.classroom_id == classroom_id,
+        ClassroomSchool.school_id == school_id,
+        ClassroomSchool.is_active.is_(True)
+    ).first()
+    return classroom_school is not None
+
+
+def check_classroom_is_personal(classroom_id: int, db: Session) -> bool:
+    """
+    檢查班級是否為個人班級（不屬於任何學校）
+    
+    Returns:
+        True: 個人班級
+        False: 學校班級
+    """
+    classroom_school = db.query(ClassroomSchool).filter(
+        ClassroomSchool.classroom_id == classroom_id,
+        ClassroomSchool.is_active.is_(True)
+    ).first()
+    
+    return classroom_school is None
+
+
+def validate_student_classroom_school(
+    student_id: int,
+    classroom_id: int,
+    db: Session
+) -> bool:
+    """
+    Validate that student can join classroom (must belong to classroom's school).
+    
+    Business rule:
+    - Student must belong to the school that the classroom belongs to
+    
+    Returns:
+        True if student can join classroom, False otherwise
+    """
+    # 1. Get classroom's school
+    classroom_school = db.query(ClassroomSchool).filter(
+        ClassroomSchool.classroom_id == classroom_id,
+        ClassroomSchool.is_active.is_(True)
+    ).first()
+    
+    if not classroom_school:
+        return False
+    
+    school_id = classroom_school.school_id
+    
+    # 2. Check if student belongs to this school
+    return check_student_in_school(student_id, school_id, db)

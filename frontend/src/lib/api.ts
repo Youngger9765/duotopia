@@ -510,6 +510,143 @@ class ApiClient {
     });
   }
 
+  // ============ School Student Methods ============
+  async getSchoolStudents(
+    schoolId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      status?: "active" | "inactive";
+      classroom_id?: number;
+      unassigned?: boolean;
+    }
+  ) {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append("page", params.page.toString());
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    if (params?.search) queryParams.append("search", params.search);
+    if (params?.status) queryParams.append("status", params.status);
+    if (params?.classroom_id) queryParams.append("classroom_id", params.classroom_id.toString());
+    if (params?.unassigned !== undefined) queryParams.append("unassigned", params.unassigned.toString());
+    
+    const queryString = queryParams.toString();
+    const url = `/api/schools/${schoolId}/students${queryString ? `?${queryString}` : ""}`;
+    return this.request(url);
+  }
+
+  async createSchoolStudent(
+    schoolId: string,
+    data: {
+      name: string;
+      email?: string;
+      student_number?: string;
+      birthdate: string; // YYYY-MM-DD
+      phone?: string;
+    }
+  ) {
+    return this.request(`/api/schools/${schoolId}/students`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async addStudentToSchool(
+    schoolId: string,
+    studentId: number
+  ) {
+    return this.request(`/api/schools/${schoolId}/students/${studentId}`, {
+      method: "POST",
+    });
+  }
+
+  async updateSchoolStudent(
+    schoolId: string,
+    studentId: number,
+    data: {
+      name?: string;
+      email?: string;
+      student_number?: string;
+      birthdate?: string;
+      phone?: string;
+      is_active?: boolean;
+    }
+  ) {
+    return this.request(`/api/schools/${schoolId}/students/${studentId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async removeStudentFromSchool(
+    schoolId: string,
+    studentId: number
+  ) {
+    return this.request(`/api/schools/${schoolId}/students/${studentId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async addStudentToClassroom(
+    schoolId: string,
+    studentId: number,
+    classroomId: number
+  ) {
+    return this.request(`/api/schools/${schoolId}/students/${studentId}/classrooms`, {
+      method: "POST",
+      body: JSON.stringify({ classroom_id: classroomId }),
+    });
+  }
+
+  async removeStudentFromClassroom(
+    schoolId: string,
+    studentId: number,
+    classroomId: number
+  ) {
+    return this.request(`/api/schools/${schoolId}/students/${studentId}/classrooms/${classroomId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getClassroomStudents(
+    schoolId: string,
+    classroomId: number
+  ) {
+    return this.request(`/api/schools/${schoolId}/classrooms/${classroomId}/students`);
+  }
+
+  async batchAddStudentsToClassroom(
+    schoolId: string,
+    classroomId: number,
+    studentIds: number[]
+  ) {
+    return this.request(`/api/schools/${schoolId}/classrooms/${classroomId}/students/batch`, {
+      method: "POST",
+      body: JSON.stringify({ student_ids: studentIds }),
+    });
+  }
+
+  async batchImportStudents(
+    schoolId: string,
+    students: Array<{
+      name: string;
+      email?: string;
+      student_number?: string;
+      birthdate: string;
+      phone?: string;
+      classroom_id?: number;
+    }>,
+    duplicateAction: "skip" | "update" | "add_suffix" = "skip"
+  ) {
+    return this.request(`/api/schools/${schoolId}/students/batch-import`, {
+      method: "POST",
+      body: JSON.stringify({
+        students,
+        duplicate_action: duplicateAction,
+      }),
+    });
+  }
+
   // ============ Student CRUD Methods ============
   async createStudent(data: {
     name: string;

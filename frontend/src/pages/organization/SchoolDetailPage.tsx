@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit2, School as SchoolIcon, Users, UserPlus, BookOpen, ArrowRight, GraduationCap } from "lucide-react";
+import { Edit2, School as SchoolIcon, Users, UserPlus, BookOpen, ArrowRight, GraduationCap, UserCheck } from "lucide-react";
 
 interface School {
   id: string;
@@ -340,7 +340,7 @@ export default function SchoolDetailPage() {
       </Card>
 
       {/* Quick Actions Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
           <CardContent
             className="p-6"
@@ -394,6 +394,26 @@ export default function SchoolDetailPage() {
                 <div>
                   <h3 className="font-semibold text-gray-900">學校教材</h3>
                   <p className="text-sm text-gray-500">教材與課程</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent
+            className="p-6"
+            onClick={() => navigate(`/organization/schools/${schoolId}/students`)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <UserCheck className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">學生管理</h3>
+                  <p className="text-sm text-gray-500">學生名冊</p>
                 </div>
               </div>
               <ArrowRight className="h-5 w-5 text-gray-400" />

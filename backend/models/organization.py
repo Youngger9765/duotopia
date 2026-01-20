@@ -125,6 +125,9 @@ class School(Base):
     classroom_schools = relationship(
         "ClassroomSchool", back_populates="school", cascade="all, delete-orphan"
     )
+    student_enrollments = relationship(
+        "StudentSchool", back_populates="school", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<School(id={self.id}, name={self.name}, org={self.organization_id})>"
@@ -277,3 +280,49 @@ class ClassroomSchool(Base):
         return (
             f"<ClassroomSchool(classroom={self.classroom_id}, school={self.school_id})>"
         )
+
+
+class StudentSchool(Base):
+    """
+    學生-學校關係表（多對多）
+    - 記錄學生屬於哪些學校
+    - 支援學生同時屬於多個學校
+    """
+
+    __tablename__ = "student_schools"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    student_id = Column(
+        Integer,
+        ForeignKey("students.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    school_id = Column(
+        UUID, ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    # 狀態
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
+
+    # 時間戳記
+    enrolled_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=True
+    )
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    student = relationship("Student", back_populates="school_enrollments")
+    school = relationship("School", back_populates="student_enrollments")
+
+    # 唯一約束：一個學生在一個學校只能有一條記錄
+    __table_args__ = (
+        UniqueConstraint("student_id", "school_id", name="uq_student_school"),
+        Index("ix_student_schools_active", "student_id", "school_id", "is_active"),
+    )
+
+    def __repr__(self):
+        return f"<StudentSchool(student={self.student_id}, school={self.school_id})>"
