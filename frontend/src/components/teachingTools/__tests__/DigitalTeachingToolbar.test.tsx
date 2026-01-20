@@ -16,21 +16,26 @@ vi.mock("react-i18next", () => ({
 describe("DigitalTeachingToolbar", () => {
   beforeEach(() => {
     // Mock canvas for testing
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (HTMLCanvasElement.prototype as any).getContext = vi.fn(() => ({
-      scale: vi.fn(),
-      lineCap: "",
-      lineJoin: "",
-      beginPath: vi.fn(),
-      moveTo: vi.fn(),
-      lineTo: vi.fn(),
-      stroke: vi.fn(),
-      closePath: vi.fn(),
-      clearRect: vi.fn(),
-      globalCompositeOperation: "",
-      strokeStyle: "",
-      lineWidth: 0,
-    }));
+    HTMLCanvasElement.prototype.getContext = vi.fn((contextId: string) => {
+      if (contextId === "2d") {
+        const ctx = {
+          scale: vi.fn(),
+          lineCap: "",
+          lineJoin: "",
+          beginPath: vi.fn(),
+          moveTo: vi.fn(),
+          lineTo: vi.fn(),
+          stroke: vi.fn(),
+          closePath: vi.fn(),
+          clearRect: vi.fn(),
+          globalCompositeOperation: "",
+          strokeStyle: "",
+          lineWidth: 0,
+        };
+        return ctx as unknown as CanvasRenderingContext2D;
+      }
+      return null;
+    }) as unknown as HTMLCanvasElement["getContext"];
 
     // Mock window.innerWidth and innerHeight
     window.innerWidth = 1024;
