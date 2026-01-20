@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'fix/issue-*'
+      - 'feat/issue-*'
       - 'feature/issue-*'
       - 'claude/issue-*'
     paths:
@@ -59,6 +60,27 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
+      - name: Setup Python for migrations
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Alembic database migrations
+        working-directory: ./backend
+        env:
+          # Use pooler URL for GitHub Actions (direct connection blocked by Supabase)
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_POOLER_URL }}
+          STAGING_SUPABASE_POOLER_URL: ${{ secrets.STAGING_DATABASE_POOLER_URL }}
+        run: |
+          echo "🔍 Installing dependencies for migrations..."
+          pip install alembic psycopg2-binary sqlalchemy python-dotenv
+          echo "🔄 Running Alembic database migrations..."
+          echo "📊 Current migration status:"
+          alembic current || echo "No current revision"
+          echo "🔄 Upgrading to all heads (handles multiple branches)..."
+          alembic upgrade heads
+          echo "✅ Migrations complete"
+
       - name: Deploy backend to Cloud Run
         id: deploy
         working-directory: ./backend
@@ -95,6 +117,9 @@ jobs:
           ENV_VARS="$ENV_VARS,SUPABASE_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}"
           ENV_VARS="$ENV_VARS,FRONTEND_URL=${FRONTEND_URL}"
           ENV_VARS="$ENV_VARS,OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
+          ENV_VARS="$ENV_VARS,USE_VERTEX_AI=${{ vars.USE_VERTEX_AI || 'false' }}"
+          ENV_VARS="$ENV_VARS,VERTEX_AI_PROJECT_ID=${PROJECT_ID}"
+          ENV_VARS="$ENV_VARS,VERTEX_AI_LOCATION=us-central1"
           ENV_VARS="$ENV_VARS,SMTP_HOST=${{ secrets.SMTP_HOST }}"
           ENV_VARS="$ENV_VARS,SMTP_PORT=${{ secrets.SMTP_PORT }}"
           ENV_VARS="$ENV_VARS,SMTP_USER=${{ secrets.SMTP_USER }}"
@@ -122,10 +147,11 @@ jobs:
             --platform managed \
             --region ${REGION} \
             --allow-unauthenticated \
-            --port 8000 \
-            --memory 256Mi \
-            --cpu 500m \
-            --concurrency 1 \
+            --port 8080 \
+            --memory 1Gi \
+            --cpu 1 \
+            --timeout 300 \
+            --concurrency 10 \
             --max-instances 1 \
             --min-instances 0 \
             --set-env-vars "${ENV_VARS}" \

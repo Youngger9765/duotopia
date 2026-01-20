@@ -4,7 +4,16 @@ from sqlalchemy.orm import Session
 from typing import Optional  # noqa: F401
 from pydantic import BaseModel, EmailStr
 from database import get_db
-from models import Teacher, Student
+from models import (
+    Teacher,
+    Student,
+    ClassroomStudent,
+    ClassroomSchool,
+    School,
+    Organization,
+    TeacherOrganization,
+    TeacherSchool,
+)
 from auth import (
     verify_password,
     create_access_token,
@@ -83,6 +92,55 @@ async def teacher_login(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive"
             )
 
+    # Sync Casbin roles on login
+    try:
+        from services.casbin_service import get_casbin_service
+
+        casbin_service = get_casbin_service()
+        casbin_service.sync_teacher_roles(teacher.id)
+    except Exception as e:
+        # Log error but don't fail login
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(
+            f"Failed to sync Casbin roles for teacher {teacher.id} on login: {e}"
+        )
+
+    # Query organization role
+    teacher_org = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher.id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+
+    # Query school role
+    teacher_school = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == teacher.id,
+            TeacherSchool.is_active.is_(True),
+        )
+        .first()
+    )
+
+    # Determine role (priority: org > school > teacher)
+    role = "teacher"  # default
+    organization_id = None
+    school_id = None
+
+    if teacher_org:
+        role = teacher_org.role  # org_owner, org_admin, etc.
+        organization_id = str(teacher_org.organization_id)
+    elif teacher_school:
+        # TeacherSchool uses 'roles' array, get the first one or 'teacher' as default
+        if teacher_school.roles and len(teacher_school.roles) > 0:
+            role = teacher_school.roles[0]  # school_admin or teacher
+        school_id = str(teacher_school.school_id)
+
     # Create token
     access_token = create_access_token(
         data={
@@ -90,6 +148,7 @@ async def teacher_login(
             "email": teacher.email,
             "type": "teacher",
             "name": teacher.name,
+            "role": role,
         },
         expires_delta=timedelta(hours=24),  # 24 hours for development
     )
@@ -104,6 +163,9 @@ async def teacher_login(
             "phone": teacher.phone,
             "is_demo": teacher.is_demo,
             "is_admin": teacher.is_admin,
+            "role": role,
+            "organization_id": organization_id,
+            "school_id": school_id,
         },
     }
 
@@ -277,6 +339,48 @@ async def student_login(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
 
+    # Query classroom's school and organization
+    school_name = None
+    organization_name = None
+
+    # Get student's active classroom enrollment
+    classroom_student = (
+        db.query(ClassroomStudent)
+        .filter(
+            ClassroomStudent.student_id == student.id,
+            ClassroomStudent.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if classroom_student:
+        # Get classroom's school via ClassroomSchool
+        classroom_school = (
+            db.query(ClassroomSchool)
+            .filter(
+                ClassroomSchool.classroom_id == classroom_student.classroom_id,
+                ClassroomSchool.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if classroom_school:
+            # Get school info
+            school = (
+                db.query(School).filter(School.id == classroom_school.school_id).first()
+            )
+            if school and school.is_active:
+                school_name = school.display_name or school.name
+
+                # Get school's organization
+                organization = (
+                    db.query(Organization)
+                    .filter(Organization.id == school.organization_id)
+                    .first()
+                )
+                if organization and organization.is_active:
+                    organization_name = organization.display_name or organization.name
+
     # 創建 JWT token
     access_token = create_access_token(
         data={
@@ -297,6 +401,8 @@ async def student_login(
             "email": student.email,
             "name": student.name,
             "student_number": student.student_number,
+            "school_name": school_name,
+            "organization_name": organization_name,
         },
     }
 

@@ -619,6 +619,9 @@
     "score": {
       "label": "分數: {{score}}"
     },
+    "proficiency": {
+      "label": "熟悉度：{{proficiency}}%"
+    },
     "buttons": {
       "start": "開始作業",
       "continue": "繼續作業",
@@ -753,7 +756,10 @@
     },
     "activityTypes": {
       "reading": "例句朗讀",
-      "rearrangement": "例句重組"
+      "rearrangement": "例句重組",
+      "vocabulary": "單字練習",
+      "wordReading": "單字朗讀",
+      "wordSelection": "單字選擇"
     },
     "stats": {
       "minutes": "分鐘",
@@ -1251,7 +1257,8 @@
         "quotaExceeded": "配額不足，無法派發作業",
         "quotaExceededDesc": "請升級方案或等待下個計費週期",
         "missingAudio": "選擇的內容缺少音檔",
-        "missingAudioDesc": "此練習模式需要音檔，請先回到內容管理頁面產生 TTS 音檔"
+        "missingAudioDesc": "此練習模式需要音檔，請先回到內容管理頁面產生 TTS 音檔",
+        "mixedContentType": "目前只能選擇{{type}}，請先清除已選擇的內容再選擇其他類型"
       },
       "success": {
         "created": "成功創建作業，已指派給 {{count}} 位學生"
@@ -1261,10 +1268,13 @@
         "READING_ASSESSMENT": "例句集",
         "example_sentences": "例句集",
         "EXAMPLE_SENTENCES": "例句集",
+        "vocabulary_set": "單字集",
+        "VOCABULARY_SET": "單字集",
+        "sentence_making": "造句練習",
+        "SENTENCE_MAKING": "單字集",
         "speaking_practice": "口說練習",
         "speaking_scenario": "情境對話",
         "listening_cloze": "聽力填空",
-        "sentence_making": "造句練習",
         "speaking_quiz": "口說測驗"
       },
       "actions": {
@@ -1297,7 +1307,28 @@
         "playAudioNo": "否（寫作練習）",
         "scoreListening": "計分類別：聽力",
         "scoreWriting": "計分類別：寫作",
-        "scoreSpeaking": "計分類別：口說"
+        "scoreSpeaking": "計分類別：口說",
+        "wordReading": "單字朗讀",
+        "wordReadingDesc": "學生朗讀單字，系統評分發音",
+        "wordSelection": "單字選擇",
+        "wordSelectionDesc": "看單字或聽音檔，選擇正確的翻譯",
+        "targetProficiency": "達標熟悉度",
+        "targetProficiencyDesc": "學生需達到此熟悉度才算完成作業",
+        "showTranslation": "顯示翻譯",
+        "showTranslationDesc": "練習時顯示單字的翻譯",
+        "showWord": "顯示單字",
+        "showWordDesc": "練習時顯示英文單字",
+        "showImage": "顯示圖片",
+        "showImageDesc": "練習時顯示單字的圖片",
+        "playAudioOption": "播放音檔",
+        "playAudioOptionDesc": "練習時自動播放單字音檔",
+        "wordReadingInfo": "學生需朗讀每個單字，系統會使用 Azure Speech AI 評分發音",
+        "wordSelectionInfo": "學生需看單字或聽音檔選擇正確翻譯，使用艾賓浩斯記憶曲線幫助記憶",
+        "questionDisplay": "題目呈現方式",
+        "displayWord": "顯示單字",
+        "displayWordDesc": "看英文單字選翻譯",
+        "playAudioWord": "播放音檔",
+        "playAudioWordDesc": "聽音檔選翻譯"
       }
     },
     "classroomAssignDialog": {
@@ -1315,6 +1346,7 @@
       "description": "為 「{{lessonName}}」 選擇要新增的內容類型",
       "processing": "處理中...",
       "recommended": "推薦",
+      "new": "最新",
       "comingSoon": "即將推出",
       "cancel": "取消",
       "types": {
@@ -2217,6 +2249,8 @@
       "VOCABULARY_SET": "單字集",
       "SPEAKING": "例句朗讀",
       "REARRANGEMENT": "例句重組",
+      "WORD_SELECTION": "單字選擇",
+      "WORD_READING": "單字朗讀",
       "speakingPractice": "口說練習",
       "speaking_practice": "口說練習",
       "SPEAKING_PRACTICE": "口說練習",
@@ -2383,6 +2417,7 @@
       "resubmitted": "已訂正",
       "graded": "已完成",
       "score": "分數",
+      "proficiency": "熟練度",
       "actions": "操作",
       "searchPlaceholder": "搜尋學生姓名...",
       "allStatuses": "全部狀態",
@@ -2411,6 +2446,8 @@
       "sentenceMaking": "單字集",
       "sentence_making": "單字集",
       "SENTENCE_MAKING": "單字集",
+      "vocabularySet": "單字集",
+      "vocabulary_set": "單字集",
       "VOCABULARY_SET": "單字集",
       "speakingQuiz": "口說測驗",
       "speaking_quiz": "口說測驗",
@@ -2483,7 +2520,8 @@
       "previewMode": "預覽示範模式"
     },
     "info": {
-      "description": "這是預覽示範模式，您看到的畫面與學生完全相同。所有操作（包括錄音）都可正常使用，但不會儲存到資料庫。"
+      "description": "這是預覽示範模式，您看到的畫面與學生完全相同。所有操作（包括錄音）都可正常使用，但不會儲存到資料庫。",
+      "suffix": "：您看到的畫面與學生完全相同。所有操作（包括錄音）都可正常使用，但不會儲存到資料庫。"
     }
   },
   "teacherClassrooms": {
@@ -3700,15 +3738,23 @@
       "speed": "語速"
     }
   },
-  "sentenceMakingPanel": {
+  "vocabularySet": {
+    "dialogTitle": "新增單字集",
+    "editTitle": "編輯單字集",
+    "defaultTitle": "單字集內容",
+    "saving": "儲存中...",
     "placeholders": {
       "enterEnglishWord": "輸入英文單字",
-      "enterEnglishSentence": "輸入英文例句",
-      "aiPromptExample": "例如：請生成與日常生活相關的例句"
+      "enterEnglishSentence": "輸入英文例句 (選填)",
+      "aiPromptExample": "例如：請生成與日常生活相關的例句",
+      "translation": "{{lang}}單字翻譯",
+      "exampleTranslation": "{{lang}}例句翻譯 (選填)"
     },
     "tooltips": {
       "generateExampleSentence": "AI 生成例句",
-      "batchAIGenerateExamples": "批次 AI 生成例句"
+      "batchAIGenerateExamples": "批次 AI 生成例句",
+      "generateTranslation": "生成{{lang}}翻譯",
+      "generateExampleTranslation": "生成{{lang}}例句翻譯"
     },
     "buttons": {
       "batchAIGenerateExamples": "批次AI生成例句",
@@ -3743,7 +3789,116 @@
       "willBeOverwritten": "將被覆蓋",
       "translationFieldsCleared": "翻譯欄位將被清空",
       "itemsAddedAndCreated": "已新增 {{count}} 個項目並創建內容",
-      "itemsAdded": "已新增 {{added}} 個項目（共 {{total}} 個）"
+      "itemsAdded": "已新增 {{added}} 個項目（共 {{total}} 個）",
+      "batchTranslationSuccess": "批次翻譯完成：{{total}} 個項目，{{posCount}} 個詞性",
+      "missingExampleSentencesHint": "部分單字缺少例句或例句翻譯，請使用「AI 生成例句」功能補齊後再儲存"
+    },
+    "image": {
+      "upload": "上傳圖片",
+      "uploading": "上傳中...",
+      "remove": "移除圖片",
+      "tooLarge": "圖片檔案過大，最大限制 2MB",
+      "invalidType": "不支援的圖片格式，請使用 JPG、PNG、GIF 或 WebP",
+      "uploadSuccess": "圖片上傳成功",
+      "uploadFailed": "圖片上傳失敗，請稍後再試",
+      "removed": "圖片已移除",
+      "pasteSelectRow": "請先點擊要添加圖片的單字行",
+      "pasteHasImage": "此行已有圖片，請先移除",
+      "pasteOrUpload": "Ctrl+V 貼上 或 點擊上傳",
+      "pasteShortcut": "Ctrl+V / Cmd+V 貼上 或 ",
+      "clickToUpload": "點擊上傳",
+      "macScreenshotHint": "截圖提示：請使用 Ctrl+Shift+Cmd+4 截圖才能貼上",
+      "windowsScreenshotHint": "截圖提示：請使用 Win+Shift+S 截圖後貼上"
+    }
+  },
+  "wordReading": {
+    "loading": "正在載入單字...",
+    "noItems": "找不到單字項目",
+    "noImage": "無圖片",
+    "wordReading": "單字朗讀",
+    "progress": "{{current}} / {{total}}",
+    "itemProgress": "第 {{current}} / {{total}} 題",
+    "completedCount": "已完成 {{count}} 題",
+    "playAudio": "播放發音",
+    "stopAudio": "停止播放",
+    "recordingLimit": "錄音限制：最長 5 秒",
+    "previous": "上一題",
+    "next": "下一題",
+    "submit": "提交作業",
+    "submitting": "提交中...",
+    "analyzing": "AI 分析中...",
+    "uploadAndAssess": "上傳並分析",
+    "aiResult": "AI 評估結果",
+    "overallScore": "綜合評分",
+    "points": " 分",
+    "accuracy": "準確度",
+    "fluency": "流暢度",
+    "completeness": "完整度",
+    "pronunciation": "發音",
+    "teacherFeedback": "老師評語",
+    "passed": "通過",
+    "needsCorrection": "需訂正",
+    "reassess": "重新評估",
+    "assessed": "已評估",
+    "recorded": "已錄音",
+    "notRecorded": "未錄音",
+    "timeUp": "時間到！",
+    "timeUpDescription": "錄音時間已結束，您可以選擇重試或跳過此題。",
+    "retry": "重試",
+    "skip": "跳過",
+    "studentAnswer": "學生作答",
+    "pleaseRecord": "請先錄音",
+    "clickToAssess": "點擊上方按鈕開始評估",
+    "startRecordOrUpload": "開始錄音或上傳",
+    "noTeacherFeedback": "尚無老師評語",
+    "toast": {
+      "loadFailed": "載入單字失敗",
+      "recordedPreview": "錄音已儲存（預覽模式）",
+      "uploaded": "錄音已上傳",
+      "uploadFailed": "上傳失敗",
+      "aiComplete": "AI 評估完成",
+      "incompleteItems": "還有 {{count}} 題未錄音",
+      "cannotSubmitPreview": "預覽模式無法提交",
+      "submitted": "作業已提交",
+      "submitFailed": "提交失敗",
+      "completed": "作業已完成！",
+      "missingData": "請先錄音",
+      "recordingTooLong": "錄音時間過長，限制最長 10 秒"
+    }
+  },
+  "wordSelection": {
+    "loading": "正在載入單字...",
+    "noItems": "找不到單字項目",
+    "wordSelection": "單字選擇",
+    "itemProgress": "第 {{current}} / {{total}} 題",
+    "questionNumber": "第 {{number}} 題",
+    "questionProgress": "第 {{current}}/{{total}} 題",
+    "proficiency": "熟悉度",
+    "currentProficiency": "目前熟悉度",
+    "playAudio": "播放發音",
+    "selectTranslation": "請選擇正確的翻譯：",
+    "selectTranslationAudio": "聽音檔後選擇正確的翻譯：",
+    "seconds": "秒",
+    "timeUp": "時間到！",
+    "correct": "正確！",
+    "incorrect": "答錯了",
+    "correctAnswerIs": "正確答案是：",
+    "next": "下一題",
+    "finishRound": "完成本輪",
+    "roundComplete": "本輪完成！",
+    "wordsMastered": "已熟練 {{mastered}} / {{total}} 個單字",
+    "targetReached": "恭喜！您已達到目標熟悉度！",
+    "continuePractice": "繼續練習",
+    "close": "關閉",
+    "nextRound": "開始下一輪",
+    "achievementTitle": "恭喜達標！",
+    "achievementMessage": "您已達成目標熟悉度 {{target}}%！",
+    "toast": {
+      "startFailed": "開始練習失敗",
+      "submitFailed": "提交答案失敗",
+      "cannotCompletePreview": "預覽模式無法完成作業",
+      "completed": "作業已完成！",
+      "completeFailed": "完成作業失敗"
     }
   }
 }

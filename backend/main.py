@@ -1,16 +1,10 @@
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.orm import Session
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 import uvicorn
 import os
-
-# Import database
-from database import get_db
 
 # Import configuration
 from core.config import settings
@@ -24,7 +18,7 @@ from core.thread_pool import (
 
 # Import middleware
 # from middleware.rate_limiter import RateLimitMiddleware  # Temporarily disabled due to bug
-from middleware.global_rate_limiter import global_rate_limiter
+from utils.performance import performance_logging_middleware, setup_query_logging
 
 # Import routers
 from routers import (
@@ -47,6 +41,9 @@ from routers import (
     subscription,
     payment,
     cron,
+    organizations,
+    schools,
+    classroom_schools,
 )
 from routes import logs
 from api import debug
@@ -67,11 +64,11 @@ environment = os.getenv("ENVIRONMENT", "development")
 if environment == "development":
     # 開發環境可以使用較寬鬆的設定
     allowed_origins = ["*"]
-elif environment == "develop":
-    # Develop 環境允許所有來源（測試用）
-    allowed_origins = ["*"]
 elif environment == "staging":
     # Staging 環境暫時允許所有來源（方便測試）
+    allowed_origins = ["*"]
+elif environment == "develop":
+    # Develop 環境允許所有來源（與 staging 共用資料庫的測試環境）
     allowed_origins = ["*"]
 elif environment == "preview":
     # Preview 環境（Per-Issue Test Environment）允許所有來源
@@ -101,57 +98,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 📦 GZip 压缩 middleware (Issue #95)
-# 对大于 1KB 的响应进行 gzip 压缩，减少带宽使用
-app.add_middleware(GZipMiddleware, minimum_size=1000)
-
-
-# 🔐 全局 Rate Limiting (补充 slowapi)
-# 保守配置：500 请求/分钟 (观察 1 周后调整为 200)
-
-
-@app.middleware("http")
-async def global_rate_limit_middleware(request: Request, call_next):
-    """
-    全局速率限制 middleware
-
-    目的：防止异常高频请求（如 2025-12-03 的 OOM 事件）
-    配置：500 请求/分钟（非常宽松，正常用户不会触发）
-    跳过：健康检查、静态文件
-    """
-    # 跳过健康检查和静态资源
-    if request.url.path in ["/health", "/", "/docs", "/redoc", "/openapi.json"]:
-        return await call_next(request)
-
-    if request.url.path.startswith("/static"):
-        return await call_next(request)
-
-    # 检查速率限制
-    allowed, info = await global_rate_limiter.check_rate_limit(
-        request,
-        max_requests=500,  # 非常宽松（观察期）
-        window_seconds=60,
-    )
-
-    if not allowed:
-        # 返回 429 Too Many Requests
-        return JSONResponse(
-            status_code=429,
-            content=info,
-            headers={
-                "Retry-After": str(info["retry_after"]),
-                "X-RateLimit-Limit": str(info["limit"]),
-            },
-        )
-
-    # 继续处理请求
-    response = await call_next(request)
-
-    # 添加 Rate Limit 信息到响应头（供调试）
-    response.headers["X-RateLimit-Limit"] = str(info["limit"])
-    response.headers["X-RateLimit-Remaining"] = str(info["remaining"])
-
-    return response
+# Add performance monitoring middleware
+app.middleware("http")(performance_logging_middleware)
 
 
 # Mount static files directory
@@ -170,45 +118,93 @@ async def startup_event():
     get_speech_thread_pool()
     get_audio_thread_pool()
 
-    # 啟動全局 Rate Limiter 清理任務
-    global_rate_limiter.start_cleanup_task()
+    # Initialize HTTP client connection pool
+    from utils.http_client import get_http_client
 
-    print("🚀 Application startup complete - Thread pools and rate limiter initialized")
+    get_http_client()
+
+    # Setup query logging (only log slow queries in production)
+    from database import get_engine
+
+    log_all = environment == "development"
+    setup_query_logging(get_engine(), log_all=log_all)
+
+    # Sync Casbin roles from database with retry mechanism
+    import logging
+    import time
+
+    logger = logging.getLogger(__name__)
+
+    MAX_RETRIES = 3
+    RETRY_DELAY = 2  # seconds
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            from services.casbin_service import get_casbin_service
+
+            casbin_service = get_casbin_service()
+            casbin_service.sync_from_database()
+            logger.info("✅ Casbin roles synced from database")
+            break
+        except Exception as e:
+            if attempt == MAX_RETRIES - 1:
+                # Last attempt failed - this is critical
+                logger.critical(
+                    f"🚨 CRITICAL: Failed to sync Casbin roles after {MAX_RETRIES} attempts: {e}",
+                    exc_info=True,
+                )
+                raise RuntimeError(
+                    "Failed to initialize permission system. Cannot start application."
+                ) from e
+            else:
+                logger.warning(
+                    f"⚠️ Casbin sync attempt {attempt + 1}/{MAX_RETRIES} failed: {e}. Retrying in {RETRY_DELAY}s..."
+                )
+                time.sleep(RETRY_DELAY)
+                RETRY_DELAY *= 2  # Exponential backoff
+
+    print(
+        "🚀 Application startup complete - "
+        "HTTP client pool, thread pools initialized, query logging enabled, Casbin synced"
+    )
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """應用程式關閉時清理資源"""
+    # Close HTTP client connection pool
+    from utils.http_client import close_http_client
+
+    await close_http_client()
+
     # 關閉線程池
     shutdown_thread_pools(wait=True)
-    print("👋 Application shutdown complete - Thread pools closed")
+    print("👋 Application shutdown complete - Thread pools and HTTP client closed")
 
 
 @app.get("/")
 async def root():
-    return {"message": "Duotopia API is running", "version": "1.0.1"}
+    return {"message": "Duotopia API is running", "version": "1.0.0"}
 
 
 @app.get("/health")
-async def health_check(db: Session = Depends(get_db)):
-    """健康檢查端點 - 檢查服務和資料庫狀態
-
-    Performance optimization (Issue #96):
-    - Uses connection pool via dependency injection
-    - Added 2-second timeout to prevent hanging
-    - Eliminates overhead of creating new connections
-    """
+async def health_check():
+    """健康檢查端點 - 檢查服務和資料庫狀態"""
     from sqlalchemy import text
-    import time
+    from database import get_session_local
 
     db_status = "unknown"
     db_latency = None
 
     try:
-        # 測試資料庫連線（使用連接池 + 超時）
+        # 測試資料庫連線
+        import time
+
         start = time.time()
-        statement = text("SELECT 1").execution_options(timeout=2)
-        db.execute(statement)
+        SessionLocal = get_session_local()
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
         db_latency = round((time.time() - start) * 1000, 2)  # ms
         db_status = "healthy"
     except Exception as e:
@@ -252,6 +248,9 @@ if environment in ["development", "staging"]:
         pass
 app.include_router(teachers.router)
 app.include_router(students.router)
+app.include_router(organizations.router)  # 機構管理路由
+app.include_router(schools.router)  # 學校管理路由
+app.include_router(classroom_schools.router)  # 班級-學校關聯路由
 app.include_router(assignments.router)
 app.include_router(unassign.router)
 app.include_router(files.router)  # 檔案服務路由

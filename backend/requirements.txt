@@ -18,6 +18,10 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.2.1
 slowapi==0.1.9  # Rate limiting for auth endpoints
 
+# Authorization (RBAC with Multi-tenant support)
+casbin==1.43.0
+casbin-sqlalchemy-adapter==1.4.0
+
 # Configuration
 python-dotenv==1.0.0
 pydantic[email]==2.5.0
@@ -26,6 +30,7 @@ pydantic[email]==2.5.0
 openai==1.57.4
 google-cloud-storage==2.13.0
 google-cloud-bigquery==3.14.1
+google-cloud-aiplatform==1.75.0  # Vertex AI (Gemini) for AI services
 azure-cognitiveservices-speech==1.45.0  # Official Azure TTS (replaces edge-tts)
 
 # Performance Monitoring (OpenTelemetry + Cloud Trace)
@@ -51,7 +56,7 @@ pytest==7.4.3
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
 pytest-xdist==3.5.0
-httpx==0.25.2
+httpx[http2]==0.25.2
 
 # Code Quality
 black==23.12.1

@@ -16,6 +16,10 @@ import {
   Calendar,
   BarChart3,
   MessageSquare,
+  ChevronRight,
+  Building2,
+  School,
+  Users,
 } from "lucide-react";
 
 export default function StudentLayout() {
@@ -86,6 +90,57 @@ export default function StudentLayout() {
 
   const isActive = (path: string) => location.pathname === path;
 
+  // Build breadcrumb items dynamically based on available data
+  const breadcrumbItems = [
+    user?.organization_name && {
+      icon: Building2,
+      label: user.organization_name,
+      isFinal: false,
+    },
+    user?.school_name && {
+      icon: School,
+      label: user.school_name,
+      isFinal: false,
+    },
+    {
+      icon: Users,
+      label: user?.classroom_name || "班級",
+      isFinal: true,
+    },
+  ].filter(Boolean) as Array<{
+    icon: typeof Building2;
+    label: string;
+    isFinal: boolean;
+  }>;
+
+  // Breadcrumb component with dynamic hierarchy
+  const Breadcrumb = () => (
+    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 overflow-x-auto">
+      {breadcrumbItems.map((item, index) => {
+        const Icon = item.icon;
+        const isLast = index === breadcrumbItems.length - 1;
+
+        return (
+          <div key={index} className="flex items-center gap-2">
+            <div className="flex items-center gap-1 whitespace-nowrap">
+              <Icon className="h-3 w-3" />
+              <span
+                className={
+                  item.isFinal
+                    ? "font-medium text-gray-900 dark:text-gray-100"
+                    : ""
+                }
+              >
+                {item.label}
+              </span>
+            </div>
+            {!isLast && <ChevronRight className="h-3 w-3 flex-shrink-0" />}
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Mobile Sidebar Overlay */}
@@ -127,8 +182,13 @@ export default function StudentLayout() {
             <LanguageSwitcher />
           </div>
 
+          {/* Organization Breadcrumb */}
+          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <Breadcrumb />
+          </div>
+
           {/* User Info */}
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
                 {user?.name?.charAt(0).toUpperCase() || "S"}
@@ -137,7 +197,7 @@ export default function StudentLayout() {
                 <p className="font-semibold text-sm">
                   {user?.name || t("studentLayout.userInfo.defaultStudent")}
                 </p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
                   {user?.classroom_name ||
                     t("studentLayout.userInfo.defaultClass")}
                 </p>
@@ -249,27 +309,31 @@ export default function StudentLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b">
+        <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
           <div className="px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-1 min-w-0">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="lg:hidden"
+                  className="lg:hidden flex-shrink-0"
                   onClick={() => setSidebarOpen(true)}
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
 
-                <div>
-                  <h1 className="text-xl font-semibold text-gray-900">
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                     {navItems.find((item) => isActive(item.path))?.label ||
                       t("studentLayout.header.defaultTitle")}
                   </h1>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     {t("studentLayout.header.welcome", { name: user?.name })}
                   </p>
+                  {/* Breadcrumb in header for desktop */}
+                  <div className="mt-2 hidden sm:block">
+                    <Breadcrumb />
+                  </div>
                 </div>
               </div>
 

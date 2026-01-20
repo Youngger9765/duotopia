@@ -619,6 +619,9 @@
     "score": {
       "label": "Score: {{score}}"
     },
+    "proficiency": {
+      "label": "Proficiency: {{proficiency}}%"
+    },
     "buttons": {
       "start": "Start Assignment",
       "continue": "Continue Assignment",
@@ -756,7 +759,10 @@
       "listening": "Listening Practice",
       "speaking": "Speaking Practice",
       "sentence": "Sentence Making",
-      "rearrangement": "Example Sentence Rearrangement"
+      "rearrangement": "Example Sentence Rearrangement",
+      "vocabulary": "Vocabulary Practice",
+      "wordReading": "Word Reading",
+      "wordSelection": "Word Selection"
     },
     "stats": {
       "minutes": "minutes",
@@ -1246,7 +1252,8 @@
         "quotaExceeded": "Insufficient quota, cannot assign assignment",
         "quotaExceededDesc": "Please upgrade your plan or wait for the next billing cycle",
         "missingAudio": "Selected content is missing audio",
-        "missingAudioDesc": "This practice mode requires audio. Please go to content management to generate TTS audio first"
+        "missingAudioDesc": "This practice mode requires audio. Please go to content management to generate TTS audio first",
+        "mixedContentType": "Only {{type}} can be selected. Please clear selected content before choosing a different type"
       },
       "success": {
         "created": "Assignment created successfully, assigned to {{count}} students"
@@ -1256,10 +1263,13 @@
         "READING_ASSESSMENT": "Example Sentences",
         "example_sentences": "Example Sentences",
         "EXAMPLE_SENTENCES": "Example Sentences",
+        "vocabulary_set": "Vocabulary Set",
+        "VOCABULARY_SET": "Vocabulary Set",
+        "sentence_making": "Vocabulary Set",
+        "SENTENCE_MAKING": "Vocabulary Set",
         "speaking_practice": "Speaking Practice",
         "speaking_scenario": "Speaking Scenario",
         "listening_cloze": "Listening Cloze",
-        "sentence_making": "Sentence Making",
         "speaking_quiz": "Speaking Quiz"
       },
       "actions": {
@@ -1292,7 +1302,28 @@
         "playAudioNo": "No (Writing Practice)",
         "scoreListening": "Score Category: Listening",
         "scoreWriting": "Score Category: Writing",
-        "scoreSpeaking": "Score Category: Speaking"
+        "scoreSpeaking": "Score Category: Speaking",
+        "wordReading": "Word Reading",
+        "wordReadingDesc": "Students read words aloud, system scores pronunciation",
+        "wordSelection": "Word Selection",
+        "wordSelectionDesc": "View words or listen to audio, select the correct translation",
+        "targetProficiency": "Target Proficiency",
+        "targetProficiencyDesc": "Students must reach this proficiency to complete the assignment",
+        "showTranslation": "Show Translation",
+        "showTranslationDesc": "Show word translation during practice",
+        "showWord": "Show Word",
+        "showWordDesc": "Show the word in English during practice",
+        "showImage": "Show Image",
+        "showImageDesc": "Show word image during practice",
+        "playAudioOption": "Play Audio",
+        "playAudioOptionDesc": "Auto-play word audio during practice",
+        "wordReadingInfo": "Students will read each word aloud. Azure Speech AI will score pronunciation.",
+        "wordSelectionInfo": "Students select correct translations using Ebbinghaus memory curve for retention.",
+        "questionDisplay": "Question Display",
+        "displayWord": "Display Word",
+        "displayWordDesc": "View word and select translation",
+        "playAudioWord": "Play Audio",
+        "playAudioWordDesc": "Listen to audio and select translation"
       }
     },
     "classroomAssignDialog": {
@@ -1310,6 +1341,7 @@
       "description": "Select the content type to add to \"{{lessonName}}\"",
       "processing": "Processing...",
       "recommended": "Recommended",
+      "new": "New",
       "comingSoon": "Coming Soon",
       "cancel": "Cancel",
       "types": {
@@ -2211,6 +2243,8 @@
       "VOCABULARY_SET": "Vocabulary Set",
       "SPEAKING": "Sentence Reading",
       "REARRANGEMENT": "Sentence Rearrangement",
+      "WORD_SELECTION": "Word Selection",
+      "WORD_READING": "Word Reading",
       "speakingPractice": "Speaking Practice",
       "speaking_practice": "Speaking Practice",
       "SPEAKING_PRACTICE": "Speaking Practice",
@@ -2377,6 +2411,7 @@
       "resubmitted": "Resubmitted",
       "graded": "Graded",
       "score": "Score",
+      "proficiency": "Proficiency",
       "actions": "Actions",
       "searchPlaceholder": "Search student name...",
       "allStatuses": "All Statuses",
@@ -2404,6 +2439,8 @@
       "sentenceMaking": "Vocabulary Set",
       "sentence_making": "Vocabulary Set",
       "SENTENCE_MAKING": "Vocabulary Set",
+      "vocabularySet": "Vocabulary Set",
+      "vocabulary_set": "Vocabulary Set",
       "VOCABULARY_SET": "Vocabulary Set",
       "speakingQuiz": "Speaking Quiz",
       "speaking_quiz": "Speaking Quiz",
@@ -2476,7 +2513,8 @@
       "previewMode": "Preview Mode"
     },
     "info": {
-      "description": "This is preview mode. You see exactly what students see. All operations (including recording) work normally, but nothing is saved to the database."
+      "description": "This is preview mode. You see exactly what students see. All operations (including recording) work normally, but nothing is saved to the database.",
+      "suffix": " - You see exactly what students see. All operations (including recording) work normally, but nothing is saved to the database."
     }
   },
   "teacherClassrooms": {
@@ -3693,15 +3731,23 @@
       "speed": "Speed"
     }
   },
-  "sentenceMakingPanel": {
+  "vocabularySet": {
+    "dialogTitle": "Add Vocabulary Set",
+    "editTitle": "Edit Vocabulary Set",
+    "defaultTitle": "Vocabulary Set Content",
+    "saving": "Saving...",
     "placeholders": {
       "enterEnglishWord": "Enter English word",
-      "enterEnglishSentence": "Enter English sentence",
-      "aiPromptExample": "e.g., Please generate sentences related to daily life"
+      "enterEnglishSentence": "Enter English sentence (optional)",
+      "aiPromptExample": "e.g., Please generate sentences related to daily life",
+      "translation": "{{lang}} word translation",
+      "exampleTranslation": "{{lang}} sentence translation (optional)"
     },
     "tooltips": {
       "generateExampleSentence": "AI Generate Example Sentence",
-      "batchAIGenerateExamples": "Batch AI Generate Examples"
+      "batchAIGenerateExamples": "Batch AI Generate Examples",
+      "generateTranslation": "Generate {{lang}} translation",
+      "generateExampleTranslation": "Generate {{lang}} sentence translation"
     },
     "buttons": {
       "batchAIGenerateExamples": "Batch AI Generate",
@@ -3736,7 +3782,116 @@
       "willBeOverwritten": "will be overwritten",
       "translationFieldsCleared": "Translation fields will be cleared",
       "itemsAddedAndCreated": "Added {{count}} items and created content",
-      "itemsAdded": "Added {{added}} items (total {{total}})"
+      "itemsAdded": "Added {{added}} items (total {{total}})",
+      "batchTranslationSuccess": "Batch translation complete: {{total}} items, {{posCount}} POS",
+      "missingExampleSentencesHint": "Some words are missing example sentences or translations. Please use 'AI Generate Examples' to fill them before saving."
+    },
+    "image": {
+      "upload": "Upload Image",
+      "uploading": "Uploading...",
+      "remove": "Remove Image",
+      "tooLarge": "Image file too large, maximum 2MB",
+      "invalidType": "Unsupported image format. Use JPG, PNG, GIF or WebP",
+      "uploadSuccess": "Image uploaded successfully",
+      "uploadFailed": "Image upload failed, please try again",
+      "removed": "Image removed",
+      "pasteSelectRow": "Please click a word row first to add an image",
+      "pasteHasImage": "This row already has an image, please remove it first",
+      "pasteOrUpload": "Ctrl+V to paste or click to upload",
+      "pasteShortcut": "Ctrl+V / Cmd+V to paste or ",
+      "clickToUpload": "click to upload",
+      "macScreenshotHint": "Tip: Use Ctrl+Shift+Cmd+4 for screenshot to paste",
+      "windowsScreenshotHint": "Tip: Use Win+Shift+S for screenshot to paste"
+    }
+  },
+  "wordReading": {
+    "loading": "Loading vocabulary...",
+    "noItems": "No vocabulary items found",
+    "noImage": "No Image",
+    "wordReading": "Word Reading",
+    "progress": "{{current}} / {{total}}",
+    "itemProgress": "Item {{current}} / {{total}}",
+    "completedCount": "{{count}} completed",
+    "playAudio": "Play Audio",
+    "stopAudio": "Stop",
+    "recordingLimit": "Recording limit: max 5 seconds",
+    "previous": "Previous",
+    "next": "Next",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "analyzing": "AI Analyzing...",
+    "uploadAndAssess": "Upload & Assess",
+    "aiResult": "AI Assessment Result",
+    "overallScore": "Overall Score",
+    "points": " Points",
+    "accuracy": "Accuracy",
+    "fluency": "Fluency",
+    "completeness": "Completeness",
+    "pronunciation": "Pronunciation",
+    "teacherFeedback": "Teacher Feedback",
+    "passed": "Passed",
+    "needsCorrection": "Needs Correction",
+    "reassess": "Re-assess",
+    "assessed": "Assessed",
+    "recorded": "Recorded",
+    "notRecorded": "Not recorded",
+    "timeUp": "Time's Up!",
+    "timeUpDescription": "Recording time has ended. You can retry or skip this word.",
+    "retry": "Retry",
+    "skip": "Skip",
+    "studentAnswer": "Student Answer",
+    "pleaseRecord": "Please record first",
+    "clickToAssess": "Click button above to assess",
+    "startRecordOrUpload": "Start recording or upload",
+    "noTeacherFeedback": "No teacher feedback yet",
+    "toast": {
+      "loadFailed": "Failed to load vocabulary",
+      "recordedPreview": "Recording saved (preview mode)",
+      "uploaded": "Recording uploaded",
+      "uploadFailed": "Upload failed",
+      "aiComplete": "AI assessment complete",
+      "incompleteItems": "{{count}} items not recorded",
+      "cannotSubmitPreview": "Cannot submit in preview mode",
+      "submitted": "Assignment submitted",
+      "submitFailed": "Submit failed",
+      "completed": "Assignment completed!",
+      "missingData": "Please record first",
+      "recordingTooLong": "Recording too long, maximum 10 seconds"
+    }
+  },
+  "wordSelection": {
+    "loading": "Loading vocabulary...",
+    "noItems": "No vocabulary items found",
+    "wordSelection": "Word Selection",
+    "itemProgress": "Item {{current}} / {{total}}",
+    "questionNumber": "Question {{number}}",
+    "questionProgress": "Q{{current}}/{{total}}",
+    "proficiency": "Proficiency",
+    "currentProficiency": "Current Proficiency",
+    "playAudio": "Play Audio",
+    "selectTranslation": "Select the correct translation:",
+    "selectTranslationAudio": "Listen and select the correct translation:",
+    "seconds": "s",
+    "timeUp": "Time's up!",
+    "correct": "Correct!",
+    "incorrect": "Incorrect",
+    "correctAnswerIs": "Correct answer:",
+    "next": "Next",
+    "finishRound": "Finish Round",
+    "roundComplete": "Round Complete!",
+    "wordsMastered": "{{mastered}} / {{total}} words mastered",
+    "targetReached": "Congratulations! You've reached the target proficiency!",
+    "continuePractice": "Continue Practice",
+    "close": "Close",
+    "nextRound": "Start Next Round",
+    "achievementTitle": "Congratulations!",
+    "achievementMessage": "You've reached the target proficiency of {{target}}%!",
+    "toast": {
+      "startFailed": "Failed to start practice",
+      "submitFailed": "Failed to submit answer",
+      "cannotCompletePreview": "Cannot complete in preview mode",
+      "completed": "Assignment completed!",
+      "completeFailed": "Failed to complete assignment"
     }
   }
 }

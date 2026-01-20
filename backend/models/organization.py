@@ -1,0 +1,274 @@
+"""
+Organization hierarchy models
+"""
+
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    DateTime,
+    ForeignKey,
+    Boolean,
+    Text,
+    UniqueConstraint,
+    Index,
+)
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from database import Base
+from .base import UUID, JSONType
+import uuid
+
+
+# ============================================
+# 機構層級系統 (Organization Hierarchy)
+# ============================================
+
+
+class Organization(Base):
+    """
+    機構 (Organization)
+    - 機構可包含多個學校
+    - 機構擁有者 (org_owner) 可管理所有學校
+    """
+
+    __tablename__ = "organizations"
+
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), nullable=False)
+    display_name = Column(String(200), nullable=True)
+    description = Column(Text, nullable=True)
+
+    # 統一編號 (Taiwan Business ID) - unique, required for business orgs
+    tax_id = Column(String(20), unique=True, nullable=True, index=True)
+
+    # 聯絡資訊
+    contact_email = Column(String(200), nullable=True)
+    contact_phone = Column(String(50), nullable=True)
+    address = Column(Text, nullable=True)
+
+    # 狀態
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
+
+    # 設定
+    settings = Column(JSONType, nullable=True)  # 機構層級設定
+
+    # 時間戳記
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    schools = relationship(
+        "School", back_populates="organization", cascade="all, delete-orphan"
+    )
+    teacher_organizations = relationship(
+        "TeacherOrganization",
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self):
+        return f"<Organization(id={self.id}, name={self.name})>"
+
+
+class School(Base):
+    """
+    學校 (School)
+    - 屬於一個機構
+    - 包含多個班級
+    - 有自己的管理者 (school_admin)
+    """
+
+    __tablename__ = "schools"
+
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
+    organization_id = Column(
+        UUID,
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    name = Column(String(100), nullable=False)
+    display_name = Column(String(200), nullable=True)
+    description = Column(Text, nullable=True)
+
+    # 聯絡資訊
+    contact_email = Column(String(200), nullable=True)
+    contact_phone = Column(String(50), nullable=True)
+    address = Column(Text, nullable=True)
+
+    # 狀態
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
+
+    # 設定
+    settings = Column(JSONType, nullable=True)  # 學校層級設定
+
+    # 時間戳記
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    organization = relationship("Organization", back_populates="schools")
+    teacher_schools = relationship(
+        "TeacherSchool", back_populates="school", cascade="all, delete-orphan"
+    )
+    classroom_schools = relationship(
+        "ClassroomSchool", back_populates="school", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self):
+        return f"<School(id={self.id}, name={self.name}, org={self.organization_id})>"
+
+
+class TeacherOrganization(Base):
+    """
+    教師-機構關係表
+    - 記錄教師在機構的角色
+    - 主要用於 org_owner
+    """
+
+    __tablename__ = "teacher_organizations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    teacher_id = Column(
+        Integer,
+        ForeignKey("teachers.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    organization_id = Column(
+        UUID,
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # 角色（通常是 org_owner）
+    role = Column(String(50), nullable=False, default="org_owner")
+
+    # 狀態
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
+
+    # 時間戳記
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    teacher = relationship("Teacher", back_populates="teacher_organizations")
+    organization = relationship("Organization", back_populates="teacher_organizations")
+
+    # 唯一約束：一個教師在一個機構只能有一個關係
+    __table_args__ = (
+        UniqueConstraint(
+            "teacher_id", "organization_id", name="uq_teacher_organization"
+        ),
+        Index(
+            "ix_teacher_organizations_active",
+            "teacher_id",
+            "organization_id",
+            "is_active",
+        ),
+    )
+
+    def __repr__(self):
+        return f"<TeacherOrganization(teacher={self.teacher_id}, org={self.organization_id}, role={self.role})>"
+
+
+class TeacherSchool(Base):
+    """
+    教師-學校關係表
+    - 記錄教師在學校的角色
+    - 支援多重角色 (school_admin, teacher)
+    """
+
+    __tablename__ = "teacher_schools"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    teacher_id = Column(
+        Integer,
+        ForeignKey("teachers.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    school_id = Column(
+        UUID, ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    # 角色列表（使用 JSON/JSONB 儲存）['school_admin', 'teacher']
+    roles = Column(JSONType, nullable=False, default=list)
+
+    # 自訂權限 (JSONB) - 覆蓋預設角色權限
+    permissions = Column(JSONType, nullable=True, default=None)
+
+    # 狀態
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
+
+    # 時間戳記
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    teacher = relationship("Teacher", back_populates="teacher_schools")
+    school = relationship("School", back_populates="teacher_schools")
+
+    # 唯一約束：一個教師在一個學校只能有一個關係
+    __table_args__ = (
+        UniqueConstraint("teacher_id", "school_id", name="uq_teacher_school"),
+        Index("ix_teacher_schools_active", "teacher_id", "school_id", "is_active"),
+    )
+
+    def __repr__(self):
+        return f"<TeacherSchool(teacher={self.teacher_id}, school={self.school_id}, roles={self.roles})>"
+
+
+class ClassroomSchool(Base):
+    """
+    班級-學校關係表
+    - 記錄班級屬於哪個學校
+    - 向下相容：保留 classroom.teacher_id（獨立教師）
+    """
+
+    __tablename__ = "classroom_schools"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    classroom_id = Column(
+        Integer,
+        ForeignKey("classrooms.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    school_id = Column(
+        UUID, ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    # 狀態
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
+
+    # 時間戳記
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    classroom = relationship("Classroom", back_populates="classroom_schools")
+    school = relationship("School", back_populates="classroom_schools")
+
+    # 唯一約束：一個班級只能屬於一個學校
+    __table_args__ = (
+        UniqueConstraint("classroom_id", name="uq_classroom_school"),
+        Index("ix_classroom_schools_active", "classroom_id", "school_id", "is_active"),
+    )
+
+    def __repr__(self):
+        return (
+            f"<ClassroomSchool(classroom={self.classroom_id}, school={self.school_id})>"
+        )
