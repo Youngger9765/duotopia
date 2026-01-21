@@ -187,11 +187,39 @@ async def create_content(
                 else:
                     max_errors = 7
 
+            # 處理 metadata（用於儲存額外欄位）
+            metadata = {}
+            if "definition" in item_data:
+                metadata["chinese_translation"] = item_data["definition"]
+            if "english_definition" in item_data:
+                metadata["english_definition"] = item_data["english_definition"]
+            if "vocabulary_translation_lang" in item_data:
+                metadata["vocabulary_translation_lang"] = item_data[
+                    "vocabulary_translation_lang"
+                ]
+            if "selectedLanguage" in item_data:
+                metadata["selected_language"] = item_data["selectedLanguage"]
+
+            # 根據前端傳來的資料決定存儲到 translation 欄位的內容
+            # 優先使用 definition (中文翻譯)，如果沒有則使用 translation
+            translation_value = item_data.get("definition") or item_data.get(
+                "translation", ""
+            )
+
+            # 處理 part_of_speech：前端可能傳送 parts_of_speech (plural, array)
+            # 後端欄位是 part_of_speech (singular, string)
+            part_of_speech = item_data.get("part_of_speech")
+            if not part_of_speech and "parts_of_speech" in item_data:
+                # 如果是陣列，取第一個元素
+                parts = item_data.get("parts_of_speech", [])
+                if parts and isinstance(parts, list) and len(parts) > 0:
+                    part_of_speech = parts[0]
+
             content_item = ContentItem(
                 content_id=content.id,
                 order_index=idx,
                 text=item_data.get("text", ""),
-                translation=item_data.get("translation", ""),
+                translation=translation_value,
                 audio_url=item_data.get("audio_url"),
                 # 例句相關欄位
                 example_sentence=example_sentence or None,
@@ -205,8 +233,9 @@ async def create_content(
                 max_errors=max_errors,
                 # 單字集相關欄位
                 image_url=item_data.get("image_url"),
-                part_of_speech=item_data.get("part_of_speech"),
+                part_of_speech=part_of_speech,
                 distractors=item_data.get("distractors"),
+                item_metadata=metadata if metadata else None,
             )
             db.add(content_item)
             items_created.append(
@@ -400,6 +429,11 @@ async def update_content(
                     metadata["english_definition"] = item_data["english_definition"]
                 if "selectedLanguage" in item_data:
                     metadata["selected_language"] = item_data["selectedLanguage"]
+                # 處理 vocabulary_translation_lang 欄位
+                if "vocabulary_translation_lang" in item_data:
+                    metadata["vocabulary_translation_lang"] = item_data[
+                        "vocabulary_translation_lang"
+                    ]
 
                 # 根據前端傳來的資料決定存儲到 translation 欄位的內容
                 # 優先使用 definition (中文翻譯)，如果沒有則使用 translation
@@ -420,6 +454,15 @@ async def update_content(
                     else:
                         max_errors = 7
 
+                # 處理 part_of_speech：前端可能傳送 parts_of_speech (plural, array)
+                # 後端欄位是 part_of_speech (singular, string)
+                part_of_speech = item_data.get("part_of_speech")
+                if not part_of_speech and "parts_of_speech" in item_data:
+                    # 如果是陣列，取第一個元素
+                    parts = item_data.get("parts_of_speech", [])
+                    if parts and isinstance(parts, list) and len(parts) > 0:
+                        part_of_speech = parts[0]
+
                 content_item = ContentItem(
                     content_id=content.id,
                     order_index=idx,
@@ -438,7 +481,7 @@ async def update_content(
                     max_errors=max_errors,
                     # 單字集相關欄位
                     image_url=item_data.get("image_url"),
-                    part_of_speech=item_data.get("part_of_speech"),
+                    part_of_speech=part_of_speech,
                     distractors=item_data.get("distractors"),
                     item_metadata=metadata,
                 )
@@ -480,6 +523,16 @@ async def update_content(
                 )
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
+                # 新的統一欄位格式（vocabulary_translation）
+                "vocabulary_translation": item.item_metadata.get("chinese_translation")
+                or item.translation
+                if item.item_metadata
+                else item.translation,
+                "vocabulary_translation_lang": item.item_metadata.get(
+                    "vocabulary_translation_lang", "chinese"
+                )
+                if item.item_metadata
+                else "chinese",
                 "audio_url": item.audio_url,
                 # 例句相關欄位
                 "example_sentence": item.example_sentence,
@@ -490,6 +543,8 @@ async def update_content(
                 # 單字集相關欄位
                 "image_url": item.image_url,
                 "part_of_speech": item.part_of_speech,
+                # 前端使用 parts_of_speech (plural, array)，提供向後相容
+                "parts_of_speech": [item.part_of_speech] if item.part_of_speech else [],
                 "distractors": item.distractors,
                 # 其他欄位
                 "options": item.item_metadata.get("options", [])
