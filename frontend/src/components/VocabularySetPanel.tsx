@@ -2161,7 +2161,11 @@ export default function VocabularySetPanel({
         let audioIndex = 0;
 
         for (let i = 0; i < newRows.length; i++) {
-          if (newRows[i].text && newRows[i].text.trim() && !newRows[i].audioUrl) {
+          if (
+            newRows[i].text &&
+            newRows[i].text.trim() &&
+            !newRows[i].audioUrl
+          ) {
             const audioUrl = (result as { audio_urls: string[] }).audio_urls[
               audioIndex
             ];
