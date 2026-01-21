@@ -135,7 +135,9 @@ async def create_assignment(
         content_copy_map[original_content.id] = content_copy.id
 
         # 複製所有 ContentItem
-        original_items = sorted(original_content.content_items, key=lambda x: x.order_index)
+        original_items = sorted(
+            original_content.content_items, key=lambda x: x.order_index
+        )
 
         for original_item in original_items:
             item_copy = ContentItem(
@@ -144,11 +146,15 @@ async def create_assignment(
                 text=original_item.text,
                 translation=original_item.translation,
                 audio_url=original_item.audio_url,
-                item_metadata=original_item.item_metadata.copy() if original_item.item_metadata else {},
+                item_metadata=original_item.item_metadata.copy()
+                if original_item.item_metadata
+                else {},
                 # Phase 2 欄位
                 image_url=original_item.image_url,
                 part_of_speech=original_item.part_of_speech,
-                distractors=original_item.distractors.copy() if original_item.distractors else None,
+                distractors=original_item.distractors.copy()
+                if original_item.distractors
+                else None,
                 word_count=original_item.word_count,
                 max_errors=original_item.max_errors,
             )
