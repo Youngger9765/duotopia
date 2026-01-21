@@ -313,12 +313,27 @@ async def get_content_detail(
                 )
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
+                # 新的統一欄位格式（vocabulary_translation）
+                "vocabulary_translation": item.item_metadata.get("chinese_translation")
+                or item.translation
+                if item.item_metadata
+                else item.translation,
+                "vocabulary_translation_lang": item.item_metadata.get(
+                    "vocabulary_translation_lang", "chinese"
+                )
+                if item.item_metadata
+                else "chinese",
                 "audio_url": item.audio_url,
                 # 單字集相關欄位
                 "example_sentence": item.example_sentence,
                 "example_sentence_translation": item.example_sentence_translation,
                 "image_url": item.image_url,
                 "part_of_speech": item.part_of_speech,
+                # 前端使用 parts_of_speech (plural, array)
+                # 優先從 metadata 讀取完整陣列，否則用 DB 欄位的單一值
+                "parts_of_speech": item.item_metadata.get("parts_of_speech", [])
+                if item.item_metadata and item.item_metadata.get("parts_of_speech")
+                else ([item.part_of_speech] if item.part_of_speech else []),
                 "distractors": item.distractors,
                 # 時間戳記
                 "created_at": item.created_at.isoformat() if item.created_at else None,
