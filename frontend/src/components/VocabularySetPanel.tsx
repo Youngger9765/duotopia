@@ -2126,10 +2126,10 @@ export default function VocabularySetPanel({
 
   const handleBatchGenerateTTS = async () => {
     try {
-      // 收集需要生成 TTS 的例句（而非單字）
+      // 收集需要生成 TTS 的單字（不是例句）
       const textsToGenerate = rows
-        .filter((row) => row.example_sentence && !row.audioUrl)
-        .map((row) => row.example_sentence || "");
+        .filter((row) => row.text && row.text.trim() && !row.audioUrl)
+        .map((row) => row.text.trim());
 
       if (textsToGenerate.length === 0) {
         toast.info(t("vocabularySet.messages.allItemsHaveAudioOrEmpty"));
@@ -2137,7 +2137,7 @@ export default function VocabularySetPanel({
       }
 
       toast.info(
-        t("vocabularySet.messages.generatingExampleAudio", {
+        t("vocabularySet.messages.generatingWordAudio", {
           count: textsToGenerate.length,
         }),
       );
@@ -2156,12 +2156,12 @@ export default function VocabularySetPanel({
         "audio_urls" in result &&
         Array.isArray(result.audio_urls)
       ) {
-        // 更新 rows 的 audioUrl（例句音檔）
+        // 更新 rows 的 audioUrl（單字音檔）
         const newRows = [...rows];
         let audioIndex = 0;
 
         for (let i = 0; i < newRows.length; i++) {
-          if (newRows[i].example_sentence && !newRows[i].audioUrl) {
+          if (newRows[i].text && newRows[i].text.trim() && !newRows[i].audioUrl) {
             const audioUrl = (result as { audio_urls: string[] }).audio_urls[
               audioIndex
             ];

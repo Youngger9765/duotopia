@@ -199,6 +199,9 @@ async def create_content(
                 ]
             if "selectedLanguage" in item_data:
                 metadata["selected_language"] = item_data["selectedLanguage"]
+            # 儲存完整的 parts_of_speech 陣列到 metadata
+            if "parts_of_speech" in item_data:
+                metadata["parts_of_speech"] = item_data["parts_of_speech"]
 
             # 根據前端傳來的資料決定存儲到 translation 欄位的內容
             # 優先使用 definition (中文翻譯)，如果沒有則使用 translation
@@ -207,10 +210,11 @@ async def create_content(
             )
 
             # 處理 part_of_speech：前端可能傳送 parts_of_speech (plural, array)
-            # 後端欄位是 part_of_speech (singular, string)
+            # 後端欄位是 part_of_speech (singular, string)，只存第一個
+            # 完整陣列已存到 metadata["parts_of_speech"]
             part_of_speech = item_data.get("part_of_speech")
             if not part_of_speech and "parts_of_speech" in item_data:
-                # 如果是陣列，取第一個元素
+                # 如果是陣列，取第一個元素存到 DB 欄位
                 parts = item_data.get("parts_of_speech", [])
                 if parts and isinstance(parts, list) and len(parts) > 0:
                     part_of_speech = parts[0]
@@ -434,6 +438,9 @@ async def update_content(
                     metadata["vocabulary_translation_lang"] = item_data[
                         "vocabulary_translation_lang"
                     ]
+                # 儲存完整的 parts_of_speech 陣列到 metadata
+                if "parts_of_speech" in item_data:
+                    metadata["parts_of_speech"] = item_data["parts_of_speech"]
 
                 # 根據前端傳來的資料決定存儲到 translation 欄位的內容
                 # 優先使用 definition (中文翻譯)，如果沒有則使用 translation
@@ -455,10 +462,11 @@ async def update_content(
                         max_errors = 7
 
                 # 處理 part_of_speech：前端可能傳送 parts_of_speech (plural, array)
-                # 後端欄位是 part_of_speech (singular, string)
+                # 後端欄位是 part_of_speech (singular, string)，只存第一個
+                # 完整陣列已存到 metadata["parts_of_speech"]
                 part_of_speech = item_data.get("part_of_speech")
                 if not part_of_speech and "parts_of_speech" in item_data:
-                    # 如果是陣列，取第一個元素
+                    # 如果是陣列，取第一個元素存到 DB 欄位
                     parts = item_data.get("parts_of_speech", [])
                     if parts and isinstance(parts, list) and len(parts) > 0:
                         part_of_speech = parts[0]
@@ -543,8 +551,11 @@ async def update_content(
                 # 單字集相關欄位
                 "image_url": item.image_url,
                 "part_of_speech": item.part_of_speech,
-                # 前端使用 parts_of_speech (plural, array)，提供向後相容
-                "parts_of_speech": [item.part_of_speech] if item.part_of_speech else [],
+                # 前端使用 parts_of_speech (plural, array)
+                # 優先從 metadata 讀取完整陣列，否則用 DB 欄位的單一值
+                "parts_of_speech": item.item_metadata.get("parts_of_speech", [])
+                if item.item_metadata and item.item_metadata.get("parts_of_speech")
+                else ([item.part_of_speech] if item.part_of_speech else []),
                 "distractors": item.distractors,
                 # 其他欄位
                 "options": item.item_metadata.get("options", [])

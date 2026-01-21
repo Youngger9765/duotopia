@@ -3765,6 +3765,7 @@
     "messages": {
       "allItemsHaveAudioOrEmpty": "All items have audio or sentences are empty",
       "generatingExampleAudio": "Generating {{count}} example audio files...",
+      "generatingWordAudio": "Generating {{count}} word audio files...",
       "translationAndPOSComplete": "Translation and POS detection complete",
       "enterExampleFirst": "Please enter example sentence first",
       "generatingExampleTranslation": "Generating example translation...",
