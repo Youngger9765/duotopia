@@ -340,16 +340,38 @@ export function ImportStudentsDialog({
     setImporting(true);
 
     try {
+      // 確保空字串被轉換為 undefined，避免 422 錯誤
       const response = (await apiClient.batchImportStudents(
         schoolId,
-        validStudents.map((student) => ({
-          name: student.name,
-          email: student.email,
-          student_number: student.student_number,
-          birthdate: student.birthdate,
-          phone: student.phone,
-          classroom_id: student.classroom_id,
-        })),
+        validStudents.map((student) => {
+          const item: {
+            name: string;
+            email?: string;
+            student_number?: string;
+            birthdate: string;
+            phone?: string;
+            classroom_id?: number;
+          } = {
+            name: student.name,
+            birthdate: student.birthdate,
+          };
+          
+          // 只添加非空欄位
+          if (student.email && student.email.trim()) {
+            item.email = student.email.trim();
+          }
+          if (student.student_number && student.student_number.trim()) {
+            item.student_number = student.student_number.trim();
+          }
+          if (student.phone && student.phone.trim()) {
+            item.phone = student.phone.trim();
+          }
+          if (student.classroom_id) {
+            item.classroom_id = student.classroom_id;
+          }
+          
+          return item;
+        }),
         duplicateAction,
       )) as {
         created?: number;

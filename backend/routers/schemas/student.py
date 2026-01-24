@@ -161,6 +161,31 @@ class BatchStudentImportItem(BaseModel):
     phone: Optional[str] = Field(None, max_length=20)
     classroom_id: Optional[int] = None
 
+    @field_validator("student_number")
+    @classmethod
+    def validate_student_number(cls, v: Optional[str]) -> Optional[str]:
+        """Validate student_number format"""
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            return None
+        if len(v) > 50:
+            raise ValueError("學號長度不能超過 50 個字符")
+        import re
+        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
+            raise ValueError("學號只能包含字母、數字、連字號和底線")
+        return v
+
+    @field_validator("email", "phone")
+    @classmethod
+    def normalize_empty_strings(cls, v: Optional[str]) -> Optional[str]:
+        """Convert empty strings to None"""
+        if v is None:
+            return v
+        v = v.strip()
+        return None if not v else v
+
 
 class BatchStudentImport(BaseModel):
     """Request to batch import students"""

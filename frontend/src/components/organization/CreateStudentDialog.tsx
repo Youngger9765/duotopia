@@ -71,13 +71,30 @@ export function CreateStudentDialog({
 
     setIsSubmitting(true);
     try {
-      const result = await apiClient.createSchoolStudent(schoolId, {
+      // 確保空字串被轉換為 undefined，避免 422 錯誤
+      const requestData: {
+        name: string;
+        email?: string;
+        student_number?: string;
+        birthdate: string;
+        phone?: string;
+      } = {
         name: trimmedName,
-        email: formData.email || undefined,
-        student_number: formData.student_number || undefined,
         birthdate: formData.birthdate,
-        phone: formData.phone || undefined,
-      });
+      };
+
+      // 只添加非空欄位
+      if (formData.email && formData.email.trim()) {
+        requestData.email = formData.email.trim();
+      }
+      if (formData.student_number && formData.student_number.trim()) {
+        requestData.student_number = formData.student_number.trim();
+      }
+      if (formData.phone && formData.phone.trim()) {
+        requestData.phone = formData.phone.trim();
+      }
+
+      const result = await apiClient.createSchoolStudent(schoolId, requestData);
 
       toast.success("學生建立成功", {
         description: result.default_password

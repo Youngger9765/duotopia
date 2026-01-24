@@ -148,6 +148,7 @@ export function SchoolProgramCreateDialog({
 
     setSaving(true);
     try {
+      // 創建學校層級的教材（僅供此學校使用）
       const response = await fetch(`${API_URL}/api/schools/${schoolId}/programs`, {
         method: "POST",
         headers: {
@@ -165,7 +166,7 @@ export function SchoolProgramCreateDialog({
         throw new Error(err.detail || "建立失敗");
       }
 
-      toast.success("教材建立成功");
+      toast.success("學校教材建立成功");
       onOpenChange(false);
       onSuccess();
     } catch (error) {
@@ -186,10 +187,15 @@ export function SchoolProgramCreateDialog({
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="grid grid-cols-2 w-full">
             <TabsTrigger value="organization">從組織複製</TabsTrigger>
-            <TabsTrigger value="custom">自建課程</TabsTrigger>
+            <TabsTrigger value="custom">自建學校課程</TabsTrigger>
           </TabsList>
 
           <TabsContent value="organization" className="space-y-4">
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
+              <p className="text-sm text-green-800">
+                ✅ 從組織教材複製到學校，所有組織教材都可以在此選擇並複製。
+              </p>
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
@@ -269,6 +275,13 @@ export function SchoolProgramCreateDialog({
           </TabsContent>
 
           <TabsContent value="custom" className="space-y-4">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+              <p className="text-sm text-blue-800">
+                💡 <strong>提示</strong>：此處創建的課程僅供此學校使用。
+                <br />
+                若要創建所有分校都可使用的組織教材，請前往「組織教材」頁面。
+              </p>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="school-program-name">
                 課程名稱 <span className="text-red-500">*</span>

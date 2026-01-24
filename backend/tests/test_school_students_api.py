@@ -283,6 +283,49 @@ class TestSchoolStudentCRUD:
         assert "id" in data
         assert "default_password" in data
 
+    def test_create_student_with_empty_strings(
+        self, client: TestClient, school_admin_teacher, school, link_school_admin
+    ):
+        """Test creating a student with empty strings (should be normalized to None)"""
+        response = client.post(
+            f"/api/schools/{school.id}/students",
+            headers={"Authorization": f"Bearer {get_test_token(school_admin_teacher.id)}"},
+            json={
+                "name": "Student With Empty Fields",
+                "birthdate": "2012-03-20",
+                "email": "",  # Empty string
+                "student_number": "",  # Empty string
+                "phone": "",  # Empty string
+            }
+        )
+        # Should succeed - empty strings should be normalized to None
+        assert response.status_code == 201
+        data = response.json()
+        assert data["name"] == "Student With Empty Fields"
+        assert data.get("email") is None or data.get("email") == ""
+        assert data.get("student_number") is None or data.get("student_number") == ""
+        assert "id" in data
+        assert "default_password" in data
+
+    def test_create_student_with_only_required_fields(
+        self, client: TestClient, school_admin_teacher, school, link_school_admin
+    ):
+        """Test creating a student with only required fields (name and birthdate)"""
+        response = client.post(
+            f"/api/schools/{school.id}/students",
+            headers={"Authorization": f"Bearer {get_test_token(school_admin_teacher.id)}"},
+            json={
+                "name": "Minimal Student",
+                "birthdate": "2013-04-25",
+                # No optional fields
+            }
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["name"] == "Minimal Student"
+        assert "id" in data
+        assert "default_password" in data
+
     def test_get_school_students(
         self, client: TestClient, school_admin_teacher, school, link_school_admin, student
     ):
