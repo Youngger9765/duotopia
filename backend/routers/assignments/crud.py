@@ -73,8 +73,13 @@ async def create_assignment(
             status_code=404, detail="Classroom not found or you don't have permission"
         )
 
-    # 驗證所有 Content 存在
-    contents = db.query(Content).filter(Content.id.in_(request.content_ids)).all()
+    # 驗證所有 Content 存在並 eager load content_items
+    contents = (
+        db.query(Content)
+        .options(selectinload(Content.content_items))
+        .filter(Content.id.in_(request.content_ids))
+        .all()
+    )
     if len(contents) != len(request.content_ids):
         raise HTTPException(status_code=404, detail="Some contents not found")
 
@@ -103,10 +108,65 @@ async def create_assignment(
     db.add(assignment)
     db.flush()  # 取得 assignment.id
 
-    # 建立 AssignmentContent 關聯
-    for idx, content_id in enumerate(request.content_ids, 1):
+    # 🔥 複製 Content 和 ContentItem 作為作業副本
+    content_copy_map = {}  # 原始 content_id -> 副本 content_id
+    content_items_copy_map = {}  # 原始 content_item_id -> 副本 content_item_id
+
+    for original_content in contents:
+        # 複製 Content
+        content_copy = Content(
+            lesson_id=original_content.lesson_id,
+            type=original_content.type,
+            title=original_content.title,
+            order_index=original_content.order_index,
+            is_active=True,
+            target_wpm=original_content.target_wpm,
+            target_accuracy=original_content.target_accuracy,
+            time_limit_seconds=original_content.time_limit_seconds,
+            level=original_content.level,
+            tags=original_content.tags.copy() if original_content.tags else [],
+            is_public=False,  # 副本不公開
+            # 作業副本欄位
+            is_assignment_copy=True,
+            source_content_id=original_content.id,
+        )
+        db.add(content_copy)
+        db.flush()
+        content_copy_map[original_content.id] = content_copy.id
+
+        # 複製所有 ContentItem
+        original_items = sorted(
+            original_content.content_items, key=lambda x: x.order_index
+        )
+
+        for original_item in original_items:
+            item_copy = ContentItem(
+                content_id=content_copy.id,
+                order_index=original_item.order_index,
+                text=original_item.text,
+                translation=original_item.translation,
+                audio_url=original_item.audio_url,
+                item_metadata=original_item.item_metadata.copy()
+                if original_item.item_metadata
+                else {},
+                # Phase 2 欄位
+                image_url=original_item.image_url,
+                part_of_speech=original_item.part_of_speech,
+                distractors=original_item.distractors.copy()
+                if original_item.distractors
+                else None,
+                word_count=original_item.word_count,
+                max_errors=original_item.max_errors,
+            )
+            db.add(item_copy)
+            db.flush()
+            content_items_copy_map[original_item.id] = item_copy.id
+
+    # 建立 AssignmentContent 關聯（指向副本）
+    for idx, original_content_id in enumerate(request.content_ids, 1):
+        copy_content_id = content_copy_map[original_content_id]
         assignment_content = AssignmentContent(
-            assignment_id=assignment.id, content_id=content_id, order_index=idx
+            assignment_id=assignment.id, content_id=copy_content_id, order_index=idx
         )
         db.add(assignment_content)
 
@@ -150,14 +210,15 @@ async def create_assignment(
             status_code=400, detail="No active students in this classroom"
         )
 
-    # Preload all ContentItems for all content_ids (avoid N+1)
+    # Preload all ContentItems for all COPY content_ids (avoid N+1)
+    copy_content_ids = list(content_copy_map.values())
     all_content_items = (
         db.query(ContentItem)
-        .filter(ContentItem.content_id.in_(request.content_ids))
+        .filter(ContentItem.content_id.in_(copy_content_ids))
         .order_by(ContentItem.content_id, ContentItem.order_index)
         .all()
     )
-    # Build map: content_id -> [items]
+    # Build map: copy_content_id -> [copy_items]
     content_items_map = {}
     for item in all_content_items:
         if item.content_id not in content_items_map:
@@ -180,11 +241,12 @@ async def create_assignment(
         db.add(student_assignment)
         db.flush()
 
-        # 為每個內容建立進度記錄
-        for idx, content_id in enumerate(request.content_ids, 1):
+        # 為每個內容建立進度記錄（使用副本 ID）
+        for idx, original_content_id in enumerate(request.content_ids, 1):
+            copy_content_id = content_copy_map[original_content_id]
             progress = StudentContentProgress(
                 student_assignment_id=student_assignment.id,
-                content_id=content_id,
+                content_id=copy_content_id,  # 指向副本
                 status=AssignmentStatus.NOT_STARTED,
                 order_index=idx,
                 is_locked=False if idx == 1 else True,  # 只解鎖第一個
@@ -192,13 +254,13 @@ async def create_assignment(
             db.add(progress)
             db.flush()  # 取得 progress.id
 
-            # Get content items from preloaded map (no query)
-            content_items = content_items_map.get(content_id, [])
+            # Get copy content items from preloaded map (no query)
+            content_items = content_items_map.get(copy_content_id, [])
 
             for item in content_items:
                 item_progress = StudentItemProgress(
                     student_assignment_id=student_assignment.id,
-                    content_item_id=item.id,
+                    content_item_id=item.id,  # 指向副本的 ContentItem
                     status="NOT_STARTED",
                 )
                 db.add(item_progress)

@@ -3772,6 +3772,7 @@
     "messages": {
       "allItemsHaveAudioOrEmpty": "所有項目都已有音檔，或例句為空",
       "generatingExampleAudio": "正在生成 {{count}} 個例句音檔...",
+      "generatingWordAudio": "正在生成 {{count}} 個單字音檔...",
       "translationAndPOSComplete": "翻譯及詞性辨識完成",
       "enterExampleFirst": "請先輸入例句",
       "generatingExampleTranslation": "生成例句翻譯中...",
