@@ -999,7 +999,7 @@ class TestCopyToClassroom:
         assert metadata["organization_id"] == str(test_org.id)
         assert metadata["program_id"] == material.id
         assert metadata["program_name"] == material.name
-        assert metadata["source_type"] == "organization_template"
+        assert metadata["source_type"] == "org_template"
         assert "organization_name" in metadata
 
     def test_copied_material_is_independent(

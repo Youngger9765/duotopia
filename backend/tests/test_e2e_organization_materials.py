@@ -374,7 +374,7 @@ class TestE2EOrganizationMaterials:
         assert metadata["organization_name"] == "台北市立國中"
         assert metadata["program_id"] == material.id
         assert metadata["program_name"] == "初級會話教材"
-        assert metadata["source_type"] == "organization_template"
+        assert metadata["source_type"] == "org_template"
 
         # Verify deep copy - all lessons, contents, items copied
         assert len(copied_data["lessons"]) == 1

@@ -59,7 +59,7 @@ class Program(Base):
     範例 - ONLY for COPIED programs (classroom copies):
     - 從公版複製: {"template_id": 123, "template_name": "初級會話"}
     - 從其他班級: {"classroom_id": 456, "classroom_name": "五年級B班", "program_id": 789}
-    - 從組織教材: {"organization_id": "uuid", "organization_name": "XX學校", "program_id": 123, "source_type": "organization_template"}
+    - 從組織教材: {"organization_id": "uuid", "organization_name": "XX學校", "program_id": 123, "source_type": "org_template"}
 
     NOTE: organization_id column is for ORGANIZATION-OWNED materials
           source_metadata.organization_id is for COPIES tracking their origin

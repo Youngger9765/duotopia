@@ -263,7 +263,7 @@ def deep_copy_program(
             "organization_name": organization.display_name or organization.name,
             "program_id": source_program.id,
             "program_name": source_program.name,
-            "source_type": "organization_template",
+            "source_type": "org_template",
         },
     )
     db.add(new_program)

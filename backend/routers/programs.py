@@ -1047,7 +1047,7 @@ async def copy_program(
                 detail="Organization materials can only be copied to school",
             )
 
-        source_type = "organization_template"
+        source_type = "org_template"
         source_metadata = {
             "source_scope": "organization",
             "organization_id": str(organization.id),
