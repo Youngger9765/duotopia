@@ -1,8 +1,8 @@
 # TODO - Duotopia Project Tasks
 
-**Last Updated**: 2026-01-19
+**Last Updated**: 2026-01-26
 **Current Branch**: `feat/issue-112-org-hierarchy`
-**Focus**: Organization Materials Management - Bug Fixes & Permission Issues
+**Focus**: Issue #112 完成，等待測試確認
 
 ---
 
@@ -149,11 +149,10 @@
    - `SchoolProgramCreateDialog` 才使用 `useProgramCopy`（統一 copy API）
    - 待做：抽成 shared copy modal + 統一 hook 規則
 
-2. **Org Dashboard 教材入口/UI** ⏰
-   - `organizationRoutes.tsx` 已有 `/organization/:orgId/materials`
-   - `OrganizationLayout`/`OrganizationDashboard` 無明確入口
-   - `SchoolDetailPage` 已有學校教材入口
-   - 待補：機構教材入口的 UI 連結與導覽
+2. **~~Org Dashboard 教材入口/UI~~** ✅ 已完成 (Issue #112)
+   - ✅ 組織詳情頁已有「組織教材」卡片入口
+   - ✅ 可新增/編輯/刪除組織教材
+   - ✅ 可複製組織教材到分校（權限已修復）
 
 3. **機構內學校的班級建立** ⏰
    - 現況：老師建立班級 `POST /api/teachers/classrooms`
