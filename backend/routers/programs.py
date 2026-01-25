@@ -923,6 +923,26 @@ def _has_school_access(teacher_id: int, school_id: uuid.UUID, db: Session) -> bo
 def _has_school_manage_permission(
     teacher_id: int, school_id: uuid.UUID, db: Session
 ) -> bool:
+    # 1. Get school's organization_id
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        return False
+
+    # 2. Check if teacher is org_owner or org_admin
+    org_membership = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher_id,
+            TeacherOrganization.organization_id == school.organization_id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if org_membership and org_membership.role in ["org_owner", "org_admin"]:
+        return True
+
+    # 3. Original teacher_schools check
     membership = (
         db.query(TeacherSchool)
         .filter(
