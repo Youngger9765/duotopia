@@ -18,6 +18,7 @@ from . import (
     tts_ops,
     upload_ops,
     assignment_ops,
+    teacher_organizations,
 )
 
 # Create main router with prefix and tags
@@ -35,6 +36,7 @@ router.include_router(translation_ops.router, tags=["teachers-translation"])
 router.include_router(tts_ops.router, tags=["teachers-tts"])
 router.include_router(upload_ops.router, tags=["teachers-upload"])
 router.include_router(assignment_ops.router, tags=["teachers-assignments"])
+router.include_router(teacher_organizations.router, tags=["teachers-organizations"])
 
 # Re-export router and dependencies for backward compatibility
 from .dependencies import get_current_teacher
