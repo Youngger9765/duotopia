@@ -92,10 +92,13 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, 
     setError(null);
 
     try {
-      const response = await fetch(`/api/teachers/${teacherId}/organizations`, {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${apiUrl}/api/teachers/${teacherId}/organizations`, {
         headers: {
           'Content-Type': 'application/json',
-          // Authorization header should be added by axios interceptor or similar
+          'Authorization': `Bearer ${token}`,
         },
       });
 

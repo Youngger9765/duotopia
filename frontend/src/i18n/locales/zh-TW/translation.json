@@ -1280,12 +1280,6 @@
       "actions": {
         "viewPlans": "查看方案"
       },
-      "steps": {
-        "selectContent": "選擇內容",
-        "practiceMode": "練習模式",
-        "selectStudents": "選擇學生",
-        "details": "作業詳情"
-      },
       "practiceMode": {
         "title": "練習模式設定",
         "description": "選擇學生練習的模式和相關設定",
@@ -3900,6 +3894,25 @@
       "cannotCompletePreview": "預覽模式無法完成作業",
       "completed": "作業已完成！",
       "completeFailed": "完成作業失敗"
+    }
+  },
+  "workspace": {
+    "personalModeOnly": "個人模式 (尚未加入任何組織)",
+    "tabs": {
+      "personal": "個人",
+      "organization": "組織"
+    },
+    "personal": {
+      "description": "這是您的個人工作區"
+    },
+    "organization": {
+      "noOrganizations": "您尚未加入任何組織",
+      "error": "載入組織時發生錯誤",
+      "bannerTitle": "組織工作區",
+      "bannerDescription": "管理組織內的學校與教師"
+    },
+    "permissions": {
+      "close": "關閉"
     }
   }
 }

@@ -3894,5 +3894,24 @@
       "completed": "Assignment completed!",
       "completeFailed": "Failed to complete assignment"
     }
+  },
+  "workspace": {
+    "personalModeOnly": "Personal Mode (Not in any organization yet)",
+    "tabs": {
+      "personal": "Personal",
+      "organization": "Organization"
+    },
+    "personal": {
+      "description": "This is your personal workspace"
+    },
+    "organization": {
+      "noOrganizations": "You have not joined any organization yet",
+      "error": "Error loading organizations",
+      "bannerTitle": "Organization Workspace",
+      "bannerDescription": "Manage schools and teachers in your organization"
+    },
+    "permissions": {
+      "close": "Close"
+    }
   }
 }
