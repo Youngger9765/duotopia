@@ -11,7 +11,7 @@ Consolidates organization-specific features:
 All operations use IF NOT EXISTS / IF EXISTS for idempotency.
 Safe to run even if staging DB already has these changes.
 
-Revision ID: add_org_features
+Revision ID: ae8fd7c7cc74
 Revises: b2c3d4e5f6a7
 Create Date: 2026-01-25 12:00:00.000000
 
@@ -22,7 +22,7 @@ from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
-revision = "add_org_features"
+revision = "ae8fd7c7cc74"
 down_revision = "b2c3d4e5f6a7"  # Last migration from staging
 branch_labels = None
 depends_on = None
