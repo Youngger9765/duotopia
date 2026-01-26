@@ -20,6 +20,8 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { getSidebarGroups } from "@/config/sidebarConfig";
 import { useSidebarRoles } from "@/hooks/useSidebarRoles";
 import { SidebarGroup } from "@/components/sidebar/SidebarGroup";
+import { WorkspaceProvider, useWorkspace } from "@/contexts/WorkspaceContext";
+import { WorkspaceSwitcher } from "@/components/workspace";
 
 interface TeacherProfile {
   id: number;
@@ -40,7 +42,8 @@ interface TeacherLayoutProps {
   children: ReactNode;
 }
 
-export default function TeacherLayout({ children }: TeacherLayoutProps) {
+// Inner component that uses workspace context
+function TeacherLayoutInner({ children }: TeacherLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
@@ -53,6 +56,9 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
   // Get user role and roles from auth store
   const user = useTeacherAuthStore((state) => state.user);
   const userRoles = useTeacherAuthStore((state) => state.userRoles);
+
+  // Get workspace context
+  const { mode, selectedSchool } = useWorkspace();
 
   // Check if user has organization management role
   const hasOrgRole = useMemo(() => {
@@ -74,6 +80,15 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
 
     return hasRole;
   }, [userRoles, user?.role]);
+
+  // Determine which sidebar items are read-only
+  const readOnlyItemIds = useMemo(() => {
+    // In organization mode with a school selected, classrooms and students are read-only
+    if (mode === 'organization' && selectedSchool) {
+      return ['classrooms', 'students'];
+    }
+    return [];
+  }, [mode, selectedSchool]);
 
   // 使用 hook 獲取 sidebar 配置和角色過濾
   const sidebarGroups = useMemo(() => getSidebarGroups(t), [t]);
@@ -167,6 +182,13 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
             </div>
           </div>
 
+          {/* Workspace Switcher - Personal / Organization Tabs */}
+          {!sidebarCollapsed && teacherProfile && (
+            <div className="px-3 pt-4">
+              <WorkspaceSwitcher />
+            </div>
+          )}
+
           {/* Navigation */}
           <nav className="flex-1 p-4 overflow-y-auto">
             <ul className="space-y-1">
@@ -176,6 +198,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
                   group={group}
                   isCollapsed={sidebarCollapsed}
                   isActive={isActive}
+                  readOnlyItemIds={readOnlyItemIds}
                   onNavigate={onNavigate}
                 />
               ))}
@@ -310,6 +333,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
       setSidebarCollapsed,
       filteredGroups,
       isActive,
+      readOnlyItemIds,
       teacherProfile,
       config,
       hasOrgRole,
@@ -318,8 +342,8 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Mobile Header */}
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        {/* Mobile Header */}
       <div className="md:hidden bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-50">
         <div className="flex items-center justify-between p-4">
           <div>
@@ -364,5 +388,35 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
         <div className="flex-1 p-4 md:p-6 overflow-auto">{children}</div>
       </div>
     </div>
+  );
+}
+
+// Wrapper component that provides workspace context
+export default function TeacherLayout({ children }: TeacherLayoutProps) {
+  const [teacherProfile, setTeacherProfile] = useState<TeacherProfile | null>(null);
+  const hasFetchedProfile = useRef(false);
+
+  useEffect(() => {
+    if (hasFetchedProfile.current) return;
+    hasFetchedProfile.current = true;
+
+    const fetchTeacherProfile = async () => {
+      try {
+        const data = (await apiClient.getTeacherDashboard()) as {
+          teacher: TeacherProfile;
+        };
+        setTeacherProfile(data.teacher);
+      } catch (err) {
+        console.error("Failed to fetch teacher profile:", err);
+      }
+    };
+
+    fetchTeacherProfile();
+  }, []);
+
+  return (
+    <WorkspaceProvider teacherId={teacherProfile?.id ?? 0}>
+      <TeacherLayoutInner>{children}</TeacherLayoutInner>
+    </WorkspaceProvider>
   );
 }

@@ -30,7 +30,7 @@ export const OrganizationTab: React.FC = () => {
     return <SchoolList />;
   }
 
-  // Phase 2: School selected, show switcher + menu
+  // Phase 2: School selected, show switcher + banner
   return (
     <div className="space-y-4">
       {/* School Switcher */}
@@ -38,13 +38,6 @@ export const OrganizationTab: React.FC = () => {
 
       {/* Permission Banner */}
       <PermissionBanner />
-
-      {/* Functional Menu (will be integrated with existing sidebar items) */}
-      <div className="space-y-1">
-        <p className="text-sm text-slate-500 dark:text-slate-400 px-3 py-2">
-          功能選單（將整合班級、教材、作業等功能）
-        </p>
-      </div>
     </div>
   );
 };
