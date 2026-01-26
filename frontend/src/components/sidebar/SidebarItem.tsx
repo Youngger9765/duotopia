@@ -3,6 +3,7 @@
  */
 
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
 import { SidebarItem as SidebarItemType } from "@/types/sidebar";
@@ -28,6 +29,7 @@ export const SidebarItem = ({
   isReadOnly = false,
   onNavigate,
 }: SidebarItemProps) => {
+  const { t } = useTranslation();
   const Icon = item.icon;
 
   return (
@@ -47,7 +49,7 @@ export const SidebarItem = ({
                     <Eye className="h-3.5 w-3.5 text-slate-400 ml-2" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="text-xs">唯讀權限</p>
+                    <p className="text-xs">{t('workspace.permissions.readOnly')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

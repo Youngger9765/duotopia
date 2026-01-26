@@ -6,12 +6,14 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Building2, ChevronRight } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useWorkspace, Organization, School } from '@/contexts/WorkspaceContext';
 import { cn } from '@/lib/utils';
 
 export const SchoolList: React.FC = () => {
+  const { t } = useTranslation();
   const { organizations, selectedSchool, selectSchool, loading } = useWorkspace();
 
   if (loading) {
@@ -32,7 +34,7 @@ export const SchoolList: React.FC = () => {
     return (
       <div className="px-3 py-6 text-center">
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          您尚未加入任何機構
+          {t('workspace.organization.noOrganizations')}
         </p>
       </div>
     );

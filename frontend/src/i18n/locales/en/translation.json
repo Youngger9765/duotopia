@@ -3453,4 +3453,26 @@
     "noTeachers": "No teachers yet",
     "noOrganizations": "No organizations yet"
   }
+  ,
+  "workspace": {
+    "tabs": {
+      "personal": "Personal",
+      "organization": "Organization"
+    },
+    "personal": {
+      "description": "Personal Teaching Mode - Full Permissions"
+    },
+    "organization": {
+      "bannerTitle": "Organization Teacher Mode",
+      "bannerDescription": "Can copy courses, assign homework, and grade assignments. Cannot manage class-teacher-student relationships.",
+      "selectSchool": "Select School",
+      "noOrganizations": "Not joined any organization yet",
+      "loading": "Loading...",
+      "error": "Failed to load"
+    },
+    "permissions": {
+      "readOnly": "Read-only",
+      "close": "Close"
+    }
+  }
 }

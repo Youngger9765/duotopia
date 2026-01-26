@@ -57,15 +57,55 @@
 
 ```bash
 # Testing
-npm run test:api:all
-npm run typecheck
-npm run lint
-npm run build
+npm run test:api:all          # Backend API tests
+npm run typecheck             # TypeScript type checking
+npm run lint                  # ESLint
+npm run build                 # Production build
+
+# Chrome Testing (MANDATORY for UI changes)
+# Use Playwright to test in Chrome - NO manual testing
+npx playwright test           # Run all browser tests
+npx playwright test --headed  # Run with visible browser
+npx playwright codegen <url>  # Record new test
 
 # Git workflow (via agent)
 create-feature-fix <issue> <desc>
 deploy-feature <issue>
 ```
+
+## Testing Rules (CRITICAL)
+
+### ❌ 禁止說「手動測試」
+- **絕對不能**叫用戶手動在 Chrome 測試
+- **必須**使用 Playwright 自動化測試
+- **必須**提供截圖證明
+
+### ✅ 正確測試流程
+1. Backend API: `pytest tests/test_*.py -v`
+2. Frontend UI: Playwright 測試 + 截圖
+3. 提供測試證明（terminal output + screenshots）
+
+### 🔑 測試登入
+
+**登入頁面有快速登入按鈕 - 直接點擊即可！**
+
+打開 `http://localhost:5173/teacher/login`，頁面底部有：
+- 「Demo Teacher (300 days prepaid)」← 點這個
+- 「Trial Teacher (30-day trial)」
+- 其他測試帳號...
+
+**Playwright 登入**:
+```typescript
+// 直接點快速登入按鈕，不需要輸入帳密
+await page.goto('http://localhost:5173/teacher/login');
+await page.locator('text=Demo Teacher (300 days prepaid)').first().click();
+await page.waitForURL('**/teacher/dashboard');
+```
+
+**環境**:
+- Backend: `localhost:8080` ⚠️ (不是 8000!)
+- Frontend: `localhost:5173`
+- `.env.local`: `VITE_API_URL=http://localhost:8080`
 
 ## Project-Specific Rules
 

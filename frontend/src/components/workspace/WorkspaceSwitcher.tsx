@@ -7,12 +7,14 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import PersonalTab from './PersonalTab';
 import OrganizationTab from './OrganizationTab';
 
 export const WorkspaceSwitcher: React.FC = () => {
+  const { t } = useTranslation();
   const { mode, setMode } = useWorkspace();
 
   return (
@@ -23,13 +25,13 @@ export const WorkspaceSwitcher: React.FC = () => {
             value="personal"
             className="data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:border data-[state=active]:border-slate-200 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700 dark:data-[state=active]:text-blue-400 dark:data-[state=active]:border-slate-600 transition-all duration-200"
           >
-            個人
+            {t('workspace.tabs.personal')}
           </TabsTrigger>
           <TabsTrigger
             value="organization"
             className="data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:border data-[state=active]:border-slate-200 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700 dark:data-[state=active]:text-blue-400 dark:data-[state=active]:border-slate-600 transition-all duration-200"
           >
-            機構
+            {t('workspace.tabs.organization')}
           </TabsTrigger>
         </TabsList>
 
