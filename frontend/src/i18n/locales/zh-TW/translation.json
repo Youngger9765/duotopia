@@ -1910,7 +1910,7 @@
       "dashboard": "儀表板",
       "myClassrooms": "我的班級",
       "allStudents": "所有學生",
-      "publicPrograms": "公版課程",
+      "publicPrograms": "我的教材",
       "subscription": "訂閱管理",
       "systemAdmin": "系統管理",
       "profile": "個人資料"
@@ -2204,7 +2204,7 @@
       "students": "學生",
       "studentList": "學生列表",
       "programs": "課程",
-      "programList": "課程列表",
+      "programList": "班級教材",
       "assignments": "作業",
       "assignmentManagement": "作業管理"
     },
@@ -2637,9 +2637,9 @@
     }
   },
   "teacherTemplatePrograms": {
-    "title": "公版課程",
+    "title": "我的教材",
     "buttons": {
-      "addProgram": "新增課程"
+      "addProgram": "新增教材資源包"
     },
     "messages": {
       "loadFailed": "載入公版課程失敗",
@@ -3147,7 +3147,7 @@
     }
   },
   "createProgramDialog": {
-    "title": "新增課程 - {{classroom}}",
+    "title": "新增班級教材 - {{classroom}}",
     "description": "選擇建立方式：從公版複製、從其他班級複製，或自建課程",
     "tabs": {
       "template": "從公版複製",
