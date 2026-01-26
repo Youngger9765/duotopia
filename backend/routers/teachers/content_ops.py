@@ -4,10 +4,6 @@ Content Ops operations for teachers.
 from fastapi import APIRouter, Depends, HTTPException, status, File, Form, UploadFile
 from sqlalchemy.orm import Session, selectinload, joinedload
 from sqlalchemy import func, text
-<<<<<<< HEAD
-from sqlalchemy.exc import IntegrityError
-=======
->>>>>>> origin/staging
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 
