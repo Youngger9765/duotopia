@@ -11,11 +11,20 @@ This module aggregates all assignment-related routers:
 from fastapi import APIRouter
 from . import crud, detail, submission, grading
 
-# Main router with prefix
+# Main router with prefix - note: no trailing slash
 router = APIRouter(prefix="/api/teachers/assignments", tags=["assignments"])
 
 # Include CRUD operations (create, read, update, delete)
 router.include_router(crud.router, tags=["assignments-crud"])
+
+# Add route alias for /api/teachers/assignments (without trailing slash)
+# to avoid 307 redirect when frontend calls without trailing slash
+router.add_api_route(
+    "",
+    crud.get_assignments,
+    methods=["GET"],
+    include_in_schema=False,  # Hide from docs to avoid duplicate
+)
 
 # Include detail and progress endpoints
 router.include_router(detail.router, tags=["assignments-detail"])

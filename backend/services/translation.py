@@ -1,12 +1,14 @@
 """
-Translation service using OpenAI API
+Translation service using OpenAI API or Vertex AI (Gemini)
+
+Supports switching between OpenAI and Vertex AI via USE_VERTEX_AI environment variable.
 """
 
 import os
 import asyncio
 import logging
 from typing import List, Dict, Optional  # noqa: F401
-from openai import AsyncOpenAI
+from openai import OpenAI, AsyncOpenAI
 from dotenv import load_dotenv
 from utils.http_client import get_http_client
 
@@ -17,17 +19,31 @@ logger = logging.getLogger(__name__)
 
 class TranslationService:
     def __init__(self):
-        self.client = None
-        self.model = "gpt-3.5-turbo"
+        self.use_vertex_ai = os.getenv("USE_VERTEX_AI", "false").lower() == "true"
+        self.client = None  # OpenAI client (lazy init)
+        self.vertex_ai = None  # Vertex AI service (lazy init)
+        self.model = "gpt-4o-mini"  # OpenAI model (for fallback)
 
     def _ensure_client(self):
-        """Lazy initialization of AsyncOpenAI client with connection pool"""
-        if self.client is None:
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                raise ValueError("OPENAI_API_KEY not found in environment variables")
-            # Use shared http_client for connection pooling
-            self.client = AsyncOpenAI(api_key=api_key, http_client=get_http_client())
+        """Lazy initialization of AI client (OpenAI or Vertex AI)"""
+        if self.use_vertex_ai:
+            if self.vertex_ai is None:
+                from services.vertex_ai import get_vertex_ai_service
+
+                self.vertex_ai = get_vertex_ai_service()
+                logger.info("Using Vertex AI (Gemini) for translation")
+        else:
+            if self.client is None:
+                api_key = os.getenv("OPENAI_API_KEY")
+                if not api_key:
+                    raise ValueError(
+                        "OPENAI_API_KEY not found in environment variables"
+                    )
+                # Use shared http_client for connection pooling
+                self.client = AsyncOpenAI(
+                    api_key=api_key, http_client=get_http_client()
+                )
+                logger.info("Using OpenAI for translation")
 
     async def translate_text(self, text: str, target_lang: str = "zh-TW") -> str:
         """
@@ -58,25 +74,37 @@ class TranslationService:
                     f"only return the translation without any explanation:\n{text}"
                 )
 
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a professional translator. Only provide the "
-                            "translation without any explanation."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.3,  # 降低隨機性以獲得更一致的翻譯
-                max_tokens=100,
+            system_instruction = (
+                "You are a professional translator. Only provide the "
+                "translation without any explanation. "
+                "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
+                "NOT Simplified Chinese."
             )
 
-            return response.choices[0].message.content.strip()
+            # Use Vertex AI or OpenAI based on configuration
+            if self.use_vertex_ai:
+                result = await self.vertex_ai.generate_text(
+                    prompt=prompt,
+                    model_type="flash",
+                    max_tokens=100,
+                    temperature=0.3,
+                    system_instruction=system_instruction,
+                )
+                return result.strip()
+            else:
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.3,  # 降低隨機性以獲得更一致的翻譯
+                    max_tokens=100,
+                )
+                return response.choices[0].message.content.strip()
+
         except Exception as e:
-            print(f"Translation error: {e}")
+            logger.error("Translation error: %s", e)
             # 如果翻譯失敗，返回原文
             return text
 
@@ -101,14 +129,21 @@ class TranslationService:
             if target_lang == "zh-TW":
                 prompt = f"""請分析以下英文單字，提供：
 1. 繁體中文翻譯
-2. 詞性（可能有多個）
+2. 詞性（必須列出所有常見用法的詞性）
 
 單字: {text}
 
-請以 JSON 格式回覆，格式如下：
-{{"translation": "中文翻譯", "parts_of_speech": ["n.", "v."]}}
+重要提示：
+- 許多英文單字有多種詞性，請列出所有常見的用法
+- 例如：顏色詞（red, blue, green）通常既是形容詞也是名詞
+- 例如：動作詞（run, walk, dance）通常既是動詞也是名詞
+- 例如：材料詞（gold, silver, plastic）通常既是名詞也是形容詞
+- 請勿遺漏任何常見詞性
 
-詞性請使用以下縮寫：n. (名詞), v. (動詞), adj. (形容詞), adv. (副詞),
+請以 JSON 格式回覆，格式如下：
+{{"translation": "中文翻譯", "parts_of_speech": ["n.", "adj."]}}
+
+詞性縮寫：n. (名詞), v. (動詞), adj. (形容詞), adv. (副詞),
 pron. (代名詞), prep. (介系詞), conj. (連接詞), interj. (感嘆詞),
 det. (限定詞), aux. (助動詞)
 
@@ -116,43 +151,64 @@ det. (限定詞), aux. (助動詞)
             else:
                 prompt = f"""Analyze the following English word and provide:
 1. English definition
-2. Parts of speech (may have multiple)
+2. Parts of speech (MUST list ALL common usages)
 
 Word: {text}
 
-Reply in JSON format:
-{{"translation": "definition", "parts_of_speech": ["n.", "v."]}}
+IMPORTANT:
+- Many English words have multiple parts of speech - list ALL common usages
+- Colors (red, blue, green) are typically both adjectives AND nouns
+- Action words (run, walk, dance) are typically both verbs AND nouns
+- Material words (gold, silver, plastic) are typically both nouns AND adjectives
+- Do NOT omit any common part of speech
 
-Use these abbreviations for parts of speech:
-n. (noun), v. (verb), adj. (adjective), adv. (adverb), pron. (pronoun),
-prep. (preposition), conj. (conjunction), interj. (interjection),
+Reply in JSON format:
+{{"translation": "definition", "parts_of_speech": ["n.", "adj."]}}
+
+POS abbreviations: n. (noun), v. (verb), adj. (adjective), adv. (adverb),
+pron. (pronoun), prep. (preposition), conj. (conjunction), interj. (interjection),
 det. (determiner), aux. (auxiliary)
 
 Only reply with JSON, no other text."""
 
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a professional linguist. Always respond with valid JSON only.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.3,
-                max_tokens=200,
+            system_instruction = (
+                "You are a professional linguist specializing in English grammar. "
+                "When identifying parts of speech, you MUST list ALL common usages - "
+                "many English words function as multiple parts of speech. "
+                "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
+                "NOT Simplified Chinese. Always respond with valid JSON only."
             )
 
-            # 解析 JSON 回應
-            import re
+            # Use Vertex AI or OpenAI based on configuration
+            if self.use_vertex_ai:
+                result = await self.vertex_ai.generate_json(
+                    prompt=prompt,
+                    model_type="flash",
+                    max_tokens=200,
+                    temperature=0.2,
+                    system_instruction=system_instruction,
+                )
+            else:
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.2,  # Lower temperature for more consistent POS detection
+                    max_tokens=200,
+                )
 
-            content = response.choices[0].message.content.strip()
-            # 移除可能的 markdown 代碼塊標記
-            content = re.sub(r"^```json\s*", "", content)
-            content = re.sub(r"\s*```$", "", content)
-            content = content.strip()
+                # 解析 JSON 回應
+                import re
 
-            result = json.loads(content)
+                content = response.choices[0].message.content.strip()
+                # 移除可能的 markdown 代碼塊標記
+                content = re.sub(r"^```json\s*", "", content)
+                content = re.sub(r"\s*```$", "", content)
+                content = content.strip()
+
+                result = json.loads(content)
 
             # 確保返回正確的結構
             return {
@@ -160,7 +216,7 @@ Only reply with JSON, no other text."""
                 "parts_of_speech": result.get("parts_of_speech", []),
             }
         except Exception as e:
-            print(f"Translate with POS error: {e}")
+            logger.error("Translate with POS error: %s", e)
             # Fallback: 只返回翻譯
             translation = await self.translate_text(text, target_lang)
             return {"translation": translation, "parts_of_speech": []}
@@ -213,46 +269,60 @@ Input: {texts_json}
 
 Required: Return format must be ["translation1", "translation2", ...]"""
 
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a professional translator. Always return results "
-                            "as a valid JSON array with the exact same number of items as input. "
-                            "Return ONLY the JSON array, no markdown, no explanation."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.3,
-                max_tokens=500,  # 與單元測試預期一致
+            system_instruction = (
+                "You are a professional translator. Always return results "
+                "as a valid JSON array with the exact same number of items as input. "
+                "Return ONLY the JSON array, no markdown, no explanation. "
+                "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
+                "NOT Simplified Chinese."
             )
 
-            # 解析 JSON 回應
-            import re
+            # Use Vertex AI or OpenAI based on configuration
+            if self.use_vertex_ai:
+                translations = await self.vertex_ai.generate_json(
+                    prompt=prompt,
+                    model_type="flash",
+                    max_tokens=500,
+                    temperature=0.3,
+                    system_instruction=system_instruction,
+                )
+                # Ensure it's a list
+                if isinstance(translations, str):
+                    translations = translations.split("---")
+            else:
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.3,
+                    max_tokens=500,  # 與單元測試預期一致
+                )
 
-            content = response.choices[0].message.content.strip()
+                # 解析 JSON 回應
+                import re
 
-            # 移除可能的 markdown 代碼塊標記
-            content = re.sub(r"^```json\s*", "", content)
-            content = re.sub(r"\s*```$", "", content)
-            content = content.strip()
+                content = response.choices[0].message.content.strip()
 
-            # Try JSON parse; handle legacy separator when JSON decode fails
-            try:
-                translations = json.loads(content)
-            except Exception:
-                # If not JSON, fall back to separator or raw string
-                if "---" in content:
-                    translations = [
-                        seg.strip() for seg in content.split("---") if seg.strip()
-                    ]
-                else:
-                    translations = [content.strip()] if content else []
-            if isinstance(translations, str):
-                translations = translations.split("---")
+                # 移除可能的 markdown 代碼塊標記
+                content = re.sub(r"^```json\s*", "", content)
+                content = re.sub(r"\s*```$", "", content)
+                content = content.strip()
+
+                # Try JSON parse; handle legacy separator when JSON decode fails
+                try:
+                    translations = json.loads(content)
+                except Exception:
+                    # If not JSON, fall back to separator or raw string
+                    if "---" in content:
+                        translations = [
+                            seg.strip() for seg in content.split("---") if seg.strip()
+                        ]
+                    else:
+                        translations = [content.strip()] if content else []
+                if isinstance(translations, str):
+                    translations = translations.split("---")
 
             # 確保返回的翻譯數量與輸入相同
             if len(translations) != len(texts):
@@ -264,31 +334,29 @@ Required: Return format must be ["translation1", "translation2", ...]"""
                     if len(manual) == len(texts):
                         translations = manual
                     else:
-                        print(
-                            f"Warning: Expected {len(texts)} translations, got {len(translations)}"
-                        )
                         logger.warning(
                             "Batch translation count mismatch "
-                            f"(expected {len(texts)}, got {len(translations)}), "
-                            "falling back to individual translation."
+                            "(expected %d, got %d), "
+                            "falling back to individual translation.",
+                            len(texts),
+                            len(translations),
                         )
                         return texts
                 else:
-                    print(
-                        f"Warning: Expected {len(texts)} translations, got {len(translations)}"
-                    )
                     logger.warning(
                         "Batch translation count mismatch "
-                        f"(expected {len(texts)}, got {len(translations)}), "
-                        "falling back to individual translation."
+                        "(expected %d, got %d), "
+                        "falling back to individual translation.",
+                        len(texts),
+                        len(translations),
                     )
                     return texts
 
             return translations
         except Exception as e:
-            print(f"Batch translation error: {e}")
             logger.error(
-                f"Batch translation error: {e}. Falling back to individual translation."
+                "Batch translation error: %s. Falling back to individual translation.",
+                e,
             )
             return texts
 
@@ -314,14 +382,21 @@ Required: Return format must be ["translation1", "translation2", ...]"""
             if target_lang == "zh-TW":
                 prompt = f"""請分析以下英文單字列表，為每個單字提供：
 1. 繁體中文翻譯
-2. 詞性（可能有多個）
+2. 詞性（必須列出所有常見用法的詞性）
 
 單字列表: {texts_json}
 
-請以 JSON 陣列格式回覆，格式如下：
-[{{"translation": "翻譯1", "parts_of_speech": ["n.", "v."]}}, {{"translation": "翻譯2", "parts_of_speech": ["adj."]}}]
+重要提示：
+- 許多英文單字有多種詞性，請列出所有常見的用法
+- 例如：顏色詞（red, blue, green）通常既是形容詞也是名詞
+- 例如：動作詞（run, walk, dance）通常既是動詞也是名詞
+- 例如：材料詞（gold, silver, plastic）通常既是名詞也是形容詞
+- 請勿遺漏任何常見詞性
 
-詞性請使用以下縮寫：n. (名詞), v. (動詞), adj. (形容詞), adv. (副詞),
+請以 JSON 陣列格式回覆，格式如下：
+[{{"translation": "翻譯1", "parts_of_speech": ["n.", "adj."]}}, {{"translation": "翻譯2", "parts_of_speech": ["v.", "n."]}}]
+
+詞性縮寫：n. (名詞), v. (動詞), adj. (形容詞), adv. (副詞),
 pron. (代名詞), prep. (介系詞), conj. (連接詞), interj. (感嘆詞),
 det. (限定詞), aux. (助動詞)
 
@@ -329,48 +404,71 @@ det. (限定詞), aux. (助動詞)
             else:
                 prompt = f"""Analyze the following English words and provide for each:
 1. English definition
-2. Parts of speech (may have multiple)
+2. Parts of speech (MUST list ALL common usages)
 
 Words: {texts_json}
 
-Reply as JSON array:
-[{{"translation": "definition1", "parts_of_speech": ["n.", "v."]}}, \
-{{"translation": "definition2", "parts_of_speech": ["adj."]}}]
+IMPORTANT:
+- Many English words have multiple parts of speech - list ALL common usages
+- Colors (red, blue, green) are typically both adjectives AND nouns
+- Action words (run, walk, dance) are typically both verbs AND nouns
+- Material words (gold, silver, plastic) are typically both nouns AND adjectives
+- Do NOT omit any common part of speech
 
-Use these abbreviations:
-n. (noun), v. (verb), adj. (adjective), adv. (adverb), pron. (pronoun),
-prep. (preposition), conj. (conjunction), interj. (interjection),
+Reply as JSON array:
+[{{"translation": "definition1", "parts_of_speech": ["n.", "adj."]}}, \
+{{"translation": "definition2", "parts_of_speech": ["v.", "n."]}}]
+
+POS abbreviations: n. (noun), v. (verb), adj. (adjective), adv. (adverb),
+pron. (pronoun), prep. (preposition), conj. (conjunction), interj. (interjection),
 det. (determiner), aux. (auxiliary)
 
 Only reply with JSON array, no other text."""
 
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a professional linguist. Always respond with valid JSON array only.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.3,
-                max_tokens=2000,
+            system_instruction = (
+                "You are a professional linguist specializing in English grammar. "
+                "When identifying parts of speech, you MUST list ALL common usages - "
+                "many English words function as multiple parts of speech. "
+                "CRITICAL: When translating to Chinese, you MUST use Traditional Chinese (繁體中文), "
+                "NOT Simplified Chinese. Always respond with valid JSON array only."
             )
 
-            # 解析 JSON 回應
-            import re
+            # Use Vertex AI or OpenAI based on configuration
+            if self.use_vertex_ai:
+                results = await self.vertex_ai.generate_json(
+                    prompt=prompt,
+                    model_type="flash",
+                    max_tokens=2000,
+                    temperature=0.2,
+                    system_instruction=system_instruction,
+                )
+            else:
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.2,  # Lower temperature for more consistent POS detection
+                    max_tokens=2000,
+                )
 
-            content = response.choices[0].message.content.strip()
-            content = re.sub(r"^```json\s*", "", content)
-            content = re.sub(r"\s*```$", "", content)
-            content = content.strip()
+                # 解析 JSON 回應
+                import re
 
-            results = json.loads(content)
+                content = response.choices[0].message.content.strip()
+                content = re.sub(r"^```json\s*", "", content)
+                content = re.sub(r"\s*```$", "", content)
+                content = content.strip()
+
+                results = json.loads(content)
 
             # 確保返回數量正確
             if len(results) != len(texts):
-                print(
-                    f"Warning: Expected {len(texts)} results, got {len(results)}. Falling back."
+                logger.warning(
+                    "Expected %d results, got %d. Falling back.",
+                    len(texts),
+                    len(results),
                 )
                 # Fallback: 逐個處理
                 tasks = [self.translate_with_pos(text, target_lang) for text in texts]
@@ -378,7 +476,7 @@ Only reply with JSON array, no other text."""
 
             return results
         except Exception as e:
-            print(f"Batch translate with POS error: {e}. Falling back.")
+            logger.error("Batch translate with POS error: %s. Falling back.", e)
             # Fallback: 逐個處理
             tasks = [self.translate_with_pos(text, target_lang) for text in texts]
             results = await asyncio.gather(*tasks)
@@ -424,6 +522,14 @@ Only reply with JSON array, no other text."""
 Generate ONE example sentence for each word at CEFR level {level}.
 The sentences should be natural, educational, and appropriate for the difficulty level.
 
+CRITICAL REQUIREMENTS:
+1. Each sentence MUST contain the exact target word (the word being learned). Do NOT use synonyms or derivatives.
+2. If translating to Chinese, you MUST use Traditional Chinese (繁體中文), NOT Simplified Chinese.
+3. **IF USER PROVIDES CUSTOM INSTRUCTIONS, YOU MUST FOLLOW THEM EXACTLY.**
+   - Many English words have multiple meanings (e.g., "like" = 喜歡 or 像是, "change" = 改變 or 零錢)
+   - When user specifies a particular meaning, use ONLY that meaning in the sentence
+   - This is the HIGHEST PRIORITY requirement
+
 Level guidelines:
 - A1: Simple present/past, basic vocabulary, short sentences (5-8 words)
 - A2: Simple sentences with common phrases, everyday topics (8-12 words)
@@ -433,54 +539,79 @@ Level guidelines:
 - C2: Near-native fluency, literary style, rare vocabulary acceptable"""
 
             # 構建 user prompt
-            user_prompt = f"""Generate example sentences for the following words:
+            user_prompt = ""
+
+            # 如果有自訂 prompt，要在最前面強調
+            if prompt:
+                user_prompt += f"""**CRITICAL USER REQUIREMENT (MUST FOLLOW)**:
+{prompt}
+
+This instruction OVERRIDES the default interpretation. For example:
+- If the word is "like" and user says "use 像是 meaning", you MUST generate sentences
+  where "like" means "similar to/such as", NOT "to enjoy".
+- If the word is "change" and user says "use 零錢 meaning", you MUST generate sentences
+  about coins/change (money), NOT about modification.
+
+"""
+
+            user_prompt += f"""Generate example sentences for the following words:
 {words_json}
 
 """
-            if prompt:
-                user_prompt += f"Additional instructions: {prompt}\n\n"
 
             if translate_to:
                 lang_name = {
-                    "zh-TW": "Traditional Chinese",
+                    "zh-TW": "Traditional Chinese (繁體中文)",
                     "ja": "Japanese",
                     "ko": "Korean",
                 }.get(translate_to, translate_to)
                 user_prompt += f"""Return as JSON array with this format:
 [{{"sentence": "...", "translation": "..."}}]
-Where translation is in {lang_name}."""
+Where translation is in {lang_name}.
+IMPORTANT: Each English sentence MUST contain the exact target word.
+Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplified Chinese."""
             else:
                 user_prompt += """Return as JSON array with this format:
 [{"sentence": "..."}]"""
 
             user_prompt += "\n\nOnly return the JSON array, no other text."
 
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.7,  # 稍高一點讓例句更有變化
-                max_tokens=2000,
-            )
+            # Use Vertex AI or OpenAI based on configuration
+            if self.use_vertex_ai:
+                sentences = await self.vertex_ai.generate_json(
+                    prompt=user_prompt,
+                    model_type="flash",
+                    max_tokens=2000,
+                    temperature=0.8,
+                    system_instruction=system_prompt,
+                )
+            else:
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=0.7,  # 稍高一點讓例句更有變化
+                    max_tokens=2000,
+                )
 
-            # 解析回應
-            import re
+                # 解析回應
+                import re
 
-            content = response.choices[0].message.content.strip()
+                content = response.choices[0].message.content.strip()
 
-            # 移除可能的 markdown 代碼塊標記
-            content = re.sub(r"^```json\s*", "", content)
-            content = re.sub(r"\s*```$", "", content)
-            content = content.strip()
+                # 移除可能的 markdown 代碼塊標記
+                content = re.sub(r"^```json\s*", "", content)
+                content = re.sub(r"\s*```$", "", content)
+                content = content.strip()
 
-            sentences = json.loads(content)
+                sentences = json.loads(content)
 
             # 確保返回數量正確
             if len(sentences) != len(words):
-                print(
-                    f"Warning: Expected {len(words)} sentences, got {len(sentences)}."
+                logger.warning(
+                    "Expected %d sentences, got %d.", len(words), len(sentences)
                 )
                 # 補齊或截斷
                 while len(sentences) < len(words):
@@ -492,9 +623,291 @@ Where translation is in {lang_name}."""
             return sentences
 
         except Exception as e:
-            print(f"Generate sentences error: {e}")
+            logger.error("Generate sentences error: %s", e)
             # Fallback: 返回簡單的預設例句
             return [{"sentence": f"This is an example with {word}."} for word in words]
+
+    async def generate_distractors(
+        self,
+        word: str,
+        translation: str,
+        count: int = 2,
+        part_of_speech: Optional[str] = None,
+    ) -> List[str]:
+        """
+        Generate distractor options for vocabulary selection quiz.
+
+        Uses AI to generate semantically similar but different Chinese translations
+        that can be used as wrong answer choices.
+
+        Args:
+            word: The English word (e.g., "apple")
+            translation: The correct Chinese translation (e.g., "蘋果")
+            count: Number of distractors to generate (default: 2, 另外1個由同作業其他單字提供)
+            part_of_speech: Optional part of speech to help generate better distractors
+
+        Returns:
+            List of distractor translations (e.g., ["香蕉", "橘子"])
+        """
+        self._ensure_client()
+        import json
+
+        try:
+            pos_hint = f"詞性: {part_of_speech}" if part_of_speech else ""
+
+            prompt = f"""為單字 "{word}"（正確翻譯: {translation}）生成 {count} 個干擾項（錯誤選項）。
+{pos_hint}
+
+## 核心原則
+
+生成「同領域但意思不同」的干擾項。
+
+## 規則
+
+1. **絕對禁止近義詞**：意思相近的詞不能當干擾項
+   - change/改變 → ❌ 變化、轉變、調整
+   - cost/成本 → ❌ 費用、價格、開支
+   - config/配置 → ❌ 設定、設置
+
+2. **允許使用反義詞，但要有多樣性**：反義詞可以出現，但不要全部都是反義詞
+   - 如果生成 2 個干擾項，最多 1 個可以是反義詞
+
+3. **優先使用「同領域但不相關」的詞**：
+   - change/改變 → ✅ 移動、旋轉、執行（都是動作動詞）
+   - cost/成本 → ✅ 利潤、營收、淨值（都是財務術語）
+   - associated/相關 → ✅ 公開、預設、必要（都是描述性質）
+
+## 範例
+
+| 單字 | 正確翻譯 | ✅ 好的干擾項 | 為什麼好 |
+|------|----------|---------------|----------|
+| change | 改變 | 移動、執行 | 同領域不相關 |
+| increase | 增加 | 計算、減少 | 1個不相關 + 1個反義 ✅ |
+| happy | 快樂 | 驚訝、悲傷 | 1個不相關 + 1個反義 ✅ |
+| apple | 蘋果 | 香蕉、橘子 | 都是水果但不是蘋果 |
+
+## 輸出格式
+JSON 陣列，只包含 {count} 個干擾項：
+["干擾項1", "干擾項2"]
+
+只回覆 JSON 陣列，不要其他文字。"""
+
+            system_instruction = (
+                "You are a vocabulary quiz generator. Generate WRONG answers (distractors) that are: "
+                "1) NEVER synonyms - if it could be a correct translation, don't use it "
+                "2) Antonyms are OK but not ALL of them - mix antonyms with unrelated words "
+                "3) Prefer same domain but UNRELATED meaning (同領域但不相關) "
+                "4) All in Traditional Chinese. JSON array only."
+            )
+
+            # Use Vertex AI or OpenAI based on configuration
+            if self.use_vertex_ai:
+                distractors = await self.vertex_ai.generate_json(
+                    prompt=prompt,
+                    model_type="flash",
+                    max_tokens=200,
+                    temperature=0.2,  # Very low temperature to strictly follow prompt rules
+                    system_instruction=system_instruction,
+                )
+            else:
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.2,  # Very low temperature to strictly follow prompt rules
+                    max_tokens=200,
+                )
+
+                # Parse JSON response
+                import re
+
+                content = response.choices[0].message.content.strip()
+                # Remove markdown code block markers if present
+                content = re.sub(r"^```json\s*", "", content)
+                content = re.sub(r"\s*```$", "", content)
+                content = content.strip()
+
+                distractors = json.loads(content)
+
+            # Filter: remove duplicates (case-insensitive) and correct answer
+            seen = {translation.lower().strip()}
+            unique_distractors = []
+            for d in distractors:
+                d_normalized = d.lower().strip()
+                if d_normalized not in seen and d.strip():
+                    seen.add(d_normalized)
+                    unique_distractors.append(d)
+            distractors = unique_distractors[:count]
+
+            # Ensure we have enough distractors
+            if len(distractors) < count:
+                logger.warning(
+                    f"Only generated {len(distractors)} distractors for '{word}', "
+                    f"expected {count}"
+                )
+
+            return distractors
+
+        except Exception as e:
+            logger.error(f"Generate distractors error for '{word}': {e}")
+            # Fallback: return generic distractors
+            fallback = ["選項A", "選項B", "選項C"]
+            return fallback[:count]
+
+    async def batch_generate_distractors(
+        self,
+        words: List[Dict[str, str]],
+        count: int = 2,
+    ) -> List[List[str]]:
+        """
+        Batch generate distractors for multiple words.
+
+        Args:
+            words: List of dicts with 'word', 'translation', and optionally 'part_of_speech'
+            count: Number of distractors per word (default: 2, 另外1個由同作業其他單字提供)
+
+        Returns:
+            List of distractor lists, one per input word
+        """
+        self._ensure_client()
+        import json
+
+        try:
+            words_json = json.dumps(
+                [{"word": w["word"], "translation": w["translation"]} for w in words],
+                ensure_ascii=False,
+            )
+
+            prompt = f"""為以下單字列表生成干擾項（錯誤選項）。每個單字需要 {count} 個干擾項。
+
+⚠️ 重要：輸出順序必須與輸入順序完全一致！
+
+單字列表（請按此順序輸出）:
+{words_json}
+
+## 核心原則
+
+生成「同領域但意思不同」的干擾項。
+
+## 規則
+
+1. **絕對禁止近義詞**：意思相近的詞不能當干擾項
+   - change/改變 → ❌ 變化、轉變、調整
+   - cost/成本 → ❌ 費用、價格、開支
+   - config/配置 → ❌ 設定、設置
+
+2. **允許使用反義詞，但要有多樣性**：反義詞可以出現，但不要全部都是反義詞
+   - 如果生成 2 個干擾項，最多 1 個可以是反義詞
+
+3. **優先使用「同領域但不相關」的詞**：
+   - change/改變 → ✅ 移動、旋轉、執行（都是動作動詞）
+   - cost/成本 → ✅ 利潤、營收、淨值（都是財務術語）
+   - associated/相關 → ✅ 公開、預設、必要（都是描述性質）
+
+## 範例
+
+| 單字 | 正確翻譯 | ✅ 好的干擾項 | 為什麼好 |
+|------|----------|---------------|----------|
+| change | 改變 | 移動、執行 | 同領域不相關 |
+| increase | 增加 | 計算、減少 | 1個不相關 + 1個反義 ✅ |
+| happy | 快樂 | 驚訝、悲傷 | 1個不相關 + 1個反義 ✅ |
+| apple | 蘋果 | 香蕉、橘子 | 都是水果但不是蘋果 |
+
+## 輸出格式
+JSON 陣列，每個元素是一個包含 {count} 個干擾項的陣列。
+⚠️ 順序必須與輸入單字列表完全對應！
+[["干擾項1", "干擾項2"], ...]
+
+只回覆 JSON 陣列，不要其他文字。"""
+
+            system_instruction = (
+                "You are a vocabulary quiz generator. Generate WRONG answers (distractors) that are: "
+                "1) NEVER synonyms - if it could be a correct translation, don't use it "
+                "2) Antonyms are OK but not ALL of them - mix antonyms with unrelated words "
+                "3) Prefer same domain but UNRELATED meaning (同領域但不相關) "
+                "4) MAINTAIN INPUT ORDER - output array must match input word order exactly "
+                "5) All in Traditional Chinese. JSON array only."
+            )
+
+            # Use Vertex AI or OpenAI based on configuration
+            if self.use_vertex_ai:
+                all_distractors = await self.vertex_ai.generate_json(
+                    prompt=prompt,
+                    model_type="flash",
+                    max_tokens=1000,
+                    temperature=0.2,  # Very low temperature to strictly follow prompt rules
+                    system_instruction=system_instruction,
+                )
+            else:
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.2,  # Very low temperature to strictly follow prompt rules
+                    max_tokens=1000,
+                )
+
+                # Parse JSON response
+                import re
+
+                content = response.choices[0].message.content.strip()
+                content = re.sub(r"^```json\s*", "", content)
+                content = re.sub(r"\s*```$", "", content)
+                content = content.strip()
+
+                all_distractors = json.loads(content)
+
+            # Verify count matches
+            if len(all_distractors) != len(words):
+                logger.warning(
+                    f"Batch distractors count mismatch: expected {len(words)}, "
+                    f"got {len(all_distractors)}. Falling back to individual generation."
+                )
+                # Fallback to individual generation
+                tasks = [
+                    self.generate_distractors(
+                        w["word"],
+                        w["translation"],
+                        count,
+                        w.get("part_of_speech"),
+                    )
+                    for w in words
+                ]
+                return await asyncio.gather(*tasks)
+
+            # Filter out correct answers and duplicates from each distractor list
+            result = []
+            for i, distractors in enumerate(all_distractors):
+                correct = words[i]["translation"]
+                # Case-insensitive dedup and correct answer removal
+                seen = {correct.lower().strip()}
+                unique = []
+                for d in distractors:
+                    d_normalized = d.lower().strip()
+                    if d_normalized not in seen and d.strip():
+                        seen.add(d_normalized)
+                        unique.append(d)
+                result.append(unique[:count])
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Batch generate distractors error: {e}")
+            # Fallback to individual generation
+            tasks = [
+                self.generate_distractors(
+                    w["word"],
+                    w["translation"],
+                    count,
+                    w.get("part_of_speech"),
+                )
+                for w in words
+            ]
+            return await asyncio.gather(*tasks)
 
 
 # 創建全局實例

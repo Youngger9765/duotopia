@@ -95,6 +95,11 @@ class AssignmentStatus(str, enum.Enum):
     RESUBMITTED = "RESUBMITTED"  # 重新提交（訂正後待批改）
 
 
+class AnswerMode(str, enum.Enum):
+    LISTENING = "listening"  # 聽力模式作答
+    WRITING = "writing"  # 寫作模式作答
+
+
 class TransactionType(str, enum.Enum):
     TRIAL = "TRIAL"  # 試用期啟動
     RECHARGE = "RECHARGE"  # 充值
@@ -109,6 +114,7 @@ class TransactionStatus(str, enum.Enum):
 
 
 class ContentType(str, enum.Enum):
+<<<<<<< HEAD
     # ===== Phase 1 - 已啟用 =====
     READING_ASSESSMENT = "reading_assessment"  # Legacy name (kept for backward compatibility)
     EXAMPLE_SENTENCES = "example_sentences"  # 例句集 (new name for reading_assessment)
@@ -121,3 +127,37 @@ class ContentType(str, enum.Enum):
     # LISTENING_CLOZE = "listening_cloze"
     # SENTENCE_MAKING = "sentence_making"  # Legacy - replaced by VOCABULARY_SET
     # SPEAKING_QUIZ = "speaking_quiz"
+=======
+    # Phase 1 - 啟用
+    EXAMPLE_SENTENCES = "EXAMPLE_SENTENCES"  # 例句集（原 READING_ASSESSMENT）
+
+    # Phase 2 - 暫時禁用（UI 中不顯示）
+    VOCABULARY_SET = "VOCABULARY_SET"  # 單字集（原 SENTENCE_MAKING）
+    MULTIPLE_CHOICE = "MULTIPLE_CHOICE"  # 單選題庫
+    SCENARIO_DIALOGUE = "SCENARIO_DIALOGUE"  # 情境對話
+
+    # Legacy values - 保留向後相容性（deprecated，新資料不應使用）
+    READING_ASSESSMENT = "READING_ASSESSMENT"  # @deprecated: use EXAMPLE_SENTENCES
+    SENTENCE_MAKING = "SENTENCE_MAKING"  # @deprecated: use VOCABULARY_SET
+
+
+class PracticeMode(str, enum.Enum):
+    """作答模式"""
+
+    # 例句集 (EXAMPLE_SENTENCES)
+    READING = "reading"  # 例句朗讀 -> 口說分類
+    REARRANGEMENT = "rearrangement"  # 例句重組 -> 聽力/寫作分類
+
+    # 單字集 (VOCABULARY_SET) - Phase 2
+    WORD_READING = "word_reading"  # 單字朗讀 -> 口說分類
+    WORD_SELECTION = "word_selection"  # 單字選擇 -> 艾賓浩斯記憶曲線
+
+
+class ScoreCategory(str, enum.Enum):
+    """分數記錄分類"""
+
+    SPEAKING = "speaking"  # 口說
+    LISTENING = "listening"  # 聽力
+    WRITING = "writing"  # 寫作
+    VOCABULARY = "vocabulary"  # 單字（Phase 2 新增）
+>>>>>>> origin/staging

@@ -1089,6 +1089,31 @@ class ApiClient {
     return response.json();
   }
 
+  async uploadImage(formData: FormData) {
+    const currentToken = this.getToken();
+    const headers: HeadersInit = {};
+
+    if (currentToken) {
+      headers["Authorization"] = `Bearer ${currentToken}`;
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/teachers/upload/image`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      if (DEBUG) console.error("Image upload error:", errorText);
+      throw new Error(
+        `Image upload failed: ${response.status} - ${errorText || response.statusText}`,
+      );
+    }
+
+    return response.json();
+  }
+
   // ============ Student Methods ============
   async getStudentProfile() {
     return this.request("/api/students/me");

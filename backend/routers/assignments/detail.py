@@ -163,6 +163,9 @@ async def get_assignment_detail(
             }
         )
 
+    # Get content_type from first content
+    content_type = contents[0]["type"] if contents else None
+
     return {
         "id": assignment.id,
         "title": assignment.title,
@@ -175,6 +178,19 @@ async def get_assignment_detail(
         "contents": contents,
         "student_ids": student_ids,
         "students_progress": students_progress,
+        # 內容類型與作答模式
+        "content_type": content_type,
+        "practice_mode": assignment.practice_mode,
+        "answer_mode": assignment.answer_mode,
+        "time_limit_per_question": assignment.time_limit_per_question,
+        "shuffle_questions": assignment.shuffle_questions,
+        "play_audio": assignment.play_audio,
+        "show_answer": assignment.show_answer,
+        "score_category": assignment.score_category,
+        "target_proficiency": assignment.target_proficiency,
+        "show_translation": assignment.show_translation,
+        "show_word": assignment.show_word,
+        "show_image": assignment.show_image,
     }
 
 

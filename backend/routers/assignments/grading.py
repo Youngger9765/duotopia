@@ -2,6 +2,8 @@
 Grading operations (AI and manual)
 """
 
+import json
+import logging
 from typing import List, Dict, Any
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,6 +18,7 @@ from models import (
     Student,
     Classroom,
     Content,
+    ContentItem,
     Assignment,
     AssignmentContent,
     StudentAssignment,
@@ -23,7 +26,16 @@ from models import (
     StudentItemProgress,
     AssignmentStatus,
 )
-from .validators import AIGradingRequest, AIGradingResponse, AIScores
+from .validators import (
+    AIGradingRequest,
+    AIGradingResponse,
+    AIScores,
+    BatchGradingRequest,
+    BatchGradingResponse,
+    StudentBatchGradingResult,
+    BatchGradeFinalizeRequest,
+    BatchGradeFinalizeResponse,
+)
 from .dependencies import get_current_teacher
 from .utils import (
     process_audio_with_whisper,
@@ -32,7 +44,13 @@ from .utils import (
     calculate_fluency_score,
     calculate_wpm,
     generate_ai_feedback,
+    get_score_with_fallback,
+    generate_item_comment,
+    generate_assignment_feedback,
+    trigger_ai_assessment_for_item,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -913,3 +931,473 @@ async def manual_grade_assignment(
         "graded_at": assignment.graded_at.isoformat(),
         "message": "Assignment graded successfully",
     }
+
+
+# ============ Batch Grading Endpoints ============
+
+
+@router.post("/{assignment_id}/batch-grade", response_model=BatchGradingResponse)
+@trace_function("Batch Grade Assignment")
+async def batch_grade_assignment(
+    assignment_id: int,
+    request: BatchGradingRequest,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    AI 批次批改作業
+
+    批改流程：
+    1. 查找需要批改的學生：
+       - 批次模式（未指定 student_ids 或多個學生）：僅處理「已提交」或「已訂正」狀態
+       - 單人模式（指定一個 student_id）：處理任何狀態（允許重新批改）
+    2. 計算每個學生的分數：
+       - 每題分數 = (總體發音 + 準確度 + 流暢度 + 完整度) / 4
+       - 總分 = 所有題目平均分
+       - 平均成績 = 各項目平均
+    3. 更新作業狀態（已批改 或 已退回）
+
+    Modes:
+    - Batch mode (no student_ids or multiple IDs): Only processes SUBMITTED/RESUBMITTED students
+    - Single-student mode (one student_id): Processes ANY status (for manual re-grading)
+
+    The status filter is intentionally skipped in single-student mode to allow
+    teachers to re-grade or apply AI suggestions to any student at any time.
+    """
+    perf = PerformanceSnapshot(f"Batch_Grade_Assignment_{assignment_id}")
+
+    # 1. 驗證教師權限
+    with start_span("Verify Teacher Permission"):
+        assignment = (
+            db.query(Assignment)
+            .join(Classroom)
+            .filter(
+                and_(
+                    Assignment.id == assignment_id,
+                    Classroom.id == request.classroom_id,
+                    Classroom.teacher_id == current_teacher.id,
+                )
+            )
+            .first()
+        )
+
+        if not assignment:
+            raise HTTPException(
+                status_code=404,
+                detail="Assignment not found or you don't have permission",
+            )
+        perf.checkpoint("Permission Check")
+
+    # 2. 查找需要批改的學生
+    # 單人模式：不限狀態（允許重新批改）
+    # 批次模式：僅處理 SUBMITTED 或 RESUBMITTED
+    with start_span("Query Students to Grade"):
+        # Build base query
+        query = (
+            db.query(StudentAssignment)
+            .join(Student)
+            .filter(StudentAssignment.assignment_id == assignment_id)
+        )
+
+        # Apply status filter based on mode
+        is_single_student_mode = request.student_ids and len(request.student_ids) == 1
+
+        if is_single_student_mode:
+            # Single-student mode: Allow grading ANY status
+            query = query.filter(Student.id.in_(request.student_ids))
+        elif request.student_ids:
+            # Multi-student mode with specific IDs: Filter by status + IDs
+            query = query.filter(
+                and_(
+                    StudentAssignment.status.in_(
+                        [AssignmentStatus.SUBMITTED, AssignmentStatus.RESUBMITTED]
+                    ),
+                    Student.id.in_(request.student_ids),
+                )
+            )
+        else:
+            # Batch mode (all students): Only SUBMITTED/RESUBMITTED
+            query = query.filter(
+                StudentAssignment.status.in_(
+                    [AssignmentStatus.SUBMITTED, AssignmentStatus.RESUBMITTED]
+                )
+            )
+
+        student_assignments = query.options(
+            selectinload(StudentAssignment.student)
+        ).all()
+        perf.checkpoint(
+            f"Found {len(student_assignments)} Students"
+            + (" (single-student mode)" if is_single_student_mode else "")
+        )
+
+    # 3. Pre-load all StudentItemProgress records at once (fix N+1 query)
+    with start_span("Pre-load Item Progress"):
+        student_assignment_ids = [sa.id for sa in student_assignments]
+        all_item_progress = (
+            db.query(StudentItemProgress)
+            .filter(
+                StudentItemProgress.student_assignment_id.in_(student_assignment_ids)
+            )
+            .all()
+        )
+
+        # Create lookup dictionary: student_assignment_id -> [item_progress]
+        progress_by_student = {}
+        for item in all_item_progress:
+            if item.student_assignment_id not in progress_by_student:
+                progress_by_student[item.student_assignment_id] = []
+            progress_by_student[item.student_assignment_id].append(item)
+
+        perf.checkpoint(f"Pre-loaded {len(all_item_progress)} Item Progress Records")
+
+    # 4. Pre-load all ContentItem records at once (fix N+1 query in AI assessment)
+    with start_span("Pre-load Content Items"):
+        content_item_ids = list(
+            set(
+                [
+                    item.content_item_id
+                    for item in all_item_progress
+                    if item.content_item_id
+                ]
+            )
+        )
+        content_items = (
+            db.query(ContentItem).filter(ContentItem.id.in_(content_item_ids)).all()
+        )
+
+        # Create lookup dictionary: content_item_id -> ContentItem
+        content_items_by_id = {item.id: item for item in content_items}
+        perf.checkpoint(f"Pre-loaded {len(content_items)} Content Items")
+
+    results = []
+
+    # 5. 批改每個學生的作業
+    with start_span("Process Each Student"):
+        for student_assignment in student_assignments:
+            student = student_assignment.student
+
+            # 6. 從預載的資料中取得該學生所有題目的進度
+            item_progress_list = progress_by_student.get(student_assignment.id, [])
+
+            # 6.5. Trigger AI assessment for items with recordings but no scores
+            with start_span("Trigger Missing AI Assessments"):
+                for item in item_progress_list:
+                    # Check if has recording but no AI assessment
+                    if item.recording_url and not item.ai_assessed_at:
+                        logger.info(
+                            f"Triggering AI assessment for item_progress {item.id}"
+                        )
+                        # Pass pre-loaded content_item to avoid N+1 query
+                        content_item = content_items_by_id.get(item.content_item_id)
+                        await trigger_ai_assessment_for_item(item, db, content_item)
+                        # Refresh to get updated scores
+                        db.refresh(item)
+
+                perf.checkpoint("AI Assessments Triggered")
+
+            # 7. 計算分數
+            item_scores = []
+            pronunciation_scores = []
+            accuracy_scores = []
+            fluency_scores = []
+            completeness_scores = []
+            missing_count = 0
+
+            for item in item_progress_list:
+                # 檢查是否有錄音
+                if not item.recording_url:
+                    # 缺題
+                    item_scores.append(0)
+                    missing_count += 1
+                    continue
+
+                # 檢查是否有 AI 評分
+                if not item.has_ai_assessment:
+                    # 沒有分析結果，視為 0 分
+                    item_scores.append(0)
+                    missing_count += 1
+                    continue
+
+                # Parse ai_feedback once for efficiency
+                ai_feedback_data = {}
+                if item.ai_feedback:
+                    try:
+                        ai_feedback_data = (
+                            json.loads(item.ai_feedback)
+                            if isinstance(item.ai_feedback, str)
+                            else item.ai_feedback
+                        )
+                    except (json.JSONDecodeError, TypeError):
+                        ai_feedback_data = {}
+
+                # 收集有效分數（使用 fallback + backfill）
+                available_scores = []
+
+                pronunciation = get_score_with_fallback(
+                    item,
+                    "pronunciation_score",
+                    "pronunciation_score",
+                    db,
+                    ai_feedback_data,
+                )
+                if pronunciation > 0:
+                    available_scores.append(pronunciation)
+                    pronunciation_scores.append(pronunciation)
+
+                accuracy = get_score_with_fallback(
+                    item, "accuracy_score", "accuracy_score", db, ai_feedback_data
+                )
+                if accuracy > 0:
+                    available_scores.append(accuracy)
+                    accuracy_scores.append(accuracy)
+
+                fluency = get_score_with_fallback(
+                    item, "fluency_score", "fluency_score", db, ai_feedback_data
+                )
+                if fluency > 0:
+                    available_scores.append(fluency)
+                    fluency_scores.append(fluency)
+
+                completeness = get_score_with_fallback(
+                    item,
+                    "completeness_score",
+                    "completeness_score",
+                    db,
+                    ai_feedback_data,
+                )
+                if completeness > 0:
+                    available_scores.append(completeness)
+                    completeness_scores.append(completeness)
+
+                # 計算該題分數（4 項平均）
+                if available_scores:
+                    item_score = sum(available_scores) / len(available_scores)
+                    item_scores.append(item_score)
+                else:
+                    # 有錄音和 AI 評分但分數為 0 - 不算缺題，只是得分低
+                    item_scores.append(0)
+
+            # 8. 計算總分和平均分
+            total_score = sum(item_scores) / len(item_scores) if item_scores else 0.0
+
+            avg_pronunciation = (
+                sum(pronunciation_scores) / len(pronunciation_scores)
+                if pronunciation_scores
+                else 0.0
+            )
+            avg_accuracy = (
+                sum(accuracy_scores) / len(accuracy_scores) if accuracy_scores else 0.0
+            )
+            avg_fluency = (
+                sum(fluency_scores) / len(fluency_scores) if fluency_scores else 0.0
+            )
+            avg_completeness = (
+                sum(completeness_scores) / len(completeness_scores)
+                if completeness_scores
+                else 0.0
+            )
+
+            # 9. 更新 StudentAssignment
+            student_assignment.score = total_score
+            student_assignment.graded_at = datetime.now(timezone.utc)
+
+            # 9.5. Generate item-level comments
+            with start_span("Generate Item Comments"):
+                for item in item_progress_list:
+                    # Only generate comments for items with recordings
+                    if item.recording_url and item.ai_assessed_at:
+                        # Get scores (use get_score_with_fallback for safety)
+                        pron = float(
+                            get_score_with_fallback(
+                                item,
+                                "pronunciation_score",
+                                "pronunciation_score",
+                                db,
+                                ai_feedback_data={},
+                            )
+                        )
+                        acc = float(
+                            get_score_with_fallback(
+                                item,
+                                "accuracy_score",
+                                "accuracy_score",
+                                db,
+                                ai_feedback_data={},
+                            )
+                        )
+                        flu = float(
+                            get_score_with_fallback(
+                                item,
+                                "fluency_score",
+                                "fluency_score",
+                                db,
+                                ai_feedback_data={},
+                            )
+                        )
+                        comp = float(
+                            get_score_with_fallback(
+                                item,
+                                "completeness_score",
+                                "completeness_score",
+                                db,
+                                ai_feedback_data={},
+                            )
+                        )
+
+                        # Generate and store comment
+                        comment = generate_item_comment(pron, acc, flu, comp)
+                        item.teacher_feedback = comment
+
+                perf.checkpoint("Item Comments Generated")
+
+            # 9.6. Generate assignment feedback
+            with start_span("Generate Assignment Feedback"):
+                completed_items_count = len(
+                    [i for i in item_progress_list if i.recording_url]
+                )
+
+                assignment_feedback = generate_assignment_feedback(
+                    total_items=len(item_progress_list),
+                    completed_items=completed_items_count,
+                    avg_score=total_score,
+                    avg_pronunciation=avg_pronunciation,
+                    avg_fluency=avg_fluency,
+                    avg_accuracy=avg_accuracy,
+                    avg_completeness=avg_completeness,
+                )
+
+                student_assignment.feedback = assignment_feedback
+                perf.checkpoint("Assignment Feedback Generated")
+
+            # 10. Set graded_at timestamp (status will be decided in finalize step)
+            student_assignment.graded_at = datetime.now(timezone.utc)
+
+            # 11. 記錄結果
+            results.append(
+                StudentBatchGradingResult(
+                    student_id=student.id,
+                    student_name=student.name,
+                    total_score=round(total_score, 1),
+                    missing_items=missing_count,
+                    total_items=len(item_progress_list),
+                    completed_items=len(
+                        [i for i in item_progress_list if i.recording_url]
+                    ),
+                    avg_pronunciation=round(avg_pronunciation, 1),
+                    avg_accuracy=round(avg_accuracy, 1),
+                    avg_fluency=round(avg_fluency, 1),
+                    avg_completeness=round(avg_completeness, 1),
+                    feedback=student_assignment.feedback,
+                    status=student_assignment.status.value,
+                )
+            )
+
+        perf.checkpoint("All Students Processed")
+
+    # 12. 提交到資料庫
+    with start_span("Database Commit"):
+        db.commit()
+        perf.checkpoint("Database Committed")
+
+    perf.finish()
+
+    return BatchGradingResponse(
+        total_students=len(student_assignments), processed=len(results), results=results
+    )
+
+
+@router.post(
+    "/{assignment_id}/finalize-batch-grade",
+    response_model=BatchGradeFinalizeResponse,
+)
+@trace_function("Finalize Batch Grade")
+async def finalize_batch_grade(
+    assignment_id: int,
+    request: BatchGradeFinalizeRequest,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    完成批次批改 - 根據老師決定設定最終狀態
+
+    Teacher Decisions:
+    - "RETURNED" → Mark as RETURNED
+    - "GRADED" → Mark as GRADED
+    - None or missing → Keep SUBMITTED/RESUBMITTED (no change)
+    """
+    perf = PerformanceSnapshot(f"Finalize_Batch_Grade_{assignment_id}")
+
+    with start_span("Verify Permissions"):
+        # Verify assignment exists
+        assignment = db.query(Assignment).filter(Assignment.id == assignment_id).first()
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+
+        # Verify teacher owns this assignment's classroom
+        classroom = (
+            db.query(Classroom)
+            .filter(
+                Classroom.id == request.classroom_id,
+                Classroom.teacher_id == current_teacher.id,
+            )
+            .first()
+        )
+
+        if not classroom:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        perf.checkpoint("Permissions Verified")
+
+    with start_span("Query Student Assignments"):
+        # Get all submitted/resubmitted students
+        student_assignments = (
+            db.query(StudentAssignment)
+            .filter(
+                StudentAssignment.assignment_id == assignment_id,
+                StudentAssignment.classroom_id == request.classroom_id,
+                StudentAssignment.status.in_(
+                    [AssignmentStatus.SUBMITTED, AssignmentStatus.RESUBMITTED]
+                ),
+            )
+            .all()
+        )
+        perf.checkpoint(f"Queried {len(student_assignments)} Student Assignments")
+
+    returned_count = 0
+    graded_count = 0
+    unchanged_count = 0
+
+    with start_span("Update Student Statuses"):
+        for sa in student_assignments:
+            student_id = str(sa.student_id)
+
+            # Check teacher's decision for this student
+            decision = request.teacher_decisions.get(student_id)
+
+            if decision == "RETURNED":
+                sa.status = AssignmentStatus.RETURNED
+                sa.returned_at = datetime.now(timezone.utc)
+                returned_count += 1
+            elif decision == "GRADED":
+                sa.status = AssignmentStatus.GRADED
+                # graded_at was already set in batch-grade step
+                graded_count += 1
+            else:
+                # None or other value → Keep original status (SUBMITTED/RESUBMITTED)
+                unchanged_count += 1
+
+        perf.checkpoint("Updated Student Statuses")
+
+    with start_span("Database Commit"):
+        db.commit()
+        perf.checkpoint("Database Committed")
+
+    perf.finish()
+
+    return BatchGradeFinalizeResponse(
+        returned_count=returned_count,
+        graded_count=graded_count,
+        unchanged_count=unchanged_count,
+        total_count=len(student_assignments),
+    )

@@ -152,8 +152,12 @@ export interface Assignment {
   };
   // Score property for graded assignments
   score?: number;
-  // 🆕 練習模式：'reading' (例句朗讀) / 'rearrangement' (例句重組)
-  practice_mode?: "reading" | "rearrangement";
+  // 練習模式：'reading' (例句朗讀) / 'rearrangement' (例句重組) / 'word_reading' (單字朗讀) / 'word_selection' (單字選擇)
+  practice_mode?:
+    | "reading"
+    | "rearrangement"
+    | "word_reading"
+    | "word_selection";
 }
 
 // ============ Student Assignment Types ============
