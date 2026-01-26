@@ -463,10 +463,10 @@ export default function PricingPage() {
             <p className="text-gray-900 font-medium">
               {t("pricing.contactUs")}
               <a
-                href="mailto:myduotopia@gmail.com"
+                href="mailto:contact@duotopia.co"
                 className="text-blue-600 hover:text-blue-700 underline"
               >
-                myduotopia@gmail.com
+                contact@duotopia.co
               </a>
             </p>
           </div>
