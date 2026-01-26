@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { RecursiveTreeAccordion } from "./RecursiveTreeAccordion";
 import { programTreeConfig } from "./programTreeConfig";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
-import SentenceMakingPanel from "@/components/SentenceMakingPanel";
+import SentenceMakingPanel from "@/components/activities/SentenceMakingActivity";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
 import {
   ProgramTreeLesson,
