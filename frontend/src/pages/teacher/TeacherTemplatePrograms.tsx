@@ -1,10 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import TeacherLayout from "@/components/TeacherLayout";
-<<<<<<< HEAD
-import { ProgramTreeView } from "@/components/shared/ProgramTreeView";
-import { useProgramAPI } from "@/hooks/useProgramAPI";
-=======
 import { RecursiveTreeAccordion } from "@/components/shared/RecursiveTreeAccordion";
 import { programTreeConfig } from "@/components/shared/programTreeConfig";
 import { ProgramDialog } from "@/components/ProgramDialog";
@@ -15,21 +11,15 @@ import VocabularySetPanel from "@/components/VocabularySetPanel";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { apiClient } from "@/lib/api";
->>>>>>> origin/staging
 import { toast } from "sonner";
-import { Program } from "@/types";
+import { Program, Lesson, Content } from "@/types";
 
 export default function TeacherTemplateProgramsNew() {
   const { t } = useTranslation();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isReordering, setIsReordering] = useState(false);
 
-<<<<<<< HEAD
-  // Use unified Programs API
-  const api = useProgramAPI({
-    scope: 'teacher',
-  });
-=======
   // Program dialog states
   const [programDialogType, setProgramDialogType] = useState<
     "create" | "edit" | "delete" | null
@@ -67,7 +57,6 @@ export default function TeacherTemplateProgramsNew() {
   const [vocabularySetContentId, setVocabularySetContentId] = useState<
     number | null
   >(null);
->>>>>>> origin/staging
 
   useEffect(() => {
     fetchTemplatePrograms();
@@ -76,8 +65,9 @@ export default function TeacherTemplateProgramsNew() {
   const fetchTemplatePrograms = async () => {
     try {
       setLoading(true);
-      const data = await api.getPrograms();
-      setPrograms(data);
+      // 使用 teachers API，已包含完整的 lessons/contents 和排序（teachers.py Line 300, 304）
+      const response = await apiClient.getTeacherPrograms(true);
+      setPrograms(response as Program[]);
     } catch (err) {
       console.error("Failed to fetch template programs:", err);
       toast.error(t("teacherTemplatePrograms.messages.loadFailed"));
@@ -86,8 +76,6 @@ export default function TeacherTemplateProgramsNew() {
     }
   };
 
-<<<<<<< HEAD
-=======
   // Program handlers
   const handleCreateProgram = () => {
     setSelectedProgram(null);
@@ -444,7 +432,6 @@ export default function TeacherTemplateProgramsNew() {
     }
   };
 
->>>>>>> origin/staging
   if (loading) {
     return (
       <TeacherLayout>
@@ -460,16 +447,6 @@ export default function TeacherTemplateProgramsNew() {
 
   return (
     <TeacherLayout>
-<<<<<<< HEAD
-      <div className="p-6 space-y-4">
-        <ProgramTreeView
-          programs={programs}
-          showCreateButton
-          createButtonText={t("teacherTemplatePrograms.buttons.addProgram")}
-          scope="teacher"
-          onRefresh={fetchTemplatePrograms}
-        />
-=======
       <div className="relative h-full bg-gray-50">
         <div
           className={`p-6 space-y-4 transition-all duration-300 ${
@@ -891,7 +868,6 @@ export default function TeacherTemplateProgramsNew() {
             }}
           />
         )}
->>>>>>> origin/staging
       </div>
     </TeacherLayout>
   );

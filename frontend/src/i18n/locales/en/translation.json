@@ -27,13 +27,6 @@
     "paste": "Paste",
     "cut": "Cut",
     "yes": "Yes",
-<<<<<<< HEAD
-    "no": "No",
-    "active": "Active",
-    "inactive": "Inactive",
-    "comingSoon": "Coming Soon",
-    "selectLanguage": "Select Language"
-=======
     "no": "No"
   },
   "rearrangement": {
@@ -81,7 +74,6 @@
       "submitFailed": "Failed to submit answer",
       "retryFailed": "Failed to retry"
     }
->>>>>>> origin/staging
   },
   "nav": {
     "home": "Home",
@@ -3156,20 +3148,14 @@
       "custom": "Custom Program"
     },
     "template": {
-      "search": "Search program templates...",
       "searchPlaceholder": "Search program templates...",
       "selected": "Selected {{count}} / {{total}} templates",
       "selectAll": "Select All",
       "clear": "Clear",
       "loading": "Loading...",
-      "empty": "No templates available",
       "noTemplates": "No templates available",
-      "duplicate": "⚠️ This program already exists, duplication may cause confusion",
       "duplicateWarning": "⚠️ This program already exists, duplication may cause confusion",
       "confirmDuplicate": "⚠️ Warning: The following programs already exist in the classroom:\n\n{{names}}\n\nDuplication may cause confusion, continue anyway?",
-      "nameLabel": "New program name (optional, leave blank to use original)",
-      "namePlaceholder": "{{originalName}}",
-      "multipleNote": "{{count}} templates selected, will use original names",
       "nameOptional": "New program name (optional, leave blank to use original)",
       "multipleSelected": "{{count}} templates selected, will use original names"
     },
@@ -3907,29 +3893,6 @@
       "cannotCompletePreview": "Cannot complete in preview mode",
       "completed": "Assignment completed!",
       "completeFailed": "Failed to complete assignment"
-    }
-  }
-  ,
-  "workspace": {
-    "tabs": {
-      "personal": "Personal",
-      "organization": "Organization"
-    },
-    "personal": {
-      "description": "Personal Teaching Mode - Full Permissions"
-    },
-    "personalModeOnly": "Personal Teaching Mode - Full Permissions",
-    "organization": {
-      "bannerTitle": "Organization Teacher Mode",
-      "bannerDescription": "Can copy courses, assign homework, and grade assignments. Cannot manage class-teacher-student relationships.",
-      "selectSchool": "Select School",
-      "noOrganizations": "Not joined any organization yet",
-      "loading": "Loading...",
-      "error": "Failed to load"
-    },
-    "permissions": {
-      "readOnly": "Read-only",
-      "close": "Close"
     }
   }
 }
