@@ -1165,7 +1165,7 @@
       "company": "Language Expansion Digital Learning Co., Ltd.",
       "taxId": "Tax ID: 60619397",
       "contactPrompt": "If you have any questions about these terms, please contact us through the following:",
-      "email": "Email: myduotopia@gmail.com"
+      "email": "Email: contact@duotopia.co"
     }
   },
   "dialogs": {
@@ -1905,7 +1905,7 @@
       "dashboard": "Dashboard",
       "myClassrooms": "My Classrooms",
       "allStudents": "All Students",
-      "publicPrograms": "Public Programs",
+      "publicPrograms": "My Teaching Materials",
       "subscription": "Subscription",
       "systemAdmin": "System Admin",
       "profile": "Profile"
@@ -2198,7 +2198,7 @@
       "students": "Students",
       "studentList": "Student List",
       "programs": "Programs",
-      "programList": "Program List",
+      "programList": "Class Materials",
       "assignments": "Assignments",
       "assignmentManagement": "Assignment Management"
     },
@@ -2630,9 +2630,9 @@
     }
   },
   "teacherTemplatePrograms": {
-    "title": "Template Programs",
+    "title": "My Teaching Materials",
     "buttons": {
-      "addProgram": "Add Program"
+      "addProgram": "Add Resource Pack"
     },
     "messages": {
       "loadFailed": "Failed to load template programs",
@@ -3140,7 +3140,7 @@
     }
   },
   "createProgramDialog": {
-    "title": "Add Program - {{classroom}}",
+    "title": "Add Class Materials - {{classroom}}",
     "description": "Choose creation method: copy from template, copy from other classroom, or create custom",
     "tabs": {
       "template": "Copy from Template",
