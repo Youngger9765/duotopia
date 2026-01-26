@@ -3837,6 +3837,7 @@
     "personal": {
       "description": "個人教學模式 - 完整權限"
     },
+    "personalModeOnly": "個人教學模式 - 完整權限",
     "organization": {
       "bannerTitle": "機構教師模式",
       "bannerDescription": "可複製課程、派作業、改作業。無法管理班師生關係。",

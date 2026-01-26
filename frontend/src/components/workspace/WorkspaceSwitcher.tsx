@@ -15,8 +15,20 @@ import OrganizationTab from './OrganizationTab';
 
 export const WorkspaceSwitcher: React.FC = () => {
   const { t } = useTranslation();
-  const { mode, setMode } = useWorkspace();
+  const { mode, setMode, organizations } = useWorkspace();
 
+  // If teacher has no organizations, don't show tabs - just show personal mode
+  if (organizations.length === 0) {
+    return (
+      <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+        <div className="text-sm text-slate-600 dark:text-slate-400">
+          {t('workspace.personalModeOnly')}
+        </div>
+      </div>
+    );
+  }
+
+  // If has organizations, show full tabs UI
   return (
     <div className="mb-4">
       <Tabs value={mode} onValueChange={(value) => setMode(value as 'personal' | 'organization')}>

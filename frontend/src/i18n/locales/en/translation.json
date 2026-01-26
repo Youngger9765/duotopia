@@ -3463,6 +3463,7 @@
     "personal": {
       "description": "Personal Teaching Mode - Full Permissions"
     },
+    "personalModeOnly": "Personal Teaching Mode - Full Permissions",
     "organization": {
       "bannerTitle": "Organization Teacher Mode",
       "bannerDescription": "Can copy courses, assign homework, and grade assignments. Cannot manage class-teacher-student relationships.",
