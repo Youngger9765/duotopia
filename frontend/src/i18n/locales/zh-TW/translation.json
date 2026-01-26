@@ -27,7 +27,8 @@
     "paste": "貼上",
     "cut": "剪下",
     "yes": "是",
-    "no": "否"
+    "no": "否",
+    "selectLanguage": "選擇語言"
   },
   "rearrangement": {
     "loading": "正在載入題目...",

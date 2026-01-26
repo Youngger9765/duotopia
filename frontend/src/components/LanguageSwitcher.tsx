@@ -14,7 +14,7 @@ const languages = [
 ];
 
 export function LanguageSwitcher() {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
 
   const handleLanguageChange = (languageCode: string) => {
     i18n.changeLanguage(languageCode);
@@ -28,7 +28,7 @@ export function LanguageSwitcher() {
       <Globe className="h-4 w-4 text-gray-500" />
       <Select value={normalizedLanguage} onValueChange={handleLanguageChange}>
         <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder="選擇語言" />
+          <SelectValue placeholder={t('common.selectLanguage')} />
         </SelectTrigger>
         <SelectContent>
           {languages.map((lang) => (
