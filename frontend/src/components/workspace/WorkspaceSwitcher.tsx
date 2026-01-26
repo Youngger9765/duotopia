@@ -1,0 +1,48 @@
+/**
+ * WorkspaceSwitcher - Main component for teacher workspace switching
+ *
+ * Provides Tab interface to switch between:
+ * - Personal mode (my classes, my students, my materials)
+ * - Organization mode (organization schools and materials)
+ */
+
+import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
+import PersonalTab from './PersonalTab';
+import OrganizationTab from './OrganizationTab';
+
+export const WorkspaceSwitcher: React.FC = () => {
+  const { mode, setMode } = useWorkspace();
+
+  return (
+    <div className="mb-4">
+      <Tabs value={mode} onValueChange={(value) => setMode(value as 'personal' | 'organization')}>
+        <TabsList className="grid w-full grid-cols-2 h-12">
+          <TabsTrigger
+            value="personal"
+            className="data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:border data-[state=active]:border-slate-200 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700 dark:data-[state=active]:text-blue-400 dark:data-[state=active]:border-slate-600 transition-all duration-200"
+          >
+            個人
+          </TabsTrigger>
+          <TabsTrigger
+            value="organization"
+            className="data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:border data-[state=active]:border-slate-200 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700 dark:data-[state=active]:text-blue-400 dark:data-[state=active]:border-slate-600 transition-all duration-200"
+          >
+            機構
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="personal" className="mt-4">
+          <PersonalTab />
+        </TabsContent>
+
+        <TabsContent value="organization" className="mt-4">
+          <OrganizationTab />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default WorkspaceSwitcher;
