@@ -146,9 +146,10 @@ setup_task_worktree() {
     # Sanitize slug: lowercase, replace non-alphanumeric with dash, limit to 30 chars
     TASK_SLUG=$(echo "$TASK_SLUG" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | cut -c1-30 | sed 's/-$//')
 
+    # Fallback: generate random 16-char string if slug is empty (e.g., Chinese-only input)
     if [ -z "$TASK_SLUG" ]; then
-        echo "Error: Task slug cannot be empty after sanitization"
-        exit 1
+        TASK_SLUG="task-$(date +%s%N | shasum | cut -c1-16)"
+        echo "Warning: Empty slug after sanitization, using fallback: $TASK_SLUG"
     fi
 
     # Generate Task ID: YYYYMMDD-NNN
