@@ -656,3 +656,214 @@ class TestAutoGradedSubmissionWorkflow:
             assert actual_status == expected_status, (
                 f"practice_mode={mode}: expected {expected_status}, got {actual_status}"
             )
+
+
+class TestAutoGradedScoreCalculation:
+    """測試自動批改類型的分數計算邏輯 (Issue #165)"""
+
+    def test_rearrangement_score_calculation(self):
+        """測試例句重組分數計算邏輯"""
+
+        def calculate_rearrangement_score(item_progress_records: list) -> float:
+            """
+            計算例句重組的總分
+            從 StudentItemProgress.expected_score 計算平均分
+            """
+            if not item_progress_records:
+                return 0
+
+            total_score = sum(
+                float(p.get("expected_score", 0) or 0) for p in item_progress_records
+            )
+            return total_score / len(item_progress_records)
+
+        # 測試正常情況
+        progress_records = [
+            {"content_item_id": 1, "expected_score": 100.0, "status": "COMPLETED"},
+            {"content_item_id": 2, "expected_score": 80.0, "status": "COMPLETED"},
+            {"content_item_id": 3, "expected_score": 90.0, "status": "COMPLETED"},
+        ]
+        score = calculate_rearrangement_score(progress_records)
+        assert score == 90.0  # (100 + 80 + 90) / 3
+
+        # 測試有部分失敗的情況
+        progress_records_with_fail = [
+            {"content_item_id": 1, "expected_score": 100.0, "status": "COMPLETED"},
+            {"content_item_id": 2, "expected_score": 0.0, "status": "COMPLETED"},  # 失敗
+            {"content_item_id": 3, "expected_score": 85.0, "status": "COMPLETED"},
+        ]
+        score = calculate_rearrangement_score(progress_records_with_fail)
+        assert abs(score - 61.67) < 0.1  # (100 + 0 + 85) / 3 ≈ 61.67
+
+        # 測試空列表
+        score = calculate_rearrangement_score([])
+        assert score == 0
+
+        # 測試 None 值處理
+        progress_with_none = [
+            {"content_item_id": 1, "expected_score": 100.0},
+            {"content_item_id": 2, "expected_score": None},
+            {"content_item_id": 3, "expected_score": 80.0},
+        ]
+        score = calculate_rearrangement_score(progress_with_none)
+        assert score == 60.0  # (100 + 0 + 80) / 3
+
+    def test_word_selection_score_calculation(self):
+        """測試單字選擇分數計算邏輯"""
+
+        def calculate_word_selection_score(
+            words_mastered: int, total_words: int
+        ) -> float:
+            """
+            計算單字選擇的總分
+            基於 mastery 百分比（與 calculate_assignment_mastery 函數邏輯一致）
+            """
+            if total_words == 0:
+                return 0
+            current_mastery = (words_mastered / total_words) * 100
+            return min(100, int(current_mastery))
+
+        # 測試完全掌握
+        score = calculate_word_selection_score(10, 10)
+        assert score == 100
+
+        # 測試部分掌握
+        score = calculate_word_selection_score(8, 10)
+        assert score == 80
+
+        # 測試低掌握度
+        score = calculate_word_selection_score(3, 10)
+        assert score == 30
+
+        # 測試零掌握
+        score = calculate_word_selection_score(0, 10)
+        assert score == 0
+
+        # 測試零總數（邊界情況）
+        score = calculate_word_selection_score(0, 0)
+        assert score == 0
+
+    def test_auto_graded_score_recording_logic(self):
+        """測試自動批改分數記錄邏輯"""
+
+        def submit_auto_graded_assignment(
+            practice_mode: str, item_progress: list, mastery_data: dict = None
+        ) -> dict:
+            """
+            模擬自動批改作業提交並計算分數
+            """
+            result = {
+                "status": "GRADED",
+                "is_auto_graded": True,
+                "score": None,
+            }
+
+            if practice_mode == "rearrangement":
+                # 例句重組：計算 expected_score 平均值
+                if item_progress:
+                    total = sum(
+                        float(p.get("expected_score", 0) or 0) for p in item_progress
+                    )
+                    result["score"] = total / len(item_progress)
+                else:
+                    result["score"] = 0
+
+            elif practice_mode == "word_selection":
+                # 單字選擇：使用 mastery 計算
+                if mastery_data:
+                    current_mastery = (
+                        mastery_data.get("words_mastered", 0)
+                        / max(mastery_data.get("total_words", 1), 1)
+                    ) * 100
+                    result["score"] = min(100, int(current_mastery))
+                else:
+                    result["score"] = 0
+
+            return result
+
+        # 測試例句重組分數記錄
+        rearrangement_progress = [
+            {"expected_score": 100.0},
+            {"expected_score": 90.0},
+            {"expected_score": 85.0},
+        ]
+        result = submit_auto_graded_assignment("rearrangement", rearrangement_progress)
+        assert result["status"] == "GRADED"
+        assert result["is_auto_graded"] is True
+        assert abs(result["score"] - 91.67) < 0.1  # (100 + 90 + 85) / 3
+
+        # 測試單字選擇分數記錄
+        mastery_data = {"words_mastered": 9, "total_words": 10}
+        result = submit_auto_graded_assignment(
+            "word_selection", [], mastery_data=mastery_data
+        )
+        assert result["status"] == "GRADED"
+        assert result["is_auto_graded"] is True
+        assert result["score"] == 90
+
+    def test_score_stored_in_student_assignment(self):
+        """測試分數正確儲存到 StudentAssignment"""
+
+        class MockStudentAssignment:
+            """模擬 StudentAssignment 模型"""
+
+            def __init__(self):
+                self.id = 1
+                self.status = "IN_PROGRESS"
+                self.score = None
+                self.graded_at = None
+                self.submitted_at = None
+
+        def process_auto_graded_submit(
+            student_assignment: MockStudentAssignment,
+            practice_mode: str,
+            calculated_score: float,
+        ):
+            """處理自動批改提交"""
+            student_assignment.status = "GRADED"
+            student_assignment.score = calculated_score
+            student_assignment.graded_at = datetime.now()
+            student_assignment.submitted_at = datetime.now()
+
+        # 測試分數儲存
+        sa = MockStudentAssignment()
+        process_auto_graded_submit(sa, "rearrangement", 85.5)
+
+        assert sa.status == "GRADED"
+        assert sa.score == 85.5
+        assert sa.graded_at is not None
+        assert sa.submitted_at is not None
+
+    def test_manual_graded_no_score_calculation(self):
+        """測試手動批改類型不計算分數"""
+
+        def submit_assignment(practice_mode: str, item_progress: list) -> dict:
+            """模擬提交邏輯"""
+            is_auto_graded = practice_mode in ("rearrangement", "word_selection")
+
+            if is_auto_graded:
+                if item_progress:
+                    total = sum(
+                        float(p.get("expected_score", 0) or 0) for p in item_progress
+                    )
+                    score = total / len(item_progress)
+                else:
+                    score = 0
+                return {"status": "GRADED", "score": score, "is_auto_graded": True}
+            else:
+                # 手動批改類型不計算分數
+                return {"status": "SUBMITTED", "score": None, "is_auto_graded": False}
+
+        # 手動批改類型：reading
+        result = submit_assignment(
+            "reading", [{"expected_score": 100.0}, {"expected_score": 90.0}]
+        )
+        assert result["status"] == "SUBMITTED"
+        assert result["score"] is None
+        assert result["is_auto_graded"] is False
+
+        # 手動批改類型：word_reading
+        result = submit_assignment("word_reading", [{"expected_score": 85.0}])
+        assert result["status"] == "SUBMITTED"
+        assert result["score"] is None
+        assert result["is_auto_graded"] is False

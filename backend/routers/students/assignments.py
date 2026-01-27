@@ -571,6 +571,35 @@ async def submit_assignment(
     if is_auto_graded:
         student_assignment.status = AssignmentStatus.GRADED
         student_assignment.graded_at = datetime.now(timezone.utc)
+
+        # Issue #165: 計算並儲存自動批改的總分
+        if practice_mode == "rearrangement":
+            # 例句重組：從 StudentItemProgress.expected_score 計算平均分
+            item_progress_records = (
+                db.query(StudentItemProgress)
+                .filter(
+                    StudentItemProgress.student_assignment_id == student_assignment.id
+                )
+                .all()
+            )
+            if item_progress_records:
+                total_score = sum(
+                    float(p.expected_score or 0) for p in item_progress_records
+                )
+                student_assignment.score = total_score / len(item_progress_records)
+            else:
+                student_assignment.score = 0
+        elif practice_mode == "word_selection":
+            # 單字選擇：使用 calculate_assignment_mastery 函數計算
+            result = db.execute(
+                text("SELECT * FROM calculate_assignment_mastery(:sa_id)"),
+                {"sa_id": student_assignment.id},
+            ).fetchone()
+            if result:
+                current_mastery = float(result.current_mastery) * 100
+                student_assignment.score = min(100, int(current_mastery))
+            else:
+                student_assignment.score = 0
     else:
         student_assignment.status = AssignmentStatus.SUBMITTED
     student_assignment.submitted_at = datetime.now(timezone.utc)
@@ -582,6 +611,7 @@ async def submit_assignment(
         "submitted_at": student_assignment.submitted_at.isoformat(),
         "status": student_assignment.status.value,
         "is_auto_graded": is_auto_graded,
+        "score": student_assignment.score if is_auto_graded else None,
     }
 
 
@@ -1522,7 +1552,8 @@ async def complete_word_selection_assignment(
     student_assignment.submitted_at = datetime.now(timezone.utc)
 
     # Calculate final score based on mastery
-    student_assignment.final_score = min(100, int(current_mastery))
+    # Issue #165: Fix - use 'score' column instead of non-existent 'final_score'
+    student_assignment.score = min(100, int(current_mastery))
 
     db.commit()
 
@@ -1530,7 +1561,7 @@ async def complete_word_selection_assignment(
         "success": True,
         "message": "作業已完成！",
         "status": "COMPLETED",
-        "final_score": student_assignment.final_score,
+        "final_score": student_assignment.score,
         "achieved_target": current_mastery >= target_proficiency,
     }
 
