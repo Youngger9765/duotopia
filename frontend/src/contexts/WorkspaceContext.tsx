@@ -6,6 +6,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useTeacherAuthStore } from '@/stores/teacherAuthStore';
 
 // ============================================
 // Types
@@ -67,6 +68,9 @@ interface WorkspaceProviderProps {
 }
 
 export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, teacherId }) => {
+  // Get token from auth store
+  const token = useTeacherAuthStore((state) => state.token);
+
   const [mode, setModeState] = useState<WorkspaceMode>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.MODE);
     return (saved === 'organization' ? 'organization' : 'personal') as WorkspaceMode;
@@ -88,12 +92,16 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, 
 
   // Fetch organizations from API
   const fetchOrganizations = async () => {
+    if (!token) {
+      console.warn('No token available, skipping organization fetch');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '';
-      const token = localStorage.getItem('token');
 
       const response = await fetch(`${apiUrl}/api/teachers/${teacherId}/organizations`, {
         headers: {
@@ -117,12 +125,12 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, 
     }
   };
 
-  // Load organizations on mount
+  // Load organizations on mount and when token/teacherId changes
   useEffect(() => {
-    if (teacherId) {
+    if (teacherId && token) {
       fetchOrganizations();
     }
-  }, [teacherId]);
+  }, [teacherId, token]);
 
   // Persist mode to localStorage
   const setMode = (newMode: WorkspaceMode) => {
