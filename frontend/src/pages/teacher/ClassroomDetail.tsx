@@ -91,6 +91,8 @@ export default function ClassroomDetail({
   const [activeTab, setActiveTab] = useState(
     isTemplateMode ? "programs" : "students",
   );
+  // Track if we've initialized the tab based on student count
+  const [hasInitializedTab, setHasInitializedTab] = useState(false);
 
   // Teacher subscription state
   const [canAssignHomework, setCanAssignHomework] = useState<boolean>(false);
@@ -179,6 +181,24 @@ export default function ClassroomDetail({
       setActiveTab("assignments");
     }
   }, [location.search]);
+
+  // Issue #150: Smart default tab based on student count
+  // When class has students, default to "assignments" tab
+  // When class has no students, keep "students" tab
+  useEffect(() => {
+    // Skip if in template mode or already initialized
+    if (isTemplateMode || hasInitializedTab || loading) return;
+
+    // Skip if URL already specifies a tab
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("tab")) return;
+
+    // Set default tab based on student count
+    if (students.length > 0) {
+      setActiveTab("assignments");
+    }
+    setHasInitializedTab(true);
+  }, [students, loading, isTemplateMode, hasInitializedTab, location.search]);
 
   const fetchClassroomDetail = async (showLoading = true) => {
     try {
