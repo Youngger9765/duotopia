@@ -921,42 +921,33 @@ export default function TeacherAssignmentDetailPage() {
   };
 
   const getContentTypeLabel = (type: string) => {
-    // 將 snake_case 轉換為 camelCase，或直接使用原值
-    // API 可能返回: reading_assessment, READING_ASSESSMENT, 或 readingAssessment
-    let normalizedType = type;
+    // API 可能返回: reading_assessment, READING_ASSESSMENT, EXAMPLE_SENTENCES 等
+    // 翻譯檔案中有多種格式的 key，按優先順序嘗試
 
-    // 如果是大寫的 SNAKE_CASE，轉為小寫
-    if (type === type.toUpperCase() && type.includes("_")) {
-      normalizedType = type.toLowerCase();
+    // 1. 先嘗試原始值（大寫 SNAKE_CASE）
+    const originalKey = `assignmentDetail.contentTypes.${type}`;
+    const originalTranslated = t(originalKey);
+    if (originalTranslated !== originalKey) {
+      return originalTranslated;
     }
 
-    // 如果是 snake_case，轉為 camelCase
-    if (normalizedType.includes("_")) {
-      normalizedType = normalizedType.replace(/_([a-z])/g, (_, letter) =>
-        letter.toUpperCase(),
-      );
+    // 2. 嘗試小寫 snake_case
+    const lowerType = type.toLowerCase();
+    const lowerKey = `assignmentDetail.contentTypes.${lowerType}`;
+    const lowerTranslated = t(lowerKey);
+    if (lowerTranslated !== lowerKey) {
+      return lowerTranslated;
     }
 
-    // 嘗試翻譯鍵值
-    const typeKey = `assignmentDetail.contentTypes.${normalizedType}`;
-    const translated = t(typeKey);
-
-    // 如果翻譯失敗（返回鍵值本身），嘗試其他格式
-    if (translated === typeKey) {
-      // 嘗試使用 gradingPage.contentTypes（大寫格式）
-      const upperType = type.toUpperCase();
-      const gradingKey = `gradingPage.contentTypes.${upperType}`;
-      const gradingTranslated = t(gradingKey);
-
-      if (gradingTranslated !== gradingKey) {
-        return gradingTranslated;
-      }
-
-      // 如果都失敗，返回原始值（至少顯示原始類型）
-      return type;
+    // 3. 嘗試 gradingPage.contentTypes（大寫格式）
+    const gradingKey = `gradingPage.contentTypes.${type}`;
+    const gradingTranslated = t(gradingKey);
+    if (gradingTranslated !== gradingKey) {
+      return gradingTranslated;
     }
 
-    return translated;
+    // 4. 如果都失敗，返回原始值
+    return type;
   };
 
   // Calculate statistics (only for assigned students)
