@@ -1791,41 +1791,26 @@ export default function TeacherAssignmentDetailPage() {
                       <div className="flex-shrink-0">
                         {isAssigned ? (
                           <>
-                            {/* rearrangement 模式：GRADED 狀態顯示查看結果 */}
-                            {/* word_selection 模式：不顯示任何批改/查看按鈕 */}
-                            {assignment?.practice_mode === "rearrangement"
-                              ? upperStatus === "GRADED" && (
+                            {/* Issue #165: rearrangement/word_selection 模式不顯示任何批改/查看結果按鈕 */}
+                            {assignment?.practice_mode === "rearrangement" ||
+                            assignment?.practice_mode === "word_selection"
+                              ? null
+                              : (upperStatus === "SUBMITTED" ||
+                                  upperStatus === "RESUBMITTED" ||
+                                  upperStatus === "GRADED" ||
+                                  upperStatus === "RETURNED") && (
                                   <Button
                                     variant="outline"
-                                    className="text-green-600 border-green-600 hover:bg-green-50 h-12 min-h-12 px-3 text-sm dark:border-green-500 dark:text-green-400 dark:hover:bg-green-900/20"
+                                    className="text-orange-600 border-orange-600 hover:bg-orange-50 h-12 min-h-12 px-3 text-sm dark:border-orange-500 dark:text-orange-400 dark:hover:bg-orange-900/20"
                                     onClick={() =>
                                       navigate(
-                                        `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading?studentId=${progress.student_id}`,
+                                        `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
                                       )
                                     }
                                   >
-                                    {t("assignmentDetail.buttons.viewResult") ||
-                                      "查看結果"}
+                                    {t("assignmentDetail.buttons.grade")}
                                   </Button>
-                                )
-                              : assignment?.practice_mode === "word_selection"
-                                ? null // word_selection 不顯示批改按鈕
-                                : (upperStatus === "SUBMITTED" ||
-                                    upperStatus === "RESUBMITTED" ||
-                                    upperStatus === "GRADED" ||
-                                    upperStatus === "RETURNED") && (
-                                    <Button
-                                      variant="outline"
-                                      className="text-orange-600 border-orange-600 hover:bg-orange-50 h-12 min-h-12 px-3 text-sm dark:border-orange-500 dark:text-orange-400 dark:hover:bg-orange-900/20"
-                                      onClick={() =>
-                                        navigate(
-                                          `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading`,
-                                        )
-                                      }
-                                    >
-                                      {t("assignmentDetail.buttons.grade")}
-                                    </Button>
-                                  )}
+                                )}
                             {(upperStatus === "NOT_STARTED" ||
                               upperStatus === "IN_PROGRESS") && (
                               <Button
@@ -2174,29 +2159,12 @@ export default function TeacherAssignmentDetailPage() {
                                   const upperStatus =
                                     progress.status?.toUpperCase();
 
-                                  // rearrangement 模式：GRADED 狀態顯示「查看結果」
+                                  // Issue #165: rearrangement/word_selection 模式不顯示任何批改/查看結果按鈕
+                                  // 只有未開始或進行中可取消指派
                                   if (
                                     assignment?.practice_mode ===
                                     "rearrangement"
                                   ) {
-                                    if (upperStatus === "GRADED") {
-                                      return (
-                                        <Button
-                                          variant="outline"
-                                          className="text-green-600 border-green-600 hover:bg-green-50 transition-colors h-12 min-h-12 dark:border-green-500 dark:text-green-400 dark:hover:bg-green-900/20"
-                                          onClick={() => {
-                                            navigate(
-                                              `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading?studentId=${progress.student_id}`,
-                                            );
-                                          }}
-                                        >
-                                          {t(
-                                            "assignmentDetail.buttons.viewResult",
-                                          ) || "查看結果"}
-                                        </Button>
-                                      );
-                                    }
-                                    // rearrangement 模式：未開始或進行中可取消指派
                                     if (
                                       upperStatus === "NOT_STARTED" ||
                                       upperStatus === "IN_PROGRESS"
