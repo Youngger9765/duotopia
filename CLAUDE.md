@@ -53,7 +53,7 @@
 
 | Skill | Purpose |
 |-------|---------|
-| `/handle-issue <N> [N2 N3...]` | 使用 git worktree 隔離處理 issue，支援平行處理多個 issue |
+| `/worktree <issues \| description>` | 使用 git worktree 隔離開發。支援 GitHub issue（如 `#42 #43`）或任意任務描述。自動觸發：「開 worktree」、「用 worktree 處理」 |
 
 ### Commands (`.claude/commands/`)
 
