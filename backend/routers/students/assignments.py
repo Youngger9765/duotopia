@@ -36,6 +36,11 @@ from .validators import (
 
 logger = logging.getLogger(__name__)
 
+# 自動批改的練習模式（不需要老師批改）
+# - rearrangement: 例句重組
+# - word_selection: 單字選擇
+AUTO_GRADED_MODES = frozenset({"rearrangement", "word_selection"})
+
 router = APIRouter()
 
 
@@ -548,7 +553,7 @@ async def submit_assignment(
             practice_mode = assignment.practice_mode
 
     # 判斷是否為自動批改類型
-    is_auto_graded = practice_mode in ("rearrangement", "word_selection")
+    is_auto_graded = practice_mode in AUTO_GRADED_MODES
 
     # 更新所有進度為已完成
     progress_records = (
@@ -575,6 +580,7 @@ async def submit_assignment(
         # Issue #165: 計算並儲存自動批改的總分
         if practice_mode == "rearrangement":
             # 例句重組：從 StudentItemProgress.expected_score 計算平均分
+            # 注意：只計算有分數的記錄，忽略 NULL 值（避免拉低平均分）
             item_progress_records = (
                 db.query(StudentItemProgress)
                 .filter(
@@ -582,11 +588,14 @@ async def submit_assignment(
                 )
                 .all()
             )
-            if item_progress_records:
-                total_score = sum(
-                    float(p.expected_score or 0) for p in item_progress_records
-                )
-                student_assignment.score = total_score / len(item_progress_records)
+            # 過濾掉 NULL 值，只計算有效分數
+            valid_scores = [
+                float(p.expected_score)
+                for p in item_progress_records
+                if p.expected_score is not None
+            ]
+            if valid_scores:
+                student_assignment.score = sum(valid_scores) / len(valid_scores)
             else:
                 student_assignment.score = 0
         elif practice_mode == "word_selection":
