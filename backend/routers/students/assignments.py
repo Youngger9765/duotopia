@@ -534,6 +534,22 @@ async def submit_assignment(
             status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
         )
 
+    # 取得作業的 practice_mode 來判斷是否為自動批改類型
+    # 自動批改類型：rearrangement（例句重組）、word_selection（單字選擇）
+    # 手動批改類型：reading（例句朗讀）、word_reading（單字朗讀）
+    practice_mode = None
+    if student_assignment.assignment_id:
+        assignment = (
+            db.query(Assignment)
+            .filter(Assignment.id == student_assignment.assignment_id)
+            .first()
+        )
+        if assignment:
+            practice_mode = assignment.practice_mode
+
+    # 判斷是否為自動批改類型
+    is_auto_graded = practice_mode in ("rearrangement", "word_selection")
+
     # 更新所有進度為已完成
     progress_records = (
         db.query(StudentContentProgress)
@@ -543,18 +559,29 @@ async def submit_assignment(
 
     for progress in progress_records:
         if progress.status == AssignmentStatus.IN_PROGRESS:
-            progress.status = AssignmentStatus.SUBMITTED
+            # 自動批改類型直接標記為 GRADED，手動批改類型標記為 SUBMITTED
+            progress.status = (
+                AssignmentStatus.GRADED if is_auto_graded else AssignmentStatus.SUBMITTED
+            )
             progress.completed_at = datetime.now()
 
     # 更新作業狀態
-    student_assignment.status = AssignmentStatus.SUBMITTED
-    student_assignment.submitted_at = datetime.now()
+    # Issue #165: 例句重組和單字選擇為自動批改，提交後直接標記為 GRADED（已完成）
+    # 例句朗讀和單字朗讀需要老師批改，標記為 SUBMITTED（已提交）
+    if is_auto_graded:
+        student_assignment.status = AssignmentStatus.GRADED
+        student_assignment.graded_at = datetime.now(timezone.utc)
+    else:
+        student_assignment.status = AssignmentStatus.SUBMITTED
+    student_assignment.submitted_at = datetime.now(timezone.utc)
 
     db.commit()
 
     return {
         "message": "Assignment submitted successfully",
         "submitted_at": student_assignment.submitted_at.isoformat(),
+        "status": student_assignment.status.value,
+        "is_auto_graded": is_auto_graded,
     }
 
 

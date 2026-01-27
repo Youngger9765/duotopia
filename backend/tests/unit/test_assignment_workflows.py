@@ -502,3 +502,157 @@ class TestAssignmentStatistics:
         assert empty_stats["total"] == 0
         assert empty_stats["completion_rate"] == 0
         assert empty_stats["average_score"] is None
+
+
+class TestAutoGradedSubmissionWorkflow:
+    """測試自動批改類型的提交工作流程 (Issue #165)"""
+
+    def test_auto_graded_practice_modes(self):
+        """測試自動批改模式判斷邏輯"""
+
+        def is_auto_graded_mode(practice_mode: str) -> bool:
+            """判斷是否為自動批改類型"""
+            # 自動批改類型：rearrangement（例句重組）、word_selection（單字選擇）
+            # 手動批改類型：reading（例句朗讀）、word_reading（單字朗讀）
+            return practice_mode in ("rearrangement", "word_selection")
+
+        # 自動批改類型
+        assert is_auto_graded_mode("rearrangement") is True
+        assert is_auto_graded_mode("word_selection") is True
+
+        # 手動批改類型
+        assert is_auto_graded_mode("reading") is False
+        assert is_auto_graded_mode("word_reading") is False
+
+        # 其他類型（預設為手動批改）
+        assert is_auto_graded_mode("unknown") is False
+        assert is_auto_graded_mode("") is False
+
+    def test_submit_auto_graded_assignment_logic(self):
+        """測試自動批改作業提交邏輯"""
+
+        def submit_assignment_logic(
+            current_status: str, practice_mode: str
+        ) -> tuple:
+            """模擬作業提交邏輯"""
+            is_auto_graded = practice_mode in ("rearrangement", "word_selection")
+
+            if current_status not in ("NOT_STARTED", "IN_PROGRESS"):
+                raise ValueError(f"Cannot submit assignment with status: {current_status}")
+
+            if is_auto_graded:
+                # 自動批改：直接標記為 GRADED（已完成）
+                new_status = "GRADED"
+                message = "作業已完成（自動批改）"
+            else:
+                # 手動批改：標記為 SUBMITTED（待批改）
+                new_status = "SUBMITTED"
+                message = "作業已提交，等待老師批改"
+
+            return new_status, message, is_auto_graded
+
+        # 測試例句重組提交 → 直接 GRADED
+        status, msg, auto = submit_assignment_logic("IN_PROGRESS", "rearrangement")
+        assert status == "GRADED"
+        assert auto is True
+        assert "自動批改" in msg
+
+        # 測試單字選擇提交 → 直接 GRADED
+        status, msg, auto = submit_assignment_logic("IN_PROGRESS", "word_selection")
+        assert status == "GRADED"
+        assert auto is True
+
+        # 測試例句朗讀提交 → SUBMITTED（需要老師批改）
+        status, msg, auto = submit_assignment_logic("IN_PROGRESS", "reading")
+        assert status == "SUBMITTED"
+        assert auto is False
+        assert "等待老師批改" in msg
+
+        # 測試單字朗讀提交 → SUBMITTED（需要老師批改）
+        status, msg, auto = submit_assignment_logic("IN_PROGRESS", "word_reading")
+        assert status == "SUBMITTED"
+        assert auto is False
+
+    def test_submit_from_not_started_status(self):
+        """測試從未開始狀態直接提交（邊界情況）"""
+
+        def submit_assignment_logic(
+            current_status: str, practice_mode: str
+        ) -> tuple:
+            is_auto_graded = practice_mode in ("rearrangement", "word_selection")
+
+            if current_status not in ("NOT_STARTED", "IN_PROGRESS"):
+                raise ValueError(f"Cannot submit assignment with status: {current_status}")
+
+            new_status = "GRADED" if is_auto_graded else "SUBMITTED"
+            return new_status, is_auto_graded
+
+        # 從 NOT_STARTED 直接提交也應該正常工作
+        status, auto = submit_assignment_logic("NOT_STARTED", "rearrangement")
+        assert status == "GRADED"
+
+        status, auto = submit_assignment_logic("NOT_STARTED", "reading")
+        assert status == "SUBMITTED"
+
+    def test_content_progress_status_on_submit(self):
+        """測試提交時內容進度狀態更新邏輯"""
+
+        def update_progress_on_submit(
+            progress_list: list, is_auto_graded: bool
+        ) -> list:
+            """更新所有進度狀態"""
+            updated = []
+            target_status = "GRADED" if is_auto_graded else "SUBMITTED"
+
+            for progress in progress_list:
+                if progress["status"] == "IN_PROGRESS":
+                    progress["status"] = target_status
+                    progress["completed_at"] = datetime.now()
+                updated.append(progress)
+
+            return updated
+
+        # 模擬進度記錄
+        progress_list = [
+            {"content_id": 1, "status": "IN_PROGRESS", "completed_at": None},
+            {"content_id": 2, "status": "IN_PROGRESS", "completed_at": None},
+            {"content_id": 3, "status": "COMPLETED", "completed_at": datetime.now()},
+        ]
+
+        # 自動批改類型：IN_PROGRESS → GRADED
+        auto_result = update_progress_on_submit(
+            [p.copy() for p in progress_list], is_auto_graded=True
+        )
+        assert auto_result[0]["status"] == "GRADED"
+        assert auto_result[1]["status"] == "GRADED"
+        assert auto_result[2]["status"] == "COMPLETED"  # 已完成的不變
+
+        # 手動批改類型：IN_PROGRESS → SUBMITTED
+        manual_result = update_progress_on_submit(
+            [p.copy() for p in progress_list], is_auto_graded=False
+        )
+        assert manual_result[0]["status"] == "SUBMITTED"
+        assert manual_result[1]["status"] == "SUBMITTED"
+        assert manual_result[2]["status"] == "COMPLETED"
+
+    def test_practice_mode_status_mapping(self):
+        """測試各練習模式對應的提交後狀態"""
+        mode_status_mapping = {
+            # 例句集模式
+            "reading": "SUBMITTED",        # 例句朗讀 → 需要老師批改
+            "rearrangement": "GRADED",     # 例句重組 → 自動批改完成
+            # 單字集模式
+            "word_reading": "SUBMITTED",   # 單字朗讀 → 需要老師批改
+            "word_selection": "GRADED",    # 單字選擇 → 自動批改完成
+        }
+
+        def get_submit_status(practice_mode: str) -> str:
+            """取得提交後的狀態"""
+            is_auto_graded = practice_mode in ("rearrangement", "word_selection")
+            return "GRADED" if is_auto_graded else "SUBMITTED"
+
+        for mode, expected_status in mode_status_mapping.items():
+            actual_status = get_submit_status(mode)
+            assert actual_status == expected_status, (
+                f"practice_mode={mode}: expected {expected_status}, got {actual_status}"
+            )
