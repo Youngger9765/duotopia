@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import TeacherLayout from "@/components/TeacherLayout";
 import { RecursiveTreeAccordion } from "@/components/shared/RecursiveTreeAccordion";
 import { programTreeConfig } from "@/components/shared/programTreeConfig";
 import { ProgramDialog } from "@/components/ProgramDialog";
@@ -442,21 +441,21 @@ export default function SchoolMaterialsPage() {
 
   if (loading) {
     return (
-      <TeacherLayout>
+      <>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">{t("common.loading")}</p>
           </div>
         </div>
-      </TeacherLayout>
+      </>
     );
   }
 
   // Show prompt if no school is selected
   if (!selectedSchool && !selectedOrganization) {
     return (
-      <TeacherLayout>
+      <>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center max-w-md">
             <AlertCircle className="h-16 w-16 text-amber-500 mx-auto mb-4" />
@@ -468,7 +467,7 @@ export default function SchoolMaterialsPage() {
             </p>
           </div>
         </div>
-      </TeacherLayout>
+      </>
     );
   }
 
@@ -478,7 +477,7 @@ export default function SchoolMaterialsPage() {
     : selectedOrganization?.name || "";
 
   return (
-    <TeacherLayout>
+    <>
       <div className="relative h-full bg-gray-50">
         <div
           className={`p-6 space-y-4 transition-all duration-300 ${
@@ -910,6 +909,6 @@ export default function SchoolMaterialsPage() {
           />
         )}
       </div>
-    </TeacherLayout>
+    </>
   );
 }

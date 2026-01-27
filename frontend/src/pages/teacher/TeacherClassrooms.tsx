@@ -20,7 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import TeacherLayout from "@/components/TeacherLayout";
 import {
   Users,
   BookOpen,
@@ -208,24 +207,21 @@ export default function TeacherClassrooms() {
 
   if (loading) {
     return (
-      <TeacherLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">
-              {t("common.loading")}
-            </p>
-          </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            {t("common.loading")}
+          </p>
         </div>
-      </TeacherLayout>
+      </div>
     );
   }
 
   return (
-    <TeacherLayout>
-      <div>
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
+    <div>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
             {t("teacherClassrooms.title")}
           </h2>
@@ -760,7 +756,6 @@ export default function TeacherClassrooms() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </TeacherLayout>
+    </div>
   );
 }

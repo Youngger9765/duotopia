@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
-import TeacherLayout from "@/components/TeacherLayout";
 import StudentTable, { Student } from "@/components/StudentTable";
 import { StudentDialogs } from "@/components/StudentDialogs";
 import { ClassroomAssignDialog } from "@/components/ClassroomAssignDialog";
@@ -307,19 +306,19 @@ export default function TeacherStudents() {
 
   if (loading) {
     return (
-      <TeacherLayout>
+      <>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">{t("common.loading")}</p>
           </div>
         </div>
-      </TeacherLayout>
+      </>
     );
   }
 
   return (
-    <TeacherLayout>
+    <>
       <div>
         {/* Header */}
         <div className="mb-6">
@@ -600,6 +599,6 @@ export default function TeacherStudents() {
         }}
         classrooms={classrooms}
       />
-    </TeacherLayout>
+    </>
   );
 }

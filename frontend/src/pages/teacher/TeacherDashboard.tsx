@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import TeacherLayout from "@/components/TeacherLayout";
 import {
   Users,
   UserCheck,
@@ -112,28 +111,24 @@ export default function TeacherDashboard() {
 
   if (loading) {
     return (
-      <TeacherLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">
-              {t("teacherDashboard.loading")}
-            </p>
-          </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">
+            {t("teacherDashboard.loading")}
+          </p>
         </div>
-      </TeacherLayout>
+      </div>
     );
   }
 
   if (!dashboardData) {
     return (
-      <TeacherLayout>
-        <div className="text-center py-12">
-          <p className="text-gray-500">
-            {t("teacherDashboard.error.loadFailed")}
-          </p>
-        </div>
-      </TeacherLayout>
+      <div className="text-center py-12">
+        <p className="text-gray-500">
+          {t("teacherDashboard.error.loadFailed")}
+        </p>
+      </div>
     );
   }
 
@@ -168,7 +163,7 @@ export default function TeacherDashboard() {
   );
 
   return (
-    <TeacherLayout>
+    <>
       {/* Share to Students Dialog */}
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
         <DialogContent className="sm:max-w-md">
@@ -410,6 +405,6 @@ export default function TeacherDashboard() {
           </Card>
         </div>
       </div>
-    </TeacherLayout>
+    </>
   );
 }

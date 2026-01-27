@@ -28,6 +28,7 @@ import StudentAssignmentList from "./pages/student/StudentAssignmentList";
 import StudentAssignmentDetail from "./pages/student/StudentAssignmentDetail";
 import StudentActivityPage from "./pages/student/StudentActivityPage";
 import StudentLayout from "./components/StudentLayout";
+import TeacherLayout from "./components/TeacherLayout";
 import EmailVerification from "./pages/EmailVerification";
 import StudentProfile from "./pages/student/StudentProfile";
 import DatabaseAdminPage from "./pages/admin/DatabaseAdminPage";
@@ -109,7 +110,9 @@ function App() {
           path="/teacher/dashboard"
           element={
             <ProtectedRoute>
-              <TeacherDashboard />
+              <TeacherLayout>
+                <TeacherDashboard />
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -117,7 +120,9 @@ function App() {
           path="/teacher/classrooms"
           element={
             <ProtectedRoute>
-              <TeacherClassrooms />
+              <TeacherLayout>
+                <TeacherClassrooms />
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -158,7 +163,9 @@ function App() {
           path="/teacher/students"
           element={
             <ProtectedRoute>
-              <TeacherStudents />
+              <TeacherLayout>
+                <TeacherStudents />
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -190,7 +197,9 @@ function App() {
           path="/teacher/school-materials"
           element={
             <ProtectedRoute>
-              <SchoolMaterialsPage />
+              <TeacherLayout>
+                <SchoolMaterialsPage />
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
