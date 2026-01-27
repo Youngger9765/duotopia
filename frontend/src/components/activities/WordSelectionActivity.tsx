@@ -419,13 +419,34 @@ export default function WordSelectionActivity({
     startPractice();
   };
 
-  // Complete assignment - 後端已在每次作答時自動同步狀態，這裡只需關閉並觸發 callback
-  const handleCompleteAssignment = () => {
-    toast.success(
-      t("wordSelection.toast.completed") || "Assignment completed!",
-    );
-    setShowAchievementDialog(false);
-    onComplete?.();
+  // Complete assignment - 呼叫 API 完成作業並更新狀態
+  const handleCompleteAssignment = async () => {
+    // 預覽模式不需要呼叫 API
+    if (isPreviewMode) {
+      toast.success(
+        t("wordSelection.toast.completed") || "Assignment completed!",
+      );
+      setShowAchievementDialog(false);
+      onComplete?.();
+      return;
+    }
+
+    try {
+      // 呼叫提交 API 來更新狀態為 GRADED 並記錄分數
+      await apiClient.post(`/api/students/assignments/${assignmentId}/submit`);
+
+      toast.success(
+        t("wordSelection.toast.completed") || "Assignment completed!",
+      );
+      setShowAchievementDialog(false);
+      onComplete?.();
+    } catch (error) {
+      console.error("Error completing assignment:", error);
+      toast.error(
+        t("wordSelection.toast.completeFailed") ||
+          "Failed to complete assignment",
+      );
+    }
   };
 
   // Continue practice after achievement
