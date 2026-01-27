@@ -323,8 +323,23 @@ class ApiClient {
     return this.request("/api/teachers/dashboard");
   }
 
-  async getTeacherClassrooms() {
-    return this.request("/api/teachers/classrooms");
+  async getTeacherClassrooms(params?: {
+    mode?: string;
+    school_id?: string;
+    organization_id?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.mode) queryParams.append("mode", params.mode);
+    if (params?.school_id) queryParams.append("school_id", params.school_id);
+    if (params?.organization_id)
+      queryParams.append("organization_id", params.organization_id);
+
+    const query = queryParams.toString();
+    const url = query
+      ? `/api/teachers/classrooms?${query}`
+      : "/api/teachers/classrooms";
+
+    return this.request(url);
   }
 
   async getTeacherPrograms(
@@ -637,7 +652,7 @@ class ApiClient {
     });
   }
 
-  async batchImportStudents(
+  async batchImportStudentsForSchool(
     schoolId: string,
     students: Array<{
       name: string;
@@ -1033,13 +1048,28 @@ class ApiClient {
   }
 
   // ============ Student Management Methods ============
-  async getAllStudents() {
-    return this.request("/api/teachers/students", {
+  async getAllStudents(params?: {
+    mode?: string;
+    school_id?: string;
+    organization_id?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.mode) queryParams.append("mode", params.mode);
+    if (params?.school_id) queryParams.append("school_id", params.school_id);
+    if (params?.organization_id)
+      queryParams.append("organization_id", params.organization_id);
+
+    const query = queryParams.toString();
+    const url = query
+      ? `/api/teachers/students?${query}`
+      : "/api/teachers/students";
+
+    return this.request(url, {
       method: "GET",
     });
   }
 
-  async batchImportStudents(
+  async batchImportStudentsForTeacher(
     students: Array<{
       name: string;
       classroom_name: string;

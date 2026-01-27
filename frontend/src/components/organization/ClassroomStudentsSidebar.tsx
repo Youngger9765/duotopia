@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { apiClient } from "@/lib/api";
-import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { logError } from "@/utils/errorLogger";
 import {
   Sheet,
@@ -42,7 +41,7 @@ export function ClassroomStudentsSidebar({
 }: ClassroomStudentsSidebarProps) {
   const [classroomStudents, setClassroomStudents] = useState<Student[]>([]);
   const [availableStudents, setAvailableStudents] = useState<Student[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<number>>(new Set());
 
@@ -57,7 +56,7 @@ export function ClassroomStudentsSidebar({
   const fetchClassroomStudents = async () => {
     try {
       setLoading(true);
-      const students = await apiClient.getClassroomStudents(schoolId, classroomId);
+      const students = await apiClient.getClassroomStudents(schoolId, classroomId) as Student[];
       const classroomStudentsData = students || [];
       setClassroomStudents(classroomStudentsData);
       // 獲取班級學生後，立即更新可用學生列表
@@ -72,7 +71,7 @@ export function ClassroomStudentsSidebar({
 
   const fetchAvailableStudents = async (currentClassroomStudents: Student[] = classroomStudents) => {
     try {
-      const students = await apiClient.getSchoolStudents(schoolId);
+      const students = await apiClient.getSchoolStudents(schoolId) as Student[];
       // 過濾掉已經在班級中的學生
       const currentClassroomStudentIds = new Set(currentClassroomStudents.map((s) => s.id));
       const available = (students || []).filter((s: Student) => !currentClassroomStudentIds.has(s.id));

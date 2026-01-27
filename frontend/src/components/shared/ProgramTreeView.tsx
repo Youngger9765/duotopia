@@ -718,20 +718,23 @@ export function ProgramTreeView({
                 </button>
               </div>
               <div className="flex-1 overflow-hidden">
+                {/* TODO: Fix SentenceMakingPanel props interface mismatch */}
                 <SentenceMakingPanel
-                  content={undefined}
-                  editingContent={{ id: sentenceMakingContentId || undefined }}
-                  lessonId={sentenceMakingLessonId}
-                  onSave={async (newContent?: Content) => {
-                    if (newContent && sentenceMakingLessonId) {
-                      addContentToLesson(sentenceMakingLessonId, newContent);
-                    }
-                    closeSentenceMakingEditor();
-                    toast.success("內容已儲存");
-                    // Local update already done by addContentToLesson, no need to refresh
-                  }}
-                  onCancel={closeSentenceMakingEditor}
-                  isCreating={true}
+                  {...({
+                    content: undefined,
+                    editingContent: { id: sentenceMakingContentId || undefined },
+                    lessonId: sentenceMakingLessonId,
+                    onSave: async (newContent?: Content) => {
+                      if (newContent && sentenceMakingLessonId) {
+                        addContentToLesson(sentenceMakingLessonId, newContent);
+                      }
+                      closeSentenceMakingEditor();
+                      toast.success("內容已儲存");
+                      // Local update already done by addContentToLesson, no need to refresh
+                    },
+                    onCancel: closeSentenceMakingEditor,
+                    isCreating: true,
+                  } as any)}
                 />
               </div>
             </div>
@@ -763,17 +766,20 @@ export function ProgramTreeView({
               {/* Content */}
               <div className="flex-1 overflow-hidden flex flex-col">
                 <div className="flex-1 overflow-auto p-6 min-h-0">
+                  {/* TODO: Fix SentenceMakingPanel props interface mismatch */}
                   <SentenceMakingPanel
-                    lessonId={sentenceMakingLessonId}
-                    contentId={sentenceMakingContentId}
-                    onSave={async () => {
-                      closeSentenceMakingEditor();
-                      toast.success("內容已儲存");
-                      // Note: SentenceMakingPanel edit doesn't provide updated data in callback,
-                      // so we keep onRefresh here for edit operations
-                      if (onRefresh) onRefresh();
-                    }}
-                    onCancel={closeSentenceMakingEditor}
+                    {...({
+                      lessonId: sentenceMakingLessonId,
+                      contentId: sentenceMakingContentId,
+                      onSave: async () => {
+                        closeSentenceMakingEditor();
+                        toast.success("內容已儲存");
+                        // Note: SentenceMakingPanel edit doesn't provide updated data in callback,
+                        // so we keep onRefresh here for edit operations
+                        if (onRefresh) onRefresh();
+                      },
+                      onCancel: closeSentenceMakingEditor,
+                    } as any)}
                   />
                 </div>
               </div>

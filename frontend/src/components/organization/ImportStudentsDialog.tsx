@@ -341,7 +341,7 @@ export function ImportStudentsDialog({
 
     try {
       // 確保空字串被轉換為 undefined，避免 422 錯誤
-      const response = (await apiClient.batchImportStudents(
+      const response = (await apiClient.batchImportStudentsForSchool(
         schoolId,
         validStudents.map((student) => {
           const item: {

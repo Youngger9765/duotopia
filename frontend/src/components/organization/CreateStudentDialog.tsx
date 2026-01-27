@@ -94,7 +94,7 @@ export function CreateStudentDialog({
         requestData.phone = formData.phone.trim();
       }
 
-      const result = await apiClient.createSchoolStudent(schoolId, requestData);
+      const result = await apiClient.createSchoolStudent(schoolId, requestData) as { default_password?: string };
 
       toast.success("學生建立成功", {
         description: result.default_password

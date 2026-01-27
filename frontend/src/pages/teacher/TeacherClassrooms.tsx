@@ -72,13 +72,32 @@ export default function TeacherClassrooms() {
 
   useEffect(() => {
     fetchClassrooms();
-  }, []);
+  }, [selectedSchool, selectedOrganization, mode]);
 
   const fetchClassrooms = async () => {
     try {
       setLoading(true);
-      const data =
-        (await apiClient.getTeacherClassrooms()) as ClassroomDetail[];
+
+      // Build API params based on workspace context
+      const apiParams: {
+        mode?: string;
+        school_id?: string;
+        organization_id?: string;
+      } = {};
+
+      if (mode === "personal") {
+        apiParams.mode = "personal";
+      } else if (selectedSchool) {
+        apiParams.mode = "school";
+        apiParams.school_id = selectedSchool.id;
+      } else if (selectedOrganization) {
+        apiParams.mode = "organization";
+        apiParams.organization_id = selectedOrganization.id;
+      }
+
+      const data = (await apiClient.getTeacherClassrooms(
+        apiParams,
+      )) as ClassroomDetail[];
       // Sort by ID to maintain consistent order
       const sortedData = data.sort((a, b) => a.id - b.id);
       setClassrooms(sortedData);

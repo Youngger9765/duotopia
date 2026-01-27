@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { API_URL } from "@/config/api";
 import { Breadcrumb } from "@/components/organization/Breadcrumb";
@@ -24,7 +24,6 @@ interface Organization {
 
 export default function SchoolTeachersPage() {
   const { schoolId } = useParams<{ schoolId: string }>();
-  const navigate = useNavigate();
   const token = useTeacherAuthStore((state) => state.token);
 
   const [teachers, setTeachers] = useState<Teacher[]>([]);

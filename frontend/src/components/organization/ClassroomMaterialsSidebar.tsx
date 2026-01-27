@@ -40,14 +40,14 @@ export function ClassroomMaterialsSidebar({
   classroomId,
   classroomName,
   schoolId,
-  organizationId,
+  organizationId: _organizationId,
   onSuccess,
 }: ClassroomMaterialsSidebarProps) {
   const token = useTeacherAuthStore((state) => state.token);
   
   const [classroomPrograms, setClassroomPrograms] = useState<Program[]>([]);
   const [schoolPrograms, setSchoolPrograms] = useState<Program[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProgramIds, setSelectedProgramIds] = useState<Set<number>>(new Set());
 
@@ -63,7 +63,7 @@ export function ClassroomMaterialsSidebar({
     try {
       setLoading(true);
       // Use school-level endpoint for organization admin access
-      const programs = await apiClient.getSchoolClassroomPrograms(schoolId, classroomId);
+      const programs = await apiClient.getSchoolClassroomPrograms(schoolId, classroomId) as Program[];
       const classroomProgramsData = programs || [];
       setClassroomPrograms(classroomProgramsData);
       // 獲取班級教材後，立即更新可用教材列表

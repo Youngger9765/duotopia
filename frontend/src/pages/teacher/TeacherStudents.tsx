@@ -47,19 +47,39 @@ export default function TeacherStudents() {
 
   useEffect(() => {
     fetchClassrooms();
-  }, []);
+  }, [selectedSchool, selectedOrganization, mode]);
 
   const fetchClassrooms = async () => {
     try {
       setLoading(true);
 
-      // Fetch classrooms for the dropdown
-      const classroomData =
-        (await apiClient.getTeacherClassrooms()) as Classroom[];
+      // Build API params based on workspace context
+      const apiParams: {
+        mode?: string;
+        school_id?: string;
+        organization_id?: string;
+      } = {};
+
+      if (mode === "personal") {
+        apiParams.mode = "personal";
+      } else if (selectedSchool) {
+        apiParams.mode = "school";
+        apiParams.school_id = selectedSchool.id;
+      } else if (selectedOrganization) {
+        apiParams.mode = "organization";
+        apiParams.organization_id = selectedOrganization.id;
+      }
+
+      // Fetch classrooms for the dropdown (with workspace filtering)
+      const classroomData = (await apiClient.getTeacherClassrooms(
+        apiParams,
+      )) as Classroom[];
       setClassrooms(classroomData);
 
-      // Fetch all students (including those without classroom)
-      const studentsData = (await apiClient.getAllStudents()) as Array<{
+      // Fetch students with workspace filtering (server-side)
+      const studentsData = (await apiClient.getAllStudents(
+        apiParams,
+      )) as Array<{
         id: number;
         name: string;
         email: string;
@@ -116,22 +136,9 @@ export default function TeacherStudents() {
     }
   };
 
-  // 過濾並排序學生
+  // 過濾並排序學生（workspace filtering 已在後端完成）
   const filteredStudents = allStudents
     .filter((student) => {
-      // Workspace filtering: filter by school/organization
-      let matchesWorkspace = true;
-      if (mode === "personal") {
-        // Personal mode: show all students
-        matchesWorkspace = true;
-      } else if (selectedSchool) {
-        // School selected: show only students from this school
-        matchesWorkspace = student.school_id === selectedSchool.id;
-      } else if (selectedOrganization) {
-        // Organization selected (no specific school): show students from all schools in the organization
-        matchesWorkspace = student.organization_id === selectedOrganization.id;
-      }
-
       // 班級篩選邏輯
       let matchesClassroom = true;
       if (selectedClassroom === null) {
@@ -149,7 +156,7 @@ export default function TeacherStudents() {
         !searchTerm ||
         student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (student.email || "").toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesWorkspace && matchesClassroom && matchesSearch;
+      return matchesClassroom && matchesSearch;
     })
     .sort((a, b) => a.id - b.id); // 按 ID 排序
 

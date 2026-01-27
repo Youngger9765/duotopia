@@ -118,7 +118,7 @@ export default function SchoolStudentsPage() {
         params.search = searchTerm;
       }
 
-      const data = await apiClient.getSchoolStudents(schoolId, params);
+      const data = await apiClient.getSchoolStudents(schoolId, params) as Student[];
       setStudents(data);
     } catch (error) {
       logError("Failed to fetch students", error, { schoolId });
