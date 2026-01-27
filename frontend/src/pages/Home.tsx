@@ -513,10 +513,10 @@ export default function Home() {
                     {t("home.footer.contact")}
                   </p>
                   <a
-                    href="mailto:myduotopia@gmail.com"
+                    href="mailto:contact@duotopia.co"
                     className="text-blue-400 hover:text-blue-300"
                   >
-                    myduotopia@gmail.com
+                    contact@duotopia.co
                   </a>
                 </div>
               </div>
