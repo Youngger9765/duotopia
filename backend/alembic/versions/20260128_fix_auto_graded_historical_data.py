@@ -28,7 +28,8 @@ def upgrade():
 
     # Step 1: 修正 rearrangement 類型的狀態和分數
     # 計算平均分數從 StudentItemProgress.expected_score
-    op.execute("""
+    op.execute(
+        """
         WITH rearrangement_scores AS (
             -- 計算每個 student_assignment 的平均分數
             SELECT
@@ -49,11 +50,13 @@ def upgrade():
             score = rs.calculated_score
         FROM rearrangement_scores rs
         WHERE sa.id = rs.student_assignment_id;
-    """)
+    """
+    )
 
     # Step 2: 修正 word_selection 類型的狀態和分數
     # 使用 calculate_assignment_mastery 函數計算分數
-    op.execute("""
+    op.execute(
+        """
         WITH word_selection_scores AS (
             -- 使用 calculate_assignment_mastery 計算每個作業的熟悉度分數
             SELECT
@@ -75,10 +78,12 @@ def upgrade():
             score = ws.calculated_score
         FROM word_selection_scores ws
         WHERE sa.id = ws.student_assignment_id;
-    """)
+    """
+    )
 
     # Step 3: 同時修正 StudentContentProgress 狀態（如果有的話）
-    op.execute("""
+    op.execute(
+        """
         UPDATE student_content_progress scp
         SET status = 'GRADED'
         FROM student_assignments sa
@@ -87,7 +92,8 @@ def upgrade():
           AND a.practice_mode IN ('rearrangement', 'word_selection')
           AND scp.status = 'SUBMITTED'
           AND sa.is_active = true;
-    """)
+    """
+    )
 
 
 def downgrade():
@@ -98,9 +104,11 @@ def downgrade():
     # 這個 downgrade 比較難精確執行，因為我們無法區分
     # 哪些是本次 migration 修改的，哪些是正常流程產生的
     # 因此只記錄警告，不做實際回滾
-    op.execute("""
+    op.execute(
+        """
         -- Downgrade is not fully reversible
         -- Records that were updated cannot be distinguished from normally graded ones
         -- This is intentional - the data fix is permanent
         SELECT 1;
-    """)
+    """
+    )

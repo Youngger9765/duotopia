@@ -26,7 +26,8 @@ def upgrade():
     # Drop existing constraint and add new one with updated values
     # Using IF EXISTS for idempotency - safe to run on production
     # where constraint already includes word_selection
-    op.execute("""
+    op.execute(
+        """
         DO $$ BEGIN
             -- Drop the existing constraint if it exists
             IF EXISTS (
@@ -41,12 +42,14 @@ def upgrade():
             ADD CONSTRAINT check_practice_mode
             CHECK (practice_mode IN ('listening', 'writing', 'word_selection'));
         END $$;
-    """)
+    """
+    )
 
 
 def downgrade():
     """Revert to original constraint (listening, writing only)."""
-    op.execute("""
+    op.execute(
+        """
         DO $$ BEGIN
             IF EXISTS (
                 SELECT 1 FROM pg_constraint
@@ -59,4 +62,5 @@ def downgrade():
             ADD CONSTRAINT check_practice_mode
             CHECK (practice_mode IN ('listening', 'writing'));
         END $$;
-    """)
+    """
+    )

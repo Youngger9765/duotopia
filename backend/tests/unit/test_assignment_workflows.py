@@ -531,14 +531,14 @@ class TestAutoGradedSubmissionWorkflow:
     def test_submit_auto_graded_assignment_logic(self):
         """測試自動批改作業提交邏輯"""
 
-        def submit_assignment_logic(
-            current_status: str, practice_mode: str
-        ) -> tuple:
+        def submit_assignment_logic(current_status: str, practice_mode: str) -> tuple:
             """模擬作業提交邏輯"""
             is_auto_graded = practice_mode in ("rearrangement", "word_selection")
 
             if current_status not in ("NOT_STARTED", "IN_PROGRESS"):
-                raise ValueError(f"Cannot submit assignment with status: {current_status}")
+                raise ValueError(
+                    f"Cannot submit assignment with status: {current_status}"
+                )
 
             if is_auto_graded:
                 # 自動批改：直接標記為 GRADED（已完成）
@@ -576,13 +576,13 @@ class TestAutoGradedSubmissionWorkflow:
     def test_submit_from_not_started_status(self):
         """測試從未開始狀態直接提交（邊界情況）"""
 
-        def submit_assignment_logic(
-            current_status: str, practice_mode: str
-        ) -> tuple:
+        def submit_assignment_logic(current_status: str, practice_mode: str) -> tuple:
             is_auto_graded = practice_mode in ("rearrangement", "word_selection")
 
             if current_status not in ("NOT_STARTED", "IN_PROGRESS"):
-                raise ValueError(f"Cannot submit assignment with status: {current_status}")
+                raise ValueError(
+                    f"Cannot submit assignment with status: {current_status}"
+                )
 
             new_status = "GRADED" if is_auto_graded else "SUBMITTED"
             return new_status, is_auto_graded
@@ -639,11 +639,11 @@ class TestAutoGradedSubmissionWorkflow:
         """測試各練習模式對應的提交後狀態"""
         mode_status_mapping = {
             # 例句集模式
-            "reading": "SUBMITTED",        # 例句朗讀 → 需要老師批改
-            "rearrangement": "GRADED",     # 例句重組 → 自動批改完成
+            "reading": "SUBMITTED",  # 例句朗讀 → 需要老師批改
+            "rearrangement": "GRADED",  # 例句重組 → 自動批改完成
             # 單字集模式
-            "word_reading": "SUBMITTED",   # 單字朗讀 → 需要老師批改
-            "word_selection": "GRADED",    # 單字選擇 → 自動批改完成
+            "word_reading": "SUBMITTED",  # 單字朗讀 → 需要老師批改
+            "word_selection": "GRADED",  # 單字選擇 → 自動批改完成
         }
 
         def get_submit_status(practice_mode: str) -> str:
@@ -653,9 +653,9 @@ class TestAutoGradedSubmissionWorkflow:
 
         for mode, expected_status in mode_status_mapping.items():
             actual_status = get_submit_status(mode)
-            assert actual_status == expected_status, (
-                f"practice_mode={mode}: expected {expected_status}, got {actual_status}"
-            )
+            assert (
+                actual_status == expected_status
+            ), f"practice_mode={mode}: expected {expected_status}, got {actual_status}"
 
 
 class TestAutoGradedScoreCalculation:

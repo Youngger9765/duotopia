@@ -566,7 +566,9 @@ async def submit_assignment(
         if progress.status == AssignmentStatus.IN_PROGRESS:
             # 自動批改類型直接標記為 GRADED，手動批改類型標記為 SUBMITTED
             progress.status = (
-                AssignmentStatus.GRADED if is_auto_graded else AssignmentStatus.SUBMITTED
+                AssignmentStatus.GRADED
+                if is_auto_graded
+                else AssignmentStatus.SUBMITTED
             )
             progress.completed_at = datetime.now()
 

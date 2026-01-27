@@ -203,7 +203,14 @@ export default function ClassroomDetail({
       setActiveTab("assignments");
     }
     setHasInitializedTab(true);
-  }, [students, loading, isTemplateMode, hasInitializedTab, location.search, assignmentsLoaded]);
+  }, [
+    students,
+    loading,
+    isTemplateMode,
+    hasInitializedTab,
+    location.search,
+    assignmentsLoaded,
+  ]);
 
   const fetchClassroomDetail = async (showLoading = true) => {
     try {

@@ -543,7 +543,10 @@ export default function WordSelectionActivity({
                   <RefreshCw className="h-4 w-4 mr-2" />
                   {t("wordSelection.continuePractice") || "Continue Practice"}
                 </Button>
-                <Button onClick={handleCompleteAssignment} disabled={completing}>
+                <Button
+                  onClick={handleCompleteAssignment}
+                  disabled={completing}
+                >
                   {completing ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
