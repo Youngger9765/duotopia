@@ -28,7 +28,7 @@ Handle one or more GitHub issues using git worktrees for parallel, isolated deve
 ┌─────────────────────────────────────────────────────────────┐
 │  1. SETUP         Create worktree from staging              │
 │                   └─ .worktrees/issue-<N>                   │
-│                   └─ Branch: claude/issue-<N>               │
+│                   └─ Branch: fix/issue-<N>-<description>    │
 ├─────────────────────────────────────────────────────────────┤
 │  2. ANALYZE       Read GitHub issue content                 │
 │                   └─ gh issue view <N>                      │
@@ -50,7 +50,20 @@ Handle one or more GitHub issues using git worktrees for parallel, isolated deve
 
 ## Phase 1: Setup Worktree
 
-### 1.1 Verify worktree directory
+### 1.1 Validate and extract issue number
+
+```bash
+# Strip # prefix and validate
+ISSUE_NUM="${ISSUE_NUM#\#}"
+
+# Validate issue number is numeric only (security check)
+if ! [[ "$ISSUE_NUM" =~ ^[0-9]+$ ]]; then
+    echo "Error: Issue number must be numeric, got: $ISSUE_NUM"
+    exit 1
+fi
+```
+
+### 1.2 Verify worktree directory
 
 ```bash
 # Check if .worktrees exists
@@ -65,31 +78,43 @@ if [ ! -d ".worktrees" ]; then
 fi
 ```
 
-### 1.2 Fetch latest staging and create worktree
+### 1.3 Extract issue title for branch name
 
 ```bash
-# For each issue number in $ARGUMENTS
-ISSUE_NUM=<extracted-number>
+# Get issue title and convert to slug for branch name
+ISSUE_TITLE=$(gh issue view "$ISSUE_NUM" --json title -q '.title')
+ISSUE_SLUG=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | cut -c1-30 | sed 's/-$//')
 
+# Branch name follows project standard: fix/issue-<N>-<description>
+BRANCH_NAME="fix/issue-${ISSUE_NUM}-${ISSUE_SLUG}"
+```
+
+### 1.4 Fetch latest staging and create worktree
+
+```bash
 git fetch origin staging
 
 # Create worktree with new branch from staging
-git worktree add .worktrees/issue-${ISSUE_NUM} -b claude/issue-${ISSUE_NUM} origin/staging
+git worktree add ".worktrees/issue-${ISSUE_NUM}" -b "$BRANCH_NAME" origin/staging
 ```
 
-### 1.3 Install dependencies (if needed)
+### 1.5 Install dependencies (if needed)
 
 ```bash
-cd .worktrees/issue-${ISSUE_NUM}
+cd ".worktrees/issue-${ISSUE_NUM}"
 
-# Backend (Python)
+# Backend (Python with virtual environment)
 if [ -d backend ] && [ -f backend/requirements.txt ]; then
-    cd backend && pip install -r requirements.txt && cd ..
+    cd backend
+    python -m venv venv 2>/dev/null || true
+    source venv/bin/activate 2>/dev/null || true
+    pip install -r requirements.txt
+    cd ..
 fi
 
-# Frontend (Node.js)
+# Frontend (Node.js - use ci for reproducible builds)
 if [ -f package.json ]; then
-    npm install
+    npm ci
 fi
 ```
 
@@ -98,7 +123,7 @@ fi
 ### 2.1 Read GitHub issue
 
 ```bash
-gh issue view ${ISSUE_NUM} --json title,body,labels,comments,assignees
+gh issue view "$ISSUE_NUM" --json title,body,labels,comments,assignees
 ```
 
 ### 2.2 Analysis checklist
@@ -144,7 +169,7 @@ Present the plan in this format:
 
 ---
 **Worktree**: `.worktrees/issue-<NUM>`
-**Branch**: `claude/issue-<NUM>`
+**Branch**: `fix/issue-<NUM>-<description>`
 
 Please review and confirm this plan, or provide feedback.
 ```
@@ -156,7 +181,7 @@ Please review and confirm this plan, or provide feedback.
 ### 4.1 Work in the worktree
 
 ```bash
-cd .worktrees/issue-${ISSUE_NUM}
+cd ".worktrees/issue-${ISSUE_NUM}"
 ```
 
 ### 4.2 TDD Development
@@ -195,7 +220,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### 4.5 Push branch
 
 ```bash
-git push -u origin claude/issue-${ISSUE_NUM}
+git push -u origin "$BRANCH_NAME"
 ```
 
 ### 4.6 Report completion
@@ -203,7 +228,7 @@ git push -u origin claude/issue-${ISSUE_NUM}
 ```markdown
 ## Issue #<NUM> Implementation Complete
 
-**Branch**: `claude/issue-<NUM>` (pushed)
+**Branch**: `fix/issue-<NUM>-<description>` (pushed)
 **Worktree**: `.worktrees/issue-<NUM>`
 
 ### Changes Made
@@ -225,15 +250,45 @@ git push -u origin claude/issue-${ISSUE_NUM}
 When `$ARGUMENTS` contains multiple issue numbers:
 
 ### Parallel Setup
+
 ```bash
 # Extract all issue numbers
 ISSUES="$ARGUMENTS"  # e.g., "42 43 44"
 
-# Create all worktrees
+# Validate all issue numbers first
 for NUM in $ISSUES; do
-    git worktree add .worktrees/issue-${NUM} -b claude/issue-${NUM} origin/staging &
+    NUM="${NUM#\#}"  # Strip # prefix
+    if ! [[ "$NUM" =~ ^[0-9]+$ ]]; then
+        echo "Error: Invalid issue number: $NUM"
+        exit 1
+    fi
+done
+
+# Create all worktrees
+declare -A PIDS
+for NUM in $ISSUES; do
+    NUM="${NUM#\#}"
+    ISSUE_TITLE=$(gh issue view "$NUM" --json title -q '.title')
+    ISSUE_SLUG=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | cut -c1-30 | sed 's/-$//')
+    BRANCH_NAME="fix/issue-${NUM}-${ISSUE_SLUG}"
+    git worktree add ".worktrees/issue-${NUM}" -b "$BRANCH_NAME" origin/staging &
+    PIDS[$NUM]=$!
 done
 wait
+
+# Verify all worktrees created successfully
+FAILED=()
+for NUM in $ISSUES; do
+    NUM="${NUM#\#}"
+    if [ ! -d ".worktrees/issue-${NUM}" ]; then
+        FAILED+=("$NUM")
+    fi
+done
+
+if [ ${#FAILED[@]} -gt 0 ]; then
+    echo "Error: Failed to create worktrees for issues: ${FAILED[*]}"
+    exit 1
+fi
 ```
 
 ### Present All Plans Together
@@ -262,6 +317,35 @@ Please review all plans. You can:
 - Request changes: "for #42, please also consider..."
 ```
 
+## Recovery from Failed Implementation
+
+If implementation fails in Phase 4:
+
+### 1. Preserve Work (Don't Delete Immediately)
+```bash
+# Check current state
+cd ".worktrees/issue-${ISSUE_NUM}"
+git status
+git diff
+```
+
+### 2. Document What Failed
+- Note the error message
+- Identify which step failed
+- Check test output if applicable
+
+### 3. Options for User
+Present these options to the user:
+- **Retry**: Fix the issue and continue implementation
+- **Adjust Plan**: Revise the plan based on what was learned
+- **Abandon**: Clean up and start fresh
+
+### 4. Cleanup (Only After User Confirms)
+```bash
+# Only run after user explicitly confirms abandonment
+.claude/skills/handle-issue/scripts/cleanup-worktree.sh "$ISSUE_NUM"
+```
+
 ## Worktree Management Commands
 
 ```bash
@@ -269,12 +353,41 @@ Please review all plans. You can:
 git worktree list
 
 # Check status of specific worktree
-cd .worktrees/issue-<NUM> && git status
+cd ".worktrees/issue-<NUM>" && git status
 
 # Remove worktree (after PR merged)
-git worktree remove .worktrees/issue-<NUM>
-git branch -D claude/issue-<NUM>  # if branch exists locally
+git worktree remove ".worktrees/issue-<NUM>"
+git branch -D "fix/issue-<NUM>-<description>"  # if branch exists locally
 ```
+
+## Edge Cases
+
+### Running from Within a Worktree
+If already in a worktree, return to main repository first:
+```bash
+cd "$(git rev-parse --show-toplevel)/.."
+```
+
+### Issue Already Has a Branch
+Check for existing branches before creating:
+```bash
+if git show-ref --verify --quiet "refs/heads/fix/issue-${ISSUE_NUM}-"*; then
+    echo "Warning: Branch for issue #${ISSUE_NUM} already exists"
+    git branch -a | grep "issue-${ISSUE_NUM}"
+fi
+```
+
+### Issue is Closed
+```bash
+STATE=$(gh issue view "$ISSUE_NUM" --json state -q '.state')
+if [ "$STATE" = "CLOSED" ]; then
+    echo "Warning: Issue #${ISSUE_NUM} is closed"
+    # Ask user if they want to proceed anyway
+fi
+```
+
+### Disk Space Warning
+Multiple worktrees consume disk space. Each worktree is a full copy of the working directory.
 
 ## Red Flags - Never Do These
 
@@ -285,6 +398,7 @@ git branch -D claude/issue-<NUM>  # if branch exists locally
 - Push without running tests
 - Assume requirements without asking
 - Commit directly to `staging` branch
+- Accept non-numeric issue numbers (security risk)
 
 ## Integration with Other Workflows
 
