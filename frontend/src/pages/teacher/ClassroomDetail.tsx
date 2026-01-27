@@ -91,6 +91,8 @@ export default function ClassroomDetail({
   const [activeTab, setActiveTab] = useState(
     isTemplateMode ? "programs" : "students",
   );
+  // Track if we've initialized the tab based on student count
+  const [hasInitializedTab, setHasInitializedTab] = useState(false);
 
   // Teacher subscription state
   const [canAssignHomework, setCanAssignHomework] = useState<boolean>(false);
@@ -149,6 +151,7 @@ export default function ClassroomDetail({
   // Assignment states
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignmentsLoaded, setAssignmentsLoaded] = useState(false);
   const [selectedAssignment] = useState<Assignment | null>(null);
   const [showAssignmentDetails, setShowAssignmentDetails] = useState(false);
   const [batchGradingModal, setBatchGradingModal] = useState({
@@ -179,6 +182,28 @@ export default function ClassroomDetail({
       setActiveTab("assignments");
     }
   }, [location.search]);
+
+  // Issue #150: Smart default tab based on student count
+  // When class has students, default to "assignments" tab
+  // When class has no students, keep "students" tab
+  useEffect(() => {
+    // Skip if in template mode or already initialized
+    if (isTemplateMode || hasInitializedTab || loading) return;
+
+    // Wait for assignments to be loaded before switching tab
+    // (tab is disabled while loading, so switching won't work)
+    if (!assignmentsLoaded) return;
+
+    // Skip if URL already specifies a tab
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("tab")) return;
+
+    // Set default tab based on student count
+    if (students.length > 0) {
+      setActiveTab("assignments");
+    }
+    setHasInitializedTab(true);
+  }, [students, loading, isTemplateMode, hasInitializedTab, location.search, assignmentsLoaded]);
 
   const fetchClassroomDetail = async (showLoading = true) => {
     try {
@@ -316,6 +341,8 @@ export default function ClassroomDetail({
     } catch (err) {
       console.error("Failed to fetch assignments:", err);
       setAssignments([]);
+    } finally {
+      setAssignmentsLoaded(true);
     }
   };
 
