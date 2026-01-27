@@ -134,7 +134,10 @@ export default function TeacherDashboard() {
 
   // Filter classrooms based on workspace selection
   const filteredClassrooms = dashboardData.classrooms.filter((classroom) => {
-    if (mode === "personal") return true;
+    if (mode === "personal") {
+      // Personal mode: only show classrooms without school_id or organization_id
+      return !classroom.school_id && !classroom.organization_id;
+    }
     if (selectedSchool) {
       return classroom.school_id === selectedSchool.id;
     }

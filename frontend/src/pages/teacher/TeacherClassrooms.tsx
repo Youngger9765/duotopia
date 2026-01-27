@@ -190,8 +190,8 @@ export default function TeacherClassrooms() {
   // Filter classrooms based on workspace selection
   const filteredClassrooms = classrooms.filter((classroom) => {
     if (mode === "personal") {
-      // Personal mode: show all classrooms
-      return true;
+      // Personal mode: only show classrooms without school_id or organization_id
+      return !classroom.school_id && !classroom.organization_id;
     }
     if (selectedSchool) {
       // School selected: show only classrooms from this school
