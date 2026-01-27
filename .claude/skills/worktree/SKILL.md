@@ -1,20 +1,28 @@
 ---
-name: handle-issue
-description: Handle GitHub issues using git worktrees for isolated, parallel development. Use when user says "handle issue", "fix issue", "work on issue", or provides issue numbers to work on.
-argument-hint: "<issue-number> [issue-number2 ...]"
-disable-model-invocation: true
+name: worktree
+description: |
+  Create isolated git worktree for development. Automatically triggered when user mentions:
+  - "開 worktree", "用 worktree", "worktree 處理", "worktree 隔離"
+  - "handle issue", "fix issue", "work on issue" with worktree context
+  Supports both GitHub issues and custom task descriptions.
+argument-hint: "<issue-number(s)> | <task-description>"
+disable-model-invocation: false
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, WebFetch
 ---
 
-# Handle Issue Skill
+# Worktree Skill
 
-Handle one or more GitHub issues using git worktrees for parallel, isolated development.
+Create isolated git worktrees for parallel, focused development. Supports two modes:
+1. **GitHub Issue Mode** - When input matches issue numbers
+2. **General Task Mode** - When input is a task description
 
-**Announce at start:** "I'm using the handle-issue skill to set up isolated worktrees for issue(s) #$ARGUMENTS."
+**Announce at start:** "I'm using the worktree skill to set up an isolated development environment."
 
 ## Arguments
 
-- `$ARGUMENTS` - Space-separated issue numbers (e.g., `42`, `42 43 44`, `#42 #43`)
+- `$ARGUMENTS` - Either:
+  - Issue numbers: `42`, `#42`, `42 43`, `#42 #43`
+  - Task description: Any other text describing the work
 
 ## Current Context
 
@@ -22,17 +30,29 @@ Handle one or more GitHub issues using git worktrees for parallel, isolated deve
 - **Current branch**: !`git branch --show-current`
 - **Worktrees**: !`git worktree list 2>/dev/null | head -5`
 
+## Mode Detection
+
+```
+Input: $ARGUMENTS
+    │
+    ├─ Matches /^#?\d+(\s+#?\d+)*$/ → GitHub Issue Mode
+    │   Examples: "42", "#42", "42 43", "#42 #43"
+    │
+    └─ Any other text → General Task Mode
+        Examples: "實作使用者登出功能", "fix navbar alignment"
+```
+
 ## Workflow Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  1. SETUP         Create worktree from staging              │
-│                   └─ .worktrees/issue-<N>                   │
-│                   └─ Branch: fix/issue-<N>-<description>    │
+│                   ├─ Issue: .worktrees/issue-<N>            │
+│                   └─ Task:  .worktrees/task-YYYYMMDD-NNN    │
 ├─────────────────────────────────────────────────────────────┤
-│  2. ANALYZE       Read GitHub issue content                 │
-│                   └─ gh issue view <N>                      │
-│                   └─ Identify requirements & questions      │
+│  2. ANALYZE       Understand requirements                   │
+│                   ├─ Issue: Read GitHub issue content       │
+│                   └─ Task:  Analyze user's description      │
 ├─────────────────────────────────────────────────────────────┤
 │  3. PLAN          Present structured plan                   │
 │                   └─ Problem summary                        │
@@ -48,7 +68,13 @@ Handle one or more GitHub issues using git worktrees for parallel, isolated deve
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Phase 1: Setup Worktree
+---
+
+# GitHub Issue Mode
+
+When `$ARGUMENTS` matches issue number pattern.
+
+## Phase 1: Setup Issue Worktree
 
 ### 1.1 Validate and extract issue number
 
@@ -135,15 +161,113 @@ gh issue view "$ISSUE_NUM" --json title,body,labels,comments,assignees
 - [ ] Review any existing comments
 - [ ] List unclear requirements or questions
 
-## Phase 3: Present Plan (CRITICAL: STOP FOR APPROVAL)
+---
 
-Present the plan in this format:
+# General Task Mode
+
+When `$ARGUMENTS` is a task description (not issue numbers).
+
+## Phase 1: Setup Task Worktree
+
+### 1.1 Generate Task ID
+
+Task ID format: `YYYYMMDD-NNN` where NNN is a sequential number for the day.
+
+```bash
+TODAY=$(date +%Y%m%d)
+WORKTREE_DIR=".worktrees"
+
+# Find existing task worktrees for today and get next number
+EXISTING=$(ls -1 "$WORKTREE_DIR" 2>/dev/null | grep "^task-${TODAY}-" | sort -r | head -1)
+if [ -n "$EXISTING" ]; then
+    LAST_NUM=$(echo "$EXISTING" | sed "s/task-${TODAY}-//" | sed 's/^0*//')
+    NEXT_NUM=$((LAST_NUM + 1))
+else
+    NEXT_NUM=1
+fi
+
+TASK_ID=$(printf "%s-%03d" "$TODAY" "$NEXT_NUM")
+```
+
+### 1.2 Analyze description and generate branch slug
+
+Analyze the user's task description to:
+1. Identify the type of work (fix, feature, refactor, optimize, etc.)
+2. Extract key terms for the branch name
+3. Generate a concise, descriptive slug (max 30 chars)
+
+Examples:
+| User Input | Generated Slug |
+|------------|---------------|
+| 優化首頁載入速度 | optimize-homepage-loading |
+| navbar 在手機版會跑版 | fix-navbar-mobile-layout |
+| 新增使用者偏好設定 | add-user-preferences |
+| fix the login validation | fix-login-validation |
+
+```bash
+# Branch name format: fix/YYYYMMDD-NNN-<slug>
+BRANCH_NAME="fix/${TASK_ID}-${TASK_SLUG}"
+WORKTREE_PATH="${WORKTREE_DIR}/task-${TASK_ID}"
+```
+
+### 1.3 Create worktree
+
+```bash
+git fetch origin staging
+
+# Ensure .worktrees directory exists and is git-ignored
+mkdir -p "$WORKTREE_DIR"
+if ! git check-ignore -q "$WORKTREE_DIR" 2>/dev/null; then
+    echo "$WORKTREE_DIR/" >> .gitignore
+fi
+
+# Create worktree with new branch from staging
+git worktree add "$WORKTREE_PATH" -b "$BRANCH_NAME" origin/staging
+```
+
+### 1.4 Install dependencies (same as issue mode)
+
+```bash
+cd "$WORKTREE_PATH"
+
+# Backend
+if [ -d backend ] && [ -f backend/requirements.txt ]; then
+    cd backend
+    python -m venv venv 2>/dev/null || true
+    source venv/bin/activate 2>/dev/null || true
+    pip install -r requirements.txt
+    cd ..
+fi
+
+# Frontend
+if [ -f package.json ]; then
+    npm ci
+fi
+```
+
+## Phase 2: Analyze Task
+
+### 2.1 Clarify requirements
+
+Based on the task description, identify:
+- [ ] What is the expected outcome?
+- [ ] What files/components are likely involved?
+- [ ] Are there any dependencies or prerequisites?
+- [ ] What are the acceptance criteria?
+
+If the description is ambiguous, ask clarifying questions before proceeding.
+
+---
+
+# Phase 3: Present Plan (CRITICAL: STOP FOR APPROVAL)
+
+Present the plan in this format (applies to both modes):
 
 ```markdown
-## Issue #<NUM>: <Title>
+## [Issue #<NUM>: <Title> | Task <TASK_ID>: <Description>]
 
 ### Problem Summary
-[One paragraph summary of the issue]
+[One paragraph summary of the work]
 
 ### Proposed Solution
 1. [Step 1 - specific action]
@@ -168,34 +292,28 @@ Present the plan in this format:
 - [ ] Large (6+ files, significant changes)
 
 ---
-**Worktree**: `.worktrees/issue-<NUM>`
-**Branch**: `fix/issue-<NUM>-<description>`
+**Worktree**: `.worktrees/[issue-<NUM> | task-<TASK_ID>]`
+**Branch**: `fix/[issue-<NUM>-<desc> | <TASK_ID>-<desc>]`
 
 Please review and confirm this plan, or provide feedback.
 ```
 
 **IMPORTANT**: Do NOT proceed to Phase 4 until user explicitly approves.
 
-## Phase 4: Implement (After Approval Only)
+---
+
+# Phase 4: Implement (After Approval Only)
 
 ### 4.1 Work in the worktree
 
 ```bash
-cd ".worktrees/issue-${ISSUE_NUM}"
+cd ".worktrees/[issue-${ISSUE_NUM} | task-${TASK_ID}]"
 ```
 
 ### 4.2 TDD Development
 
 1. **Red Phase**: Write failing tests first
-   ```bash
-   # Create test file
-   # backend/tests/integration/api/test_issue_${ISSUE_NUM}.py
-   ```
-
-2. **Green Phase**: Implement the fix
-   - Make minimal changes to pass tests
-   - Follow existing code patterns
-
+2. **Green Phase**: Implement the fix (minimal changes to pass tests)
 3. **Refactor Phase**: Clean up if needed
 
 ### 4.3 Run tests
@@ -211,9 +329,15 @@ cd frontend && npm run typecheck && npm run build
 ### 4.4 Commit changes
 
 ```bash
-git add .
+# For issues
 git commit -m "fix: [description] (Related to #${ISSUE_NUM})
 
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+# For tasks
+git commit -m "fix: [description]
+
+Task: ${TASK_ID}
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
@@ -226,10 +350,10 @@ git push -u origin "$BRANCH_NAME"
 ### 4.6 Report completion
 
 ```markdown
-## Issue #<NUM> Implementation Complete
+## [Issue #<NUM> | Task <TASK_ID>] Implementation Complete
 
-**Branch**: `fix/issue-<NUM>-<description>` (pushed)
-**Worktree**: `.worktrees/issue-<NUM>`
+**Branch**: `fix/[...]` (pushed)
+**Worktree**: `.worktrees/[...]`
 
 ### Changes Made
 - [Change 1]
@@ -242,22 +366,23 @@ git push -u origin "$BRANCH_NAME"
 ### Next Steps
 1. Create PR to staging: `gh pr create --base staging`
 2. Wait for CI/CD checks
-3. Request case owner testing
+3. [For issues: Request case owner testing]
 ```
 
-## Handling Multiple Issues
+---
 
-When `$ARGUMENTS` contains multiple issue numbers:
+# Handling Multiple Issues
+
+When `$ARGUMENTS` contains multiple issue numbers (e.g., "42 43 44"):
 
 ### Parallel Setup
 
 ```bash
-# Extract all issue numbers
 ISSUES="$ARGUMENTS"  # e.g., "42 43 44"
 
 # Validate all issue numbers first
 for NUM in $ISSUES; do
-    NUM="${NUM#\#}"  # Strip # prefix
+    NUM="${NUM#\#}"
     if ! [[ "$NUM" =~ ^[0-9]+$ ]]; then
         echo "Error: Invalid issue number: $NUM"
         exit 1
@@ -265,30 +390,14 @@ for NUM in $ISSUES; do
 done
 
 # Create all worktrees
-declare -A PIDS
 for NUM in $ISSUES; do
     NUM="${NUM#\#}"
     ISSUE_TITLE=$(gh issue view "$NUM" --json title -q '.title')
     ISSUE_SLUG=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | cut -c1-30 | sed 's/-$//')
     BRANCH_NAME="fix/issue-${NUM}-${ISSUE_SLUG}"
     git worktree add ".worktrees/issue-${NUM}" -b "$BRANCH_NAME" origin/staging &
-    PIDS[$NUM]=$!
 done
 wait
-
-# Verify all worktrees created successfully
-FAILED=()
-for NUM in $ISSUES; do
-    NUM="${NUM#\#}"
-    if [ ! -d ".worktrees/issue-${NUM}" ]; then
-        FAILED+=("$NUM")
-    fi
-done
-
-if [ ${#FAILED[@]} -gt 0 ]; then
-    echo "Error: Failed to create worktrees for issues: ${FAILED[*]}"
-    exit 1
-fi
 ```
 
 ### Present All Plans Together
@@ -306,78 +415,93 @@ fi
 
 ---
 
-## Issue #44: [Title]
-[Full plan...]
-
----
-
 Please review all plans. You can:
 - Approve all: "proceed with all"
 - Approve specific: "proceed with #42 and #43"
 - Request changes: "for #42, please also consider..."
 ```
 
-## Recovery from Failed Implementation
+---
+
+# Worktree Management
+
+## List worktrees
+
+```bash
+git worktree list
+```
+
+## Check worktree status
+
+```bash
+cd ".worktrees/[issue-<NUM> | task-<TASK_ID>]" && git status
+```
+
+## Cleanup after merge
+
+```bash
+# Remove worktree
+git worktree remove ".worktrees/[...]"
+
+# Delete local branch if exists
+git branch -D "fix/[...]"
+```
+
+---
+
+# Recovery from Failed Implementation
 
 If implementation fails in Phase 4:
 
-### 1. Preserve Work (Don't Delete Immediately)
+### 1. Preserve Work
+
 ```bash
-# Check current state
-cd ".worktrees/issue-${ISSUE_NUM}"
+cd ".worktrees/[...]"
 git status
 git diff
 ```
 
 ### 2. Document What Failed
+
 - Note the error message
 - Identify which step failed
 - Check test output if applicable
 
 ### 3. Options for User
-Present these options to the user:
-- **Retry**: Fix the issue and continue implementation
-- **Adjust Plan**: Revise the plan based on what was learned
+
+- **Retry**: Fix the issue and continue
+- **Adjust Plan**: Revise the plan based on learnings
 - **Abandon**: Clean up and start fresh
 
 ### 4. Cleanup (Only After User Confirms)
-```bash
-# Only run after user explicitly confirms abandonment
-.claude/skills/handle-issue/scripts/cleanup-worktree.sh "$ISSUE_NUM"
-```
-
-## Worktree Management Commands
 
 ```bash
-# List all worktrees
-git worktree list
-
-# Check status of specific worktree
-cd ".worktrees/issue-<NUM>" && git status
-
-# Remove worktree (after PR merged)
-git worktree remove ".worktrees/issue-<NUM>"
-git branch -D "fix/issue-<NUM>-<description>"  # if branch exists locally
+.claude/skills/worktree/scripts/cleanup-worktree.sh [issue-NUM | task-TASK_ID]
 ```
 
-## Edge Cases
+---
+
+# Edge Cases
 
 ### Running from Within a Worktree
+
 If already in a worktree, return to main repository first:
 ```bash
 cd "$(git rev-parse --show-toplevel)/.."
 ```
 
-### Issue Already Has a Branch
+### Issue/Task Already Has a Branch
+
 Check for existing branches before creating:
 ```bash
-if git show-ref --verify --quiet "refs/heads/fix/issue-${ISSUE_NUM}-"*; then
-    echo "Warning: Branch for issue #${ISSUE_NUM} already exists"
-    git branch -a | grep "issue-${ISSUE_NUM}"
+if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME" 2>/dev/null; then
+    echo "Warning: Branch $BRANCH_NAME already exists"
+    git branch -a | grep "$BRANCH_NAME"
 fi
 ```
 
 ### Issue is Closed
+
 ```bash
 STATE=$(gh issue view "$ISSUE_NUM" --json state -q '.state')
 if [ "$STATE" = "CLOSED" ]; then
@@ -386,10 +510,9 @@ if [ "$STATE" = "CLOSED" ]; then
 fi
 ```
 
-### Disk Space Warning
-Multiple worktrees consume disk space. Each worktree is a full copy of the working directory.
+---
 
-## Red Flags - Never Do These
+# Red Flags - Never Do These
 
 - Implement without presenting plan first
 - Skip user confirmation before coding
@@ -399,12 +522,15 @@ Multiple worktrees consume disk space. Each worktree is a full copy of the worki
 - Assume requirements without asking
 - Commit directly to `staging` branch
 - Accept non-numeric issue numbers (security risk)
+- Create task without generating proper Task ID
 
-## Integration with Other Workflows
+---
+
+# Integration with Other Workflows
 
 After implementation, use the standard PDCA workflow:
 1. Create PR with `gh pr create --base staging`
-2. Use "Fixes #<NUM>" in PR body to auto-close issue
+2. Use "Fixes #<NUM>" in PR body to auto-close issue (for issues)
 3. Wait for CI/CD checks
 4. Wait for case owner approval
 5. Merge via `gh pr merge --squash`
