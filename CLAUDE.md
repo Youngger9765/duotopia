@@ -47,6 +47,22 @@
 
 **Learning Files**: `.claude/learning/*.json`
 
+## Skills & Commands
+
+### Skills (`.claude/skills/`)
+
+| Skill | Purpose |
+|-------|---------|
+| `/handle-issue <N> [N2 N3...]` | 使用 git worktree 隔離處理 issue，支援平行處理多個 issue |
+
+### Commands (`.claude/commands/`)
+
+| Command | Purpose |
+|---------|---------|
+| `/reflect [error]` | 手動觸發錯誤反思 |
+| `/weekly-review` | 產生週報 |
+| `/restart-server` | 重啟 backend server |
+
 ## Project Hooks
 
 | Hook | Script | Purpose |
