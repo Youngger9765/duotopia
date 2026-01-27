@@ -3912,6 +3912,12 @@
     },
     "permissions": {
       "close": "Close"
-    }
+    },
+    "switchWorkspace": "Switch Workspace",
+    "selectWorkspace": "Select Workspace",
+    "currentWorkspace": "Current Workspace",
+    "personalMode": "Personal Mode",
+    "selectOrganization": "Select Organization",
+    "noSchoolsInOrg": "No schools in this organization"
   }
 }

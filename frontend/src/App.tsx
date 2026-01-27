@@ -19,6 +19,7 @@ import TeacherAssignmentDetailPage from "./pages/teacher/TeacherAssignmentDetail
 import TeacherAssignmentPreviewPage from "./pages/teacher/TeacherAssignmentPreviewPage";
 import GradingPage from "./pages/teacher/GradingPage";
 import TeacherTemplatePrograms from "./pages/teacher/TeacherTemplatePrograms";
+import SchoolMaterialsPage from "./pages/teacher/SchoolMaterialsPage";
 import TeacherSubscription from "./pages/teacher/TeacherSubscription";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
 import StudentLogin from "./pages/StudentLogin";
@@ -182,6 +183,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ClassroomDetail isTemplateMode={true} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/school-materials"
+          element={
+            <ProtectedRoute>
+              <SchoolMaterialsPage />
             </ProtectedRoute>
           }
         />

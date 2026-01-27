@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import TeacherLayout from "@/components/TeacherLayout";
 import StudentTable, { Student } from "@/components/StudentTable";
@@ -29,6 +30,7 @@ import { Classroom } from "@/types";
 
 export default function TeacherStudents() {
   const { t } = useTranslation();
+  const { selectedSchool, selectedOrganization, mode } = useWorkspace();
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
@@ -118,6 +120,19 @@ export default function TeacherStudents() {
   // 過濾並排序學生
   const filteredStudents = allStudents
     .filter((student) => {
+      // Workspace filtering: filter by school/organization
+      let matchesWorkspace = true;
+      if (mode === "personal") {
+        // Personal mode: show all students
+        matchesWorkspace = true;
+      } else if (selectedSchool) {
+        // School selected: show only students from this school
+        matchesWorkspace = student.school_id === selectedSchool.id;
+      } else if (selectedOrganization) {
+        // Organization selected (no specific school): show students from all schools in the organization
+        matchesWorkspace = student.organization_id === selectedOrganization.id;
+      }
+
       // 班級篩選邏輯
       let matchesClassroom = true;
       if (selectedClassroom === null) {
@@ -135,7 +150,7 @@ export default function TeacherStudents() {
         !searchTerm ||
         student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (student.email || "").toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesClassroom && matchesSearch;
+      return matchesWorkspace && matchesClassroom && matchesSearch;
     })
     .sort((a, b) => a.id - b.id); // 按 ID 排序
 

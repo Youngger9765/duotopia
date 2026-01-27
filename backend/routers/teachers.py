@@ -111,6 +111,9 @@ class ClassroomSummary(BaseModel):
     name: str
     description: Optional[str]
     student_count: int
+    school_id: Optional[str] = None
+    school_name: Optional[str] = None
+    organization_id: Optional[str] = None
 
 
 class StudentSummary(BaseModel):
@@ -118,6 +121,9 @@ class StudentSummary(BaseModel):
     name: str
     email: Optional[str] = None  # Allow None for students without email
     classroom_name: str
+    school_id: Optional[str] = None
+    school_name: Optional[str] = None
+    organization_id: Optional[str] = None
 
 
 class OrganizationInfo(BaseModel):
@@ -386,10 +392,25 @@ async def get_teacher_dashboard(
             Classroom.is_active.is_(True),  # Filter out soft-deleted classrooms
         )
         .options(
-            selectinload(Classroom.students).selectinload(ClassroomStudent.student)
+            selectinload(Classroom.students).selectinload(ClassroomStudent.student),
+            selectinload(Classroom.classroom_schools),
         )
         .all()
     )
+
+    # Get school information for classrooms
+    classroom_school_dict = {}
+    for classroom in classrooms:
+        active_links = [cs for cs in classroom.classroom_schools if cs.is_active]
+        if active_links:
+            link = active_links[0]
+            school = db.query(School).filter(School.id == link.school_id).first()
+            if school:
+                classroom_school_dict[classroom.id] = {
+                    "school_id": str(school.id),
+                    "school_name": school.name,
+                    "organization_id": str(school.organization_id),
+                }
 
     classroom_summaries = []
     total_students = 0
@@ -406,12 +427,18 @@ async def get_teacher_dashboard(
         student_count = len(active_students)
         total_students += student_count
 
+        school_info = classroom_school_dict.get(classroom.id)
         classroom_summaries.append(
             ClassroomSummary(
                 id=classroom.id,
                 name=classroom.name,
                 description=classroom.description,
                 student_count=student_count,
+                school_id=school_info.get("school_id") if school_info else None,
+                school_name=school_info.get("school_name") if school_info else None,
+                organization_id=(
+                    school_info.get("organization_id") if school_info else None
+                ),
             )
         )
 
@@ -426,6 +453,13 @@ async def get_teacher_dashboard(
                         name=classroom_student.student.name,
                         email=classroom_student.student.email,  # Can be None now
                         classroom_name=classroom.name,
+                        school_id=school_info.get("school_id") if school_info else None,
+                        school_name=(
+                            school_info.get("school_name") if school_info else None
+                        ),
+                        organization_id=(
+                            school_info.get("organization_id") if school_info else None
+                        ),
                     )
                 )
 
@@ -499,7 +533,7 @@ async def get_teacher_classrooms(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """取得教師的所有班級"""
+    """取得教師的所有班級（包含學校和組織資訊）"""
 
     # Get classrooms with students (only active classrooms)
     classrooms = (
@@ -509,7 +543,8 @@ async def get_teacher_classrooms(
             Classroom.is_active.is_(True),  # Only show active classrooms
         )
         .options(
-            selectinload(Classroom.students).selectinload(ClassroomStudent.student)
+            selectinload(Classroom.students).selectinload(ClassroomStudent.student),
+            selectinload(Classroom.classroom_schools),
         )
         .all()
     )
@@ -528,6 +563,21 @@ async def get_teacher_classrooms(
     # Convert to dict for easy lookup
     program_count_map = {pc.classroom_id: pc.count for pc in program_counts}
 
+    # Get school and organization info for classrooms
+    classroom_school_map = {}
+    for classroom in classrooms:
+        active_links = [cs for cs in classroom.classroom_schools if cs.is_active]
+        if active_links:
+            # Get the first active link (a classroom should only have one active school)
+            link = active_links[0]
+            school = db.query(School).filter(School.id == link.school_id).first()
+            if school:
+                classroom_school_map[classroom.id] = {
+                    "school_id": str(school.id),
+                    "school_name": school.name,
+                    "organization_id": str(school.organization_id),
+                }
+
     return [
         {
             "id": classroom.id,
@@ -538,6 +588,12 @@ async def get_teacher_classrooms(
             "program_count": program_count_map.get(classroom.id, 0),  # Efficient lookup
             "created_at": (
                 classroom.created_at.isoformat() if classroom.created_at else None
+            ),
+            # Add school and organization info
+            "school_id": classroom_school_map.get(classroom.id, {}).get("school_id"),
+            "school_name": classroom_school_map.get(classroom.id, {}).get("school_name"),
+            "organization_id": classroom_school_map.get(classroom.id, {}).get(
+                "organization_id"
             ),
             "students": [
                 {
@@ -1004,23 +1060,42 @@ async def get_all_students(
     # 批次查詢教室資訊
     classroom_ids = [cs.classroom_id for cs in classroom_students_list]
     classrooms_dict = {}
+    classroom_school_dict = {}
     if classroom_ids:
         classrooms_list = (
-            db.query(Classroom).filter(Classroom.id.in_(classroom_ids)).all()
+            db.query(Classroom)
+            .filter(Classroom.id.in_(classroom_ids))
+            .options(selectinload(Classroom.classroom_schools))
+            .all()
         )
         classrooms_dict = {c.id: c for c in classrooms_list}
 
-    # Build response with classroom info
+        # Get school information for classrooms
+        for classroom in classrooms_list:
+            active_links = [cs for cs in classroom.classroom_schools if cs.is_active]
+            if active_links:
+                link = active_links[0]
+                school = db.query(School).filter(School.id == link.school_id).first()
+                if school:
+                    classroom_school_dict[classroom.id] = {
+                        "school_id": str(school.id),
+                        "school_name": school.name,
+                        "organization_id": str(school.organization_id),
+                    }
+
+    # Build response with classroom and school info
     result = []
     for student in all_students:
         # 使用字典查找，避免重複查詢
         classroom_student = classroom_students_dict.get(student.id)
 
         classroom_info = None
+        school_info = None
         if classroom_student:
             classroom = classrooms_dict.get(classroom_student.classroom_id)
             if classroom:
                 classroom_info = {"id": classroom.id, "name": classroom.name}
+                school_info = classroom_school_dict.get(classroom.id)
 
         result.append(
             {
@@ -1039,6 +1114,12 @@ async def get_all_students(
                 "status": "active" if student.is_active else "inactive",
                 "classroom_id": classroom_info["id"] if classroom_info else None,
                 "classroom_name": (classroom_info["name"] if classroom_info else "未分配"),
+                # Add school and organization info
+                "school_id": school_info.get("school_id") if school_info else None,
+                "school_name": school_info.get("school_name") if school_info else None,
+                "organization_id": (
+                    school_info.get("organization_id") if school_info else None
+                ),
                 "email_verified": student.email_verified,
                 "email_verified_at": (
                     student.email_verified_at.isoformat()

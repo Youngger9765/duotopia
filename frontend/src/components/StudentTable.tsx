@@ -35,6 +35,9 @@ export interface Student {
   classroom_name?: string;
   phone?: string;
   enrollment_date?: string;
+  school_id?: string;
+  school_name?: string;
+  organization_id?: string;
 }
 
 interface StudentTableProps {

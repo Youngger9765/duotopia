@@ -96,9 +96,11 @@ def get_teacher_organizations(
         # Query teacher's ACTIVE organization memberships with eager loading
         teacher_orgs = (
             db.query(TeacherOrganization)
+            .join(Organization, TeacherOrganization.organization_id == Organization.id)
             .filter(
                 TeacherOrganization.teacher_id == teacher_id,
-                TeacherOrganization.is_active == True  # Only active memberships
+                TeacherOrganization.is_active == True,  # Only active memberships
+                Organization.is_active == True  # Only active organizations
             )
             .options(joinedload(TeacherOrganization.organization))
             .all()
@@ -110,10 +112,13 @@ def get_teacher_organizations(
         # Optimization: Fetch all schools and teacher-school relationships in batch
         all_org_ids = [to.organization_id for to in teacher_orgs]
 
-        # Single query for all schools across all organizations
+        # Single query for all ACTIVE schools across all organizations
         all_schools = (
             db.query(School)
-            .filter(School.organization_id.in_(all_org_ids))
+            .filter(
+                School.organization_id.in_(all_org_ids),
+                School.is_active == True  # Only active schools
+            )
             .all()
         )
 

@@ -3913,6 +3913,12 @@
     },
     "permissions": {
       "close": "關閉"
-    }
+    },
+    "switchWorkspace": "切換工作區",
+    "selectWorkspace": "選擇工作區",
+    "currentWorkspace": "目前工作區",
+    "personalMode": "個人模式",
+    "selectOrganization": "選擇組織",
+    "noSchoolsInOrg": "此組織沒有學校"
   }
 }

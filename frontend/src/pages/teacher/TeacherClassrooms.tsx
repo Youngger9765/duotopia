@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -45,10 +46,14 @@ interface ClassroomDetail {
   }>;
   program_count?: number;
   created_at?: string;
+  school_id?: string;
+  school_name?: string;
+  organization_id?: string;
 }
 
 export default function TeacherClassrooms() {
   const { t } = useTranslation();
+  const { selectedSchool, selectedOrganization, mode } = useWorkspace();
   const [classrooms, setClassrooms] = useState<ClassroomDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingClassroom, setEditingClassroom] =
@@ -183,6 +188,24 @@ export default function TeacherClassrooms() {
     );
   };
 
+  // Filter classrooms based on workspace selection
+  const filteredClassrooms = classrooms.filter((classroom) => {
+    if (mode === "personal") {
+      // Personal mode: show all classrooms
+      return true;
+    }
+    if (selectedSchool) {
+      // School selected: show only classrooms from this school
+      return classroom.school_id === selectedSchool.id;
+    }
+    if (selectedOrganization) {
+      // Organization selected (no specific school): show all classrooms from the organization
+      return classroom.organization_id === selectedOrganization.id;
+    }
+    // Default: show all
+    return true;
+  });
+
   if (loading) {
     return (
       <TeacherLayout>
@@ -243,7 +266,7 @@ export default function TeacherClassrooms() {
                   {t("teacherClassrooms.stats.totalClassrooms")}
                 </p>
                 <p className="text-xl sm:text-2xl font-bold dark:text-gray-100">
-                  {classrooms.length}
+                  {filteredClassrooms.length}
                 </p>
               </div>
               <GraduationCap className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 dark:text-blue-400" />
@@ -256,7 +279,7 @@ export default function TeacherClassrooms() {
                   {t("teacherClassrooms.stats.totalStudents")}
                 </p>
                 <p className="text-xl sm:text-2xl font-bold dark:text-gray-100">
-                  {classrooms.reduce((sum, c) => sum + c.student_count, 0)}
+                  {filteredClassrooms.reduce((sum, c) => sum + c.student_count, 0)}
                 </p>
               </div>
               <Users className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 dark:text-green-400" />
@@ -269,7 +292,7 @@ export default function TeacherClassrooms() {
                   {t("teacherClassrooms.stats.activeClassrooms")}
                 </p>
                 <p className="text-xl sm:text-2xl font-bold dark:text-gray-100">
-                  {classrooms.length}
+                  {filteredClassrooms.length}
                 </p>
               </div>
               <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 dark:text-purple-400" />
@@ -281,7 +304,7 @@ export default function TeacherClassrooms() {
         <>
           {/* Mobile Card View */}
           <div className="md:hidden space-y-4">
-            {classrooms.map((classroom) => (
+            {filteredClassrooms.map((classroom) => (
               <div
                 key={classroom.id}
                 className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 space-y-3"
@@ -369,7 +392,7 @@ export default function TeacherClassrooms() {
             ))}
             <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
               {t("teacherClassrooms.messages.totalCount", {
-                count: classrooms.length,
+                count: filteredClassrooms.length,
               })}
             </div>
           </div>
@@ -380,7 +403,7 @@ export default function TeacherClassrooms() {
               <Table>
                 <TableCaption className="dark:text-gray-400">
                   {t("teacherClassrooms.messages.totalCount", {
-                    count: classrooms.length,
+                    count: filteredClassrooms.length,
                   })}
                 </TableCaption>
                 <TableHeader>
@@ -412,7 +435,7 @@ export default function TeacherClassrooms() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {classrooms.map((classroom) => (
+                  {filteredClassrooms.map((classroom) => (
                     <TableRow
                       key={classroom.id}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
@@ -490,7 +513,7 @@ export default function TeacherClassrooms() {
         </>
 
         {/* Empty State */}
-        {classrooms.length === 0 && (
+        {filteredClassrooms.length === 0 && (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
             <GraduationCap className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
             <p className="text-gray-500 dark:text-gray-400">
