@@ -132,6 +132,14 @@ class StudentItemProgress(Base):
     )  # NOT_STARTED, IN_PROGRESS, COMPLETED, SUBMITTED
     attempts = Column(Integer, default=0)
 
+    # Rearrangement activity fields (例句重組專用)
+    error_count = Column(Integer, default=0)  # 錯誤選擇次數
+    correct_word_count = Column(Integer, default=0)  # 正確選擇的單字數
+    retry_count = Column(Integer, default=0)  # 重試次數
+    expected_score = Column(DECIMAL(5, 2), default=0)  # 預期分數
+    timeout_ended = Column(Boolean, default=False)  # 是否因超時結束
+    rearrangement_data = Column(JSONB)  # 單字選擇歷史記錄
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

@@ -79,6 +79,7 @@ export default function WordSelectionActivity({
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [completing, setCompleting] = useState(false);
 
   // Settings
   const [showWord, setShowWord] = useState(true);
@@ -419,13 +420,41 @@ export default function WordSelectionActivity({
     startPractice();
   };
 
-  // Complete assignment - 後端已在每次作答時自動同步狀態，這裡只需關閉並觸發 callback
-  const handleCompleteAssignment = () => {
-    toast.success(
-      t("wordSelection.toast.completed") || "Assignment completed!",
-    );
-    setShowAchievementDialog(false);
-    onComplete?.();
+  // Complete assignment - 呼叫 API 完成作業並更新狀態
+  const handleCompleteAssignment = async () => {
+    // 預覽模式不需要呼叫 API
+    if (isPreviewMode) {
+      toast.success(
+        t("wordSelection.toast.completed") || "Assignment completed!",
+      );
+      setShowAchievementDialog(false);
+      onComplete?.();
+      return;
+    }
+
+    // 防止重複點擊
+    if (completing) return;
+
+    setCompleting(true);
+    try {
+      // 呼叫提交 API 來更新狀態為 GRADED 並記錄分數
+      await apiClient.post(`/api/students/assignments/${assignmentId}/submit`);
+
+      toast.success(
+        t("wordSelection.toast.completed") || "Assignment completed!",
+      );
+      setShowAchievementDialog(false);
+      onComplete?.();
+    } catch (error) {
+      console.error("Error completing assignment:", error);
+      toast.error(
+        t("wordSelection.toast.completeFailed") ||
+          "Failed to complete assignment. Please try again.",
+      );
+      // 保持 dialog 開啟，讓使用者可以重試
+    } finally {
+      setCompleting(false);
+    }
   };
 
   // Continue practice after achievement
@@ -506,12 +535,23 @@ export default function WordSelectionActivity({
                   "Congratulations! You've reached the target proficiency!"}
               </p>
               <div className="flex gap-4 justify-center">
-                <Button variant="outline" onClick={handleContinuePractice}>
+                <Button
+                  variant="outline"
+                  onClick={handleContinuePractice}
+                  disabled={completing}
+                >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   {t("wordSelection.continuePractice") || "Continue Practice"}
                 </Button>
-                <Button onClick={handleCompleteAssignment}>
-                  <CheckCircle className="h-4 w-4 mr-2" />
+                <Button
+                  onClick={handleCompleteAssignment}
+                  disabled={completing}
+                >
+                  {completing ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                  )}
                   {t("wordSelection.close") || "Close"}
                 </Button>
               </div>
@@ -741,11 +781,18 @@ export default function WordSelectionActivity({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={handleContinuePractice}>
+            <Button
+              variant="outline"
+              onClick={handleContinuePractice}
+              disabled={completing}
+            >
               <RefreshCw className="h-4 w-4 mr-2" />
               {t("wordSelection.continuePractice") || "Continue Practice"}
             </Button>
-            <Button onClick={handleCompleteAssignment}>
+            <Button onClick={handleCompleteAssignment} disabled={completing}>
+              {completing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
               {t("wordSelection.close") || "Close"}
             </Button>
           </DialogFooter>

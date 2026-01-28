@@ -47,6 +47,22 @@
 
 **Learning Files**: `.claude/learning/*.json`
 
+## Skills & Commands
+
+### Skills (`.claude/skills/`)
+
+| Skill | Purpose |
+|-------|---------|
+| `/worktree <issues \| description>` | 使用 git worktree 隔離開發。支援 GitHub issue（如 `#42 #43`）或任意任務描述。自動觸發：「開 worktree」、「用 worktree 處理」 |
+
+### Commands (`.claude/commands/`)
+
+| Command | Purpose |
+|---------|---------|
+| `/reflect [error]` | 手動觸發錯誤反思 |
+| `/weekly-review` | 產生週報 |
+| `/restart-server` | 重啟 backend server |
+
 ## Project Hooks
 
 | Hook | Script | Purpose |

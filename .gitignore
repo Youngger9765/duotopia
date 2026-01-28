@@ -124,3 +124,7 @@ backend/tests/load_testing/__pycache__/
 # Keep .gitkeep files to track empty directories
 !backend/tests/load_testing/audio_samples/.gitkeep
 !backend/tests/load_testing/results/.gitkeep
+
+# Git Worktrees (for isolated issue development)
+.worktrees/
+worktrees/
