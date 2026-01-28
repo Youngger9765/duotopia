@@ -13,9 +13,11 @@ import { X } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { Program, Lesson, Content } from "@/types";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function TeacherTemplateProgramsNew() {
   const { t } = useTranslation();
+  const { mode, selectedSchool, selectedOrganization } = useWorkspace();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReordering, setIsReordering] = useState(false);
@@ -60,13 +62,32 @@ export default function TeacherTemplateProgramsNew() {
 
   useEffect(() => {
     fetchTemplatePrograms();
-  }, []);
+  }, [mode, selectedSchool, selectedOrganization]);
 
   const fetchTemplatePrograms = async () => {
     try {
       setLoading(true);
+
+      // Build API params from workspace context
+      let schoolId: string | undefined;
+      let organizationId: string | undefined;
+
+      if (selectedSchool) {
+        // School mode: when a school is selected
+        schoolId = selectedSchool.id;
+      } else if (selectedOrganization) {
+        // Organization mode: when an organization is selected
+        organizationId = selectedOrganization.id;
+      }
+      // Otherwise: personal mode (no schoolId or organizationId)
+
       // 使用 teachers API，已包含完整的 lessons/contents 和排序（teachers.py Line 300, 304）
-      const response = await apiClient.getTeacherPrograms(true);
+      const response = await apiClient.getTeacherPrograms(
+        true,
+        undefined,
+        schoolId,
+        organizationId,
+      );
       setPrograms(response as Program[]);
     } catch (err) {
       console.error("Failed to fetch template programs:", err);

@@ -627,10 +627,12 @@ async def get_teacher_classrooms(
 async def get_teacher_programs(
     is_template: Optional[bool] = None,
     classroom_id: Optional[int] = None,
+    school_id: Optional[str] = None,
+    organization_id: Optional[str] = None,
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """取得教師的所有課程（支援過濾公版/班級課程）"""
+    """取得教師的所有課程（支援過濾公版/班級課程/學校/組織）"""
     query = (
         db.query(Program)
         .filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True))
@@ -649,6 +651,55 @@ async def get_teacher_programs(
     # 過濾特定班級
     if classroom_id is not None:
         query = query.filter(Program.classroom_id == classroom_id)
+
+    # 過濾 workspace context (school/organization) with authorization
+    if school_id:
+        # Verify teacher belongs to this school
+        teacher_school = (
+            db.query(TeacherSchool)
+            .filter(
+                TeacherSchool.teacher_id == current_teacher.id,
+                TeacherSchool.school_id == school_id,
+                TeacherSchool.is_active == True,
+            )
+            .first()
+        )
+
+        if not teacher_school:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Teacher does not have access to this school",
+            )
+
+        query = query.filter(Program.school_id == school_id)
+
+    elif organization_id:
+        # Verify teacher belongs to this organization
+        teacher_org = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == current_teacher.id,
+                TeacherOrganization.organization_id == organization_id,
+                TeacherOrganization.is_active == True,
+            )
+            .first()
+        )
+
+        if not teacher_org:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Teacher does not have access to this organization",
+            )
+
+        query = query.filter(Program.organization_id == organization_id)
+
+    elif not classroom_id:
+        # Personal mode: 只顯示個人課程（沒有 school_id 和 organization_id）
+        # 但如果已指定 classroom_id，則不套用此過濾（班級課程可能有 school_id）
+        query = query.filter(
+            Program.school_id.is_(None),
+            Program.organization_id.is_(None)
+        )
 
     programs = query.order_by(Program.order_index).all()
 
