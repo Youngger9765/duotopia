@@ -62,6 +62,7 @@ import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface Student {
   id: number;
@@ -244,6 +245,7 @@ export function AssignmentDialog({
   onSuccess,
 }: AssignmentDialogProps) {
   const { t } = useTranslation();
+  const { selectedSchool, selectedOrganization } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [loadingClassroomPrograms, setLoadingClassroomPrograms] =
@@ -362,8 +364,22 @@ export function AssignmentDialog({
   const loadTemplatePrograms = async () => {
     try {
       setLoadingTemplates(true);
+
+      // Build query params with workspace context
+      const params = new URLSearchParams();
+      params.append("is_template", "true");
+
+      if (selectedSchool) {
+        // School mode: when a school is selected
+        params.append("school_id", selectedSchool.id);
+      } else if (selectedOrganization) {
+        // Organization mode: when an organization is selected
+        params.append("organization_id", selectedOrganization.id);
+      }
+      // Otherwise: personal mode (no schoolId or organizationId)
+
       const response = await apiClient.get<Program[]>(
-        `/api/teachers/programs?is_template=true`,
+        `/api/teachers/programs?${params.toString()}`,
       );
       setTemplatePrograms(response);
     } catch (error) {

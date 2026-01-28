@@ -3901,5 +3901,30 @@
       "completed": "作業已完成！",
       "completeFailed": "完成作業失敗"
     }
+  },
+  "workspace": {
+    "personalModeOnly": "個人模式（尚未加入任何組織）",
+    "tabs": {
+      "personal": "個人",
+      "organization": "組織"
+    },
+    "personal": {
+      "description": "這是您的個人工作區"
+    },
+    "organization": {
+      "noOrganizations": "您尚未加入任何組織",
+      "error": "載入組織時發生錯誤",
+      "bannerTitle": "組織工作區",
+      "bannerDescription": "管理您組織中的學校與教師"
+    },
+    "permissions": {
+      "close": "關閉"
+    },
+    "switchWorkspace": "切換工作區",
+    "selectWorkspace": "選擇工作區",
+    "currentWorkspace": "目前工作區",
+    "personalMode": "個人模式",
+    "selectOrganization": "選擇組織",
+    "noSchoolsInOrg": "此組織尚無學校"
   }
 }

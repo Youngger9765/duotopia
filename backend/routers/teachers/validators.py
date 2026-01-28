@@ -34,6 +34,9 @@ class ClassroomSummary(BaseModel):
     name: str
     description: Optional[str]
     student_count: int
+    school_id: Optional[str] = None
+    school_name: Optional[str] = None
+    organization_id: Optional[str] = None
 
 
 class StudentSummary(BaseModel):

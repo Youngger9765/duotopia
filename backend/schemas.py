@@ -1,5 +1,5 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List, Dict, Any  # noqa: F401
+from pydantic import BaseModel, EmailStr, Field, model_validator
+from typing import Optional, List, Dict, Any, Union  # noqa: F401
 from datetime import datetime  # noqa: F401
 from enum import Enum
 from models import ProgramLevel  # 使用 models 中定義的 Enum
@@ -51,11 +51,25 @@ class ProgramCreate(ProgramBase):
 
 
 class ProgramUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = Field(None, max_length=1000)
     level: Optional[str] = None  # 改用 str，由後端轉換為 Enum
-    estimated_hours: Optional[int] = None
+    estimated_hours: Optional[int] = Field(None, ge=0)
     tags: Optional[List[str]] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def validate_fields(cls, data):
+        """Validate that name is not empty or whitespace"""
+        if isinstance(data, dict):
+            if 'name' in data and data['name'] is not None:
+                stripped = data['name'].strip()
+                if not stripped:
+                    raise ValueError('Name cannot be empty or whitespace')
+                data['name'] = stripped
+            if 'description' in data and data['description'] is not None:
+                data['description'] = data['description'].strip()
+        return data
 
 
 class ProgramResponse(ProgramBase):
@@ -63,6 +77,8 @@ class ProgramResponse(ProgramBase):
     is_template: bool
     classroom_id: Optional[int] = None
     teacher_id: int
+    organization_id: Optional[str] = None
+    school_id: Optional[str] = None
     source_type: Optional[str] = None
     source_metadata: Optional[Dict[str, Any]] = None
     is_active: bool
@@ -74,6 +90,26 @@ class ProgramResponse(ProgramBase):
     teacher_name: Optional[str] = None
     lesson_count: Optional[int] = 0
     is_duplicate: Optional[bool] = None
+    lessons: List["LessonResponse"] = []
+
+    @model_validator(mode='before')
+    @classmethod
+    def convert_uuid_fields(cls, data):
+        """Convert UUID fields to strings before validation"""
+        if hasattr(data, 'organization_id') and data.organization_id is not None:
+            if not isinstance(data.organization_id, str):
+                object.__setattr__(data, 'organization_id', str(data.organization_id))
+        elif isinstance(data, dict) and 'organization_id' in data:
+            if data['organization_id'] is not None and not isinstance(data['organization_id'], str):
+                data['organization_id'] = str(data['organization_id'])
+
+        if hasattr(data, 'school_id') and data.school_id is not None:
+            if not isinstance(data.school_id, str):
+                object.__setattr__(data, 'school_id', str(data.school_id))
+        elif isinstance(data, dict) and 'school_id' in data:
+            if data['school_id'] is not None and not isinstance(data['school_id'], str):
+                data['school_id'] = str(data['school_id'])
+        return data
 
     class Config:
         from_attributes = True
@@ -91,6 +127,12 @@ class ProgramCopyFromClassroom(BaseModel):
     name: Optional[str] = None  # 可選，預設使用來源名稱
 
 
+class ProgramCopyRequest(BaseModel):
+    target_scope: str
+    target_id: Optional[Union[str, int]] = None
+    name: Optional[str] = None
+
+
 # Lesson schemas
 class LessonBase(BaseModel):
     name: str
@@ -103,12 +145,70 @@ class LessonCreate(LessonBase):
     pass
 
 
+class LessonUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = Field(None, max_length=1000)
+    order_index: Optional[int] = None
+    estimated_minutes: Optional[int] = Field(None, ge=0)
+
+    @model_validator(mode='before')
+    @classmethod
+    def validate_fields(cls, data):
+        """Validate that name is not empty or whitespace"""
+        if isinstance(data, dict):
+            if 'name' in data and data['name'] is not None:
+                stripped = data['name'].strip()
+                if not stripped:
+                    raise ValueError('Name cannot be empty or whitespace')
+                data['name'] = stripped
+            if 'description' in data and data['description'] is not None:
+                data['description'] = data['description'].strip()
+        return data
+
+
 class LessonResponse(LessonBase):
     id: int
     program_id: int
     is_active: bool
     created_at: datetime
     updated_at: Optional[datetime] = None
+    contents: List["ContentResponse"] = []
+
+    class Config:
+        from_attributes = True
+
+
+# Content Item schemas
+class ContentItemResponse(BaseModel):
+    """Response model for content item"""
+    id: int
+    content_id: int
+    order_index: int
+    text: str
+    translation: Optional[str] = None
+    audio_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+# Content schemas
+class ContentCreate(BaseModel):
+    """Request model for creating content"""
+    type: str
+    title: str
+    order_index: int = 1
+
+
+class ContentResponse(BaseModel):
+    """Response model for content"""
+    id: int
+    lesson_id: int
+    type: str
+    title: str
+    order_index: int
+    is_active: bool
+    items: List["ContentItemResponse"] = []
 
     class Config:
         from_attributes = True
@@ -342,3 +442,10 @@ class RefundRequest(BaseModel):
     amount: Optional[int] = Field(None, description="退款金額（None = 全額退款）")
     reason: str = Field(..., min_length=1, description="退款原因（必填）")
     notes: Optional[str] = Field(None, description="備註")
+
+
+# Rebuild models to resolve forward references
+ContentItemResponse.model_rebuild()
+ContentResponse.model_rebuild()
+LessonResponse.model_rebuild()
+ProgramResponse.model_rebuild()

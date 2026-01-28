@@ -1,0 +1,301 @@
+// ============================================
+// 訂閱與計費系統 - 資料模型規格
+// ============================================
+// 用途: 管理機構訂閱、合約、點數包、付款等計費相關資料
+// 
+// 核心流程:
+//   1. 報價計算 (QuotationCalculator)
+//   2. 簽約 (Contract)
+//   3. 付款 (Payment)
+//   4. 開通訂閱 (Subscription)
+//   5. 點數發放 (PointsTransaction)
+//   6. 點數加購 (PointsPackage Purchase)
+// ============================================
+
+// ============================================
+// 1. ContractFile (合約電子檔)
+// ============================================
+Table contract_files {
+  id uuid [pk, note: "合約檔案唯一識別碼"]
+  organization_id uuid [not null, ref: > organizations.id, note: "所屬機構 ID"]
+  subscription_id uuid [null, ref: > subscriptions.id, note: "關聯的訂閱 ID（續約時同一訂閱可有多份合約）"]
+  
+  // 檔案資訊
+  file_name varchar(255) [not null, note: "原始檔名"]
+  file_path varchar(500) [not null, note: "檔案儲存路徑或 URL"]
+  file_size bigint [not null, note: "檔案大小（bytes）"]
+  mime_type varchar(100) [not null, note: "檔案 MIME 類型（如：application/pdf）"]
+  
+  // 合約基本資訊（選填，方便搜尋與顯示）
+  contract_number varchar(50) [null, note: "合約編號（如紙本合約上的編號）"]
+  contract_type varchar(20) [null, note: "合約類型: 'yearly'（一年約）、'two_years'（兩年約）"]
+  contract_start_date date [null, note: "合約起始日期（如有）"]
+  contract_end_date date [null, note: "合約結束日期（如有）"]
+  
+  // 上傳資訊
+  uploaded_by int [not null, ref: > users.id, note: "上傳者（專案人員）"]
+  uploaded_at timestamp [not null, default: `now()`, note: "上傳時間"]
+  
+  // 備註
+  notes text [null, note: "備註說明"]
+  
+  // 時間戳記
+  created_at timestamp [not null, default: `now()`, note: "建立時間"]
+  updated_at timestamp [null, note: "最後更新時間"]
+  
+  indexes {
+    organization_id [name: "idx_contract_files_org_id"]
+    subscription_id [name: "idx_contract_files_subscription_id"]
+    contract_number [name: "idx_contract_files_number"]
+  }
+  
+  Note: '''
+  核心規則:
+  - 合約為線下簽署，系統僅儲存電子檔供查閱
+  - 一個機構可有多份合約（續約、補充協議等）
+  - 一個訂閱可關聯多份合約
+  - 合約條款內容儲存在 PDF 中，不重複儲存在資料庫
+  - 合約資訊欄位（contract_number 等）為選填，方便搜尋
+  '''
+}
+
+// ============================================
+// 2. Payment (付款記錄 - 線下付款)
+// ============================================
+Table payments {
+  id uuid [pk, note: "付款唯一識別碼"]
+  organization_id uuid [not null, ref: > organizations.id, note: "所屬機構 ID"]
+  subscription_id uuid [null, ref: > subscriptions.id, note: "關聯的訂閱 ID（如適用）"]
+  
+  // 付款資訊
+  payment_number varchar(50) [unique, not null, note: "付款編號（由專案人員填寫或自動生成）"]
+  payment_date date [not null, note: "實際付款日期"]
+  amount decimal(12,2) [not null, note: "付款金額"]
+  currency varchar(3) [not null, default: 'TWD', note: "幣別: TWD、USD"]
+  
+  // 付款方式
+  payment_method varchar(50) [not null, note: "付款方式: 'bank_transfer'（銀行轉帳）、'aftee_installment'（AFTEE 分期）、'credit_card_installment'（信用卡分期）、'other'（其他）"]
+  installment_periods int [null, note: "分期期數（如適用）"]
+  installment_provider varchar(50) [null, note: "分期提供方: 'aftee'、'yushan_bank'、'ctbc'、'other'"]
+  
+  // 記錄資訊
+  recorded_by int [not null, ref: > users.id, note: "記錄者（專案人員）"]
+  notes text [null, note: "備註說明（如：發票號碼、交易憑證等）"]
+  
+  // 時間戳記
+  created_at timestamp [not null, default: `now()`, note: "建立時間"]
+  updated_at timestamp [null, note: "最後更新時間"]
+  
+  indexes {
+    organization_id [name: "idx_payments_org_id"]
+    subscription_id [name: "idx_payments_subscription_id"]
+    payment_number [name: "idx_payments_number"]
+    payment_date [name: "idx_payments_date"]
+  }
+  
+  Note: '''
+  核心規則:
+  - 付款為線下處理，由專案人員手動記錄
+  - 用於追蹤付款歷史與財務記錄
+  - 可記錄分期資訊（AFTEE、信用卡分期等）
+  - 無付款狀態追蹤（線下已完成才記錄）
+  '''
+}
+
+// ============================================
+// 3. Subscription (機構訂閱)
+// ============================================
+Table subscriptions {
+  id uuid [pk, note: "訂閱唯一識別碼"]
+  organization_id uuid [not null, ref: > organizations.id, note: "所屬機構 ID，CASCADE 刪除"]
+  
+  // 訂閱期間
+  start_date date [not null, note: "訂閱開始日期"]
+  end_date date [not null, note: "訂閱結束日期"]
+  
+  // 合約條款快照（專案人員填寫）
+  purchased_teachers int [not null, note: "購買教師數（計費基礎）"]
+  bonus_teachers int [not null, default: 0, note: "贈送教師數（由業務人員依合約內容人工填入，無固定公式）"]
+  initial_points bigint [not null, note: "初始點數（合約承諾）"]
+  
+  // 授權數量（系統維護）
+  total_teacher_licenses int [not null, note: "教師授權總數 = purchased_teachers，不含贈送教師數"]
+  used_teacher_licenses int [not null, default: 0, note: "已使用教師授權數（已邀請的教師數）"]
+  available_teacher_licenses int [not null, note: "可用教師授權數 = total_teacher_licenses - used_teacher_licenses"]
+  
+  // 點數（系統維護）
+  total_points bigint [not null, note: "總點數 = initial_points + 後續加購"]
+  used_points bigint [not null, default: 0, note: "已使用點數"]
+  remaining_points bigint [not null, note: "剩餘點數 = total_points - used_points"]
+  
+  // 狀態
+  status varchar(20) [not null, default: 'active', note: "訂閱狀態: 'active'（生效中）、'expired'（已到期）、'suspended'（已暫停）、'cancelled'（已取消）"]
+  
+  // 服務人員
+  service_staff_id int [null, ref: > users.id, note: "指派的 Duotopia 專案服務人員"]
+  
+  // 設定
+  settings jsonb [null, note: "訂閱設定（JSON 格式）"]
+  
+  // 時間戳記
+  created_at timestamp [not null, default: `now()`, note: "建立時間"]
+  updated_at timestamp [null, note: "最後更新時間"]
+  activated_at timestamp [not null, note: "訂閱生效時間"]
+  
+  indexes {
+    organization_id [name: "idx_subscriptions_org_id"]
+    service_staff_id [name: "idx_subscriptions_staff_id"]
+    status [name: "idx_subscriptions_status"]
+    (start_date, end_date) [name: "idx_subscriptions_period"]
+  }
+  
+  Note: '''
+  核心規則:
+  - 由專案人員在後台手動開立訂閱
+  - 合約條款快照:
+    - purchased_teachers, bonus_teachers, initial_points 由專案人員填寫
+    - total_teacher_licenses = purchased_teachers + bonus_teachers（驗證約束）
+  - 授權與點數動態維護:
+    - used_teacher_licenses: 已邀請的教師數
+    - available_teacher_licenses = total - used（計算欄位或同步更新）
+    - total_points = initial_points + 加購累計
+    - remaining_points = total_points - used_points（計算欄位或同步更新）
+  - 訂閱狀態根據日期與業務需求更新
+  - 可關聯多份合約檔案（contract_files.subscription_id）
+  '''
+}
+
+// ============================================
+// 4. PointsPackage (點數包方案)
+// ============================================
+Table points_packages {
+  id int [pk, increment, note: "主鍵"]
+  
+  // 方案資訊
+  package_code varchar(20) [unique, not null, note: "方案代碼: 'pkg_10k'、'pkg_50k'"]
+  package_name varchar(100) [not null, note: "方案名稱"]
+  points bigint [not null, note: "點數數量"]
+  
+  // 價格
+  price decimal(10,2) [not null, note: "方案價格（USD）"]
+  currency varchar(3) [not null, default: 'USD', note: "幣別"]
+  
+  // 狀態
+  is_active boolean [not null, default: true, note: "方案是否啟用"]
+  
+  // 時間戳記
+  created_at timestamp [not null, default: `now()`, note: "建立時間"]
+  updated_at timestamp [null, note: "最後更新時間"]
+  
+  Note: '''
+  預設方案:
+  - 10k 點數包: 10,000 點，18 USD
+  - 50k 點數包: 50,000 點，85 USD
+  '''
+}
+
+// ============================================
+// 5. PointsPurchase (點數加購記錄)
+// ============================================
+Table points_purchases {
+  id uuid [pk, note: "加購唯一識別碼"]
+  subscription_id uuid [not null, ref: > subscriptions.id, note: "所屬訂閱 ID"]
+  organization_id uuid [not null, ref: > organizations.id, note: "所屬機構 ID"]
+  points_package_id int [not null, ref: > points_packages.id, note: "點數包方案 ID"]
+  
+  // 加購資訊
+  purchase_number varchar(50) [unique, not null, note: "加購編號，系統自動生成"]
+  points bigint [not null, note: "加購點數"]
+  price decimal(10,2) [not null, note: "加購價格（USD）"]
+  
+  // 付款資訊
+  payment_id uuid [null, ref: > payments.id, note: "付款記錄 ID"]
+  payment_status varchar(20) [not null, default: 'pending', note: "付款狀態: 'pending'、'completed'、'failed'"]
+  
+  // 狀態
+  status varchar(20) [not null, default: 'pending', note: "加購狀態: 'pending'（待處理）、'completed'（已完成）、'cancelled'（已取消）"]
+  
+  // 時間戳記
+  created_at timestamp [not null, default: `now()`, note: "建立時間"]
+  updated_at timestamp [null, note: "最後更新時間"]
+  completed_at timestamp [null, note: "完成時間"]
+  
+  indexes {
+    subscription_id [name: "idx_points_purchases_subscription_id"]
+    organization_id [name: "idx_points_purchases_org_id"]
+    purchase_number [name: "idx_points_purchases_number"]
+    status [name: "idx_points_purchases_status"]
+  }
+  
+  Note: '''
+  核心規則:
+  - 點數加購在訂閱期間內可隨時進行
+  - 加購完成後點數自動加入訂閱的 total_points
+  - 支援兩種加購方案: 10k (18 USD) 和 50k (85 USD)
+  '''
+}
+
+// ============================================
+// 6. PointsTransaction (點數交易記錄)
+// ============================================
+Table points_transactions {
+  id bigint [pk, increment, note: "主鍵"]
+  subscription_id uuid [not null, ref: > subscriptions.id, note: "所屬訂閱 ID"]
+  organization_id uuid [not null, ref: > organizations.id, note: "所屬機構 ID"]
+  
+  // 交易類型
+  transaction_type varchar(20) [not null, note: "交易類型: 'grant'（發放）、'purchase'（加購）、'usage'（使用）、'refund'（退款）、'adjustment'（調整）"]
+  
+  // 點數變動
+  points_change bigint [not null, note: "點數變動量（正數為增加，負數為減少）"]
+  balance_before bigint [not null, note: "交易前餘額"]
+  balance_after bigint [not null, note: "交易後餘額"]
+  
+  // 關聯資訊
+  related_contract_id uuid [null, ref: > contracts.id, note: "關聯合約 ID（用於 grant）"]
+  related_purchase_id uuid [null, ref: > points_purchases.id, note: "關聯加購 ID（用於 purchase）"]
+  related_user_id int [null, ref: > users.id, note: "關聯用戶 ID（用於 usage）"]
+  
+  // 描述
+  description text [null, note: "交易描述"]
+  metadata jsonb [null, note: "額外資訊（JSON 格式）"]
+  
+  // 時間戳記
+  created_at timestamp [not null, default: `now()`, note: "交易時間"]
+  
+  indexes {
+    subscription_id [name: "idx_points_transactions_subscription_id"]
+    organization_id [name: "idx_points_transactions_org_id"]
+    transaction_type [name: "idx_points_transactions_type"]
+    created_at [name: "idx_points_transactions_created_at"]
+  }
+  
+  Note: '''
+  核心規則:
+  - 所有點數變動都必須記錄
+  - balance_after = balance_before + points_change
+  - 使用點數時 points_change 為負數
+  - 發放或加購時 points_change 為正數
+  '''
+}
+
+// ============================================
+// 關聯關係摘要
+// ============================================
+// 
+// Organization (機構)
+//   └─> Contract (合約) 1:N
+//        └─> Payment (付款) 1:N
+//        └─> Subscription (訂閱) 1:1
+//             └─> PointsPurchase (點數加購) 1:N
+//                  └─> PointsPackage (點數包方案) N:1
+//             └─> PointsTransaction (點數交易) 1:N
+//
+// 流程:
+// 1. 建立 Contract（合約）
+// 2. 建立 Payment（付款）
+// 3. 付款完成後建立 Subscription（訂閱）
+// 4. 發放初始點數（PointsTransaction type=grant）
+// 5. 點數不足時可加購（PointsPurchase）
+// 6. 使用點數時記錄交易（PointsTransaction type=usage）
+// ============================================

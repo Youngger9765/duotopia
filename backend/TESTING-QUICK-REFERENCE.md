@@ -36,12 +36,16 @@ cat /tmp/issue-112-api-test-report.md
 
 ## 🔧 Test Accounts
 
-| Role | Email | Password |
-|------|-------|----------|
-| org_owner | owner@duotopia.com | owner123 |
-| org_admin | orgadmin@duotopia.com | orgadmin123 |
-| school_admin | schooladmin@duotopia.com | schooladmin123 |
-| teacher | orgteacher@duotopia.com | orgteacher123 |
+**密碼**: 所有測試帳號使用環境變數 `$SEED_DEFAULT_PASSWORD`
+
+| Role | Email |
+|------|-------|
+| org_owner | owner@duotopia.com |
+| org_admin | chen@duotopia.com |
+| school_admin | wang@duotopia.com |
+| teacher | liu@duotopia.com |
+
+📖 **完整測試帳號列表**: 請見 [docs/TEST_ACCOUNTS.md](../../docs/TEST_ACCOUNTS.md)
 
 ## 📋 API Endpoints Tested
 

@@ -9,6 +9,7 @@ interface SidebarGroupProps {
   group: SidebarGroupType;
   isCollapsed: boolean;
   isActive: (path: string) => boolean;
+  readOnlyItemIds?: string[];
   onNavigate?: () => void;
 }
 
@@ -16,6 +17,7 @@ export const SidebarGroup = ({
   group,
   isCollapsed,
   isActive,
+  readOnlyItemIds = [],
   onNavigate,
 }: SidebarGroupProps) => {
   return (
@@ -28,6 +30,7 @@ export const SidebarGroup = ({
               item={item}
               isActive={isActive(item.path)}
               isCollapsed={isCollapsed}
+              isReadOnly={readOnlyItemIds.includes(item.id)}
               onNavigate={onNavigate}
             />
           </li>

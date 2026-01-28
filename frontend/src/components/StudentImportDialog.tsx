@@ -298,7 +298,7 @@ export function StudentImportDialog({
 
     try {
       // Call backend API to batch import students with duplicate action
-      const response = (await apiClient.batchImportStudents(
+      const response = (await apiClient.batchImportStudentsForTeacher(
         validStudents.map((student) => ({
           name: student.name,
           classroom_name: student.className || "",
