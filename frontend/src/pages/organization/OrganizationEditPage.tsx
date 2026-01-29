@@ -24,7 +24,7 @@ import { StaffMember } from "@/components/organization/StaffTable";
 export default function OrganizationEditPage() {
   const { orgId } = useParams<{ orgId: string }>();
   const token = useTeacherAuthStore((state) => state.token);
-  const { setSelectedNode, setExpandedOrgs, refreshSchools } =
+  const { setSelectedNode, setExpandedOrgs, refreshSchools, refreshOrganizations } =
     useOrganization();
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [schools, setSchools] = useState<School[]>([]);
@@ -120,9 +120,13 @@ export default function OrganizationEditPage() {
     }
   };
 
-  const handleEditSuccess = () => {
+  const handleEditSuccess = useCallback(() => {
     fetchOrganization();
-  };
+    // Sync sidebar organization data in OrganizationContext
+    if (token) {
+      refreshOrganizations(token);
+    }
+  }, [token, refreshOrganizations]);
 
   const handleSchoolCreateSuccess = useCallback(() => {
     fetchSchools();
