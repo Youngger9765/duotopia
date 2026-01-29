@@ -236,3 +236,72 @@ def test_organization_stats_teacher_deduplication(shared_test_session, admin_tea
     assert data["total_teachers"] == 2, f"Should have 2 unique teachers (got {data['total_teachers']}). Teacher A has both org_owner and school_admin roles, Teacher B has school role only."
 
     print(f"✅ Test passed: Teacher count correctly deduplicated to {data['total_teachers']}")
+
+
+def test_get_organization_statistics_as_admin(shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client):
+    """Test admin can get organization statistics"""
+    # Create organization
+    org_data = {
+        "name": "Test Org Stats",
+        "owner_email": regular_teacher.email,
+        "teacher_limit": 10
+    }
+    create_response = test_client.post(
+        "/api/admin/organizations",
+        json=org_data,
+        headers=auth_headers_admin
+    )
+    assert create_response.status_code == 201
+    org_id = create_response.json()["organization_id"]
+
+    # Add 3 more teachers to organization
+    from models import Teacher, TeacherOrganization
+    teacher1 = Teacher(email="t1@test.com", password_hash=get_password_hash("password"), name="T1", email_verified=True, is_active=True)
+    teacher2 = Teacher(email="t2@test.com", password_hash=get_password_hash("password"), name="T2", email_verified=True, is_active=True)
+    teacher3 = Teacher(email="t3@test.com", password_hash=get_password_hash("password"), name="T3", email_verified=True, is_active=True)
+    shared_test_session.add_all([teacher1, teacher2, teacher3])
+    shared_test_session.flush()
+
+    shared_test_session.add_all([
+        TeacherOrganization(teacher_id=teacher1.id, organization_id=org_id, role="teacher", is_active=True),
+        TeacherOrganization(teacher_id=teacher2.id, organization_id=org_id, role="teacher", is_active=True),
+        TeacherOrganization(teacher_id=teacher3.id, organization_id=org_id, role="org_admin", is_active=True),
+    ])
+    shared_test_session.commit()
+
+    # Get statistics
+    response = test_client.get(
+        f"/api/admin/organizations/{org_id}/statistics",
+        headers=auth_headers_admin
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["teacher_count"] == 4  # 1 owner + 3 added
+    assert data["teacher_limit"] == 10
+    assert data["usage_percentage"] == 40.0
+
+
+def test_get_organization_statistics_no_limit(shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client):
+    """Test statistics when teacher_limit is None (unlimited)"""
+    org_data = {
+        "name": "Test Org Unlimited",
+        "owner_email": regular_teacher.email,
+        # No teacher_limit
+    }
+    create_response = test_client.post(
+        "/api/admin/organizations",
+        json=org_data,
+        headers=auth_headers_admin
+    )
+    assert create_response.status_code == 201
+    org_id = create_response.json()["organization_id"]
+
+    response = test_client.get(
+        f"/api/admin/organizations/{org_id}/statistics",
+        headers=auth_headers_admin
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["teacher_count"] == 1
+    assert data["teacher_limit"] is None
+    assert data["usage_percentage"] == 0.0  # 0% when unlimited

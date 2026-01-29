@@ -57,3 +57,20 @@ class AdminOrganizationResponse(BaseModel):
                 "message": "Organization created successfully. Owner wang@abc.edu.tw has been assigned org_owner role."
             }
         }
+
+
+class OrganizationStatisticsResponse(BaseModel):
+    """Organization teacher statistics"""
+
+    teacher_count: int = Field(..., description="Active teachers in organization")
+    teacher_limit: Optional[int] = Field(None, description="Maximum teachers allowed (None = unlimited)")
+    usage_percentage: float = Field(..., description="Percentage of limit used (0-100)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "teacher_count": 5,
+                "teacher_limit": 10,
+                "usage_percentage": 50.0
+            }
+        }

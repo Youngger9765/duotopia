@@ -36,6 +36,7 @@ from schemas import RefundRequest
 from routers.schemas.admin_organization import (
     AdminOrganizationCreate,
     AdminOrganizationResponse,
+    OrganizationStatisticsResponse,
 )
 import os
 import subprocess
@@ -798,4 +799,56 @@ async def create_organization_as_admin(
         owner_email=owner.email,
         owner_id=owner.id,
         message=f"Organization created successfully. Owner {owner.email} has been assigned org_owner role."
+    )
+
+
+@router.get(
+    "/organizations/{org_id}/statistics",
+    response_model=OrganizationStatisticsResponse,
+    summary="Get organization statistics (Admin only)"
+)
+async def get_organization_statistics(
+    org_id: str,
+    current_admin: Teacher = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Get organization teacher count and limit statistics.
+
+    **Admin only endpoint.**
+
+    Returns:
+    - teacher_count: Number of active teachers
+    - teacher_limit: Maximum allowed (None if unlimited)
+    - usage_percentage: Percentage used (0 if unlimited)
+    """
+    # Validate organization exists
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+
+    if not org:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Organization with ID {org_id} not found"
+        )
+
+    # Count active teachers
+    active_teacher_count = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.is_active == True
+        )
+        .count()
+    )
+
+    # Calculate usage percentage
+    if org.teacher_limit is None or org.teacher_limit == 0:
+        usage_percentage = 0.0
+    else:
+        usage_percentage = (active_teacher_count / org.teacher_limit) * 100
+
+    return OrganizationStatisticsResponse(
+        teacher_count=active_teacher_count,
+        teacher_limit=org.teacher_limit,
+        usage_percentage=round(usage_percentage, 1)
     )
