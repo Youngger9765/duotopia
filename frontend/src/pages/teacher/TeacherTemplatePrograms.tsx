@@ -15,7 +15,17 @@ import { toast } from "sonner";
 import { Program, Lesson, Content } from "@/types";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
-export default function TeacherTemplateProgramsNew() {
+// Wrapper component that provides TeacherLayout (which contains WorkspaceProvider)
+export default function TeacherTemplatePrograms() {
+  return (
+    <TeacherLayout>
+      <TeacherTemplateProgramsInner />
+    </TeacherLayout>
+  );
+}
+
+// Inner component that uses useWorkspace hook (now inside WorkspaceProvider)
+function TeacherTemplateProgramsInner() {
   const { t } = useTranslation();
   const { mode, selectedSchool, selectedOrganization } = useWorkspace();
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -455,20 +465,17 @@ export default function TeacherTemplateProgramsNew() {
 
   if (loading) {
     return (
-      <TeacherLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">{t("common.loading")}</p>
-          </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">{t("common.loading")}</p>
         </div>
-      </TeacherLayout>
+      </div>
     );
   }
 
   return (
-    <TeacherLayout>
-      <div className="relative h-full bg-gray-50">
+    <div className="relative h-full bg-gray-50">
         <div
           className={`p-6 space-y-4 transition-all duration-300 ${
             showReadingEditor && editorContentId !== null
@@ -890,6 +897,5 @@ export default function TeacherTemplateProgramsNew() {
           />
         )}
       </div>
-    </TeacherLayout>
   );
 }
