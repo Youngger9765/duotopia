@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ export default function CreateOrganization() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [formData, setFormData] = useState<AdminOrganizationCreateRequest>({
     name: "",
     display_name: "",
@@ -35,6 +36,15 @@ export default function CreateOrganization() {
     address: "",
     owner_email: "",
   });
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,21 +86,32 @@ export default function CreateOrganization() {
         `機構創建成功！機構名稱：${response.organization_name}，擁有人：${response.owner_email}`
       );
 
-      // Redirect to organizations list
-      setTimeout(() => {
+      // Redirect to organizations list with cleanup
+      redirectTimeoutRef.current = setTimeout(() => {
         navigate("/admin/organizations");
       }, 2000);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to create organization:", err);
 
-      if (err.response?.status === 403) {
-        setError("權限不足：您必須是平台管理員才能創建機構");
-      } else if (err.response?.status === 404) {
-        setError("找不到指定的擁有人 Email，請確認該用戶已註冊並完成驗證");
-      } else if (err.response?.status === 400) {
-        setError(
-          err.response.data?.detail || "創建失敗：機構名稱可能已存在"
-        );
+      // Type-safe error handling
+      if (err && typeof err === "object" && "response" in err) {
+        const apiError = err as {
+          response?: { status?: number; data?: { detail?: string } };
+        };
+
+        if (apiError.response?.status === 403) {
+          setError("權限不足：您必須是平台管理員才能創建機構");
+        } else if (apiError.response?.status === 404) {
+          setError(
+            "找不到指定的擁有人 Email，請確認該用戶已註冊並完成驗證"
+          );
+        } else if (apiError.response?.status === 400) {
+          setError(
+            apiError.response.data?.detail || "創建失敗：機構名稱可能已存在"
+          );
+        } else {
+          setError("創建機構失敗，請稍後再試");
+        }
       } else {
         setError("創建機構失敗，請稍後再試");
       }
