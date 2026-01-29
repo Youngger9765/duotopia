@@ -305,3 +305,42 @@ def test_get_organization_statistics_no_limit(shared_test_session, admin_teacher
     assert data["teacher_count"] == 1
     assert data["teacher_limit"] is None
     assert data["usage_percentage"] == 0.0  # 0% when unlimited
+
+
+# ============ Teacher Lookup Tests ============
+def test_get_teacher_by_email_as_admin(shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client):
+    """Admin can lookup teacher by email"""
+    response = test_client.get(
+        f"/api/admin/teachers/lookup?email={regular_teacher.email}",
+        headers=auth_headers_admin
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == regular_teacher.id
+    assert data["email"] == regular_teacher.email
+    assert data["name"] == regular_teacher.name
+    assert data["email_verified"] == True
+    assert "phone" in data
+
+
+def test_get_teacher_by_email_not_found(shared_test_session, admin_teacher, auth_headers_admin, test_client):
+    """Returns 404 when teacher email not found"""
+    response = test_client.get(
+        "/api/admin/teachers/lookup?email=nonexistent@example.com",
+        headers=auth_headers_admin
+    )
+
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
+
+
+def test_get_teacher_by_email_non_admin_forbidden(shared_test_session, regular_teacher, auth_headers_regular, test_client):
+    """Non-admin cannot lookup teacher info"""
+    response = test_client.get(
+        f"/api/admin/teachers/lookup?email={regular_teacher.email}",
+        headers=auth_headers_regular
+    )
+
+    assert response.status_code == 403
+    assert "Admin access required" in response.json()["detail"]

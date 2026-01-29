@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
 from typing import Dict, Any, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from datetime import datetime, timezone
 import logging
 
@@ -37,6 +37,7 @@ from routers.schemas.admin_organization import (
     AdminOrganizationCreate,
     AdminOrganizationResponse,
     OrganizationStatisticsResponse,
+    TeacherLookupResponse,
 )
 import os
 import subprocess
@@ -851,4 +852,46 @@ async def get_organization_statistics(
         teacher_count=active_teacher_count,
         teacher_limit=org.teacher_limit,
         usage_percentage=round(usage_percentage, 1)
+    )
+
+
+@router.get(
+    "/teachers/lookup",
+    response_model=TeacherLookupResponse,
+    summary="Lookup teacher by email (Admin only)"
+)
+async def get_teacher_by_email(
+    email: EmailStr = Query(..., description="Teacher email address"),
+    current_admin: Teacher = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Lookup teacher information by email address.
+
+    **Admin only endpoint.**
+
+    Used in organization creation form to display owner name/phone
+    when admin enters owner email.
+
+    Returns:
+    - Teacher ID, email, name, phone, email_verified status
+
+    Raises:
+    - 404 if teacher not found
+    - 403 if caller is not admin
+    """
+    teacher = db.query(Teacher).filter(Teacher.email == email).first()
+
+    if not teacher:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Teacher with email {email} not found"
+        )
+
+    return TeacherLookupResponse(
+        id=teacher.id,
+        email=teacher.email,
+        name=teacher.name,
+        phone=teacher.phone,
+        email_verified=teacher.email_verified
     )

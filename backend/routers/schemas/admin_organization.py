@@ -74,3 +74,25 @@ class OrganizationStatisticsResponse(BaseModel):
                 "usage_percentage": 50.0
             }
         }
+
+
+class TeacherLookupResponse(BaseModel):
+    """Teacher lookup response for organization owner assignment"""
+
+    id: int
+    email: EmailStr
+    name: str
+    phone: Optional[str] = None
+    email_verified: bool
+
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "id": 42,
+                "email": "teacher@example.com",
+                "name": "John Doe",
+                "phone": "0912345678",
+                "email_verified": True
+            }
+        }
