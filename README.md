@@ -125,3 +125,9 @@ Organization (機構)
 - Staging: [部署後自動更新]
 - [Organization Hierarchy API](./docs/API_ORGANIZATION_HIERARCHY.md)
 - [RBAC Permissions](./backend/docs/RBAC_PERMISSIONS.md)
+
+## 管理功能
+
+### Admin Features
+
+- [Organization Creation Guide](docs/admin/organization-creation-guide.md) - 平台管理員創建機構並指派擁有人
