@@ -34,6 +34,7 @@ import StudentProfile from "./pages/student/StudentProfile";
 import DatabaseAdminPage from "./pages/admin/DatabaseAdminPage";
 import AdminMonitoringPage from "./pages/admin/AdminMonitoringPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import CreateOrganization from "./pages/admin/CreateOrganization";
 import DebugPage from "./pages/DebugPage";
 import TermsOfService from "./pages/TermsOfService";
 import PricingPage from "./pages/PricingPage";
@@ -238,6 +239,14 @@ function App() {
           }
         />
         <Route path="/admin/database" element={<DatabaseAdminPage />} />
+        <Route
+          path="/admin/organizations/create"
+          element={
+            <ProtectedRoute requireAdmin>
+              <CreateOrganization />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Student Routes with Layout */}
         <Route path="/student" element={<StudentLayout />}>
