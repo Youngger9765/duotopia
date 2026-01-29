@@ -44,6 +44,7 @@ export function StaffTable({
   const token = useTeacherAuthStore((state) => state.token);
   const user = useTeacherAuthStore((state) => state.user);
   const [updatingRoleId, setUpdatingRoleId] = useState<number | null>(null);
+  const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
 
   // Check if current user can edit roles
   const canEditRoles =
@@ -101,13 +102,52 @@ export function StaffTable({
         }
       } else {
         const data = await response.json();
-        toast.error(data.detail || "角色更新失敗");
+        const errorMessage = typeof data.detail === 'string'
+          ? data.detail
+          : JSON.stringify(data.detail) || "角色更新失敗";
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error("Failed to update teacher role:", error);
       toast.error("網路連線錯誤");
     } finally {
       setUpdatingRoleId(null);
+    }
+  };
+
+  const handleStatusChange = async (teacherId: number, currentRole: string, newStatus: string) => {
+    const isActive = newStatus === "active";
+    setUpdatingStatusId(teacherId);
+    try {
+      const response = await fetch(
+        `${API_URL}/api/organizations/${organizationId}/teachers/${teacherId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ role: currentRole, is_active: isActive }),
+        },
+      );
+
+      if (response.ok) {
+        toast.success("狀態更新成功");
+        if (onRoleUpdated) {
+          onRoleUpdated();
+        }
+      } else {
+        const data = await response.json();
+        const errorMessage = typeof data.detail === 'string'
+          ? data.detail
+          : JSON.stringify(data.detail) || "狀態更新失敗";
+        toast.error(errorMessage);
+      }
+    } catch (error) {
+      console.error("Failed to update teacher status:", error);
+      toast.error("網路連線錯誤");
+    } finally {
+      setUpdatingStatusId(null);
     }
   };
 
@@ -162,15 +202,33 @@ export function StaffTable({
               )}
             </TableCell>
             <TableCell>
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  member.is_active
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-800"
-                }`}
-              >
-                {member.is_active ? "啟用" : "停用"}
-              </span>
+              {canEditRoles && member.id !== user?.id ? (
+                <Select
+                  value={member.is_active ? "active" : "inactive"}
+                  onValueChange={(newStatus) =>
+                    handleStatusChange(member.id, member.role, newStatus)
+                  }
+                  disabled={updatingStatusId === member.id}
+                >
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">啟用</SelectItem>
+                    <SelectItem value="inactive">停用</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    member.is_active
+                      ? "bg-green-100 text-green-800"
+                      : "bg-gray-100 text-gray-800"
+                  }`}
+                >
+                  {member.is_active ? "啟用" : "停用"}
+                </span>
+              )}
             </TableCell>
           </TableRow>
         ))}
