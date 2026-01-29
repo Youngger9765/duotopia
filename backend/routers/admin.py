@@ -26,13 +26,21 @@ from models import (
     SubscriptionPeriod,
     TransactionType,
     TransactionStatus,
+    Organization,
+    TeacherOrganization,
 )
 from routers.teachers import get_current_teacher
 from services.tappay_service import TapPayService
+from services.casbin_service import CasbinService
 from schemas import RefundRequest
+from routers.schemas.admin_organization import (
+    AdminOrganizationCreate,
+    AdminOrganizationResponse,
+)
 import os
 import subprocess
 import sys
+import uuid
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -688,3 +696,106 @@ async def admin_refund(
         "amount": refund_request.amount or transaction.amount,
         "period_updated": period is not None,
     }
+
+
+# ============ Organization Management ============
+@router.post(
+    "/organizations",
+    response_model=AdminOrganizationResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create organization and assign owner (Admin only)",
+)
+async def create_organization_as_admin(
+    org_data: AdminOrganizationCreate,
+    current_admin: Teacher = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Create a new organization and assign an existing registered teacher as org_owner.
+
+    **Admin only endpoint.**
+
+    Requirements:
+    - Caller must have is_admin = True
+    - owner_email must exist in database
+    - owner_email must be verified (is_verified = True)
+    - Organization name must be unique
+
+    This endpoint:
+    1. Validates owner email exists and is verified
+    2. Creates organization with provided info
+    3. Creates TeacherOrganization record with role="org_owner"
+    4. Adds Casbin role for authorization
+
+    Returns organization ID and owner info.
+    """
+
+    # Validate owner exists and is verified
+    owner = db.query(Teacher).filter(
+        Teacher.email == org_data.owner_email,
+        Teacher.email_verified == True
+    ).first()
+
+    if not owner:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Teacher with email {org_data.owner_email} not found or not verified. "
+                   "Owner must be a registered and verified user."
+        )
+
+    # Check duplicate organization name
+    existing_org = db.query(Organization).filter(
+        Organization.name == org_data.name
+    ).first()
+
+    if existing_org:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Organization with name '{org_data.name}' already exists."
+        )
+
+    # Create organization
+    new_org = Organization(
+        id=str(uuid.uuid4()),
+        name=org_data.name,
+        display_name=org_data.display_name,
+        description=org_data.description,
+        tax_id=org_data.tax_id,
+        teacher_limit=org_data.teacher_limit,
+        contact_email=org_data.contact_email,
+        contact_phone=org_data.contact_phone,
+        address=org_data.address,
+        is_active=True,
+    )
+
+    db.add(new_org)
+    db.flush()  # Get org.id for next step
+
+    # Create TeacherOrganization with org_owner role
+    teacher_org = TeacherOrganization(
+        teacher_id=owner.id,
+        organization_id=new_org.id,
+        role="org_owner",
+        is_active=True,
+    )
+
+    db.add(teacher_org)
+
+    # Add Casbin role
+    casbin_service = CasbinService()
+    casbin_service.add_role_for_user(
+        teacher_id=owner.id,
+        role="org_owner",
+        domain=new_org.id
+    )
+
+    db.commit()
+    db.refresh(new_org)
+
+    return AdminOrganizationResponse(
+        organization_id=str(new_org.id),
+        organization_name=new_org.name,
+        owner_email=owner.email,
+        owner_id=owner.id,
+        message=f"Organization created successfully. Owner {owner.email} has been assigned org_owner role."
+    )
