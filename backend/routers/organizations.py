@@ -443,15 +443,9 @@ async def get_organization_stats(
         .scalar()
     )
 
-    # Count unique teachers (org members + school members)
-    org_teachers = (
-        db.query(func.count(distinct(TeacherOrganization.teacher_id)))
-        .filter(
-            TeacherOrganization.organization_id.in_(org_ids),
-            TeacherOrganization.is_active.is_(True),
-        )
-        .scalar()
-    )
+    # Count unique teachers (org members + school members) - FIXED: Use UNION to deduplicate
+    # A teacher can be both org member AND school member, so we must deduplicate
+    from sqlalchemy import union, select
 
     # Get school IDs for counting school-level teachers
     school_ids = (
@@ -461,20 +455,30 @@ async def get_organization_stats(
     )
     school_id_list = [s.id for s in school_ids]
 
-    school_teachers = 0
-    if school_id_list:
-        school_teachers = (
-            db.query(func.count(distinct(TeacherSchool.teacher_id)))
-            .filter(
-                TeacherSchool.school_id.in_(school_id_list),
-                TeacherSchool.is_active.is_(True),
-            )
-            .scalar()
-        ) or 0
+    # Build UNION query to get unique teacher IDs
+    # Query 1: Organization-level teachers
+    org_teacher_query = select(TeacherOrganization.teacher_id).where(
+        TeacherOrganization.organization_id.in_(org_ids),
+        TeacherOrganization.is_active.is_(True),
+    )
 
-    # Note: total_teachers might double-count if teacher is both org and school member
-    # For now, we just sum them. Could use UNION for exact count if needed.
-    total_teachers = (org_teachers or 0) + school_teachers
+    # Query 2: School-level teachers (only if schools exist)
+    if school_id_list:
+        school_teacher_query = select(TeacherSchool.teacher_id).where(
+            TeacherSchool.school_id.in_(school_id_list),
+            TeacherSchool.is_active.is_(True),
+        )
+        # UNION deduplicates automatically
+        unique_teachers_query = union(org_teacher_query, school_teacher_query)
+    else:
+        unique_teachers_query = org_teacher_query
+
+    # Count unique teachers from the UNION
+    total_teachers = (
+        db.query(func.count())
+        .select_from(unique_teachers_query.alias("unique_teachers"))
+        .scalar()
+    ) or 0
 
     # TODO: Count students when student model is available
     total_students = 0
