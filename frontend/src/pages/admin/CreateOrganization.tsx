@@ -86,9 +86,9 @@ export default function CreateOrganization() {
         `機構創建成功！機構名稱：${response.organization_name}，擁有人：${response.owner_email}`
       );
 
-      // Redirect to organizations list with cleanup
+      // Redirect to admin dashboard with cleanup
       redirectTimeoutRef.current = setTimeout(() => {
-        navigate("/admin/organizations");
+        navigate("/admin");
       }, 2000);
     } catch (err) {
       console.error("Failed to create organization:", err);
