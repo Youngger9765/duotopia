@@ -745,6 +745,32 @@ async def create_organization_as_admin(
                    "Owner must be a registered and verified user."
         )
 
+    # Validate project staff if provided
+    project_staff_teachers = []
+    if org_data.project_staff_emails:
+        for staff_email in org_data.project_staff_emails:
+            staff_teacher = db.query(Teacher).filter(
+                Teacher.email == staff_email,
+                Teacher.email_verified == True
+            ).first()
+
+            if not staff_teacher:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Teacher {staff_email} not found or not verified. "
+                           "Project staff must be registered and verified users."
+                )
+
+            # Prevent owner from being in project staff
+            if staff_email == org_data.owner_email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Owner {staff_email} cannot also be project staff. "
+                           "Owner already has org_owner role."
+                )
+
+            project_staff_teachers.append(staff_teacher)
+
     # Check duplicate organization name
     existing_org = db.query(Organization).filter(
         Organization.name == org_data.name
@@ -791,15 +817,37 @@ async def create_organization_as_admin(
         domain=new_org.id
     )
 
+    # Assign project staff as org_admin
+    for staff_teacher in project_staff_teachers:
+        staff_org = TeacherOrganization(
+            teacher_id=staff_teacher.id,
+            organization_id=new_org.id,
+            role="org_admin",
+            is_active=True,
+        )
+        db.add(staff_org)
+
+        # Add Casbin role for org_admin
+        casbin_service.add_role_for_user(
+            teacher_id=staff_teacher.id,
+            role="org_admin",
+            domain=new_org.id
+        )
+
     db.commit()
     db.refresh(new_org)
+
+    # Build response message
+    staff_count = len(project_staff_teachers)
+    staff_msg = f" {staff_count} project staff assigned." if staff_count > 0 else ""
 
     return AdminOrganizationResponse(
         organization_id=str(new_org.id),
         organization_name=new_org.name,
         owner_email=owner.email,
         owner_id=owner.id,
-        message=f"Organization created successfully. Owner {owner.email} has been assigned org_owner role."
+        project_staff_assigned=[t.email for t in project_staff_teachers] if project_staff_teachers else None,
+        message=f"Organization created successfully. Owner {owner.email} has been assigned org_owner role.{staff_msg}"
     )
 
 

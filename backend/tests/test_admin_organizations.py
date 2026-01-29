@@ -344,3 +344,74 @@ def test_get_teacher_by_email_non_admin_forbidden(shared_test_session, regular_t
 
     assert response.status_code == 403
     assert "Admin access required" in response.json()["detail"]
+
+
+def test_create_organization_with_project_staff(shared_test_session, admin_teacher, auth_headers_admin, test_client):
+    """Test creating organization with multiple project staff (org_admin)"""
+    # Create test teachers for project staff
+    from models import Teacher
+    staff1 = Teacher(email="staff1@duotopia.com", password_hash=get_password_hash("password"), name="Staff 1", email_verified=True, is_active=True)
+    staff2 = Teacher(email="staff2@duotopia.com", password_hash=get_password_hash("password"), name="Staff 2", email_verified=True, is_active=True)
+    owner = Teacher(email="owner@duotopia.com", password_hash=get_password_hash("password"), name="Owner", email_verified=True, is_active=True)
+    shared_test_session.add_all([staff1, staff2, owner])
+    shared_test_session.commit()
+
+    # Create organization with project staff
+    org_data = {
+        "name": "Test Org With Staff",
+        "owner_email": "owner@duotopia.com",
+        "project_staff_emails": ["staff1@duotopia.com", "staff2@duotopia.com"]
+    }
+
+    response = test_client.post(
+        "/api/admin/organizations",
+        json=org_data,
+        headers=auth_headers_admin
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["organization_name"] == "Test Org With Staff"
+    assert "project_staff_assigned" in data
+    assert len(data["project_staff_assigned"]) == 2
+    assert "staff1@duotopia.com" in data["project_staff_assigned"]
+    assert "staff2@duotopia.com" in data["project_staff_assigned"]
+
+    # Verify roles in database
+    from models import TeacherOrganization
+    org_id = data["organization_id"]
+
+    staff_roles = shared_test_session.query(TeacherOrganization).filter(
+        TeacherOrganization.organization_id == org_id,
+        TeacherOrganization.role == "org_admin"
+    ).all()
+
+    assert len(staff_roles) == 2
+    staff_emails = [r.teacher.email for r in staff_roles]
+    assert "staff1@duotopia.com" in staff_emails
+    assert "staff2@duotopia.com" in staff_emails
+
+
+def test_create_organization_staff_not_verified(shared_test_session, admin_teacher, auth_headers_admin, test_client):
+    """Test cannot assign unverified teacher as project staff"""
+    from models import Teacher
+    unverified = Teacher(email="unverified@test.com", password_hash=get_password_hash("password"), name="Unverified", email_verified=False, is_active=True)
+    owner = Teacher(email="owner2@duotopia.com", password_hash=get_password_hash("password"), name="Owner2", email_verified=True, is_active=True)
+    shared_test_session.add_all([unverified, owner])
+    shared_test_session.commit()
+
+    org_data = {
+        "name": "Test Org",
+        "owner_email": "owner2@duotopia.com",
+        "project_staff_emails": ["unverified@test.com"]
+    }
+
+    response = test_client.post(
+        "/api/admin/organizations",
+        json=org_data,
+        headers=auth_headers_admin
+    )
+
+    assert response.status_code == 400
+    assert "unverified@test.com" in response.json()["detail"]
+    assert "not verified" in response.json()["detail"].lower()

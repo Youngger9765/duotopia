@@ -1,7 +1,7 @@
 """Admin-only organization creation schemas"""
 
 from pydantic import BaseModel, Field, EmailStr
-from typing import Optional
+from typing import Optional, List
 
 
 class AdminOrganizationCreate(BaseModel):
@@ -22,6 +22,12 @@ class AdminOrganizationCreate(BaseModel):
     # Owner assignment
     owner_email: EmailStr = Field(..., description="機構擁有人 Email（必須已註冊）")
 
+    # Project staff assignment
+    project_staff_emails: Optional[List[EmailStr]] = Field(
+        default=None,
+        description="專案服務人員 Email 列表（org_admin 角色）"
+    )
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -33,7 +39,8 @@ class AdminOrganizationCreate(BaseModel):
                 "contact_email": "contact@abc.edu.tw",
                 "contact_phone": "02-1234-5678",
                 "address": "台北市信義區信義路五段7號",
-                "owner_email": "wang@abc.edu.tw"
+                "owner_email": "wang@abc.edu.tw",
+                "project_staff_emails": ["staff@duotopia.com"]
             }
         }
 
@@ -45,6 +52,10 @@ class AdminOrganizationResponse(BaseModel):
     organization_name: str
     owner_email: str
     owner_id: int
+    project_staff_assigned: Optional[List[str]] = Field(
+        default=None,
+        description="Project staff emails assigned as org_admin"
+    )
     message: str
 
     class Config:
@@ -54,7 +65,8 @@ class AdminOrganizationResponse(BaseModel):
                 "organization_name": "ABC Education",
                 "owner_email": "wang@abc.edu.tw",
                 "owner_id": 42,
-                "message": "Organization created successfully. Owner wang@abc.edu.tw has been assigned org_owner role."
+                "project_staff_assigned": ["staff@duotopia.com"],
+                "message": "Organization created successfully. Owner wang@abc.edu.tw has been assigned org_owner role. 1 project staff assigned."
             }
         }
 
