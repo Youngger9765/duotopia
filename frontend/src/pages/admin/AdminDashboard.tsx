@@ -8,6 +8,7 @@ import AdminSubscriptionDashboard from "./AdminSubscriptionDashboard";
 import AdminBillingDashboard from "./AdminBillingDashboard";
 import AdminAudioErrorDashboard from "./AdminAudioErrorDashboard";
 import AdminLayout from "@/components/admin/AdminLayout";
+// import TeacherUsageCard from "@/components/organization/TeacherUsageCard";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("subscription");
@@ -96,6 +97,9 @@ export default function AdminDashboard() {
               <p className="text-sm text-gray-600">
                 機構創建功能可以讓平台管理員為已註冊的老師創建組織並指派擁有人權限。
               </p>
+
+              {/* Add teacher usage example (optional - requires org ID) */}
+              {/* <TeacherUsageCard organizationId="example-org-id" /> */}
             </CardContent>
           </Card>
         </TabsContent>
