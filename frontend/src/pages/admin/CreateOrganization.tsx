@@ -33,6 +33,7 @@ export default function CreateOrganization() {
     email_verified: boolean;
   } | null>(null);
   const [ownerLookupError, setOwnerLookupError] = useState("");
+  const [staffEmailInput, setStaffEmailInput] = useState("");
   const [formData, setFormData] = useState<AdminOrganizationCreateRequest>({
     name: "",
     display_name: "",
@@ -43,6 +44,7 @@ export default function CreateOrganization() {
     contact_phone: "",
     address: "",
     owner_email: "",
+    project_staff_emails: [],
   });
 
   // Cleanup timeouts on unmount
@@ -115,6 +117,38 @@ export default function CreateOrganization() {
     }, 300);
   }, [performLookup]);
 
+  const addStaffEmail = () => {
+    const email = staffEmailInput.trim();
+    if (!email || !email.includes("@")) {
+      return;
+    }
+
+    // Prevent duplicates
+    if (formData.project_staff_emails?.includes(email)) {
+      toast.error("此 Email 已在列表中");
+      return;
+    }
+
+    // Prevent adding owner as staff
+    if (email === formData.owner_email) {
+      toast.error("擁有人不能同時是專案服務人員");
+      return;
+    }
+
+    setFormData({
+      ...formData,
+      project_staff_emails: [...(formData.project_staff_emails || []), email],
+    });
+    setStaffEmailInput("");
+  };
+
+  const removeStaffEmail = (email: string) => {
+    setFormData({
+      ...formData,
+      project_staff_emails: formData.project_staff_emails?.filter(e => e !== email),
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -145,6 +179,11 @@ export default function CreateOrganization() {
       if (formData.contact_phone)
         requestData.contact_phone = formData.contact_phone;
       if (formData.address) requestData.address = formData.address;
+
+      // Add project staff if any
+      if (formData.project_staff_emails && formData.project_staff_emails.length > 0) {
+        requestData.project_staff_emails = formData.project_staff_emails;
+      }
 
       const response = await apiClient.post<AdminOrganizationCreateResponse>(
         "/api/admin/organizations",
@@ -433,6 +472,74 @@ export default function CreateOrganization() {
                   請確認該 Email 已在平台註冊並完成驗證
                 </p>
               </div>
+            </div>
+
+            {/* Project Staff Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">專案服務人員（可選）</h3>
+
+              <Alert>
+                <AlertDescription>
+                  專案服務人員將被指派為 org_admin 角色，協助管理機構。可加入多位服務人員。
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-2">
+                <Label htmlFor="staff_email">服務人員 Email</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="staff_email"
+                      type="email"
+                      placeholder="staff@duotopia.com"
+                      value={staffEmailInput}
+                      onChange={(e) => setStaffEmailInput(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addStaffEmail();
+                        }
+                      }}
+                      className="pl-10"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addStaffEmail}
+                    disabled={isLoading || !staffEmailInput}
+                  >
+                    新增
+                  </Button>
+                </div>
+              </div>
+
+              {formData.project_staff_emails && formData.project_staff_emails.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">已加入的服務人員（{formData.project_staff_emails.length}）</p>
+                  <div className="space-y-2">
+                    {formData.project_staff_emails.map((email) => (
+                      <div
+                        key={email}
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded-md border"
+                      >
+                        <span className="text-sm">{email}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeStaffEmail(email)}
+                          disabled={isLoading}
+                        >
+                          移除
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-4 pt-4">
