@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ export default function CreateOrganization() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [ownerInfo, setOwnerInfo] = useState<{
     name: string;
     phone: string | null;
@@ -44,16 +45,20 @@ export default function CreateOrganization() {
     owner_email: "",
   });
 
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (redirectTimeoutRef.current) {
         clearTimeout(redirectTimeoutRef.current);
       }
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
     };
   }, []);
 
-  const lookupOwner = async (email: string) => {
+  // Actual API lookup function
+  const performLookup = useCallback(async (email: string) => {
     if (!email || !email.includes("@")) {
       setOwnerInfo(null);
       setOwnerLookupError("");
@@ -77,19 +82,38 @@ export default function CreateOrganization() {
       }
     } catch (err) {
       setOwnerInfo(null);
+      console.error("Owner lookup error:", err); // Log error details for debugging
+
       // ApiError has status property directly
       if (err && typeof err === "object" && "status" in err) {
-        const apiError = err as { status?: number };
+        const apiError = err as { status?: number; message?: string };
         if (apiError.status === 404) {
           setOwnerLookupError("此 Email 尚未註冊");
         } else {
-          setOwnerLookupError("查詢失敗");
+          // Preserve error details in the message
+          const errorMsg = apiError.message
+            ? `查詢失敗: ${apiError.message}`
+            : `查詢失敗 (HTTP ${apiError.status || "Unknown"})`;
+          setOwnerLookupError(errorMsg);
         }
       } else {
-        setOwnerLookupError("查詢失敗");
+        setOwnerLookupError("查詢失敗：網路錯誤");
       }
     }
-  };
+  }, []);
+
+  // Debounced lookup wrapper (300ms delay)
+  const lookupOwner = useCallback((email: string) => {
+    // Clear previous timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    // Set new timeout
+    debounceTimeoutRef.current = setTimeout(() => {
+      performLookup(email);
+    }, 300);
+  }, [performLookup]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
