@@ -401,7 +401,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
         setError(null);
       } catch (err) {
         console.error("Failed to fetch teacher profile:", err);
-        setError("無法載入使用者資料");
+        setError("無法載入資料，請檢查網路連線後重試");
       } finally {
         setIsLoading(false);
       }
@@ -414,9 +414,11 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
+        <div className="text-center" role="alert" aria-live="assertive">
           <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()}>重試</Button>
+          <Button onClick={() => window.location.reload()} autoFocus>
+            重試
+          </Button>
         </div>
       </div>
     );
