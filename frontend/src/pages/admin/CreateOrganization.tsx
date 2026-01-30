@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import {
   AdminOrganizationCreateRequest,
   AdminOrganizationCreateResponse,
+  TeacherLookupResponse,
 } from "@/types/admin";
 
 export default function CreateOrganization() {
@@ -25,6 +26,12 @@ export default function CreateOrganization() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [ownerInfo, setOwnerInfo] = useState<{
+    name: string;
+    phone: string | null;
+    email_verified: boolean;
+  } | null>(null);
+  const [ownerLookupError, setOwnerLookupError] = useState("");
   const [formData, setFormData] = useState<AdminOrganizationCreateRequest>({
     name: "",
     display_name: "",
@@ -45,6 +52,44 @@ export default function CreateOrganization() {
       }
     };
   }, []);
+
+  const lookupOwner = async (email: string) => {
+    if (!email || !email.includes("@")) {
+      setOwnerInfo(null);
+      setOwnerLookupError("");
+      return;
+    }
+
+    try {
+      const response = await apiClient.get<TeacherLookupResponse>(
+        `/api/admin/teachers/lookup?email=${encodeURIComponent(email)}`
+      );
+      setOwnerInfo({
+        name: response.name,
+        phone: response.phone,
+        email_verified: response.email_verified,
+      });
+      setOwnerLookupError("");
+
+      // Show warning if not verified
+      if (!response.email_verified) {
+        setOwnerLookupError("警告：此教師尚未驗證 Email");
+      }
+    } catch (err) {
+      setOwnerInfo(null);
+      // ApiError has status property directly
+      if (err && typeof err === "object" && "status" in err) {
+        const apiError = err as { status?: number };
+        if (apiError.status === 404) {
+          setOwnerLookupError("此 Email 尚未註冊");
+        } else {
+          setOwnerLookupError("查詢失敗");
+        }
+      } else {
+        setOwnerLookupError("查詢失敗");
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -330,14 +375,36 @@ export default function CreateOrganization() {
                     type="email"
                     placeholder="owner@example.com"
                     value={formData.owner_email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, owner_email: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setFormData({ ...formData, owner_email: e.target.value });
+                      lookupOwner(e.target.value);
+                    }}
                     className="pl-10"
                     required
                     disabled={isLoading}
                   />
                 </div>
+                {ownerInfo && (
+                  <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200">
+                    <p className="text-sm font-medium text-blue-900">教師資訊</p>
+                    <p className="text-sm text-blue-700 mt-1">
+                      姓名：{ownerInfo.name}
+                    </p>
+                    {ownerInfo.phone && (
+                      <p className="text-sm text-blue-700">
+                        手機：{ownerInfo.phone}
+                      </p>
+                    )}
+                    {ownerInfo.email_verified && (
+                      <p className="text-xs text-green-600 mt-1">✓ Email 已驗證</p>
+                    )}
+                  </div>
+                )}
+                {ownerLookupError && (
+                  <p className="text-sm text-amber-600 mt-1">
+                    {ownerLookupError}
+                  </p>
+                )}
                 <p className="text-sm text-gray-500">
                   請確認該 Email 已在平台註冊並完成驗證
                 </p>
