@@ -74,7 +74,7 @@ async def get_teacher_classrooms(
                     "id": cs.student.id,
                     "name": cs.student.name,
                     "email": cs.student.email,
-                    "student_id": cs.student.student_number,
+                    "student_number": cs.student.student_number,
                     "birthdate": (
                         cs.student.birthdate.isoformat()
                         if cs.student.birthdate
