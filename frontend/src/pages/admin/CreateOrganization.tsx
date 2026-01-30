@@ -59,9 +59,16 @@ export default function CreateOrganization() {
     };
   }, []);
 
+  // Email validation helper
+  const isValidEmail = (email: string): boolean => {
+    // Simple but effective email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   // Actual API lookup function
   const performLookup = useCallback(async (email: string) => {
-    if (!email || !email.includes("@")) {
+    if (!email || !isValidEmail(email)) {
       setOwnerInfo(null);
       setOwnerLookupError("");
       return;
@@ -118,19 +125,20 @@ export default function CreateOrganization() {
   }, [performLookup]);
 
   const addStaffEmail = () => {
-    const email = staffEmailInput.trim();
-    if (!email || !email.includes("@")) {
+    const email = staffEmailInput.trim().toLowerCase();
+    if (!email || !isValidEmail(email)) {
+      toast.error("請輸入有效的 Email 格式");
       return;
     }
 
-    // Prevent duplicates
-    if (formData.project_staff_emails?.includes(email)) {
+    // Prevent duplicates (case-insensitive)
+    if (formData.project_staff_emails?.some(e => e.toLowerCase() === email)) {
       toast.error("此 Email 已在列表中");
       return;
     }
 
-    // Prevent adding owner as staff
-    if (email === formData.owner_email) {
+    // Prevent adding owner as staff (case-insensitive)
+    if (email === formData.owner_email.toLowerCase()) {
       toast.error("擁有人不能同時是專案服務人員");
       return;
     }
@@ -495,7 +503,7 @@ export default function CreateOrganization() {
                       placeholder="staff@duotopia.com"
                       value={staffEmailInput}
                       onChange={(e) => setStaffEmailInput(e.target.value)}
-                      onKeyPress={(e) => {
+                      onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
                           addStaffEmail();
