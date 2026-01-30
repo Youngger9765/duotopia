@@ -71,7 +71,7 @@ export default function SchoolClassroomsPage() {
       fetchSchool();
     }
     // Note: token is stable from store, no need to include in deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [schoolId]);
 
   const fetchSchool = async () => {

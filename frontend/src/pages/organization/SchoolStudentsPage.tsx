@@ -57,7 +57,7 @@ export default function SchoolStudentsPage() {
     if (schoolId && token) {
       fetchSchool();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [schoolId]);
 
   const fetchSchool = async () => {
@@ -134,7 +134,7 @@ export default function SchoolStudentsPage() {
 
       return () => clearTimeout(debounceTimer);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [searchTerm, schoolId]);
 
   const handleCreateSuccess = () => {

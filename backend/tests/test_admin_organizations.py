@@ -415,3 +415,52 @@ def test_create_organization_staff_not_verified(shared_test_session, admin_teach
     assert response.status_code == 400
     assert "unverified@test.com" in response.json()["detail"]
     assert "not verified" in response.json()["detail"].lower()
+
+
+def test_create_organization_owner_cannot_be_project_staff(shared_test_session, admin_teacher, auth_headers_admin, test_client):
+    """Test that owner email cannot also be in project_staff_emails"""
+    from models import Teacher
+    owner = Teacher(email="owner3@duotopia.com", password_hash=get_password_hash("password"), name="Owner3", email_verified=True, is_active=True)
+    shared_test_session.add(owner)
+    shared_test_session.commit()
+
+    org_data = {
+        "name": "Test Org Owner Conflict",
+        "owner_email": "owner3@duotopia.com",
+        "project_staff_emails": ["owner3@duotopia.com"]  # Owner in staff list
+    }
+
+    response = test_client.post(
+        "/api/admin/organizations",
+        json=org_data,
+        headers=auth_headers_admin
+    )
+
+    assert response.status_code == 400
+    assert "owner3@duotopia.com" in response.json()["detail"]
+    assert "cannot also be project staff" in response.json()["detail"].lower()
+
+
+def test_create_organization_duplicate_staff_emails(shared_test_session, admin_teacher, auth_headers_admin, test_client):
+    """Test that duplicate emails in project_staff_emails are rejected"""
+    from models import Teacher
+    owner = Teacher(email="owner4@duotopia.com", password_hash=get_password_hash("password"), name="Owner4", email_verified=True, is_active=True)
+    staff = Teacher(email="staff@duotopia.com", password_hash=get_password_hash("password"), name="Staff", email_verified=True, is_active=True)
+    shared_test_session.add_all([owner, staff])
+    shared_test_session.commit()
+
+    org_data = {
+        "name": "Test Org Duplicate Staff",
+        "owner_email": "owner4@duotopia.com",
+        "project_staff_emails": ["staff@duotopia.com", "staff@duotopia.com"]  # Duplicate
+    }
+
+    response = test_client.post(
+        "/api/admin/organizations",
+        json=org_data,
+        headers=auth_headers_admin
+    )
+
+    assert response.status_code == 400
+    assert "duplicate" in response.json()["detail"].lower()
+    assert "staff@duotopia.com" in response.json()["detail"]

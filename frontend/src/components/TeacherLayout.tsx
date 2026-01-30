@@ -44,14 +44,15 @@ interface TeacherLayoutProps {
 }
 
 // Inner component that uses workspace context
-function TeacherLayoutInner({ children }: TeacherLayoutProps) {
+interface TeacherLayoutInnerProps extends TeacherLayoutProps {
+  teacherProfile: TeacherProfile;
+}
+
+function TeacherLayoutInner({ children, teacherProfile }: TeacherLayoutInnerProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [teacherProfile, setTeacherProfile] = useState<TeacherProfile | null>(
-    null,
-  );
   const [config, setConfig] = useState<SystemConfig | null>(null);
 
   // Get user role and roles from auth store
@@ -111,26 +112,12 @@ function TeacherLayoutInner({ children }: TeacherLayoutProps) {
   }, [navigate]);
 
   // ✅ 使用 useRef 防止重複執行
-  const hasFetchedProfile = useRef(false);
+  const hasFetchedConfig = useRef(false);
 
   useEffect(() => {
     // 只在 mount 時執行一次
-    if (hasFetchedProfile.current) return;
-    hasFetchedProfile.current = true;
-
-    const fetchTeacherProfile = async () => {
-      try {
-        const data = (await apiClient.getTeacherDashboard()) as {
-          teacher: TeacherProfile;
-        };
-        setTeacherProfile(data.teacher);
-      } catch (err) {
-        console.error("Failed to fetch teacher profile:", err);
-        if (err instanceof Error && err.message.includes("401")) {
-          handleLogout();
-        }
-      }
-    };
+    if (hasFetchedConfig.current) return;
+    hasFetchedConfig.current = true;
 
     const fetchConfig = async () => {
       try {
@@ -141,7 +128,6 @@ function TeacherLayoutInner({ children }: TeacherLayoutProps) {
       }
     };
 
-    fetchTeacherProfile();
     fetchConfig();
   }, []); // 只在 mount 時執行
 
@@ -398,6 +384,8 @@ function TeacherLayoutInner({ children }: TeacherLayoutProps) {
 // Wrapper component that provides workspace context
 export default function TeacherLayout({ children }: TeacherLayoutProps) {
   const [teacherProfile, setTeacherProfile] = useState<TeacherProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const hasFetchedProfile = useRef(false);
 
   useEffect(() => {
@@ -410,17 +398,45 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
           teacher: TeacherProfile;
         };
         setTeacherProfile(data.teacher);
+        setError(null);
       } catch (err) {
         console.error("Failed to fetch teacher profile:", err);
+        setError("無法載入使用者資料");
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchTeacherProfile();
   }, []);
 
+  // Show error state if profile fetch failed
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>重試</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state while fetching teacher profile
+  if (isLoading || !teacherProfile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">載入中...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <WorkspaceProvider teacherId={teacherProfile?.id ?? 0}>
-      <TeacherLayoutInner>{children}</TeacherLayoutInner>
+    <WorkspaceProvider teacherId={teacherProfile.id}>
+      <TeacherLayoutInner teacherProfile={teacherProfile}>{children}</TeacherLayoutInner>
     </WorkspaceProvider>
   );
 }

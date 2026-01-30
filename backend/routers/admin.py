@@ -748,6 +748,20 @@ async def create_organization_as_admin(
     # Validate project staff if provided
     project_staff_teachers = []
     if org_data.project_staff_emails:
+        # Check for duplicates in input
+        unique_emails = set()
+        duplicate_emails = set()
+        for email in org_data.project_staff_emails:
+            if email in unique_emails:
+                duplicate_emails.add(email)
+            unique_emails.add(email)
+
+        if duplicate_emails:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Duplicate emails in project staff list: {', '.join(sorted(duplicate_emails))}"
+            )
+
         for staff_email in org_data.project_staff_emails:
             staff_teacher = db.query(Teacher).filter(
                 Teacher.email == staff_email,
@@ -809,15 +823,7 @@ async def create_organization_as_admin(
 
     db.add(teacher_org)
 
-    # Add Casbin role
-    casbin_service = CasbinService()
-    casbin_service.add_role_for_user(
-        teacher_id=owner.id,
-        role="org_owner",
-        domain=new_org.id
-    )
-
-    # Assign project staff as org_admin
+    # Assign project staff as org_admin (before Casbin)
     for staff_teacher in project_staff_teachers:
         staff_org = TeacherOrganization(
             teacher_id=staff_teacher.id,
@@ -827,15 +833,37 @@ async def create_organization_as_admin(
         )
         db.add(staff_org)
 
-        # Add Casbin role for org_admin
-        casbin_service.add_role_for_user(
-            teacher_id=staff_teacher.id,
-            role="org_admin",
-            domain=new_org.id
-        )
-
+    # Commit database changes BEFORE Casbin operations
     db.commit()
     db.refresh(new_org)
+
+    # Add Casbin roles (AFTER database commit)
+    # Wrap Casbin operations in try-except to rollback on failure
+    try:
+        casbin_service = CasbinService()
+        casbin_service.add_role_for_user(
+            teacher_id=owner.id,
+            role="org_owner",
+            domain=str(new_org.id)  # Convert UUID to string
+        )
+
+        # Add Casbin roles for project staff
+        for staff_teacher in project_staff_teachers:
+            casbin_service.add_role_for_user(
+                teacher_id=staff_teacher.id,
+                role="org_admin",
+                domain=str(new_org.id)  # Convert UUID to string
+            )
+    except Exception as e:
+        # Rollback database changes if Casbin fails
+        logger.error(f"Casbin operation failed for org {new_org.id}: {e}")
+        # Soft delete the organization to maintain referential integrity
+        new_org.is_active = False
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to assign permissions. Organization created but deactivated. Please contact support."
+        )
 
     # Build response message
     staff_count = len(project_staff_teachers)
