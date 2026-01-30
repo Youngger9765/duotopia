@@ -160,7 +160,62 @@ Sidebar 頂部
    - **Commit**: da4b519c "fix(reorder): 修復拖曳排序功能 - INSERT邏輯+本地狀態更新"
 
 ### Medium Priority
-1. ~~**重構：ProgramTreeView 取代所有 RecursiveTreeAccordion 直接使用**~~ ✅ **已完成**
+
+1. **Admin Organization Creation - 擴展功能** ✅ **PHASE 1 COMPLETED (2026-01-30)**
+   - **來源**: `spec/features/organization/機構設定與擁有人註冊.feature`（案主需求）
+   - **設計文檔**: `docs/plans/2026-01-30-admin-org-creation-extended-features-design.md` ✅
+
+   **Phase 1: 不需要 Migration（優先實作）** ✅ COMPLETED
+   - ✅ **教師授權數顯示**（3-4h） - DONE 2026-01-30
+     - ✅ 使用現有 `Organization.teacher_limit` 欄位
+     - ✅ Backend: GET /api/admin/organizations/{id}/statistics
+     - ✅ Frontend: TeacherUsageCard component
+
+   - ✅ **擁有人姓名、手機欄位**（2-3h） - DONE 2026-01-30
+     - ✅ 使用現有 `Teacher.name` 和 `Teacher.phone` 欄位
+     - ✅ Backend: GET /api/admin/teachers/lookup?email=xxx
+     - ✅ Frontend: Auto-fetch on owner_email change
+
+   - ✅ **專案服務人員指派（org_admin）**（4-6h） - DONE 2026-01-30
+     - ✅ 使用現有 `TeacherOrganization.role` 欄位
+     - ✅ Frontend: Multi-select input with validation
+     - ✅ Backend: project_staff_emails field support
+     - ✅ Casbin: org_admin role permissions
+
+   **Phase 2: 未註冊擁有人流程（簡化版）**
+   - ⏰ **擁有人尚未註冊流程 - Option A**（4-5h）
+     - ✅ 使用現有 `Teacher` 表和 token 欄位
+     - Admin 輸入：owner_email, owner_name, owner_phone
+     - 系統自動建立 Teacher 帳號（隨機密碼）
+     - 顯示初始密碼給 Admin（線下告知擁有人）
+     - 擁有人首次登入強制改密碼
+
+   **Phase 3: 點數系統（需 Migration，暫緩）**
+   - ⏸️ **總點數欄位**（5h）- **需要 Migration**
+     - ❌ 需要新增 `Organization.total_points` 欄位
+     - 採用方案 B（機構層級點數池）
+     - 等待 Migration 批准
+
+   - ⏸️ **剩餘點數顯示**（3-4h）- **依賴 Phase 3.1**
+     - 計算：total_points - sum(point_usage_logs)
+     - 顯示在機構後台
+
+   - ⏸️ **Email 認證流程 - Option B**（12-16h）- **未來擴展**
+     - 發送認證信機制
+     - Token 驗證頁面
+     - 自動登入流程
+     - 需要 Email 基礎建設
+
+   - **預估時間**:
+     - Phase 1-2（不需 Migration）: 13-18 小時
+     - Phase 3（需 Migration）: 8-9 小時
+     - 總計: 21-27 小時
+
+   - **優先級**: 🔴 HIGH（案主明確需求）
+   - **狀態**: Phase 1-2 可立即開始，Phase 3 等待批准
+   - **參考文檔**: `spec/features/organization/機構設定與擁有人註冊.feature`
+
+2. ~~**重構：ProgramTreeView 取代所有 RecursiveTreeAccordion 直接使用**~~ ✅ **已完成**
    - **完成日期**：2026-01-16
    - **實作內容**：
      - ✅ ProgramTreeView 內建完整 Program/Lesson/Content CRUD
