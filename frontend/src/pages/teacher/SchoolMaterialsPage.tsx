@@ -16,7 +16,8 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function SchoolMaterialsPage() {
   const { t } = useTranslation();
-  const { selectedSchool, selectedOrganization } = useWorkspace();
+  const { selectedSchool, selectedOrganization, mode } = useWorkspace();
+  const isOrgMode = mode === 'organization';
 
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
@@ -502,6 +503,8 @@ export default function SchoolMaterialsPage() {
             showCreateButton
             createButtonText={t("teacherTemplatePrograms.buttons.addProgram")}
             onCreateClick={handleCreateProgram}
+            disableActions={isOrgMode}
+            disableReason="學校教材由學校後台統一管理"
             onEdit={(item, level, parentId) => {
               if (level === 0) handleEditProgram(item.id);
               else if (level === 1)

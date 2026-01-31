@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { apiClient, ApiError } from "@/lib/api";
 import { toast } from "sonner";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   Content,
   Assignment,
@@ -83,6 +84,8 @@ export default function ClassroomDetail({
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { mode } = useWorkspace();
+  const isOrgMode = mode === 'organization';
   const [classroom, setClassroom] = useState<ClassroomInfo | null>(null);
   const [templateProgram, setTemplateProgram] = useState<Program | null>(null);
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -1232,6 +1235,8 @@ export default function ClassroomDetail({
                     <Button
                       onClick={handleCreateStudent}
                       className="h-10 bg-blue-500 hover:bg-blue-600 text-white"
+                      disabled={isOrgMode}
+                      title={isOrgMode ? "請從學校後台處理學生管理" : ""}
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       {t("classroomDetail.buttons.addStudent")}
@@ -1246,6 +1251,8 @@ export default function ClassroomDetail({
                     onEditStudent={handleEditStudent}
                     onResetPassword={handleResetPassword}
                     emptyMessage={t("classroomDetail.messages.noStudents")}
+                    disableActions={isOrgMode}
+                    disableReason="請從學校後台處理學生管理"
                   />
                 </TabsContent>
               )}

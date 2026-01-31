@@ -53,6 +53,8 @@ interface StudentTableProps {
   emptyDescription?: string;
   selectedIds?: Set<number>;
   onSelectionChange?: (ids: Set<number>) => void;
+  disableActions?: boolean;
+  disableReason?: string;
 }
 
 export default function StudentTable({
@@ -68,6 +70,8 @@ export default function StudentTable({
   emptyDescription,
   selectedIds: externalSelectedIds,
   onSelectionChange,
+  disableActions = false,
+  disableReason = "",
 }: StudentTableProps) {
   const { t } = useTranslation();
   const [internalSelectedIds, setInternalSelectedIds] = React.useState<
@@ -291,6 +295,8 @@ export default function StudentTable({
                     size="sm"
                     onClick={() => onEditStudent(student)}
                     className="flex-1"
+                    disabled={disableActions}
+                    title={disableActions ? disableReason : ""}
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     {t("studentTable.actions.edit")}
@@ -312,6 +318,8 @@ export default function StudentTable({
                       }
                     }}
                     className="hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400"
+                    disabled={disableActions}
+                    title={disableActions ? disableReason : ""}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
