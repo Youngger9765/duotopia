@@ -77,7 +77,13 @@ async def get_teacher_programs(
     else:
         query = (
             db.query(Program)
-            .filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True))
+            .filter(
+                Program.teacher_id == current_teacher.id,
+                Program.is_active.is_(True),
+                # 🔥 FIX: 個人教材必須排除有 school_id 或 organization_id 的課程
+                Program.school_id.is_(None),
+                Program.organization_id.is_(None),
+            )
             .options(
                 selectinload(Program.classroom),
                 selectinload(Program.lessons)
