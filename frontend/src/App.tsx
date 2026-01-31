@@ -131,7 +131,9 @@ function App() {
           path="/teacher/classroom/:id"
           element={
             <ProtectedRoute>
-              <ClassroomDetail />
+              <TeacherLayout>
+                <ClassroomDetail />
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
