@@ -24,10 +24,9 @@ export default function TeacherTemplatePrograms() {
   );
 }
 
-// Inner component that uses useWorkspace hook (now inside WorkspaceProvider)
+// Inner component - 「我的教材」不需要 workspace context
 function TeacherTemplateProgramsInner() {
   const { t } = useTranslation();
-  const { mode, selectedSchool, selectedOrganization } = useWorkspace();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReordering, setIsReordering] = useState(false);
@@ -78,25 +77,16 @@ function TeacherTemplateProgramsInner() {
     try {
       setLoading(true);
 
-      // Build API params from workspace context
-      let schoolId: string | undefined;
-      let organizationId: string | undefined;
-
-      if (selectedSchool) {
-        // School mode: when a school is selected
-        schoolId = selectedSchool.id;
-      } else if (selectedOrganization) {
-        // Organization mode: when an organization is selected
-        organizationId = selectedOrganization.id;
-      }
-      // Otherwise: personal mode (no schoolId or organizationId)
+      // 「我的教材」永遠只查詢教師個人的教材
+      // 不使用 workspace context（school_id/organization_id）
+      // 無論使用者在個人模式還是機構模式，都只顯示該教師自己建立的教材
 
       // 使用 teachers API，已包含完整的 lessons/contents 和排序（teachers.py Line 300, 304）
       const response = await apiClient.getTeacherPrograms(
-        true,
-        undefined,
-        schoolId,
-        organizationId,
+        true,           // is_template
+        undefined,      // classroom_id
+        undefined,      // school_id (不傳，永遠查詢 teacher's own)
+        undefined,      // organization_id (不傳，永遠查詢 teacher's own)
       );
       setPrograms(response as Program[]);
     } catch (err) {
