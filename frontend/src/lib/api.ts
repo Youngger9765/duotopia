@@ -465,8 +465,12 @@ class ApiClient {
     );
   }
 
-  async getCopyablePrograms(classroomId: number) {
-    return this.request(`/api/programs/copyable?classroom_id=${classroomId}`);
+  async getCopyablePrograms(classroomId: number, schoolId?: string) {
+    let url = `/api/programs/copyable?classroom_id=${classroomId}`;
+    if (schoolId) {
+      url += `&school_id=${schoolId}`;
+    }
+    return this.request(url);
   }
 
   async getClassroomPrograms(classroomId: number) {

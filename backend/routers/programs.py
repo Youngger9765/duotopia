@@ -666,13 +666,18 @@ async def create_custom_program(
 @router.get("/copyable", response_model=List[ProgramResponse])
 async def get_copyable_programs(
     classroom_id: int,
+    school_id: Optional[str] = None,
     db: Session = Depends(get_db),
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
-    """取得教師班級的課程（只顯示班級課程，不含公版模板），並標記重複狀態"""
-    # 只取得班級課程 - 使用 joinedload 來載入 classroom 關聯
+    """取得教師班級的課程（只顯示班級課程，不含公版模板），並標記重複狀態
 
-    classroom_programs = (
+    Args:
+        classroom_id: 目標班級 ID
+        school_id: 可選，如果提供則只顯示該學校的班級課程（學校模式）
+    """
+    # 只取得班級課程 - 使用 joinedload 來載入 classroom 關聯
+    query = (
         db.query(Program)
         .options(joinedload(Program.classroom))
         .join(Classroom)
@@ -681,8 +686,20 @@ async def get_copyable_programs(
             Classroom.teacher_id == current_teacher.id,
             Program.is_active.is_(True),
         )
-        .all()
     )
+
+    # 如果提供 school_id，只顯示該學校的班級課程
+    if school_id:
+        try:
+            school_uuid = uuid.UUID(school_id)
+            query = query.filter(Classroom.school_id == school_uuid)
+        except (TypeError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid school_id format",
+            )
+
+    classroom_programs = query.all()
 
     # 獲取目標班級中已存在的課程，用於重複檢測
     target_classroom_programs = (
@@ -904,6 +921,27 @@ async def list_programs(
 
 
 def _has_school_access(teacher_id: int, school_id: uuid.UUID, db: Session) -> bool:
+    # 1. Get school's organization_id
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        return False
+
+    # 2. Check if teacher is org_owner or org_admin (organization-level access)
+    if school.organization_id:
+        org_membership = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == teacher_id,
+                TeacherOrganization.organization_id == school.organization_id,
+                TeacherOrganization.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if org_membership and org_membership.role in ["org_owner", "org_admin"]:
+            return True
+
+    # 3. Check school-level membership
     membership = (
         db.query(TeacherSchool)
         .filter(

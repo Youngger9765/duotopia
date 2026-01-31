@@ -153,7 +153,10 @@ export default function CreateProgramDialog({
       setLoading(true);
       const promises = [
         apiClient.getTemplatePrograms() as Promise<Program[]>,
-        apiClient.getCopyablePrograms(classroomId) as Promise<Program[]>,
+        apiClient.getCopyablePrograms(
+          classroomId,
+          isOrganizationMode && selectedSchool ? selectedSchool.id : undefined
+        ) as Promise<Program[]>,
       ];
 
       // 組織模式下載入學校教材
