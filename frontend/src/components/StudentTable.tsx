@@ -526,8 +526,9 @@ export default function StudentTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        title={t("studentTable.edit")}
+                        title={disableActions ? disableReason : t("studentTable.edit")}
                         onClick={() => onEditStudent(student)}
+                        disabled={disableActions}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -536,7 +537,7 @@ export default function StudentTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        title={t("studentTable.delete")}
+                        title={disableActions ? disableReason : t("studentTable.delete")}
                         onClick={() => {
                           if (
                             confirm(
@@ -549,6 +550,7 @@ export default function StudentTable({
                           }
                         }}
                         className="hover:bg-red-50 hover:text-red-600"
+                        disabled={disableActions}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
