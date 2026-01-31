@@ -21,7 +21,7 @@ class CreateAssignmentRequest(BaseModel):
     practice_mode: Optional[
         str
     ] = None  # reading, rearrangement, word_reading, word_selection
-    answer_mode: Optional[str] = None  # speaking, listening, writing
+    answer_mode: Optional[str] = None  # DEPRECATED: only 'listening'/'writing' allowed by DB
     time_limit_per_question: Optional[int] = None
     shuffle_questions: Optional[bool] = False
     show_answer: Optional[bool] = False
