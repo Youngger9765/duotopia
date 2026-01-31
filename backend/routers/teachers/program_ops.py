@@ -34,20 +34,57 @@ router = APIRouter()
 async def get_teacher_programs(
     is_template: Optional[bool] = None,
     classroom_id: Optional[int] = None,
+    school_id: Optional[str] = None,
+    organization_id: Optional[str] = None,
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """取得教師的所有課程（支援過濾公版/班級課程）"""
-    query = (
-        db.query(Program)
-        .filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True))
-        .options(
-            selectinload(Program.classroom),
-            selectinload(Program.lessons)
-            .selectinload(Lesson.contents)
-            .selectinload(Content.content_items),
+    """取得教師的所有課程（支援過濾公版/班級課程/學校教材/組織教材）"""
+
+    # 如果提供 school_id，返回該學校的共用教材（不限制 teacher_id）
+    if school_id:
+        query = (
+            db.query(Program)
+            .filter(
+                Program.school_id == school_id,
+                Program.is_template.is_(True),
+                Program.is_active.is_(True),
+            )
+            .options(
+                selectinload(Program.classroom),
+                selectinload(Program.lessons)
+                .selectinload(Lesson.contents)
+                .selectinload(Content.content_items),
+            )
         )
-    )
+    # 如果提供 organization_id，返回該組織的共用教材（不限制 teacher_id）
+    elif organization_id:
+        query = (
+            db.query(Program)
+            .filter(
+                Program.organization_id == organization_id,
+                Program.is_template.is_(True),
+                Program.is_active.is_(True),
+            )
+            .options(
+                selectinload(Program.classroom),
+                selectinload(Program.lessons)
+                .selectinload(Lesson.contents)
+                .selectinload(Content.content_items),
+            )
+        )
+    # 否則返回教師的個人課程（原有邏輯）
+    else:
+        query = (
+            db.query(Program)
+            .filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True))
+            .options(
+                selectinload(Program.classroom),
+                selectinload(Program.lessons)
+                .selectinload(Lesson.contents)
+                .selectinload(Content.content_items),
+            )
+        )
 
     # 過濾公版/班級課程
     if is_template is not None:
