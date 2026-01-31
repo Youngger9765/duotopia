@@ -292,9 +292,10 @@ export default function CreateProgramDialog({
     setCreating(true);
     try {
       const promises = selectedSchoolPrograms.map((program) =>
-        apiClient.copyFromTemplate({
-          template_id: program.id,
-          classroom_id: classroomId,
+        apiClient.copyProgram({
+          program_id: program.id,
+          target_scope: "classroom",
+          target_id: classroomId.toString(),
           name:
             selectedSchoolPrograms.length === 1 && schoolProgramName
               ? schoolProgramName

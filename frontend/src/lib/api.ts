@@ -419,6 +419,22 @@ class ApiClient {
     });
   }
 
+  async copyProgram(data: {
+    program_id: number;
+    target_scope: "classroom" | "teacher" | "school";
+    target_id: string;
+    name?: string;
+  }) {
+    return this.request(`/api/programs/${data.program_id}/copy`, {
+      method: "POST",
+      body: JSON.stringify({
+        target_scope: data.target_scope,
+        target_id: data.target_id,
+        name: data.name,
+      }),
+    });
+  }
+
   async copyFromClassroom(data: {
     source_program_id: number;
     target_classroom_id: number;
