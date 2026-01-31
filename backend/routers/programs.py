@@ -3,7 +3,7 @@
 """
 
 from datetime import datetime  # noqa: F401
-from typing import List, Literal  # noqa: F401
+from typing import List, Literal, Optional  # noqa: F401
 from copy import deepcopy
 import uuid
 import logging
