@@ -100,11 +100,29 @@ function TeacherLayoutInner({ children, teacherProfile }: TeacherLayoutInnerProp
     teacherProfile,
   );
 
-  // ✅ Phase 4: 移除組織管理功能 - 只保留純教學功能
-  // 過濾掉所有組織相關的 sidebar groups
+  // ✅ 根據 workspace mode 過濾 sidebar 內容
+  // 個人模式：過濾掉組織相關功能（組織架構、學校教材）
+  // 機構模式：顯示所有功能
   const filteredGroups = useMemo(() => {
-    return visibleGroups.filter((group) => group.id !== "organization-hub");
-  }, [visibleGroups]);
+    return visibleGroups
+      .filter((group) => {
+        // 個人模式下過濾掉組織管理 group
+        if (mode === 'personal' && group.id === "organization-hub") {
+          return false;
+        }
+        return true;
+      })
+      .map((group) => {
+        // 個人模式下過濾掉「學校教材」item
+        if (mode === 'personal' && group.id === 'class-management') {
+          return {
+            ...group,
+            items: group.items.filter((item) => item.id !== 'school-materials'),
+          };
+        }
+        return group;
+      });
+  }, [visibleGroups, mode]);
 
   const handleLogout = useCallback(() => {
     apiClient.logout();

@@ -21,12 +21,6 @@ export const getSidebarGroups = (
         icon: Building2,
         path: "/teacher/organizations-hub",
       },
-      {
-        id: "school-materials",
-        label: "學校教材",
-        icon: BookOpen,
-        path: "/teacher/school-materials",
-      },
     ],
   },
   // 👥 教學管理 (所有教師) - 包含儀表板
@@ -58,6 +52,12 @@ export const getSidebarGroups = (
         label: t("teacherLayout.nav.publicPrograms"),
         icon: BookOpen,
         path: "/teacher/programs",
+      },
+      {
+        id: "school-materials",
+        label: "學校教材",
+        icon: BookOpen,
+        path: "/teacher/school-materials",
       },
     ],
   },
