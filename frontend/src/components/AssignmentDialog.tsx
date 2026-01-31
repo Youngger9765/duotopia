@@ -245,22 +245,27 @@ export function AssignmentDialog({
   onSuccess,
 }: AssignmentDialogProps) {
   const { t } = useTranslation();
-  const { selectedSchool, selectedOrganization } = useWorkspace();
+  const { mode, selectedSchool, selectedOrganization } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [loadingClassroomPrograms, setLoadingClassroomPrograms] =
     useState(false);
+  const [loadingSchoolPrograms, setLoadingSchoolPrograms] = useState(false);
   const [loadingLessons, setLoadingLessons] = useState<Record<number, boolean>>(
     {},
   );
   const [currentStep, setCurrentStep] = useState(1);
-  const [activeTab, setActiveTab] = useState<"template" | "classroom">(
+  const [activeTab, setActiveTab] = useState<"template" | "classroom" | "school">(
     "template",
   );
+
+  // 只在機構模式且選擇了學校時顯示「學校教材」tab
+  const showSchoolTab = mode === 'organization' && selectedSchool !== null;
 
   // 分別儲存公版和班級課程
   const [templatePrograms, setTemplatePrograms] = useState<Program[]>([]);
   const [classroomPrograms, setClassroomPrograms] = useState<Program[]>([]);
+  const [schoolPrograms, setSchoolPrograms] = useState<Program[]>([]);
 
   const [expandedPrograms, setExpandedPrograms] = useState<Set<number>>(
     new Set(),
@@ -309,6 +314,9 @@ export function AssignmentDialog({
     if (open) {
       loadTemplatePrograms();
       loadClassroomPrograms();
+      if (showSchoolTab) {
+        loadSchoolPrograms();
+      }
       loadQuotaInfo();
       // Reset form when dialog opens
       setCartItems([]);
@@ -407,6 +415,29 @@ export function AssignmentDialog({
       setClassroomPrograms([]);
     } finally {
       setLoadingClassroomPrograms(false);
+    }
+  };
+
+  // 加載學校教材（學校層級的課程）
+  const loadSchoolPrograms = async () => {
+    if (!selectedSchool) return;
+
+    try {
+      setLoadingSchoolPrograms(true);
+      const params = new URLSearchParams();
+      params.append("school_id", selectedSchool.id);
+      params.append("scope", "school");
+
+      const response = await apiClient.get<Program[]>(
+        `/api/teachers/programs?${params.toString()}`,
+      );
+      setSchoolPrograms(response);
+    } catch (error) {
+      console.error("Failed to load school programs:", error);
+      toast.error("載入學校教材失敗");
+      setSchoolPrograms([]);
+    } finally {
+      setLoadingSchoolPrograms(false);
     }
   };
 
@@ -1147,18 +1178,27 @@ export function AssignmentDialog({
                 <Tabs
                   value={activeTab}
                   onValueChange={(v) =>
-                    setActiveTab(v as "template" | "classroom")
+                    setActiveTab(v as "template" | "classroom" | "school")
                   }
                   className="flex-1 flex flex-col min-h-0"
                 >
-                  <TabsList className="grid w-full grid-cols-2 mb-2">
+                  <TabsList className={`grid w-full ${showSchoolTab ? 'grid-cols-3' : 'grid-cols-2'} mb-2`}>
                     <TabsTrigger
                       value="template"
                       className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
                     >
                       <Globe className="h-4 w-4" />
-                      公版課程
+                      個人教材
                     </TabsTrigger>
+                    {showSchoolTab && (
+                      <TabsTrigger
+                        value="school"
+                        className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                      >
+                        <School className="h-4 w-4" />
+                        學校教材
+                      </TabsTrigger>
+                    )}
                     <TabsTrigger
                       value="classroom"
                       className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
@@ -1168,7 +1208,7 @@ export function AssignmentDialog({
                     </TabsTrigger>
                   </TabsList>
 
-                  {/* 公版課程 Tab */}
+                  {/* 個人教材 Tab */}
                   <TabsContent
                     value="template"
                     className="flex-1 mt-0 overflow-hidden min-h-0"
@@ -1411,6 +1451,196 @@ export function AssignmentDialog({
                       )}
                     </ScrollArea>
                   </TabsContent>
+
+                  {/* 學校教材 Tab */}
+                  {showSchoolTab && (
+                    <TabsContent
+                      value="school"
+                      className="flex-1 mt-0 overflow-hidden min-h-0"
+                    >
+                      <ScrollArea className="h-full border rounded-lg p-3">
+                        {loadingSchoolPrograms ? (
+                          <div className="flex flex-col items-center justify-center h-96">
+                            <div className="relative">
+                              <div className="absolute inset-0 animate-ping">
+                                <div className="h-16 w-16 rounded-full border-4 border-blue-200 opacity-75"></div>
+                              </div>
+                              <Loader2 className="h-16 w-16 animate-spin text-blue-600 mx-auto relative" />
+                            </div>
+                            <p className="mt-6 text-lg font-medium text-gray-700">
+                              {t(
+                                "dialogs.assignmentDialog.selectContent.loading",
+                              )}
+                            </p>
+                            <p className="mt-2 text-sm text-gray-500">
+                              載入學校教材中...
+                            </p>
+                          </div>
+                        ) : schoolPrograms.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center h-96">
+                            <School className="h-16 w-16 text-gray-300 mb-4" />
+                            <p className="text-gray-500">此學校尚無教材</p>
+                            <p className="text-sm text-gray-400 mt-2">
+                              學校管理員可以創建學校層級的教材
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {schoolPrograms.map((program) => (
+                              <Card key={program.id} className="overflow-hidden">
+                                <button
+                                  onClick={() => toggleProgram(program.id)}
+                                  className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {loadingLessons[program.id] ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : expandedPrograms.has(program.id) ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                    <Package className="h-4 w-4 text-blue-600" />
+                                    <span className="font-medium">
+                                      {program.name}
+                                    </span>
+                                    {program.level && (
+                                      <Badge variant="outline" className="ml-2">
+                                        {program.level}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-500">
+                                      {t(
+                                        "dialogs.assignmentDialog.selectContent.units",
+                                        { count: program.lessons?.length || 0 },
+                                      )}
+                                    </span>
+                                    {loadingLessons[program.id] && (
+                                      <span className="text-xs text-blue-600">
+                                        {t(
+                                          "dialogs.assignmentDialog.selectContent.loadingLabel",
+                                        )}
+                                      </span>
+                                    )}
+                                  </div>
+                                </button>
+
+                                {expandedPrograms.has(program.id) &&
+                                  program.lessons && (
+                                    <div className="border-t bg-gray-50">
+                                      {program.lessons.map((lesson) => (
+                                        <div key={lesson.id} className="ml-6">
+                                          <button
+                                            onClick={() =>
+                                              toggleLesson(lesson.id)
+                                            }
+                                            className="w-full p-2 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              {loadingLessons[lesson.id] ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                              ) : expandedLessons.has(
+                                                  lesson.id,
+                                                ) ? (
+                                                <ChevronDown className="h-4 w-4" />
+                                              ) : (
+                                                <ChevronRight className="h-4 w-4" />
+                                              )}
+                                              <Layers className="h-4 w-4 text-green-600" />
+                                              <span className="text-sm">
+                                                {lesson.name}
+                                              </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-xs text-gray-500">
+                                                {t(
+                                                  "dialogs.assignmentDialog.selectContent.contents",
+                                                  {
+                                                    count:
+                                                      lesson.contents?.length ||
+                                                      0,
+                                                  },
+                                                )}
+                                              </span>
+                                            </div>
+                                          </button>
+
+                                          {expandedLessons.has(lesson.id) &&
+                                            lesson.contents && (
+                                              <div className="ml-6 space-y-1 pb-2 bg-white">
+                                                {lesson.contents.map(
+                                                  (content) => {
+                                                    const isSelected =
+                                                      cartItems.some(
+                                                        (item) =>
+                                                          item.contentId ===
+                                                          content.id,
+                                                      );
+                                                    const isDisabled =
+                                                      !isSelected &&
+                                                      !isContentSelectable(
+                                                        content.type,
+                                                      );
+                                                    return (
+                                                      <button
+                                                        key={content.id}
+                                                        onClick={() =>
+                                                          toggleContent(
+                                                            content.id,
+                                                            program.name,
+                                                            lesson.name,
+                                                            content,
+                                                          )
+                                                        }
+                                                        disabled={isDisabled}
+                                                        className={cn(
+                                                          "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
+                                                          isSelected &&
+                                                            "bg-blue-50 hover:bg-blue-100",
+                                                          !isSelected &&
+                                                            !isDisabled &&
+                                                            "hover:bg-gray-50",
+                                                          isDisabled &&
+                                                            "opacity-40 cursor-not-allowed",
+                                                        )}
+                                                      >
+                                                        {isSelected ? (
+                                                          <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                                        ) : (
+                                                          <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                                        )}
+                                                        <div className="flex-1">
+                                                          <div className="text-sm font-medium">
+                                                            {content.title}
+                                                          </div>
+                                                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                            <Badge
+                                                              variant="outline"
+                                                              className="px-1 py-0"
+                                                            >
+                                                              {content.type}
+                                                            </Badge>
+                                                          </div>
+                                                        </div>
+                                                      </button>
+                                                    );
+                                                  },
+                                                )}
+                                              </div>
+                                            )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                              </Card>
+                            ))}
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </TabsContent>
+                  )}
 
                   {/* 班級課程 Tab */}
                   <TabsContent
