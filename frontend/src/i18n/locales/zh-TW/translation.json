@@ -1280,12 +1280,6 @@
       "actions": {
         "viewPlans": "查看方案"
       },
-      "steps": {
-        "selectContent": "選擇內容",
-        "practiceMode": "練習模式",
-        "selectStudents": "選擇學生",
-        "details": "作業詳情"
-      },
       "practiceMode": {
         "title": "練習模式設定",
         "description": "選擇學生練習的模式和相關設定",
@@ -3152,7 +3146,9 @@
     "tabs": {
       "template": "從公版複製",
       "classroom": "從其他班級複製",
-      "custom": "自建課程"
+      "custom": "自建課程",
+      "school": "學校教材",
+      "personal": "個人教材"
     },
     "template": {
       "searchPlaceholder": "搜尋公版課程模板...",
@@ -3223,6 +3219,18 @@
       "loadFailed": "載入資料失敗",
       "createFailed": "建立失敗，請稍後再試",
       "copyFailed": "複製失敗，請稍後再試"
+    },
+    "school": {
+      "searchPlaceholder": "搜尋學校教材...",
+      "selected": "已選擇 {{count}} / {{total}} 個學校教材",
+      "selectAll": "全選",
+      "clear": "清除",
+      "loading": "載入中...",
+      "empty": "尚未建立學校教材",
+      "duplicate": "⚠️ 已有此課程，重複建立可能造成混淆",
+      "nameLabel": "新課程名稱（選填，留空使用原名）",
+      "multipleNote": "已選擇 {{count}} 個學校教材，將使用原始名稱建立課程",
+      "confirmDuplicate": "以下課程已存在：{{names}}。確定要重複建立嗎？"
     }
   },
   "studentDialogs": {
