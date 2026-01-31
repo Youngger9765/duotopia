@@ -495,7 +495,7 @@ export function AssignmentDialog({
       setTemplatePrograms(updatePrograms);
       setClassroomPrograms(updatePrograms);
     } catch (error) {
-      console.error(`Failed to load lessons for program ${programId}:`, error);
+      console.debug(`Failed to load lessons for program ${programId}:`, error);
       toast.error(t("dialogs.assignmentDialog.errors.loadLessonsFailed"));
     } finally {
       setLoadingLessons((prev) => ({ ...prev, [programId]: false }));
@@ -535,7 +535,7 @@ export function AssignmentDialog({
       setTemplatePrograms(updatePrograms);
       setClassroomPrograms(updatePrograms);
     } catch (error) {
-      console.error(`Failed to load contents for lesson ${lessonId}:`, error);
+      console.debug(`Failed to load contents for lesson ${lessonId}:`, error);
       toast.error(t("dialogs.assignmentDialog.errors.loadContentsFailed"));
     } finally {
       setLoadingLessons((prev) => ({ ...prev, [lessonId]: false }));
