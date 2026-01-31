@@ -158,7 +158,12 @@ export default function StudentTable({
           </p>
         )}
         {onAddStudent && (
-          <Button className="mt-4" size="sm" onClick={onAddStudent}>
+          <Button
+            className="mt-4"
+            size="sm"
+            onClick={onAddStudent}
+            disabled={disableActions}
+          >
             <Plus className="h-4 w-4 mr-2" />
             {t("studentTable.emptyState.addFirst")}
           </Button>

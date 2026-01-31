@@ -437,6 +437,7 @@ export default function TeacherStudents() {
                 size="sm"
                 onClick={handleExportStudents}
                 className="flex-1 sm:flex-none"
+                disabled={disableStudentActions}
               >
                 <Download className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">
@@ -451,6 +452,7 @@ export default function TeacherStudents() {
                 size="sm"
                 onClick={() => setShowImportDialog(true)}
                 className="flex-1 sm:flex-none"
+                disabled={disableStudentActions}
               >
                 <Upload className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">
@@ -464,6 +466,7 @@ export default function TeacherStudents() {
                 size="sm"
                 onClick={handleCreateStudent}
                 className="flex-1 sm:flex-none"
+                disabled={disableStudentActions}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 {t("teacherStudents.buttons.addStudent")}

@@ -245,7 +245,7 @@ export function AssignmentDialog({
   onSuccess,
 }: AssignmentDialogProps) {
   const { t } = useTranslation();
-  const { mode, selectedSchool, selectedOrganization } = useWorkspace();
+  const { mode, selectedSchool } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [loadingClassroomPrograms, setLoadingClassroomPrograms] =
@@ -373,18 +373,10 @@ export function AssignmentDialog({
     try {
       setLoadingTemplates(true);
 
-      // Build query params with workspace context
+      // 個人教材：只傳送 is_template=true，讓後端返回 teacher_id 匹配的教材
+      // 不傳送 school_id 或 organization_id，這樣才能拿到老師自己的教材
       const params = new URLSearchParams();
       params.append("is_template", "true");
-
-      if (selectedSchool) {
-        // School mode: when a school is selected
-        params.append("school_id", selectedSchool.id);
-      } else if (selectedOrganization) {
-        // Organization mode: when an organization is selected
-        params.append("organization_id", selectedOrganization.id);
-      }
-      // Otherwise: personal mode (no schoolId or organizationId)
 
       const response = await apiClient.get<Program[]>(
         `/api/teachers/programs?${params.toString()}`,

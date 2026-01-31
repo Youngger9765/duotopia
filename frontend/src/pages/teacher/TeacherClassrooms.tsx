@@ -260,6 +260,7 @@ export default function TeacherClassrooms() {
               size="sm"
               onClick={() => setShowCreateDialog(true)}
               className="flex-1 sm:flex-none"
+              disabled={mode === 'organization' || selectedSchool !== null}
             >
               <Plus className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">
@@ -389,6 +390,7 @@ export default function TeacherClassrooms() {
                     size="sm"
                     onClick={() => handleEdit(classroom)}
                     className="flex-1"
+                    disabled={mode === 'organization' || selectedSchool !== null}
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     {t("common.edit")}
@@ -398,6 +400,7 @@ export default function TeacherClassrooms() {
                     size="sm"
                     onClick={() => setDeleteConfirmId(classroom.id)}
                     className="flex-1 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400"
+                    disabled={mode === 'organization' || selectedSchool !== null}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     {t("common.delete")}
@@ -505,6 +508,7 @@ export default function TeacherClassrooms() {
                             title={t("common.edit")}
                             onClick={() => handleEdit(classroom)}
                             className="p-1 sm:p-2"
+                            disabled={mode === 'organization' || selectedSchool !== null}
                           >
                             <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
@@ -514,6 +518,7 @@ export default function TeacherClassrooms() {
                             title={t("common.delete")}
                             onClick={() => setDeleteConfirmId(classroom.id)}
                             className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 sm:p-2"
+                            disabled={mode === 'organization' || selectedSchool !== null}
                           >
                             <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
@@ -537,7 +542,11 @@ export default function TeacherClassrooms() {
             <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
               {t("teacherClassrooms.messages.createFirstDescription")}
             </p>
-            <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
+            <Button
+              className="mt-4"
+              onClick={() => setShowCreateDialog(true)}
+              disabled={mode === 'organization' || selectedSchool !== null}
+            >
               <Plus className="h-4 w-4 mr-2" />
               {t("teacherClassrooms.buttons.createFirst")}
             </Button>
