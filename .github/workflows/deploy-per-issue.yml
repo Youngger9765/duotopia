@@ -142,8 +142,8 @@ jobs:
           ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_PARTNER_KEY=${{ secrets.TAPPAY_PRODUCTION_PARTNER_KEY }}"
           ENV_VARS="$ENV_VARS,TAPPAY_PRODUCTION_MERCHANT_ID=${{ secrets.TAPPAY_PRODUCTION_MERCHANT_ID }}"
 
-          echo "🔍 DEBUG: Deploying and capturing output"
-          DEPLOY_OUTPUT=$(gcloud run deploy "${SERVICE}" \
+          echo "🔍 DEBUG: Deploying to Cloud Run (without output capture)"
+          gcloud run deploy "${SERVICE}" \
             --image "${IMAGE}" \
             --platform managed \
             --region ${REGION} \
@@ -156,12 +156,12 @@ jobs:
             --max-instances 1 \
             --min-instances 0 \
             --set-env-vars "${ENV_VARS}" \
-            --labels "environment=preview,issue=${ISSUE}" 2>&1)
+            --labels "environment=preview,issue=${ISSUE}"
 
-          echo "$DEPLOY_OUTPUT"
-
-          echo "🔍 DEBUG: Extracting service URL from deploy output"
-          URL=$(echo "$DEPLOY_OUTPUT" | grep -F "Service URL:" | awk '{print $NF}' | xargs)
+          echo "🔍 DEBUG: Getting service URL from gcloud"
+          URL=$(gcloud run services describe "${SERVICE}" \
+            --region ${REGION} \
+            --format='value(status.url)')
 
           # Validate URL was extracted
           if [ -z "$URL" ]; then
