@@ -13,7 +13,6 @@ import { X } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { Program, Lesson, Content } from "@/types";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 // Wrapper component that provides TeacherLayout (which contains WorkspaceProvider)
 export default function TeacherTemplatePrograms() {
@@ -71,7 +70,7 @@ function TeacherTemplateProgramsInner() {
 
   useEffect(() => {
     fetchTemplatePrograms();
-  }, [mode, selectedSchool, selectedOrganization]);
+  }, []); // 「我的教材」不依賴 workspace context，只在首次載入時 fetch
 
   const fetchTemplatePrograms = async () => {
     try {
