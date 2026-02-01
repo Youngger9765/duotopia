@@ -1707,9 +1707,9 @@ async def reorder_programs(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid organization_id format"
             )
+        # Organization programs don't have teacher_id (they are NULL)
         query = query.filter(
-            Program.organization_id == org_uuid,
-            Program.teacher_id == current_teacher.id
+            Program.organization_id == org_uuid
         )
     elif scope == "school":
         try:
@@ -1719,9 +1719,9 @@ async def reorder_programs(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid school_id format"
             )
+        # School programs don't have teacher_id (they are NULL)
         query = query.filter(
-            Program.school_id == sch_uuid,
-            Program.teacher_id == current_teacher.id
+            Program.school_id == sch_uuid
         )
 
     # Get all programs in scope
@@ -1783,9 +1783,9 @@ async def reorder_lessons(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid organization_id format"
             )
+        # Organization programs don't have teacher_id (they are NULL)
         query = query.filter(
-            Program.organization_id == org_uuid,
-            Program.teacher_id == current_teacher.id
+            Program.organization_id == org_uuid
         )
     elif scope == "school":
         try:
@@ -1795,9 +1795,9 @@ async def reorder_lessons(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid school_id format"
             )
+        # School programs don't have teacher_id (they are NULL)
         query = query.filter(
-            Program.school_id == sch_uuid,
-            Program.teacher_id == current_teacher.id
+            Program.school_id == sch_uuid
         )
 
     program = query.first()
@@ -1865,9 +1865,9 @@ async def reorder_contents(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid organization_id format"
             )
+        # Organization programs don't have teacher_id (they are NULL)
         query = query.filter(
-            Program.organization_id == org_uuid,
-            Program.teacher_id == current_teacher.id
+            Program.organization_id == org_uuid
         )
     elif scope == "school":
         try:
@@ -1877,9 +1877,9 @@ async def reorder_contents(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid school_id format"
             )
+        # School programs don't have teacher_id (they are NULL)
         query = query.filter(
-            Program.school_id == sch_uuid,
-            Program.teacher_id == current_teacher.id
+            Program.school_id == sch_uuid
         )
 
     lesson = query.first()
