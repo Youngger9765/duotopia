@@ -79,6 +79,12 @@ export function OrganizationEditDialog({
     setError(null);
 
     try {
+      // If display_name is empty, set it to null to ensure sidebar shows 'name'
+      const submitData = {
+        ...formData,
+        display_name: formData.display_name || null,
+      };
+
       const response = await fetch(
         `${API_URL}/api/organizations/${organization.id}`,
         {
@@ -87,7 +93,7 @@ export function OrganizationEditDialog({
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(submitData),
         },
       );
 

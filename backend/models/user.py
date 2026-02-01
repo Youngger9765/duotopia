@@ -256,6 +256,7 @@ class Student(Base):
 
     # Relationships
     classroom_enrollments = relationship("ClassroomStudent", back_populates="student")
+    school_enrollments = relationship("StudentSchool", back_populates="student")
     assignments = relationship("StudentAssignment", back_populates="student")
 
     def get_default_password(self):

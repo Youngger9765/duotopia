@@ -14,7 +14,17 @@ import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { Program, Lesson, Content } from "@/types";
 
-export default function TeacherTemplateProgramsNew() {
+// Wrapper component that provides TeacherLayout (which contains WorkspaceProvider)
+export default function TeacherTemplatePrograms() {
+  return (
+    <TeacherLayout>
+      <TeacherTemplateProgramsInner />
+    </TeacherLayout>
+  );
+}
+
+// Inner component - 「我的教材」不需要 workspace context
+function TeacherTemplateProgramsInner() {
   const { t } = useTranslation();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,13 +70,23 @@ export default function TeacherTemplateProgramsNew() {
 
   useEffect(() => {
     fetchTemplatePrograms();
-  }, []);
+  }, []); // 「我的教材」不依賴 workspace context，只在首次載入時 fetch
 
   const fetchTemplatePrograms = async () => {
     try {
       setLoading(true);
+
+      // 「我的教材」永遠只查詢教師個人的教材
+      // 不使用 workspace context（school_id/organization_id）
+      // 無論使用者在個人模式還是機構模式，都只顯示該教師自己建立的教材
+
       // 使用 teachers API，已包含完整的 lessons/contents 和排序（teachers.py Line 300, 304）
-      const response = await apiClient.getTeacherPrograms(true);
+      const response = await apiClient.getTeacherPrograms(
+        true,           // is_template
+        undefined,      // classroom_id
+        undefined,      // school_id (不傳，永遠查詢 teacher's own)
+        undefined,      // organization_id (不傳，永遠查詢 teacher's own)
+      );
       setPrograms(response as Program[]);
     } catch (err) {
       console.error("Failed to fetch template programs:", err);
@@ -434,20 +454,17 @@ export default function TeacherTemplateProgramsNew() {
 
   if (loading) {
     return (
-      <TeacherLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">{t("common.loading")}</p>
-          </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">{t("common.loading")}</p>
         </div>
-      </TeacherLayout>
+      </div>
     );
   }
 
   return (
-    <TeacherLayout>
-      <div className="relative h-full bg-gray-50">
+    <div className="relative h-full bg-gray-50">
         <div
           className={`p-6 space-y-4 transition-all duration-300 ${
             showReadingEditor && editorContentId !== null
@@ -869,6 +886,5 @@ export default function TeacherTemplateProgramsNew() {
           />
         )}
       </div>
-    </TeacherLayout>
   );
 }

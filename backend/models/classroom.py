@@ -28,7 +28,7 @@ class Classroom(Base):
     name = Column(String(100), nullable=False)
     description = Column(Text)
     level = Column(Enum(ProgramLevel), default=ProgramLevel.A1)
-    teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
+    teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=True)
     school = Column(String(255), nullable=True)  # 學校名稱（與 DB 一致，但不使用）
     grade = Column(String(50), nullable=True)  # 年級（與 DB 一致，但不使用）
     academic_year = Column(String(20), nullable=True)  # 學年度（與 DB 一致，但不使用）

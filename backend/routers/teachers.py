@@ -55,15 +55,12 @@ async def get_current_teacher(
 
     # 🔍 診斷 logging
     logger.info("🔍 get_current_teacher called")
-    logger.info(f"🔍 Token received: {token[:30] if token else 'None'}...")
 
     payload = verify_token(token)
-    logger.info(f"🔍 Token verification result: {payload}")
+    logger.info(f"🔍 Token verification result: {bool(payload)}")
 
     if not payload:
-        logger.error(
-            f"❌ Token verification failed! Token: {token[:30] if token else 'None'}..."
-        )
+        logger.error("❌ Token verification failed")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
@@ -114,6 +111,9 @@ class ClassroomSummary(BaseModel):
     name: str
     description: Optional[str]
     student_count: int
+    school_id: Optional[str] = None
+    school_name: Optional[str] = None
+    organization_id: Optional[str] = None
 
 
 class StudentSummary(BaseModel):
@@ -121,6 +121,9 @@ class StudentSummary(BaseModel):
     name: str
     email: Optional[str] = None  # Allow None for students without email
     classroom_name: str
+    school_id: Optional[str] = None
+    school_name: Optional[str] = None
+    organization_id: Optional[str] = None
 
 
 class OrganizationInfo(BaseModel):
@@ -347,7 +350,7 @@ async def get_teacher_dashboard(
         organization_info = OrganizationInfo(
             id=str(org.id),
             name=org.display_name or org.name,
-            type=org.type or "personal",
+            type="organization",
         )
 
     # Query teacher's schools via TeacherSchool (with eager loading)
@@ -389,10 +392,25 @@ async def get_teacher_dashboard(
             Classroom.is_active.is_(True),  # Filter out soft-deleted classrooms
         )
         .options(
-            selectinload(Classroom.students).selectinload(ClassroomStudent.student)
+            selectinload(Classroom.students).selectinload(ClassroomStudent.student),
+            selectinload(Classroom.classroom_schools),
         )
         .all()
     )
+
+    # Get school information for classrooms
+    classroom_school_dict = {}
+    for classroom in classrooms:
+        active_links = [cs for cs in classroom.classroom_schools if cs.is_active]
+        if active_links:
+            link = active_links[0]
+            school = db.query(School).filter(School.id == link.school_id).first()
+            if school:
+                classroom_school_dict[classroom.id] = {
+                    "school_id": str(school.id),
+                    "school_name": school.name,
+                    "organization_id": str(school.organization_id),
+                }
 
     classroom_summaries = []
     total_students = 0
@@ -409,12 +427,18 @@ async def get_teacher_dashboard(
         student_count = len(active_students)
         total_students += student_count
 
+        school_info = classroom_school_dict.get(classroom.id)
         classroom_summaries.append(
             ClassroomSummary(
                 id=classroom.id,
                 name=classroom.name,
                 description=classroom.description,
                 student_count=student_count,
+                school_id=school_info.get("school_id") if school_info else None,
+                school_name=school_info.get("school_name") if school_info else None,
+                organization_id=(
+                    school_info.get("organization_id") if school_info else None
+                ),
             )
         )
 
@@ -429,6 +453,13 @@ async def get_teacher_dashboard(
                         name=classroom_student.student.name,
                         email=classroom_student.student.email,  # Can be None now
                         classroom_name=classroom.name,
+                        school_id=school_info.get("school_id") if school_info else None,
+                        school_name=(
+                            school_info.get("school_name") if school_info else None
+                        ),
+                        organization_id=(
+                            school_info.get("organization_id") if school_info else None
+                        ),
                     )
                 )
 
@@ -502,7 +533,7 @@ async def get_teacher_classrooms(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """取得教師的所有班級"""
+    """取得教師的所有班級（包含學校和組織資訊）"""
 
     # Get classrooms with students (only active classrooms)
     classrooms = (
@@ -512,7 +543,8 @@ async def get_teacher_classrooms(
             Classroom.is_active.is_(True),  # Only show active classrooms
         )
         .options(
-            selectinload(Classroom.students).selectinload(ClassroomStudent.student)
+            selectinload(Classroom.students).selectinload(ClassroomStudent.student),
+            selectinload(Classroom.classroom_schools),
         )
         .all()
     )
@@ -531,6 +563,21 @@ async def get_teacher_classrooms(
     # Convert to dict for easy lookup
     program_count_map = {pc.classroom_id: pc.count for pc in program_counts}
 
+    # Get school and organization info for classrooms
+    classroom_school_map = {}
+    for classroom in classrooms:
+        active_links = [cs for cs in classroom.classroom_schools if cs.is_active]
+        if active_links:
+            # Get the first active link (a classroom should only have one active school)
+            link = active_links[0]
+            school = db.query(School).filter(School.id == link.school_id).first()
+            if school:
+                classroom_school_map[classroom.id] = {
+                    "school_id": str(school.id),
+                    "school_name": school.name,
+                    "organization_id": str(school.organization_id),
+                }
+
     return [
         {
             "id": classroom.id,
@@ -541,6 +588,12 @@ async def get_teacher_classrooms(
             "program_count": program_count_map.get(classroom.id, 0),  # Efficient lookup
             "created_at": (
                 classroom.created_at.isoformat() if classroom.created_at else None
+            ),
+            # Add school and organization info
+            "school_id": classroom_school_map.get(classroom.id, {}).get("school_id"),
+            "school_name": classroom_school_map.get(classroom.id, {}).get("school_name"),
+            "organization_id": classroom_school_map.get(classroom.id, {}).get(
+                "organization_id"
             ),
             "students": [
                 {
@@ -574,10 +627,12 @@ async def get_teacher_classrooms(
 async def get_teacher_programs(
     is_template: Optional[bool] = None,
     classroom_id: Optional[int] = None,
+    school_id: Optional[str] = None,
+    organization_id: Optional[str] = None,
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """取得教師的所有課程（支援過濾公版/班級課程）"""
+    """取得教師的所有課程（支援過濾公版/班級課程/學校/組織）"""
     query = (
         db.query(Program)
         .filter(Program.teacher_id == current_teacher.id, Program.is_active.is_(True))
@@ -596,6 +651,55 @@ async def get_teacher_programs(
     # 過濾特定班級
     if classroom_id is not None:
         query = query.filter(Program.classroom_id == classroom_id)
+
+    # 過濾 workspace context (school/organization) with authorization
+    if school_id:
+        # Verify teacher belongs to this school
+        teacher_school = (
+            db.query(TeacherSchool)
+            .filter(
+                TeacherSchool.teacher_id == current_teacher.id,
+                TeacherSchool.school_id == school_id,
+                TeacherSchool.is_active == True,
+            )
+            .first()
+        )
+
+        if not teacher_school:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Teacher does not have access to this school",
+            )
+
+        query = query.filter(Program.school_id == school_id)
+
+    elif organization_id:
+        # Verify teacher belongs to this organization
+        teacher_org = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == current_teacher.id,
+                TeacherOrganization.organization_id == organization_id,
+                TeacherOrganization.is_active == True,
+            )
+            .first()
+        )
+
+        if not teacher_org:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Teacher does not have access to this organization",
+            )
+
+        query = query.filter(Program.organization_id == organization_id)
+
+    elif not classroom_id:
+        # Personal mode: 只顯示個人課程（沒有 school_id 和 organization_id）
+        # 但如果已指定 classroom_id，則不套用此過濾（班級課程可能有 school_id）
+        query = query.filter(
+            Program.school_id.is_(None),
+            Program.organization_id.is_(None)
+        )
 
     programs = query.order_by(Program.order_index).all()
 
@@ -1007,23 +1111,42 @@ async def get_all_students(
     # 批次查詢教室資訊
     classroom_ids = [cs.classroom_id for cs in classroom_students_list]
     classrooms_dict = {}
+    classroom_school_dict = {}
     if classroom_ids:
         classrooms_list = (
-            db.query(Classroom).filter(Classroom.id.in_(classroom_ids)).all()
+            db.query(Classroom)
+            .filter(Classroom.id.in_(classroom_ids))
+            .options(selectinload(Classroom.classroom_schools))
+            .all()
         )
         classrooms_dict = {c.id: c for c in classrooms_list}
 
-    # Build response with classroom info
+        # Get school information for classrooms
+        for classroom in classrooms_list:
+            active_links = [cs for cs in classroom.classroom_schools if cs.is_active]
+            if active_links:
+                link = active_links[0]
+                school = db.query(School).filter(School.id == link.school_id).first()
+                if school:
+                    classroom_school_dict[classroom.id] = {
+                        "school_id": str(school.id),
+                        "school_name": school.name,
+                        "organization_id": str(school.organization_id),
+                    }
+
+    # Build response with classroom and school info
     result = []
     for student in all_students:
         # 使用字典查找，避免重複查詢
         classroom_student = classroom_students_dict.get(student.id)
 
         classroom_info = None
+        school_info = None
         if classroom_student:
             classroom = classrooms_dict.get(classroom_student.classroom_id)
             if classroom:
                 classroom_info = {"id": classroom.id, "name": classroom.name}
+                school_info = classroom_school_dict.get(classroom.id)
 
         result.append(
             {
@@ -1042,6 +1165,12 @@ async def get_all_students(
                 "status": "active" if student.is_active else "inactive",
                 "classroom_id": classroom_info["id"] if classroom_info else None,
                 "classroom_name": (classroom_info["name"] if classroom_info else "未分配"),
+                # Add school and organization info
+                "school_id": school_info.get("school_id") if school_info else None,
+                "school_name": school_info.get("school_name") if school_info else None,
+                "organization_id": (
+                    school_info.get("organization_id") if school_info else None
+                ),
                 "email_verified": student.email_verified,
                 "email_verified_at": (
                     student.email_verified_at.isoformat()
@@ -2299,22 +2428,11 @@ async def update_lesson(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """更新課程單元"""
-    # 驗證 lesson 屬於當前教師
-    lesson = (
-        db.query(Lesson)
-        .join(Program)
-        .filter(
-            Lesson.id == lesson_id,
-            Program.teacher_id == current_teacher.id,
-            Lesson.is_active.is_(True),
-            Program.is_active.is_(True),
-        )
-        .first()
-    )
+    """更新課程單元（支援 teacher 和 organization programs）"""
+    from utils.permissions import check_lesson_access
 
-    if not lesson:
-        raise HTTPException(status_code=404, detail="Lesson not found")
+    # Unified permission check (supports teacher & org programs)
+    program, lesson = check_lesson_access(db, lesson_id, current_teacher, require_owner=True)
 
     # 更新資料
     lesson.name = lesson_data.name
@@ -2340,23 +2458,11 @@ async def delete_lesson(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """刪除課程單元 - 使用軟刪除保護資料完整性"""
+    """刪除課程單元（支援 teacher 和 organization programs）- 使用軟刪除保護資料完整性"""
+    from utils.permissions import check_lesson_access
 
-    # 驗證 lesson 屬於當前教師
-    lesson = (
-        db.query(Lesson)
-        .join(Program)
-        .filter(
-            Lesson.id == lesson_id,
-            Program.teacher_id == current_teacher.id,
-            Lesson.is_active.is_(True),
-            Program.is_active.is_(True),
-        )
-        .first()
-    )
-
-    if not lesson:
-        raise HTTPException(status_code=404, detail="Lesson not found")
+    # Unified permission check (supports teacher & org programs)
+    program, lesson = check_lesson_access(db, lesson_id, current_teacher, require_owner=True)
 
     # 檢查相關資料
     content_count = (
@@ -2870,48 +2976,13 @@ async def update_content(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """更新內容"""
-    # Verify the content belongs to the teacher
-    # 支援兩種情況：
-    # 1. 模板內容：屬於老師的課程或公版課程
-    # 2. 作業副本：屬於老師的作業
-    content = (
-        db.query(Content)
-        .outerjoin(Lesson)
-        .outerjoin(Program)
-        .outerjoin(
-            AssignmentContent, AssignmentContent.content_id == Content.id
-        )  # 透過 AssignmentContent 關聯
-        .outerjoin(
-            Assignment, Assignment.id == AssignmentContent.assignment_id
-        )  # 再 join Assignment
-        .filter(
-            Content.id == content_id,
-            Content.is_active.is_(True),
-        )
-        .filter(
-            # 模板內容：屬於老師的課程或公版課程
-            (
-                (Content.is_assignment_copy.is_(False))
-                & (
-                    (Program.teacher_id == current_teacher.id)
-                    | (Program.is_template.is_(True))
-                )
-                & (Lesson.is_active.is_(True))
-                & (Program.is_active.is_(True))
-            )
-            # 作業副本：屬於老師的作業
-            | (
-                (Content.is_assignment_copy.is_(True))
-                & (Assignment.teacher_id == current_teacher.id)
-                & (Assignment.is_active.is_(True))
-            )
-        )
-        .first()
-    )
+    """更新內容（支援 teacher、organization programs 和 assignment copies）"""
+    from utils.permissions import check_content_access
 
-    if not content:
-        raise HTTPException(status_code=404, detail="Content not found")
+    # Unified permission check (supports teacher & org programs + assignment copies)
+    program, lesson, content = check_content_access(
+        db, content_id, current_teacher, require_owner=True, allow_assignment_copy=True
+    )
 
     # 驗證句子長度（僅對 EXAMPLE_SENTENCES 類型）
     if update_data.items is not None and content.type == ContentType.EXAMPLE_SENTENCES:
@@ -3345,24 +3416,13 @@ async def delete_content(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """刪除內容（軟刪除）"""
-    # Verify the content belongs to the teacher
-    content = (
-        db.query(Content)
-        .join(Lesson)
-        .join(Program)
-        .filter(
-            Content.id == content_id,
-            Program.teacher_id == current_teacher.id,
-            Content.is_active.is_(True),
-            Lesson.is_active.is_(True),
-            Program.is_active.is_(True),
-        )
-        .first()
-    )
+    """刪除內容（支援 teacher 和 organization programs）- 軟刪除"""
+    from utils.permissions import check_content_access
 
-    if not content:
-        raise HTTPException(status_code=404, detail="Content not found")
+    # Unified permission check (supports teacher & org programs, not assignment copies)
+    program, lesson, content = check_content_access(
+        db, content_id, current_teacher, require_owner=True, allow_assignment_copy=False
+    )
 
     # 檢查是否有相關的作業
 

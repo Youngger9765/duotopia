@@ -83,6 +83,13 @@ async def create_assignment(
     if len(contents) != len(request.content_ids):
         raise HTTPException(status_code=404, detail="Some contents not found")
 
+    # Sanitize answer_mode - deprecated field with database constraint
+    # Only 'listening' and 'writing' are allowed by database CHECK constraint
+    # If value is invalid (e.g., 'speaking'), use default 'writing'
+    sanitized_answer_mode = request.answer_mode
+    if request.answer_mode not in ["listening", "writing", None]:
+        sanitized_answer_mode = "writing"  # Default fallback
+
     # 建立 Assignment 主表記錄
     assignment = Assignment(
         title=request.title,
@@ -93,7 +100,7 @@ async def create_assignment(
         is_active=True,
         # 作答模式設定
         practice_mode=request.practice_mode,
-        answer_mode=request.answer_mode,
+        answer_mode=sanitized_answer_mode,
         time_limit_per_question=request.time_limit_per_question,
         shuffle_questions=request.shuffle_questions or False,
         show_answer=request.show_answer or False,

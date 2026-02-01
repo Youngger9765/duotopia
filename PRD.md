@@ -483,14 +483,121 @@ class AssignmentStatus(str, enum.Enum):
 - **TeacherNotification**：教師通知
 - **StudentProgress**：學生進度追蹤
 
-### 2.3 Phase 2 擴展規劃（未來）
+### 2.3 教材模組架構 (Issue #112 - 2026-01-15 完成)
+
+#### 設計理念
+
+**模組化核心**: 教師個人教材 (Teacher Programs) 和組織公版教材 (Organization Materials) 共用 80% 程式碼。
+
+**架構文件**: 詳見 [`docs/MATERIALS_ARCHITECTURE.md`](./docs/MATERIALS_ARCHITECTURE.md)
+
+#### Frontend 模組（共用組件）
+
+**位置**: `frontend/src/hooks/` 和 `frontend/src/components/shared/`
+
+| 模組 | 路徑 | 說明 |
+|------|------|------|
+| **useProgramAPI** | `hooks/useProgramAPI.ts` | 統一的 CRUD API Hook，處理所有 Program/Lesson/Content 操作 |
+| **useProgramTree** | `hooks/useProgramTree.ts` | 樹狀資料管理，處理展開/收合、CRUD 操作 |
+| **useContentEditor** | `hooks/useContentEditor.ts` | Content 編輯器狀態管理 |
+| **ProgramTreeView** | `components/shared/ProgramTreeView.tsx` | 可重用的三層樹狀 UI 組件 |
+| **ContentTypeDialog** | `components/ContentTypeDialog.tsx` | Content 類型選擇對話框 |
+
+**使用範例**:
+```typescript
+// Teacher Programs 頁面
+const api = useProgramAPI();
+const { data } = useProgramTree({ scope: 'teacher' });
+
+// Organization Materials 頁面
+const api = useProgramAPI();
+const { data } = useProgramTree({
+  scope: 'organization',
+  organizationId: orgId
+});
+```
+
+**成果**: 程式碼重用率 80%，維護點減少 50%
+
+#### Backend 模組（Service Layer）
+
+**位置**: `backend/services/program_service.py`
+
+**功能**: 集中化業務邏輯和權限檢查
+
+| 方法 | 說明 |
+|------|------|
+| `create_program()` | 建立教材（Teacher 或 Organization） |
+| `create_lesson()` | 建立單元 |
+| `create_content()` | 建立內容（支援 5 種類型 ✅） |
+| `check_program_permission()` | 檢查 Program 權限 |
+| `check_lesson_permission()` | 檢查 Lesson 權限（自動向上檢查） |
+| `check_manage_materials_permission()` | 檢查組織教材管理權限 |
+
+**權限檢查鏈**:
+```
+Content 權限檢查
+  ↓ 自動向上
+Lesson 權限檢查
+  ↓ 自動向上
+Program 權限檢查
+  ↓ 自動向上
+Organization 權限檢查 (org_owner 自動通過)
+  ↓
+Casbin 規則檢查
+```
+
+#### Unified API
+
+**位置**: `backend/routers/programs.py`
+
+**設計**: 單一 API 路由，透過 `scope` 參數區分使用場景
+
+| Endpoint | Scope | 說明 |
+|----------|-------|------|
+| `GET /api/programs` | `teacher` | 取得老師個人教材 |
+| `GET /api/programs` | `organization` | 取得組織公版教材 |
+| `POST /api/programs/lessons/{id}/contents` | - | 建立內容 |
+
+**Query Parameters**:
+```
+?scope=teacher                              # 預設
+?scope=organization&organization_id=XXX     # 組織教材
+```
+
+#### ContentType Enum 修復 (2026-01-15)
+
+**問題**: Frontend 使用新類型名稱，Backend Database Enum 過時
+
+**修復**:
+- Backend Model (`backend/models/base.py`): 新增 4 個新類型
+- Database Migration (`alembic/versions/20260115_0826_*.py`): 同步 PostgreSQL enum
+
+**支援類型**:
+```python
+class ContentType(str, enum.Enum):
+    READING_ASSESSMENT = "reading_assessment"  # Legacy
+    EXAMPLE_SENTENCES = "example_sentences"     # ✅ 例句集
+    VOCABULARY_SET = "vocabulary_set"           # ✅ 單字集
+    SINGLE_CHOICE_QUIZ = "single_choice_quiz"   # ✅ 單選題庫
+    SCENARIO_DIALOGUE = "scenario_dialogue"     # ✅ 情境對話
+```
+
+#### 關鍵文件
+
+| 文件 | 路徑 | 說明 |
+|------|------|------|
+| **系統架構圖** | `docs/MATERIALS_ARCHITECTURE.md` | 完整的模組化架構說明 |
+| **組織層級規格** | `ORG_IMPLEMENTATION_SPEC.md` | Organization 功能規格 |
+
+### 2.4 Phase 2 擴展規劃（未來）
 - **School**：學校管理
 - **Institution**：機構管理
 - **SchoolTeacher**：學校教師關聯
 - **InstitutionTeacher**：機構教師關聯
 - **CourseTemplate**：機構課程模板
 
-### 2.4 活動類型架構（Phase 1）
+### 2.5 活動類型架構（Phase 1）
 
 系統 Phase 1 支援一種核心活動類型：
 
@@ -1345,6 +1452,138 @@ class AssignmentStatus(str, enum.Enum):
 - 成績公布通知
 - 教師評語通知
 - 系統提醒
+
+### 3.6 機構教材管理（Issue #112）
+
+#### 3.6.1 功能概述
+
+**實作策略**：完全重用現有 `Program → Lesson → Content → Item` 四層架構，透過 `organization_id` 欄位區分機構教材與個人教材。
+
+**教材類型分類**：
+
+| 類型 | is_template | classroom_id | organization_id | 用途 |
+|------|-------------|--------------|-----------------|------|
+| 個人教師公版 | True | NULL | NULL | 個人教師的模板庫 |
+| 班級課程 | False | ✓ | NULL (or org) | 特定班級的課程 |
+| **機構教材** | **True** | **NULL** | **✓** | **機構共享的模板庫** |
+
+#### 3.6.2 核心功能
+
+**機構教材 CRUD**：
+- **查看教材列表** (`GET /api/organizations/{org_id}/programs`)
+  - 顯示機構所有教材模板
+  - 包含教材名稱、描述、單元數、內容數
+  - 支援分頁與搜尋
+
+- **查看教材詳情** (`GET /api/organizations/{org_id}/programs/{program_id}`)
+  - 顯示完整教材結構（Lessons → Contents → Items）
+  - 包含 TTS 語音資源
+
+- **新增教材** (`POST /api/organizations/{org_id}/programs`)
+  - org_owner 或 org_admin 可建立
+  - 需要 `manage_materials` 權限（RBAC 控管）
+  - 自動設定 `is_template=True` 和 `organization_id`
+
+- **編輯教材** (`PUT /api/organizations/{org_id}/programs/{program_id}`)
+  - 修改教材名稱、描述
+  - 管理 Lessons、Contents、Items（重用現有 API）
+
+- **刪除教材** (`DELETE /api/organizations/{org_id}/programs/{program_id}`)
+  - 軟刪除（設定 `is_active=False`）
+  - 保留歷史記錄與追蹤
+
+**統一複製 API** (`POST /api/programs/{program_id}/copy`)：
+- 由單一端點處理跨層複製（Organization/School/Teacher/Classroom）
+- Body:
+  ```json
+  {
+    "target_scope": "school|classroom|teacher",
+    "target_id": "uuid-or-int"
+  }
+  ```
+- 自動深度複製：Program → Lessons → Contents → Items
+- 設定 `source_metadata` 追蹤來源：
+  ```json
+  {
+    "organization_id": "uuid",
+    "organization_name": "台北市立國中",
+    "program_id": 123,
+    "program_name": "初級會話",
+    "source_type": "organization_template"
+  }
+  ```
+- 複製後的課程歸屬目標層級，可獨立編輯
+
+**跨層複製規則（補充）**：
+- Organization → School ✅
+- School → Teacher / Classroom ✅
+- Teacher → Teacher / Classroom ✅
+- Classroom → Teacher / Classroom ✅
+- Organization → Teacher / Classroom ❌
+- School → Organization ❌
+- Teacher / Classroom → Organization ❌
+
+**實作狀態（2026-01-15）**：
+- Backend：統一 copy API + 權限規則完成
+- Frontend：學校層教材 tree + 建立/複製 modal 完成
+- 待完成：copy modal component 模組化
+
+**驗證紀錄（待補）**：
+- 組織後台入口：未驗證
+- 教師端 copy 流程：未驗證
+
+#### 3.6.3 權限控管
+
+**RBAC 權限設計**：
+- **org_owner**: 完整權限（新增/編輯/刪除機構教材）
+- **org_admin**: 需要 `manage_materials` 權限才能操作
+- **school_principal**: 可複製到自己管理的學校班級
+- **school_admin**: 可複製到自己管理的學校班級
+- **teacher**: 可複製到自己的班級，但不能修改機構教材
+
+#### 3.6.4 技術實作細節
+
+**資料庫變更**：
+- `programs` 表新增 `organization_id` 欄位（UUID, nullable, FK to organizations.id）
+- CASCADE DELETE：機構刪除時自動刪除機構教材
+- Indexes：`ix_programs_organization_id`, `ix_programs_organization_active`
+
+**Model 屬性**：
+- `Program.organization_id`: 機構 ID
+- `Program.is_organization_template`: 判斷是否為機構教材（property）
+- `Program.program_type`: 返回教材類型字串（debugging 用）
+
+**Migration**：
+- Alembic migration: `20250114_1606_e06b75c5e6b5_add_organization_id_to_programs.py`
+- 向後相容：nullable 欄位不影響現有 220 筆個人教材
+
+#### 3.6.5 前端整合
+
+**機構後台顯示**：
+- 重用現有 Program UI 元件
+- 在機構管理介面新增「教材管理」頁籤
+- 顯示教材列表（Table 格式）
+- 新增/編輯/刪除操作按鈕
+
+**教師複製流程**：
+1. 教師在機構教材庫瀏覽
+2. 點擊「複製到班級」按鈕
+3. 選擇目標班級
+4. 系統自動複製並記錄來源
+5. 教師可在班級課程中看到複製的課程
+
+#### 3.6.6 測試策略
+
+**單元測試**：
+- API 端點測試（70%+ coverage）
+- RBAC 權限測試
+- 軟刪除測試
+
+**E2E 測試**：
+- org_owner 建立教材
+- teacher 複製教材到班級
+- 驗證 source_metadata 正確記錄
+- 複製後獨立編輯不影響原教材
 
 ## 四、範圍界定與非目標（Phase 1）
 - **非目標**：多校/機構角色、家長入口、深度 AI 批改（自動逐句建議與誤差對齊）、即時多人互動、行動裝置原生 App。

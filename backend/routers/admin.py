@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
 from typing import Dict, Any, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from datetime import datetime, timezone
 import logging
 
@@ -26,13 +26,23 @@ from models import (
     SubscriptionPeriod,
     TransactionType,
     TransactionStatus,
+    Organization,
+    TeacherOrganization,
 )
 from routers.teachers import get_current_teacher
 from services.tappay_service import TapPayService
+from services.casbin_service import CasbinService
 from schemas import RefundRequest
+from routers.schemas.admin_organization import (
+    AdminOrganizationCreate,
+    AdminOrganizationResponse,
+    OrganizationStatisticsResponse,
+    TeacherLookupResponse,
+)
 import os
 import subprocess
 import sys
+import uuid
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -688,3 +698,276 @@ async def admin_refund(
         "amount": refund_request.amount or transaction.amount,
         "period_updated": period is not None,
     }
+
+
+# ============ Organization Management ============
+@router.post(
+    "/organizations",
+    response_model=AdminOrganizationResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create organization and assign owner (Admin only)",
+)
+async def create_organization_as_admin(
+    org_data: AdminOrganizationCreate,
+    current_admin: Teacher = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Create a new organization and assign an existing registered teacher as org_owner.
+
+    **Admin only endpoint.**
+
+    Requirements:
+    - Caller must have is_admin = True
+    - owner_email must exist in database
+    - owner_email must be verified (is_verified = True)
+    - Organization name must be unique
+
+    This endpoint:
+    1. Validates owner email exists and is verified
+    2. Creates organization with provided info
+    3. Creates TeacherOrganization record with role="org_owner"
+    4. Adds Casbin role for authorization
+
+    Returns organization ID and owner info.
+    """
+
+    # Validate owner exists and is verified
+    owner = db.query(Teacher).filter(
+        Teacher.email == org_data.owner_email,
+        Teacher.email_verified == True
+    ).first()
+
+    if not owner:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Teacher with email {org_data.owner_email} not found or not verified. "
+                   "Owner must be a registered and verified user."
+        )
+
+    # Validate project staff if provided
+    project_staff_teachers = []
+    if org_data.project_staff_emails:
+        # Check for duplicates in input
+        unique_emails = set()
+        duplicate_emails = set()
+        for email in org_data.project_staff_emails:
+            if email in unique_emails:
+                duplicate_emails.add(email)
+            unique_emails.add(email)
+
+        if duplicate_emails:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Duplicate emails in project staff list: {', '.join(sorted(duplicate_emails))}"
+            )
+
+        for staff_email in org_data.project_staff_emails:
+            staff_teacher = db.query(Teacher).filter(
+                Teacher.email == staff_email,
+                Teacher.email_verified == True
+            ).first()
+
+            if not staff_teacher:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Teacher {staff_email} not found or not verified. "
+                           "Project staff must be registered and verified users."
+                )
+
+            # Prevent owner from being in project staff
+            if staff_email == org_data.owner_email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Owner {staff_email} cannot also be project staff. "
+                           "Owner already has org_owner role."
+                )
+
+            project_staff_teachers.append(staff_teacher)
+
+    # Check duplicate organization name
+    existing_org = db.query(Organization).filter(
+        Organization.name == org_data.name
+    ).first()
+
+    if existing_org:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Organization with name '{org_data.name}' already exists."
+        )
+
+    # Create organization
+    new_org = Organization(
+        id=str(uuid.uuid4()),
+        name=org_data.name,
+        display_name=org_data.display_name,
+        description=org_data.description,
+        tax_id=org_data.tax_id,
+        teacher_limit=org_data.teacher_limit,
+        contact_email=org_data.contact_email,
+        contact_phone=org_data.contact_phone,
+        address=org_data.address,
+        is_active=True,
+    )
+
+    db.add(new_org)
+    db.flush()  # Get org.id for next step
+
+    # Create TeacherOrganization with org_owner role
+    teacher_org = TeacherOrganization(
+        teacher_id=owner.id,
+        organization_id=new_org.id,
+        role="org_owner",
+        is_active=True,
+    )
+
+    db.add(teacher_org)
+
+    # Assign project staff as org_admin (before Casbin)
+    for staff_teacher in project_staff_teachers:
+        staff_org = TeacherOrganization(
+            teacher_id=staff_teacher.id,
+            organization_id=new_org.id,
+            role="org_admin",
+            is_active=True,
+        )
+        db.add(staff_org)
+
+    # Commit database changes BEFORE Casbin operations
+    db.commit()
+    db.refresh(new_org)
+
+    # Add Casbin roles (AFTER database commit)
+    # Wrap Casbin operations in try-except to rollback on failure
+    try:
+        casbin_service = CasbinService()
+        casbin_service.add_role_for_user(
+            teacher_id=owner.id,
+            role="org_owner",
+            domain=str(new_org.id)  # Convert UUID to string
+        )
+
+        # Add Casbin roles for project staff
+        for staff_teacher in project_staff_teachers:
+            casbin_service.add_role_for_user(
+                teacher_id=staff_teacher.id,
+                role="org_admin",
+                domain=str(new_org.id)  # Convert UUID to string
+            )
+    except Exception as e:
+        # Rollback database changes if Casbin fails
+        logger.error(f"Casbin operation failed for org {new_org.id}: {e}")
+        # Soft delete the organization to maintain referential integrity
+        new_org.is_active = False
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to assign permissions. Organization created but deactivated. Please contact support."
+        )
+
+    # Build response message
+    staff_count = len(project_staff_teachers)
+    staff_msg = f" {staff_count} project staff assigned." if staff_count > 0 else ""
+
+    return AdminOrganizationResponse(
+        organization_id=str(new_org.id),
+        organization_name=new_org.name,
+        owner_email=owner.email,
+        owner_id=owner.id,
+        project_staff_assigned=[t.email for t in project_staff_teachers] if project_staff_teachers else None,
+        message=f"Organization created successfully. Owner {owner.email} has been assigned org_owner role.{staff_msg}"
+    )
+
+
+@router.get(
+    "/organizations/{org_id}/statistics",
+    response_model=OrganizationStatisticsResponse,
+    summary="Get organization statistics (Admin only)"
+)
+async def get_organization_statistics(
+    org_id: str,
+    current_admin: Teacher = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Get organization teacher count and limit statistics.
+
+    **Admin only endpoint.**
+
+    Returns:
+    - teacher_count: Number of active teachers
+    - teacher_limit: Maximum allowed (None if unlimited)
+    - usage_percentage: Percentage used (0 if unlimited)
+    """
+    # Validate organization exists
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+
+    if not org:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Organization with ID {org_id} not found"
+        )
+
+    # Count active teachers
+    active_teacher_count = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.is_active == True
+        )
+        .count()
+    )
+
+    # Calculate usage percentage
+    if org.teacher_limit is None or org.teacher_limit == 0:
+        usage_percentage = 0.0
+    else:
+        usage_percentage = (active_teacher_count / org.teacher_limit) * 100
+
+    return OrganizationStatisticsResponse(
+        teacher_count=active_teacher_count,
+        teacher_limit=org.teacher_limit,
+        usage_percentage=round(usage_percentage, 1)
+    )
+
+
+@router.get(
+    "/teachers/lookup",
+    response_model=TeacherLookupResponse,
+    summary="Lookup teacher by email (Admin only)"
+)
+async def get_teacher_by_email(
+    email: EmailStr = Query(..., description="Teacher email address"),
+    current_admin: Teacher = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Lookup teacher information by email address.
+
+    **Admin only endpoint.**
+
+    Used in organization creation form to display owner name/phone
+    when admin enters owner email.
+
+    Returns:
+    - Teacher ID, email, name, phone, email_verified status
+
+    Raises:
+    - 404 if teacher not found
+    - 403 if caller is not admin
+    """
+    teacher = db.query(Teacher).filter(Teacher.email == email).first()
+
+    if not teacher:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Teacher with email {email} not found"
+        )
+
+    return TeacherLookupResponse(
+        id=teacher.id,
+        email=teacher.email,
+        name=teacher.name,
+        phone=teacher.phone,
+        email_verified=teacher.email_verified
+    )

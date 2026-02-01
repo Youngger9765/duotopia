@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { API_URL } from "@/config/api";
 import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
@@ -33,6 +34,7 @@ interface Organization {
 export default function OrganizationsListPage() {
   const navigate = useNavigate();
   const token = useTeacherAuthStore((state) => state.token);
+  const { refreshOrganizations } = useOrganization();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,9 +73,13 @@ export default function OrganizationsListPage() {
     setEditDialogOpen(true);
   };
 
-  const handleEditSuccess = () => {
+  const handleEditSuccess = useCallback(() => {
     fetchOrganizations(); // Refresh list after successful edit
-  };
+    // Sync sidebar organization data in OrganizationContext
+    if (token) {
+      refreshOrganizations(token);
+    }
+  }, [token, refreshOrganizations]);
 
   return (
     <div className="space-y-6">
