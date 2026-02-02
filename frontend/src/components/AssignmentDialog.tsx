@@ -68,6 +68,7 @@ interface Student {
   id: number;
   name: string;
   email?: string; // Make email optional to match global Student type
+  student_number?: string; // Student ID number for display and sorting
 }
 
 // ContentItem 包含 audio_url 資訊，用於驗證音檔是否存在
@@ -2582,7 +2583,19 @@ export function AssignmentDialog({
               <div className="flex-1 border rounded-lg bg-gray-50 p-2 overflow-hidden">
                 <ScrollArea className="h-full">
                   <div className="grid grid-cols-3 gap-1.5 p-1">
-                    {students.map((student) => (
+                    {[...students]
+                      .sort((a, b) => {
+                        // Sort by student_number: students without number go to the end
+                        if (!a.student_number && !b.student_number) return 0;
+                        if (!a.student_number) return 1;
+                        if (!b.student_number) return -1;
+                        return a.student_number.localeCompare(
+                          b.student_number,
+                          undefined,
+                          { numeric: true },
+                        );
+                      })
+                      .map((student) => (
                       <div
                         key={student.id}
                         onClick={() => toggleStudent(student.id)}
@@ -2600,7 +2613,9 @@ export function AssignmentDialog({
                           />
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-xs truncate">
-                              {student.name}
+                              {student.student_number
+                                ? `${student.student_number}.${student.name}`
+                                : student.name}
                             </p>
                             <p className="text-[10px] text-gray-500 truncate">
                               {student.email}

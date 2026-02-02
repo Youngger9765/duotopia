@@ -163,7 +163,15 @@ export default function TeacherStudents() {
         (student.email || "").toLowerCase().includes(searchTerm.toLowerCase());
       return matchesClassroom && matchesSearch;
     })
-    .sort((a, b) => a.id - b.id); // 按 ID 排序
+    .sort((a, b) => {
+      // 按學號排序，沒有學號的放在後面
+      if (!a.student_number && !b.student_number) return 0;
+      if (!a.student_number) return 1;
+      if (!b.student_number) return -1;
+      return a.student_number.localeCompare(b.student_number, undefined, {
+        numeric: true,
+      });
+    });
 
   const handleCreateStudent = () => {
     setSelectedStudent(null);

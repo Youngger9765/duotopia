@@ -1237,7 +1237,17 @@ export default function ClassroomDetail({
                   </div>
 
                   <StudentTable
-                    students={classroom?.students || []}
+                    students={[...(classroom?.students || [])].sort((a, b) => {
+                      // 按學號排序，沒有學號的放在後面
+                      if (!a.student_number && !b.student_number) return 0;
+                      if (!a.student_number) return 1;
+                      if (!b.student_number) return -1;
+                      return a.student_number.localeCompare(
+                        b.student_number,
+                        undefined,
+                        { numeric: true },
+                      );
+                    })}
                     showClassroom={false}
                     onAddStudent={handleCreateStudent}
                     onViewStudent={handleViewStudent}
