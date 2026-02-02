@@ -133,6 +133,10 @@ interface RecursiveTreeNodeProps {
   // Accordion state
   expandedValue: string;
   onExpandedChange: (value: string) => void;
+
+  // Disable actions
+  disableActions?: boolean;
+  disableReason?: string;
 }
 
 function RecursiveTreeNode({
@@ -146,6 +150,8 @@ function RecursiveTreeNode({
   onClick,
   onCreate,
   onReorder,
+  disableActions = false,
+  disableReason = "",
 }: RecursiveTreeNodeProps) {
   const itemId = data[config.idKey];
   const itemName = data[config.nameKey];
@@ -275,11 +281,22 @@ function RecursiveTreeNode({
                     {/* More menu (⋯) with edit/delete */}
                     {(config.canEdit || config.canDelete) && (
                       <DropdownMenu>
-                        <DropdownMenuTrigger
-                          onClick={(e) => e.stopPropagation()}
-                          className="h-7 w-7 sm:h-8 sm:w-8 inline-flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        >
-                          <MoreHorizontal className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                        <DropdownMenuTrigger asChild>
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                (e.currentTarget as HTMLDivElement).click();
+                              }
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            className="h-7 w-7 sm:h-8 sm:w-8 inline-flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                          >
+                            <MoreHorizontal className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                          </div>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
@@ -289,9 +306,11 @@ function RecursiveTreeNode({
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onEdit(data, level, parentId);
+                                if (!disableActions) onEdit(data, level, parentId);
                               }}
                               className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                              disabled={disableActions}
+                              title={disableActions ? disableReason : ""}
                             >
                               <Edit className="h-4 w-4 mr-2" />
                               編輯
@@ -301,9 +320,11 @@ function RecursiveTreeNode({
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onDelete(data, level, parentId);
+                                if (!disableActions) onDelete(data, level, parentId);
                               }}
                               className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 focus:text-red-600"
+                              disabled={disableActions}
+                              title={disableActions ? disableReason : ""}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               刪除
@@ -399,6 +420,8 @@ function RecursiveTreeNode({
                               onReorder={onReorder}
                               expandedValue={childExpandedValue}
                               onExpandedChange={setChildExpandedValue}
+                              disableActions={disableActions}
+                              disableReason={disableReason}
                             />
                           ))}
                       </Accordion>
@@ -553,6 +576,8 @@ interface RecursiveTreeAccordionProps {
     level: number,
     parentId?: string | number,
   ) => void;
+  disableActions?: boolean;
+  disableReason?: string;
 }
 
 export function RecursiveTreeAccordion({
@@ -567,6 +592,8 @@ export function RecursiveTreeAccordion({
   onClick,
   onCreate,
   onReorder,
+  disableActions = false,
+  disableReason = "",
 }: RecursiveTreeAccordionProps) {
   const [expandedValue, setExpandedValue] = useState("");
   const [activeId, setActiveId] = useState<string | number | null>(null);
@@ -683,7 +710,9 @@ export function RecursiveTreeAccordion({
             {showCreateButton && onCreateClick && (
               <button
                 onClick={onCreateClick}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={disableActions}
+                title={disableActions ? disableReason : ""}
               >
                 {createButtonText}
               </button>
@@ -717,6 +746,8 @@ export function RecursiveTreeAccordion({
                   onReorder={onReorder}
                   expandedValue={expandedValue}
                   onExpandedChange={setExpandedValue}
+                  disableActions={disableActions}
+                  disableReason={disableReason}
                 />
               ))}
             </Accordion>
@@ -729,7 +760,7 @@ export function RecursiveTreeAccordion({
       </div>
 
       {/* Drag overlay for visual feedback */}
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeItem && activeConfig ? (
           <div className="bg-blue-500 text-white px-3 py-2 rounded-lg shadow-lg text-sm font-medium">
             移動:{" "}

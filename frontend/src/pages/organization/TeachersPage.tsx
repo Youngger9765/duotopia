@@ -6,27 +6,14 @@ import { API_URL } from "@/config/api";
 import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
+import { StaffTable, StaffMember } from "@/components/organization/StaffTable";
+import { InviteTeacherDialog } from "@/components/organization/InviteTeacherDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Users, UserPlus, Mail } from "lucide-react";
+import { Users, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
-interface TeacherInfo {
-  id: number;
-  email: string;
-  name: string;
-  role: string; // Organization role: org_owner, org_admin, school_admin, teacher
-  is_active: boolean;
-  created_at: string;
-}
+// Use StaffMember from StaffTable component
 
 /**
  * TeachersPage - Manage teachers within the organization portal
@@ -36,13 +23,35 @@ export default function TeachersPage() {
   const token = useTeacherAuthStore((state) => state.token);
   const { selectedNode } = useOrganization();
 
-  const [teachers, setTeachers] = useState<TeacherInfo[]>([]);
+  const [teachers, setTeachers] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [organization, setOrganization] = useState<{ name: string } | null>(null);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   const effectiveOrgId =
     orgId ||
     (selectedNode?.type === "organization" ? selectedNode.id : undefined);
+
+  useEffect(() => {
+    const fetchOrg = async () => {
+      if (!effectiveOrgId || !token) return;
+      try {
+        const res = await fetch(`${API_URL}/api/organizations/${effectiveOrgId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setOrganization(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch organization:', error);
+      }
+    };
+    if (effectiveOrgId && token) {
+      fetchOrg();
+    }
+  }, [effectiveOrgId, token]);
 
   useEffect(() => {
     if (effectiveOrgId) {
@@ -80,35 +89,7 @@ export default function TeachersPage() {
     }
   };
 
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case "org_owner":
-        return "bg-purple-100 text-purple-800";
-      case "org_admin":
-        return "bg-blue-100 text-blue-800";
-      case "school_admin":
-        return "bg-green-100 text-green-800";
-      case "teacher":
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case "org_owner":
-        return "組織擁有者";
-      case "org_admin":
-        return "組織管理員";
-      case "school_admin":
-        return "學校管理員";
-      case "teacher":
-        return "教師";
-      default:
-        return role;
-    }
-  };
+  // Role management is now handled by StaffTable component
 
   if (!effectiveOrgId) {
     return (
@@ -122,15 +103,19 @@ export default function TeachersPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb items={[{ label: "組織管理" }, { label: "教師管理" }]} />
+      <Breadcrumb items={[
+        { label: "組織管理" },
+        { label: organization?.name || "...", href: `/organization/${orgId}` },
+        { label: "人員管理" }
+      ]} />
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">教師管理</h1>
+          <h1 className="text-3xl font-bold text-gray-900">人員管理</h1>
           <p className="text-gray-600 mt-2">管理組織內的教師成員</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setInviteDialogOpen(true)}>
           <UserPlus className="h-4 w-4" />
           邀請教師
         </Button>
@@ -196,7 +181,7 @@ export default function TeachersPage() {
               <p className="text-gray-500 mb-2">此組織尚無教師</p>
               <Button
                 variant="outline"
-                onClick={() => toast.info("邀請教師功能開發中")}
+                onClick={() => setInviteDialogOpen(true)}
                 className="mt-4 gap-2"
               >
                 <UserPlus className="h-4 w-4" />
@@ -204,64 +189,25 @@ export default function TeachersPage() {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>姓名</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>組織角色</TableHead>
-                  <TableHead>加入時間</TableHead>
-                  <TableHead>狀態</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {teachers.map((teacher) => (
-                  <TableRow key={teacher.id}>
-                    <TableCell className="font-medium">
-                      {teacher.name}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-gray-400" />
-                        {teacher.email}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(
-                          teacher.role,
-                        )}`}
-                      >
-                        {getRoleLabel(teacher.role)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(teacher.created_at).toLocaleDateString("zh-TW")}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          teacher.is_active
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {teacher.is_active ? "啟用" : "停用"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        編輯權限
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <StaffTable
+              staff={teachers}
+              organizationId={effectiveOrgId}
+              onRoleUpdated={fetchTeachers}
+              showEmail={true}
+            />
           )}
         </CardContent>
       </Card>
+
+      {/* Invite Teacher Dialog */}
+      {effectiveOrgId && (
+        <InviteTeacherDialog
+          organizationId={effectiveOrgId}
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+          onSuccess={fetchTeachers}
+        />
+      )}
     </div>
   );
 }

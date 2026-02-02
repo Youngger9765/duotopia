@@ -19,7 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
-from .base import ProgramLevel, ContentType
+from .base import ProgramLevel, ContentType, UUID
 
 
 # ============ 課程系統（三層架構）============
@@ -41,6 +41,15 @@ class Program(Base):
         Integer, ForeignKey("classrooms.id", ondelete="CASCADE"), nullable=True
     )  # 公版課程為 NULL
     teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
+    organization_id = Column(
+        UUID,
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )  # Organization-owned materials (NOT classroom copies)
+    school_id = Column(
+        UUID, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, index=True
+    )  # School-owned materials
 
     # 來源追蹤
     source_type = Column(
@@ -48,10 +57,13 @@ class Program(Base):
     )  # 'template', 'classroom', 'custom', None
     source_metadata = Column(JSON, nullable=True)
     """
-    範例：
+    範例 - ONLY for COPIED programs (classroom copies):
     - 從公版複製: {"template_id": 123, "template_name": "初級會話"}
     - 從其他班級: {"classroom_id": 456, "classroom_name": "五年級B班", "program_id": 789}
-    - 自建: {"created_by": "manual"}
+    - 從組織教材: {"organization_id": "uuid", "organization_name": "XX學校", "program_id": 123, "source_type": "org_template"}
+
+    NOTE: organization_id column is for ORGANIZATION-OWNED materials
+          source_metadata.organization_id is for COPIES tracking their origin
     """
 
     # 課程屬性
@@ -86,6 +98,11 @@ class Program(Base):
     def is_classroom_program(self):
         """判斷是否為班級課程"""
         return not self.is_template and self.classroom_id is not None
+
+    @property
+    def is_school_template(self):
+        """判斷是否為學校教材"""
+        return self.is_template and self.school_id is not None
 
     def __repr__(self):
         type_str = "Template" if self.is_template else f"Class {self.classroom_id}"

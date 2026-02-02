@@ -7,18 +7,9 @@ import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { SchoolEditDialog } from "@/components/organization/SchoolEditDialog";
-import { InviteTeacherToSchoolDialog } from "@/components/organization/InviteTeacherToSchoolDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Edit2, School as SchoolIcon, Users, UserPlus } from "lucide-react";
+import { Edit2, School as SchoolIcon, Users, BookOpen, ArrowRight, GraduationCap, UserCheck } from "lucide-react";
 
 interface School {
   id: string;
@@ -48,6 +39,18 @@ interface Teacher {
   created_at: string;
 }
 
+interface Classroom {
+  id: string;
+  name: string;
+  program_level: string;
+  is_active: boolean;
+  created_at: string;
+  teacher_name: string | null;
+  teacher_email: string | null;
+  student_count: number;
+  assignment_count: number;
+}
+
 export default function SchoolDetailPage() {
   const { schoolId } = useParams<{ schoolId: string }>();
   const navigate = useNavigate();
@@ -56,10 +59,10 @@ export default function SchoolDetailPage() {
   const [school, setSchool] = useState<School | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (schoolId) {
@@ -89,9 +92,10 @@ export default function SchoolDetailPage() {
           return Array.from(newExpanded);
         });
 
-        // Fetch organization info and teachers
+        // Fetch organization info, teachers, and classrooms
         fetchOrganization(data.organization_id);
         fetchTeachers();
+        fetchClassrooms();
       } else {
         setError(`載入學校失敗：${response.status}`);
       }
@@ -149,34 +153,30 @@ export default function SchoolDetailPage() {
     }
   };
 
+  const fetchClassrooms = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/schools/${schoolId}/classrooms`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setClassrooms(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch classrooms:", error);
+    }
+  };
+
   const getPrincipal = () => {
     return teachers.find((t) => t.roles.includes("school_admin"));
   };
 
   const handleEditSuccess = () => {
     fetchSchool();
-  };
-
-  const handleInviteSuccess = () => {
-    fetchTeachers();
-  };
-
-  const getRoleBadgeColor = (roles: string[]) => {
-    if (roles.includes("school_admin")) {
-      return "bg-purple-100 text-purple-800";
-    } else if (roles.includes("school_director")) {
-      return "bg-amber-100 text-amber-800";
-    } else if (roles.includes("teacher")) {
-      return "bg-gray-100 text-gray-800";
-    }
-    return "bg-gray-100 text-gray-800";
-  };
-
-  const getRoleLabel = (roles: string[]) => {
-    if (roles.includes("school_admin")) return "校長";
-    if (roles.includes("school_director")) return "主任";
-    if (roles.includes("teacher")) return "教師";
-    return roles.join(", ");
   };
 
   if (loading) {
@@ -307,76 +307,88 @@ export default function SchoolDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Teachers/Staff Table */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-purple-100 rounded-lg">
-              <Users className="h-4 w-4 text-purple-600" />
-            </div>
-            <CardTitle className="text-base">教師團隊</CardTitle>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => setInviteDialogOpen(true)}
+      {/* Quick Actions Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent
+            className="p-6"
+            onClick={() => navigate(`/organization/schools/${schoolId}/classrooms`)}
           >
-            <UserPlus className="h-4 w-4" />
-            邀請教師
-          </Button>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {teachers.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <p className="text-gray-500 mb-2">尚無教師</p>
-              <p className="text-sm text-gray-400">點擊上方按鈕邀請教師加入</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <GraduationCap className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">班級管理</h3>
+                  <p className="text-sm text-gray-500">{classrooms.length} 個班級</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>姓名</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>角色</TableHead>
-                  <TableHead>狀態</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {teachers.map((teacher) => (
-                  <TableRow key={teacher.id}>
-                    <TableCell className="font-medium">
-                      {teacher.name}
-                    </TableCell>
-                    <TableCell>{teacher.email}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(
-                          teacher.roles,
-                        )}`}
-                      >
-                        {getRoleLabel(teacher.roles)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          teacher.is_active
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {teacher.is_active ? "啟用" : "停用"}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent
+            className="p-6"
+            onClick={() => navigate(`/organization/schools/${schoolId}/teachers`)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Users className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">教師管理</h3>
+                  <p className="text-sm text-gray-500">{teachers.length} 位教師</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent
+            className="p-6"
+            onClick={() => navigate(`/organization/schools/${schoolId}/materials`)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <BookOpen className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">學校教材</h3>
+                  <p className="text-sm text-gray-500">教材與課程</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent
+            className="p-6"
+            onClick={() => navigate(`/organization/schools/${schoolId}/students`)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <UserCheck className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">學生管理</h3>
+                  <p className="text-sm text-gray-500">學生名冊</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Edit School Dialog */}
       <SchoolEditDialog
@@ -386,16 +398,6 @@ export default function SchoolDetailPage() {
         onSuccess={handleEditSuccess}
       />
 
-      {/* Invite Teacher Dialog */}
-      {school.organization_id && (
-        <InviteTeacherToSchoolDialog
-          schoolId={school.id}
-          organizationId={school.organization_id}
-          open={inviteDialogOpen}
-          onOpenChange={setInviteDialogOpen}
-          onSuccess={handleInviteSuccess}
-        />
-      )}
     </div>
   );
 }

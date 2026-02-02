@@ -33,6 +33,9 @@ export interface ClassroomInfo {
   student_count: number;
   students: Student[];
   program_count?: number;
+  school_id?: string;
+  school_name?: string;
+  organization_id?: string;
 }
 
 export interface Classroom {
@@ -44,10 +47,14 @@ export interface Classroom {
   program_count?: number;
   created_at?: string;
   updated_at?: string;
+  school_id?: string;
+  school_name?: string;
+  organization_id?: string;
 }
 
 // ============ Content Types ============
 export interface ContentItem {
+  id?: number | string;
   text: string;
   translation?: string;
   definition?: string;

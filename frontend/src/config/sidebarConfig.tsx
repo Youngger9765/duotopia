@@ -53,6 +53,12 @@ export const getSidebarGroups = (
         icon: BookOpen,
         path: "/teacher/programs",
       },
+      {
+        id: "school-materials",
+        label: "學校教材",
+        icon: BookOpen,
+        path: "/teacher/school-materials",
+      },
     ],
   },
 ];

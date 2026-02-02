@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database import Base
 import os
+import subprocess
 
 
 # 測試資料庫 URL（使用 SQLite in-memory 或獨立的測試資料庫）
@@ -19,22 +20,61 @@ TEST_DATABASE_URL = os.getenv(
 
 @pytest.fixture(scope="session")
 def test_engine():
-    """創建測試資料庫引擎"""
-    engine = create_engine(
-        TEST_DATABASE_URL,
-        connect_args={"check_same_thread": False}
-        if "sqlite" in TEST_DATABASE_URL
-        else {},
+    """創建測試資料庫引擎
+
+    使用 alembic migrations 確保測試 DB schema 與生產一致
+    """
+    import pathlib
+    db_path = pathlib.Path("./test.db")
+
+    # 先刪除舊的測試數據庫
+    if db_path.exists():
+        db_path.unlink()
+
+    # 使用 alembic 創建測試數據庫 schema
+    env = os.environ.copy()
+    env["DATABASE_URL"] = TEST_DATABASE_URL
+
+    # CRITICAL: Skip migration validation for test DB (allows creating all tables)
+    env["SKIP_MIGRATION_VALIDATION"] = "true"
+
+    result = subprocess.run(
+        ["alembic", "upgrade", "head"],
+        env=env,
+        capture_output=True,
+        text=True,
+        cwd=os.path.dirname(__file__)  # Run from backend directory
     )
 
-    # 創建所有表
-    Base.metadata.create_all(bind=engine)
+    if result.returncode != 0:
+        print(f"❌ Alembic migration failed:")
+        print(f"STDOUT: {result.stdout}")
+        print(f"STDERR: {result.stderr}")
+
+        # Fallback to Base.metadata.create_all if alembic fails
+        print("⚠️  Falling back to Base.metadata.create_all()")
+        engine = create_engine(
+            TEST_DATABASE_URL,
+            connect_args={"check_same_thread": False},  # SQLite only
+        )
+        Base.metadata.create_all(bind=engine)
+    else:
+        print(f"✅ Alembic migrations applied successfully")
+        # Create engine for SQLite (no PostgreSQL-specific parameters)
+        engine = create_engine(
+            TEST_DATABASE_URL,
+            connect_args={"check_same_thread": False},  # SQLite only
+        )
 
     yield engine
 
     # 測試結束後清理
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
+
+    # 刪除測試數據庫文件
+    if db_path.exists():
+        db_path.unlink()
 
 
 @pytest.fixture(scope="function")
