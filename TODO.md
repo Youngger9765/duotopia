@@ -67,6 +67,49 @@ Sidebar 頂部
 
 ## 🚧 In Progress / Next Up
 
+### Issue #198 - Organization Points System 驗證 🔴 URGENT
+
+**狀態**: ✅ Phase 4 已實作，⏰ 待驗證
+
+**完成內容**:
+- ✅ Backend API (3 endpoints): GET points, POST deduct, GET history
+- ✅ Frontend Components: OrganizationPointsBalance, OrganizationPointsHistory
+- ✅ Dashboard Integration: Points section in OrganizationDashboard
+- ✅ Tests: 13/14 passing (92.9%)
+
+**待驗證項目**:
+1. ⏰ **Admin 創建組織流程** - 確認 owner email 驗證機制
+   - 路徑: `/admin/organizations/create`
+   - 測試項目:
+     - [ ] 輸入不存在的 email → 應該顯示錯誤
+     - [ ] 輸入未驗證的 email → 應該拒絕創建
+     - [ ] 輸入已驗證的 email → 成功創建並指派 org_owner 角色
+     - [ ] Owner lookup 功能正常顯示姓名、手機
+     - [ ] total_points 欄位正確儲存
+
+2. ⏰ **Points 功能完整測試** - 確認 Phase 4 實作
+   - 路徑: `/organization/dashboard` (選擇組織後)
+   - 測試項目:
+     - [ ] Points balance 正確顯示 (total/used/remaining)
+     - [ ] Progress bar 視覺化正確
+     - [ ] Low balance warning 在 remaining < 20% 時顯示
+     - [ ] History table 顯示使用記錄
+     - [ ] Pagination 正常運作 (20 items/page)
+     - [ ] Feature type badges 顏色正確
+     - [ ] 日期格式正確 (toLocaleString)
+
+3. ⏰ **API Integration 測試**
+   - [ ] GET `/api/organizations/{id}/points` 回傳正確資料
+   - [ ] GET `/api/organizations/{id}/points/history` 分頁正確
+   - [ ] 權限控制: 非 org_owner/org_admin 無法存取
+   - [ ] Error handling: 404, 403 等錯誤正確處理
+
+**Preview URL**: (待 CI/CD 完成)
+
+**參考文檔**: `docs/plans/2026-02-03-organization-points-system.md`
+
+---
+
 ### 學校學生管理功能（待開始）
 
 **設計狀態**: ✅ 已完成（見 `docs/plans/2026-01-19-school-student-management-complete.md`）  
