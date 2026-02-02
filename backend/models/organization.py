@@ -55,6 +55,11 @@ class Organization(Base):
     # 授權限制
     teacher_limit = Column(Integer, nullable=True)  # 教師授權數上限（NULL = 無限制）
 
+    # 點數系統 (Points System)
+    total_points = Column(Integer, nullable=False, default=0)  # 總點數
+    used_points = Column(Integer, nullable=False, default=0)  # 已使用點數
+    last_points_update = Column(DateTime(timezone=True), nullable=True)  # 最後更新時間
+
     # 設定
     settings = Column(JSONType, nullable=True)  # 機構層級設定
 
@@ -326,3 +331,44 @@ class StudentSchool(Base):
 
     def __repr__(self):
         return f"<StudentSchool(student={self.student_id}, school={self.school_id})>"
+
+
+class OrganizationPointsLog(Base):
+    """
+    機構點數使用記錄表
+    - 記錄每次點數扣除的詳細資訊
+    - 用於審計追蹤和使用分析
+    """
+
+    __tablename__ = "organization_points_log"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    organization_id = Column(
+        UUID,
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    teacher_id = Column(
+        Integer,
+        ForeignKey("teachers.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    # 點數使用資訊
+    points_used = Column(Integer, nullable=False)  # 使用的點數
+    feature_type = Column(String(50), nullable=True)  # 功能類型 (ai_generation, translation, etc.)
+    description = Column(Text, nullable=True)  # 詳細描述
+
+    # 時間戳記
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
+    )
+
+    # Relationships (optional, can be added if needed)
+    # organization = relationship("Organization")
+    # teacher = relationship("Teacher")
+
+    def __repr__(self):
+        return f"<OrganizationPointsLog(org={self.organization_id}, teacher={self.teacher_id}, points={self.points_used})>"
