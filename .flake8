@@ -17,15 +17,29 @@ exclude =
 
 # Per-file ignores for test files (業界最佳實踐)
 per-file-ignores =
+    # Alembic migrations auto-generate imports
+    backend/alembic/versions/*.py: F401, E501, W605
     # Test files often have unused imports for fixtures and test data setup, and may have E402 for SQLite pragma setup
     backend/tests/*/test_*.py: F401, F841, E402
     backend/tests/*/*/test_*.py: F401, F841, E402
     backend/tests/*/*/*/test_*.py: F401, F841, E402
     backend/scripts/test_*.py: F401
     # conftest.py imports fixtures that are auto-discovered by pytest
-    backend/tests/conftest.py: E402
+    backend/tests/conftest.py: E402, F541
+    backend/conftest.py: F541
     # Alembic env.py needs sys.path manipulation before imports
     backend/alembic/env.py: E402
+    # Routers use star imports and have module-level imports after path manipulation
+    backend/routers/teachers/*.py: F403, F405
+    backend/routers/assignments/*.py: F403, F405, F821
+    backend/routers/students/*.py: F403, F405
+    # Models use re-exports
+    backend/models/*.py: F403, F405, F401
+    # Seed data scripts and utilities
+    backend/seed_*.py: E402, F541
+    backend/seed_data/*.py: F403, F405, F821, F841
+    # Manual test scripts
+    backend/tests/manual_*.py: F401, F541
     # Test files with specific issues
     backend/tests/integration/auth/test_auth_comprehensive.py: F401, F811
     backend/tests/integration/api/test_manual_grading.py: E501

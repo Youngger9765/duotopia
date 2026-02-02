@@ -64,7 +64,11 @@ class AdminOrganizationResponse(BaseModel):
                 "owner_email": "wang@abc.edu.tw",
                 "owner_id": 42,
                 "project_staff_assigned": ["staff@duotopia.com"],
-                "message": "Organization created successfully. Owner wang@abc.edu.tw has been assigned org_owner role. 1 project staff assigned.",
+                "message": (
+                    "Organization created successfully. "
+                    "Owner wang@abc.edu.tw has been assigned org_owner role. "
+                    "1 project staff assigned."
+                ),
             }
         }
 

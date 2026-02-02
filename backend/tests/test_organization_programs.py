@@ -1128,7 +1128,8 @@ Test Summary:
 Expected Coverage: 70%+
 
 To run tests:
-    pytest backend/tests/test_organization_programs.py -v --cov=backend/routers/organization_programs --cov-report=term-missing
+    pytest backend/tests/test_organization_programs.py -v
+        --cov=backend/routers/organization_programs --cov-report=term-missing
 
 Note: This is a TDD test file. The router implementation (backend/routers/organization_programs.py)
 needs to be created to make these tests pass.

@@ -373,7 +373,7 @@ class TestUpdateTeacherRole:
             .filter(
                 TeacherOrganization.organization_id == test_org.id,
                 TeacherOrganization.role == "org_owner",
-                TeacherOrganization.is_active == True,
+                TeacherOrganization.is_active.is_(True),
             )
             .all()
         )

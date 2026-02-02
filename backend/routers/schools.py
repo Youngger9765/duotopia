@@ -591,7 +591,7 @@ async def list_school_teachers(
 
                 try:
                     roles = json.loads(roles)
-                except:
+                except Exception:
                     roles = []
 
             result.append(

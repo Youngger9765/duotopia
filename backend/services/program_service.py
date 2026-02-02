@@ -316,8 +316,8 @@ def create_program(
             db.query(func.max(Program.order_index))
             .filter(
                 Program.organization_id == organization_id,
-                Program.is_template == True,
-                Program.is_active == True,
+                Program.is_template.is_(True),
+                Program.is_active.is_(True),
             )
             .scalar()
             or 0
@@ -357,8 +357,8 @@ def create_program(
             db.query(func.max(Program.order_index))
             .filter(
                 Program.school_id == school_id,
-                Program.is_template == True,
-                Program.is_active == True,
+                Program.is_template.is_(True),
+                Program.is_active.is_(True),
             )
             .scalar()
             or 0
@@ -385,8 +385,8 @@ def create_program(
             db.query(func.max(Program.order_index))
             .filter(
                 Program.teacher_id == teacher_id,
-                Program.is_template == True,
-                Program.is_active == True,
+                Program.is_template.is_(True),
+                Program.is_active.is_(True),
                 Program.organization_id.is_(None),
             )
             .scalar()
@@ -498,7 +498,7 @@ def create_lesson(
     # Calculate next order_index (put at end)
     max_order = (
         db.query(func.max(Lesson.order_index))
-        .filter(Lesson.program_id == program_id, Lesson.is_active == True)
+        .filter(Lesson.program_id == program_id, Lesson.is_active.is_(True))
         .scalar()
         or 0
     )
@@ -533,12 +533,13 @@ def create_lesson(
         .filter(
             Lesson.program_id == program_id,
             Lesson.name == lesson.name,
-            Lesson.is_active == True,
+            Lesson.is_active.is_(True),
         )
         .count()
     )
     logger.info(
-        f"[SERVICE_CREATE_LESSON] Post-commit check: Found {duplicate_count} lessons with name '{lesson.name}' in program {program_id}"
+        f"[SERVICE_CREATE_LESSON] Post-commit check: Found {duplicate_count} lessons "
+        f"with name '{lesson.name}' in program {program_id}"
     )
 
     if duplicate_count > 1:
@@ -621,7 +622,7 @@ def create_content(
     # Calculate next order_index (put at end)
     max_order = (
         db.query(func.max(Content.order_index))
-        .filter(Content.lesson_id == lesson_id, Content.is_active == True)
+        .filter(Content.lesson_id == lesson_id, Content.is_active.is_(True))
         .scalar()
         or 0
     )

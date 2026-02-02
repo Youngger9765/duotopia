@@ -39,6 +39,6 @@ router.include_router(assignment_ops.router, tags=["teachers-assignments"])
 router.include_router(teacher_organizations.router, tags=["teachers-organizations"])
 
 # Re-export router and dependencies for backward compatibility
-from .dependencies import get_current_teacher
+from .dependencies import get_current_teacher  # noqa: E402
 
 __all__ = ["router", "get_current_teacher"]

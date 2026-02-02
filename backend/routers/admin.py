@@ -735,7 +735,7 @@ async def create_organization_as_admin(
     # Validate owner exists and is verified
     owner = (
         db.query(Teacher)
-        .filter(Teacher.email == org_data.owner_email, Teacher.email_verified == True)
+        .filter(Teacher.email == org_data.owner_email, Teacher.email_verified.is_(True))
         .first()
     )
 
@@ -766,7 +766,7 @@ async def create_organization_as_admin(
         for staff_email in org_data.project_staff_emails:
             staff_teacher = (
                 db.query(Teacher)
-                .filter(Teacher.email == staff_email, Teacher.email_verified == True)
+                .filter(Teacher.email == staff_email, Teacher.email_verified.is_(True))
                 .first()
             )
 
@@ -917,7 +917,7 @@ async def get_organization_statistics(
         db.query(TeacherOrganization)
         .filter(
             TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.is_active == True,
+            TeacherOrganization.is_active.is_(True),
         )
         .count()
     )

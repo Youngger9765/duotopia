@@ -102,8 +102,8 @@ def get_teacher_organizations(
             .join(Organization, TeacherOrganization.organization_id == Organization.id)
             .filter(
                 TeacherOrganization.teacher_id == teacher_id,
-                TeacherOrganization.is_active == True,  # Only active memberships
-                Organization.is_active == True,  # Only active organizations
+                TeacherOrganization.is_active.is_(True),  # Only active memberships
+                Organization.is_active.is_(True),  # Only active organizations
             )
             .options(joinedload(TeacherOrganization.organization))
             .all()
@@ -120,7 +120,7 @@ def get_teacher_organizations(
             db.query(School)
             .filter(
                 School.organization_id.in_(all_org_ids),
-                School.is_active == True,  # Only active schools
+                School.is_active.is_(True),  # Only active schools
             )
             .all()
         )
@@ -137,7 +137,7 @@ def get_teacher_organizations(
             .filter(
                 TeacherSchool.teacher_id == teacher_id,
                 TeacherSchool.school_id.in_(all_school_ids),
-                TeacherSchool.is_active == True,  # Only active memberships
+                TeacherSchool.is_active.is_(True),  # Only active memberships
             )
             .all()
         )

@@ -251,7 +251,7 @@ class TestDecision3OrgOwnerUniqueness:
             .filter(
                 TeacherOrganization.organization_id == org_id,
                 TeacherOrganization.role == "org_owner",
-                TeacherOrganization.is_active == True,
+                TeacherOrganization.is_active.is_(True),
             )
             .count()
         )
@@ -434,7 +434,7 @@ class TestOrganizationSpecDecisionsE2E:
             .filter(
                 TeacherOrganization.organization_id == org_id,
                 TeacherOrganization.role == "org_owner",
-                TeacherOrganization.is_active == True,
+                TeacherOrganization.is_active.is_(True),
             )
             .count()
         )

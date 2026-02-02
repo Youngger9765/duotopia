@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy.exc import SQLAlchemyError
+from services import program_service
 
 from database import get_db
 from models import (
@@ -797,8 +798,6 @@ async def soft_delete_program(
 # Supports both teacher and organization scopes
 # ============================================================================
 
-from services import program_service
-
 
 @router.get("", response_model=List[ProgramResponse])
 async def list_programs(
@@ -1452,7 +1451,7 @@ async def create_lesson(
             .filter(
                 Lesson.program_id == program_id,
                 Lesson.name == lesson.name,
-                Lesson.is_active == True,
+                Lesson.is_active.is_(True),
             )
             .count()
         )
@@ -1665,14 +1664,14 @@ async def reorder_programs(
         )
 
     # Build query based on scope
-    query = db.query(Program).filter(Program.is_template == True)
+    query = db.query(Program).filter(Program.is_template.is_(True))
 
     if scope == "teacher":
         query = query.filter(
             Program.teacher_id == current_teacher.id,
-            Program.organization_id == None,
-            Program.school_id == None,
-            Program.class_id == None,
+            Program.organization_id.is_(None),
+            Program.school_id.is_(None),
+            Program.class_id.is_(None),
         )
     elif scope == "organization":
         try:
@@ -1741,10 +1740,10 @@ async def reorder_lessons(
     if scope == "teacher":
         query = query.filter(
             Program.teacher_id == current_teacher.id,
-            Program.is_template == True,
-            Program.classroom_id == None,
-            Program.organization_id == None,
-            Program.school_id == None,
+            Program.is_template.is_(True),
+            Program.classroom_id.is_(None),
+            Program.organization_id.is_(None),
+            Program.school_id.is_(None),
         )
     elif scope == "organization":
         try:
@@ -1820,10 +1819,10 @@ async def reorder_contents(
     if scope == "teacher":
         query = query.filter(
             Program.teacher_id == current_teacher.id,
-            Program.is_template == True,
-            Program.classroom_id == None,
-            Program.organization_id == None,
-            Program.school_id == None,
+            Program.is_template.is_(True),
+            Program.classroom_id.is_(None),
+            Program.organization_id.is_(None),
+            Program.school_id.is_(None),
         )
     elif scope == "organization":
         try:

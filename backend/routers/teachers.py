@@ -662,7 +662,7 @@ async def get_teacher_programs(
             .filter(
                 TeacherSchool.teacher_id == current_teacher.id,
                 TeacherSchool.school_id == school_id,
-                TeacherSchool.is_active == True,
+                TeacherSchool.is_active.is_(True),
             )
             .first()
         )
@@ -682,7 +682,7 @@ async def get_teacher_programs(
             .filter(
                 TeacherOrganization.teacher_id == current_teacher.id,
                 TeacherOrganization.organization_id == organization_id,
-                TeacherOrganization.is_active == True,
+                TeacherOrganization.is_active.is_(True),
             )
             .first()
         )

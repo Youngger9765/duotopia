@@ -6,8 +6,10 @@ in organization-level materials/programs endpoints.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi import Request
 from pydantic import BaseModel
 from typing import List
+from functools import wraps
 from services.casbin_service import get_casbin_service
 from dependencies import get_current_teacher
 
@@ -211,10 +213,6 @@ async def delete_organization_program(
 # ============================================
 # Alternative: Using Decorator Pattern
 # ============================================
-
-
-from functools import wraps
-from fastapi import Request
 
 
 def require_manage_materials(org_param: str = "org_id"):

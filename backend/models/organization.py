@@ -373,4 +373,7 @@ class OrganizationPointsLog(Base):
     # teacher = relationship("Teacher")
 
     def __repr__(self):
-        return f"<OrganizationPointsLog(org={self.organization_id}, teacher={self.teacher_id}, points={self.points_used})>"
+        return (
+            f"<OrganizationPointsLog(org={self.organization_id}, "
+            f"teacher={self.teacher_id}, points={self.points_used})>"
+        )

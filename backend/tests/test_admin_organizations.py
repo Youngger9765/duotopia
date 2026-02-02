@@ -236,9 +236,10 @@ def test_organization_stats_teacher_deduplication(
     # Assert counts
     assert data["total_organizations"] == 1, "Should have 1 organization"
     assert data["total_schools"] == 1, "Should have 1 school"
-    assert (
-        data["total_teachers"] == 2
-    ), f"Should have 2 unique teachers (got {data['total_teachers']}). Teacher A has both org_owner and school_admin roles, Teacher B has school role only."
+    assert data["total_teachers"] == 2, (
+        f"Should have 2 unique teachers (got {data['total_teachers']}). "
+        f"Teacher A has both org_owner and school_admin roles, Teacher B has school role only."
+    )
 
     print(
         f"✅ Test passed: Teacher count correctly deduplicated to {data['total_teachers']}"
@@ -363,7 +364,7 @@ def test_get_teacher_by_email_as_admin(
     assert data["id"] == regular_teacher.id
     assert data["email"] == regular_teacher.email
     assert data["name"] == regular_teacher.name
-    assert data["email_verified"] == True
+    assert data["email_verified"] is True
     assert "phone" in data
 
 
