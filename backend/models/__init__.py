@@ -33,6 +33,7 @@ from .subscription import (
 # Organization models
 from .organization import (
     Organization,
+    OrganizationPointsLog,
     School,
     TeacherOrganization,
     TeacherSchool,

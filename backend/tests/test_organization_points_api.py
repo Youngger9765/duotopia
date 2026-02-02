@@ -262,3 +262,145 @@ class TestGetPointsBalance:
         )
 
         assert response.status_code == 404
+
+
+# ============================================================================
+# Test Cases - Points Deduction Endpoint
+# ============================================================================
+
+
+class TestDeductPoints:
+    """Test suite for POST /organizations/{org_id}/points/deduct endpoint"""
+
+    def test_org_owner_can_deduct_points(
+        self,
+        test_client: TestClient,
+        shared_test_session: Session,
+        test_org: Organization,
+        org_owner: Teacher,
+        owner_headers: dict,
+    ):
+        """Test that org_owner can deduct points for AI usage"""
+        # Verify log created
+        from models import OrganizationPointsLog
+
+        response = test_client.post(
+            f"/api/organizations/{test_org.id}/points/deduct",
+            json={
+                "points": 500,
+                "feature_type": "ai_generation",
+                "description": "Generated 10 questions with AI",
+            },
+            headers=owner_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["points_deducted"] == 500
+        assert data["remaining_points"] == 7000  # 10000 - 2500 - 500
+        assert "transaction_id" in data
+
+        # Verify points updated in database
+        shared_test_session.refresh(test_org)
+        assert test_org.used_points == 3000  # 2500 + 500
+
+        # Verify log created
+        log = (
+            shared_test_session.query(OrganizationPointsLog)
+            .filter(OrganizationPointsLog.organization_id == test_org.id)
+            .filter(OrganizationPointsLog.points_used == 500)
+            .first()
+        )
+        assert log is not None
+        assert log.feature_type == "ai_generation"
+        assert log.teacher_id == org_owner.id
+
+    def test_deduct_points_insufficient_balance(
+        self,
+        test_client: TestClient,
+        shared_test_session: Session,
+        org_owner: Teacher,
+        owner_headers: dict,
+    ):
+        """Test that deducting more points than available returns 400"""
+        # Create org with low balance
+        low_balance_org = Organization(
+            name=f"low_balance_{uuid.uuid4().hex[:8]}",
+            display_name="Low Balance Org",
+            is_active=True,
+            total_points=100,
+            used_points=0,
+        )
+        shared_test_session.add(low_balance_org)
+        shared_test_session.commit()
+        shared_test_session.refresh(low_balance_org)
+
+        # Add owner relationship
+        owner_rel = TeacherOrganization(
+            teacher_id=org_owner.id,
+            organization_id=low_balance_org.id,
+            role="org_owner",
+            is_active=True,
+        )
+        shared_test_session.add(owner_rel)
+        shared_test_session.commit()
+
+        # Setup Casbin
+        from services.casbin_service import get_casbin_service
+
+        casbin_service = get_casbin_service()
+        casbin_service.add_role_for_user(
+            org_owner.id, "org_owner", f"org-{low_balance_org.id}"
+        )
+
+        response = test_client.post(
+            f"/api/organizations/{low_balance_org.id}/points/deduct",
+            json={
+                "points": 500,
+                "feature_type": "ai_generation",
+                "description": "Test",
+            },
+            headers=owner_headers,
+        )
+
+        assert response.status_code == 400
+        assert "Insufficient points" in response.json()["detail"]
+
+    def test_deduct_negative_points_returns_400(
+        self,
+        test_client: TestClient,
+        test_org: Organization,
+        owner_headers: dict,
+    ):
+        """Test that deducting negative points returns 400"""
+        response = test_client.post(
+            f"/api/organizations/{test_org.id}/points/deduct",
+            json={
+                "points": -100,
+                "feature_type": "ai_generation",
+                "description": "Test",
+            },
+            headers=owner_headers,
+        )
+
+        assert response.status_code == 400
+        assert "Points must be positive" in response.json()["detail"]
+
+    def test_non_member_cannot_deduct_points(
+        self,
+        test_client: TestClient,
+        test_org: Organization,
+        teacher_headers: dict,
+    ):
+        """Test that non-member cannot deduct points"""
+        response = test_client.post(
+            f"/api/organizations/{test_org.id}/points/deduct",
+            json={
+                "points": 100,
+                "feature_type": "ai_generation",
+                "description": "Test",
+            },
+            headers=teacher_headers,
+        )
+
+        assert response.status_code == 403
