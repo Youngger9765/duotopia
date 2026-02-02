@@ -103,6 +103,10 @@ interface Program {
   description?: string;
   level?: string;
   lessons?: Lesson[];
+  teacher_id?: number;
+  organization_id?: string;
+  school_id?: string;
+  is_template?: boolean;
 }
 
 interface AssignmentDialogProps {

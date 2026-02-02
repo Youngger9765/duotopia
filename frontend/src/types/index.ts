@@ -109,6 +109,9 @@ export interface Program {
   created_at?: string;
   order_index?: number;
   classroom_id?: number;
+  teacher_id?: number;
+  organization_id?: string; // UUID
+  school_id?: string; // UUID
   lessons?: Lesson[];
   classroom_name?: string;
   is_duplicate?: boolean;

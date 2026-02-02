@@ -23,7 +23,6 @@ import {
   BookOpen,
   Copy,
   Plus,
-  Archive,
   Search,
   CheckCircle,
   ChevronDown,
