@@ -404,3 +404,155 @@ class TestDeductPoints:
         )
 
         assert response.status_code == 403
+
+
+# ============================================================================
+# Test Cases - Points History Endpoint
+# ============================================================================
+
+
+class TestPointsHistory:
+    """Test suite for GET /organizations/{org_id}/points/history endpoint"""
+
+    def test_org_owner_can_view_history(
+        self,
+        test_client: TestClient,
+        shared_test_session: Session,
+        test_org: Organization,
+        org_owner: Teacher,
+        owner_headers: dict,
+    ):
+        """Test that org_owner can view points usage history"""
+        # Create some log entries
+        from models import OrganizationPointsLog
+
+        for i in range(3):
+            log = OrganizationPointsLog(
+                organization_id=test_org.id,
+                teacher_id=org_owner.id,
+                points_used=100 * (i + 1),
+                feature_type="ai_generation",
+                description=f"Test usage {i+1}",
+            )
+            shared_test_session.add(log)
+        shared_test_session.commit()
+
+        response = test_client.get(
+            f"/api/organizations/{test_org.id}/points/history",
+            headers=owner_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+        assert "total" in data
+        assert len(data["items"]) >= 3
+        assert data["total"] >= 3
+
+        # Verify our test logs are present
+        # Note: There might be existing logs from deduction tests
+        recent_logs = [item for item in data["items"] if item["description"] and "Test usage" in item["description"]]
+        assert len(recent_logs) == 3
+
+        # Verify all expected points values are present (order may vary due to timestamp precision)
+        points_values = sorted([log["points_used"] for log in recent_logs], reverse=True)
+        assert points_values == [300, 200, 100]
+
+    def test_history_includes_teacher_name(
+        self,
+        test_client: TestClient,
+        shared_test_session: Session,
+        test_org: Organization,
+        org_owner: Teacher,
+        owner_headers: dict,
+    ):
+        """Test that history includes teacher name via join"""
+        from models import OrganizationPointsLog
+
+        # Create a log entry
+        log = OrganizationPointsLog(
+            organization_id=test_org.id,
+            teacher_id=org_owner.id,
+            points_used=50,
+            feature_type="ai_generation",
+            description="Test with teacher name",
+        )
+        shared_test_session.add(log)
+        shared_test_session.commit()
+
+        response = test_client.get(
+            f"/api/organizations/{test_org.id}/points/history",
+            headers=owner_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Find our specific log entry
+        our_log = next((item for item in data["items"] if item["description"] == "Test with teacher name"), None)
+        assert our_log is not None
+        assert our_log["teacher_name"] == org_owner.name
+        assert our_log["teacher_id"] == org_owner.id
+
+    def test_history_pagination(
+        self,
+        test_client: TestClient,
+        shared_test_session: Session,
+        test_org: Organization,
+        org_owner: Teacher,
+        owner_headers: dict,
+    ):
+        """Test that history supports pagination"""
+        from models import OrganizationPointsLog
+
+        # Create 15 log entries
+        for i in range(15):
+            log = OrganizationPointsLog(
+                organization_id=test_org.id,
+                teacher_id=org_owner.id,
+                points_used=10,
+                feature_type="ai_generation",
+                description=f"Pagination test {i}",
+            )
+            shared_test_session.add(log)
+        shared_test_session.commit()
+
+        # Get first page
+        response = test_client.get(
+            f"/api/organizations/{test_org.id}/points/history?limit=10&offset=0",
+            headers=owner_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) == 10
+        assert data["limit"] == 10
+        assert data["offset"] == 0
+        assert data["total"] >= 15
+
+        # Get second page
+        response = test_client.get(
+            f"/api/organizations/{test_org.id}/points/history?limit=10&offset=10",
+            headers=owner_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["limit"] == 10
+        assert data["offset"] == 10
+        # Second page should have remaining items
+        assert len(data["items"]) >= 5
+
+    def test_non_member_cannot_view_history(
+        self,
+        test_client: TestClient,
+        test_org: Organization,
+        teacher_headers: dict,
+    ):
+        """Test that non-member cannot view history"""
+        response = test_client.get(
+            f"/api/organizations/{test_org.id}/points/history",
+            headers=teacher_headers,
+        )
+
+        assert response.status_code == 403

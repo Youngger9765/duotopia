@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timezone
 from pydantic import BaseModel
 import uuid
@@ -33,6 +33,27 @@ class PointsDeductionResponse(BaseModel):
     points_deducted: int
     remaining_points: int
     transaction_id: int
+
+
+class PointsLogItem(BaseModel):
+    id: int
+    organization_id: uuid.UUID
+    teacher_id: Optional[int]
+    teacher_name: Optional[str]  # Joined data
+    points_used: int
+    feature_type: Optional[str]
+    description: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PointsHistoryResponse(BaseModel):
+    items: List[PointsLogItem]
+    total: int
+    limit: int
+    offset: int
 
 
 @router.get("/{organization_id}/points", response_model=PointsBalanceResponse)
@@ -153,4 +174,82 @@ async def deduct_organization_points(
         points_deducted=deduction.points,
         remaining_points=organization.total_points - organization.used_points,
         transaction_id=log_entry.id
+    )
+
+
+@router.get("/{organization_id}/points/history", response_model=PointsHistoryResponse)
+async def get_organization_points_history(
+    organization_id: uuid.UUID,
+    limit: int = 20,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    Get organization points usage history.
+
+    Permissions: org_owner or org_admin with manage_materials permission
+    Returns: Paginated list of points log entries, sorted by created_at DESC
+    """
+    # Check organization exists
+    organization = db.query(Organization).filter(
+        Organization.id == organization_id,
+        Organization.is_active.is_(True)
+    ).first()
+
+    if not organization:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    # Check permission (same as GET points)
+    membership = db.query(TeacherOrganization).filter(
+        TeacherOrganization.teacher_id == current_teacher.id,
+        TeacherOrganization.organization_id == organization_id,
+        TeacherOrganization.is_active.is_(True)
+    ).first()
+
+    if not membership:
+        raise HTTPException(status_code=403, detail="Not a member of this organization")
+
+    if membership.role != "org_owner":
+        if not has_manage_materials_permission(current_teacher.id, organization_id, db):
+            raise HTTPException(
+                status_code=403,
+                detail="Insufficient permissions to view points history"
+            )
+
+    # Get total count
+    total = db.query(OrganizationPointsLog).filter(
+        OrganizationPointsLog.organization_id == organization_id
+    ).count()
+
+    # Get paginated logs with teacher info
+    logs = (
+        db.query(OrganizationPointsLog, Teacher.name)
+        .outerjoin(Teacher, OrganizationPointsLog.teacher_id == Teacher.id)
+        .filter(OrganizationPointsLog.organization_id == organization_id)
+        .order_by(OrganizationPointsLog.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+        .all()
+    )
+
+    items = [
+        PointsLogItem(
+            id=log.id,
+            organization_id=log.organization_id,
+            teacher_id=log.teacher_id,
+            teacher_name=teacher_name,
+            points_used=log.points_used,
+            feature_type=log.feature_type,
+            description=log.description,
+            created_at=log.created_at
+        )
+        for log, teacher_name in logs
+    ]
+
+    return PointsHistoryResponse(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset
     )
