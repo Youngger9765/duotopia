@@ -64,7 +64,7 @@ jobs:
       working-directory: ./backend
       run: |
         echo "Running Flake8 linting..."
-        flake8 . --max-line-length=120 --ignore=E203,W503 --exclude=alembic,__pycache__,.venv
+        flake8 .
 
     - name: Run pytest (Parallel)
       working-directory: ./backend
