@@ -39,6 +39,7 @@ import DebugPage from "./pages/DebugPage";
 import TermsOfService from "./pages/TermsOfService";
 import PricingPage from "./pages/PricingPage";
 import TestSubscription from "./pages/TestSubscription";
+import DemoAssignmentPage from "./pages/DemoAssignmentPage";
 import { Toaster } from "sonner";
 
 /**
@@ -84,6 +85,9 @@ function App() {
         <Route path="/dashboard" element={<RoleBasedRedirect />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/pricing" element={<PricingPage />} />
+
+        {/* Demo Route - Public, no authentication required */}
+        <Route path="/demo/:assignmentId" element={<DemoAssignmentPage />} />
 
         {/* Organization Routes - Must come before teacher routes */}
         {organizationRoutes}

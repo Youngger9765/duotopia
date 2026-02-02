@@ -148,6 +148,7 @@ interface StudentActivityPageContentProps {
   assignmentTitle: string;
   assignmentId: number;
   isPreviewMode?: boolean;
+  isDemoMode?: boolean; // Demo mode - uses public demo API endpoints
   authToken?: string; // 認證 token（預覽模式用）
   onBack?: () => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -187,6 +188,7 @@ export default function StudentActivityPageContent({
   assignmentTitle,
   assignmentId,
   isPreviewMode = false,
+  isDemoMode: _isDemoMode = false, // TODO: Use for demo API switching
   authToken,
   onBack,
   onSubmit,

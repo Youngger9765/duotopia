@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
@@ -16,12 +16,80 @@ import {
   Play,
   CheckCircle,
   X,
+  Puzzle,
+  BookOpen,
+  CheckSquare,
 } from "lucide-react";
+import { DemoCard } from "@/components/DemoCard";
+import { DemoModal } from "@/components/DemoModal";
+import { demoApi } from "@/lib/demoApi";
+import { toast } from "sonner";
+
+type DemoType = "reading" | "rearrangement" | "vocabulary" | "wordSelection";
+
+interface DemoConfig {
+  demo_reading_assignment_id?: string;
+  demo_rearrangement_assignment_id?: string;
+  demo_vocabulary_assignment_id?: string;
+  demo_word_selection_assignment_id?: string;
+}
 
 export default function Home() {
   const { t } = useTranslation();
   const isProduction = import.meta.env.PROD;
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+
+  // Demo section state
+  const [demoModalOpen, setDemoModalOpen] = useState(false);
+  const [selectedDemoType, setSelectedDemoType] = useState<DemoType>("reading");
+  const [selectedDemoAssignmentId, setSelectedDemoAssignmentId] = useState<number | null>(null);
+  const [demoConfig, setDemoConfig] = useState<DemoConfig | null>(null);
+
+  // Fetch demo config on mount
+  useEffect(() => {
+    const fetchDemoConfig = async () => {
+      try {
+        const config = await demoApi.getConfig();
+        setDemoConfig(config);
+      } catch (error) {
+        console.error("Failed to load demo config:", error);
+        // Don't show error toast on homepage, just hide demo section
+      }
+    };
+
+    fetchDemoConfig();
+  }, []);
+
+  // Open demo modal with selected type
+  const openDemoModal = (type: DemoType) => {
+    if (!demoConfig) {
+      toast.error(t("demo.configError"));
+      return;
+    }
+
+    const assignmentIdMap: Record<DemoType, string | undefined> = {
+      reading: demoConfig.demo_reading_assignment_id,
+      rearrangement: demoConfig.demo_rearrangement_assignment_id,
+      vocabulary: demoConfig.demo_vocabulary_assignment_id,
+      wordSelection: demoConfig.demo_word_selection_assignment_id,
+    };
+
+    const assignmentIdStr = assignmentIdMap[type];
+    if (!assignmentIdStr) {
+      toast.error(t("demo.notAvailable"));
+      return;
+    }
+
+    const assignmentId = parseInt(assignmentIdStr, 10);
+    if (isNaN(assignmentId)) {
+      toast.error(t("demo.invalidConfig"));
+      return;
+    }
+
+    setSelectedDemoType(type);
+    setSelectedDemoAssignmentId(assignmentId);
+    setDemoModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -374,6 +442,74 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* 第 4.5 區段: Demo 體驗區 */}
+      {demoConfig && (
+        <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
+          <div className="container mx-auto px-4">
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+                  {t("home.demo.title")}
+                </h2>
+                <p className="text-xl text-gray-600">
+                  {t("home.demo.subtitle")}
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* 例句朗讀 */}
+                <DemoCard
+                  icon={<Mic className="h-8 w-8" />}
+                  title={t("home.demo.reading.title")}
+                  description={t("home.demo.reading.description")}
+                  onClick={() => openDemoModal("reading")}
+                  gradient="from-blue-500 to-indigo-600"
+                  disabled={!demoConfig.demo_reading_assignment_id}
+                />
+
+                {/* 例句重組 */}
+                <DemoCard
+                  icon={<Puzzle className="h-8 w-8" />}
+                  title={t("home.demo.rearrangement.title")}
+                  description={t("home.demo.rearrangement.description")}
+                  onClick={() => openDemoModal("rearrangement")}
+                  gradient="from-green-500 to-emerald-600"
+                  disabled={!demoConfig.demo_rearrangement_assignment_id}
+                />
+
+                {/* 單字朗讀 */}
+                <DemoCard
+                  icon={<BookOpen className="h-8 w-8" />}
+                  title={t("home.demo.vocabulary.title")}
+                  description={t("home.demo.vocabulary.description")}
+                  onClick={() => openDemoModal("vocabulary")}
+                  gradient="from-purple-500 to-pink-600"
+                  disabled={!demoConfig.demo_vocabulary_assignment_id}
+                />
+
+                {/* 單字選擇 */}
+                <DemoCard
+                  icon={<CheckSquare className="h-8 w-8" />}
+                  title={t("home.demo.wordSelection.title")}
+                  description={t("home.demo.wordSelection.description")}
+                  onClick={() => openDemoModal("wordSelection")}
+                  gradient="from-orange-500 to-red-600"
+                  disabled={!demoConfig.demo_word_selection_assignment_id}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Demo Modal */}
+      <DemoModal
+        isOpen={demoModalOpen}
+        onClose={() => setDemoModalOpen(false)}
+        assignmentId={selectedDemoAssignmentId}
+        demoType={selectedDemoType}
+      />
 
       {/* 第五區段: CTA - 漸層背景 */}
       <section className="bg-gradient-to-b from-[#204dc0] to-[#101f6b] text-white py-20">
