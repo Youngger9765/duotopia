@@ -96,7 +96,9 @@ def test_school(shared_test_session: Session, test_organization):
 
 
 @pytest.fixture
-def school_admin_membership(shared_test_session: Session, school_admin_user, test_school):
+def school_admin_membership(
+    shared_test_session: Session, school_admin_user, test_school
+):
     """Create school admin membership"""
     membership = TeacherSchool(
         teacher_id=school_admin_user.id,
@@ -137,7 +139,7 @@ class TestSchoolScope:
         shared_test_session: Session,
         school_admin_membership,
         test_school,
-        school_program
+        school_program,
     ):
         """
         RED: Test GET /api/programs?scope=school&school_id={id}
@@ -166,7 +168,7 @@ class TestSchoolScope:
         shared_test_session: Session,
         school_admin_user,
         school_admin_membership,
-        test_school
+        test_school,
     ):
         """
         RED: Test POST /api/programs with scope=school creates school program
@@ -175,10 +177,7 @@ class TestSchoolScope:
         """
         response = school_admin_client.post(
             f"/api/programs?scope=school&school_id={test_school.id}",
-            json={
-                "name": "New School Program",
-                "description": "Created for school"
-            }
+            json={"name": "New School Program", "description": "Created for school"},
         )
 
         assert response.status_code == 201
@@ -189,16 +188,15 @@ class TestSchoolScope:
         assert data["is_template"] is True
 
         # Verify in database
-        program = shared_test_session.query(Program).filter(Program.id == data["id"]).first()
+        program = (
+            shared_test_session.query(Program).filter(Program.id == data["id"]).first()
+        )
         assert program is not None
         assert str(program.school_id) == str(test_school.id)
         assert str(program.organization_id) == str(test_school.organization_id)
 
     def test_school_teacher_cannot_manage_school_materials(
-        self,
-        school_admin_client: TestClient,
-        shared_test_session: Session,
-        test_school
+        self, school_admin_client: TestClient, shared_test_session: Session, test_school
     ):
         """
         RED: Test regular teacher (without school_admin role) cannot create school programs
@@ -246,10 +244,7 @@ class TestSchoolScope:
             with TestClient(app) as client:
                 response = client.post(
                     f"/api/programs?scope=school&school_id={test_school.id}",
-                    json={
-                        "name": "Unauthorized Program",
-                        "description": "Should fail"
-                    }
+                    json={"name": "Unauthorized Program", "description": "Should fail"},
                 )
 
                 assert response.status_code == 403

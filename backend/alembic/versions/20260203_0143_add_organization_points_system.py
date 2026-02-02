@@ -14,8 +14,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '20260203_0143'
-down_revision = '20260128_fix_auto_graded_historical_data'
+revision = "20260203_0143"
+down_revision = "20260128_fix_auto_graded_historical_data"
 branch_labels = None
 depends_on = None
 
@@ -27,7 +27,8 @@ def upgrade():
     """
 
     # Add points columns to organizations table
-    op.execute("""
+    op.execute(
+        """
         DO $$ BEGIN
             -- Add total_points column
             IF NOT EXISTS (
@@ -53,10 +54,12 @@ def upgrade():
                 ALTER TABLE organizations ADD COLUMN last_points_update TIMESTAMP WITH TIME ZONE;
             END IF;
         END $$;
-    """)
+    """
+    )
 
     # Create organization_points_log table
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS organization_points_log (
             id SERIAL PRIMARY KEY,
             organization_id UUID NOT NULL,
@@ -66,10 +69,12 @@ def upgrade():
             description TEXT,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
         );
-    """)
+    """
+    )
 
     # Add foreign key constraints (only if not exists)
-    op.execute("""
+    op.execute(
+        """
         DO $$ BEGIN
             -- Add FK constraint for organization_id
             IF NOT EXISTS (
@@ -91,10 +96,12 @@ def upgrade():
                 FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL;
             END IF;
         END $$;
-    """)
+    """
+    )
 
     # Create indexes for performance
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_organization_points_log_organization_id
         ON organization_points_log(organization_id);
 
@@ -103,10 +110,12 @@ def upgrade():
 
         CREATE INDEX IF NOT EXISTS ix_organization_points_log_created_at
         ON organization_points_log(created_at DESC);
-    """)
+    """
+    )
 
     # Add check constraint to ensure used_points doesn't exceed total_points
-    op.execute("""
+    op.execute(
+        """
         DO $$ BEGIN
             IF NOT EXISTS (
                 SELECT 1 FROM pg_constraint
@@ -117,7 +126,8 @@ def upgrade():
                 CHECK (used_points <= total_points AND used_points >= 0 AND total_points >= 0);
             END IF;
         END $$;
-    """)
+    """
+    )
 
 
 def downgrade():
@@ -126,25 +136,33 @@ def downgrade():
     Note: This is destructive and will lose data.
     """
     # Drop check constraint
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE organizations DROP CONSTRAINT IF EXISTS chk_organizations_points_valid;
-    """)
+    """
+    )
 
     # Drop indexes
-    op.execute("""
+    op.execute(
+        """
         DROP INDEX IF EXISTS ix_organization_points_log_created_at;
         DROP INDEX IF EXISTS ix_organization_points_log_teacher_id;
         DROP INDEX IF EXISTS ix_organization_points_log_organization_id;
-    """)
+    """
+    )
 
     # Drop table (cascades foreign keys)
-    op.execute("""
+    op.execute(
+        """
         DROP TABLE IF EXISTS organization_points_log CASCADE;
-    """)
+    """
+    )
 
     # Drop columns from organizations
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE organizations DROP COLUMN IF EXISTS last_points_update;
         ALTER TABLE organizations DROP COLUMN IF EXISTS used_points;
         ALTER TABLE organizations DROP COLUMN IF EXISTS total_points;
-    """)
+    """
+    )

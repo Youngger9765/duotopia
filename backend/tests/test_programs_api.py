@@ -55,6 +55,7 @@ from main import app
 
 TEST_PASSWORD = os.environ.get("TEST_TEACHER_PASSWORD") or secrets.token_urlsafe(24)
 
+
 @pytest.fixture
 def test_db(shared_test_session: Session):
     """Provide test database session"""
@@ -281,7 +282,7 @@ def org_admin_membership(test_db: Session, org_admin_user, test_organization):
     casbin.add_role_for_user(
         teacher_id=org_admin_user.id,
         role="org_admin",
-        domain=f"org-{test_organization.id}"
+        domain=f"org-{test_organization.id}",
     )
 
     return membership
@@ -622,11 +623,11 @@ def school_program_with_tree(test_db: Session, teacher_user, test_school):
 class TestTeacherScope:
     """Test teacher-scoped program operations"""
 
-    def test_get_teacher_programs_with_scope(self, authenticated_client: TestClient, test_db: Session, teacher_program):
+    def test_get_teacher_programs_with_scope(
+        self, authenticated_client: TestClient, test_db: Session, teacher_program
+    ):
         """Test GET /api/programs?scope=teacher returns only teacher's programs"""
-        response = authenticated_client.get(
-            "/api/programs?scope=teacher"
-        )
+        response = authenticated_client.get("/api/programs?scope=teacher")
 
         print(f"\n=== RESPONSE STATUS: {response.status_code} ===")
         print(f"=== RESPONSE BODY: {response.json()} ===")
@@ -643,14 +644,13 @@ class TestTeacherScope:
         for program in data:
             assert program.get("organization_id") is None
 
-    def test_create_teacher_program_with_scope(self, authenticated_client: TestClient, test_db: Session, teacher_user):
+    def test_create_teacher_program_with_scope(
+        self, authenticated_client: TestClient, test_db: Session, teacher_user
+    ):
         """Test POST /api/programs with scope=teacher creates teacher program"""
         response = authenticated_client.post(
             "/api/programs?scope=teacher",
-            json={
-                "name": "New Teacher Program",
-                "description": "Created via API"
-            }
+            json={"name": "New Teacher Program", "description": "Created via API"},
         )
 
         assert response.status_code == 201
@@ -669,11 +669,11 @@ class TestTeacherScope:
         assert program.teacher_id == teacher_user.id
         assert program.organization_id is None
 
-    def test_teacher_cannot_access_org_programs(self, authenticated_client: TestClient, test_db: Session, org_program):
+    def test_teacher_cannot_access_org_programs(
+        self, authenticated_client: TestClient, test_db: Session, org_program
+    ):
         """Test teacher cannot access organization programs via teacher scope"""
-        response = authenticated_client.get(
-            "/api/programs?scope=teacher"
-        )
+        response = authenticated_client.get("/api/programs?scope=teacher")
 
         assert response.status_code == 200
         data = response.json()
@@ -682,15 +682,18 @@ class TestTeacherScope:
         program_ids = [p["id"] for p in data]
         assert org_program.id not in program_ids
 
-    def test_update_teacher_program_with_scope(self, authenticated_client: TestClient, test_db: Session, teacher_program, teacher_user):
+    def test_update_teacher_program_with_scope(
+        self,
+        authenticated_client: TestClient,
+        test_db: Session,
+        teacher_program,
+        teacher_user,
+    ):
         """Test PUT /api/programs/{id}?scope=teacher updates teacher program"""
         # RED Phase: This test will FAIL because endpoint doesn't exist yet
         response = authenticated_client.put(
             f"/api/programs/{teacher_program.id}?scope=teacher",
-            json={
-                "name": "Updated Program Name",
-                "description": "Updated description"
-            }
+            json={"name": "Updated Program Name", "description": "Updated description"},
         )
 
         assert response.status_code == 200
@@ -709,13 +712,13 @@ class TestTeacherScope:
         authenticated_client: TestClient,
         test_db: Session,
         teacher_program,
-        teacher_user
+        teacher_user,
     ):
         """Test PUT /api/programs/lessons/{id}?scope=teacher updates lesson"""
         # RED Phase: Create a lesson first
         lesson_response = authenticated_client.post(
             f"/api/programs/{teacher_program.id}/lessons",
-            json={"name": "Test Lesson", "description": "Test Description"}
+            json={"name": "Test Lesson", "description": "Test Description"},
         )
         assert lesson_response.status_code == 201
         lesson_id = lesson_response.json()["id"]
@@ -725,8 +728,8 @@ class TestTeacherScope:
             f"/api/programs/lessons/{lesson_id}?scope=teacher",
             json={
                 "name": "Updated Lesson Name",
-                "description": "Updated lesson description"
-            }
+                "description": "Updated lesson description",
+            },
         )
 
         assert response.status_code == 200
@@ -736,20 +739,19 @@ class TestTeacherScope:
 
         # Verify in database
         from models import Lesson
+
         lesson = test_db.query(Lesson).filter(Lesson.id == lesson_id).first()
         assert lesson.name == "Updated Lesson Name"
         assert lesson.description == "Updated lesson description"
 
     def test_update_lesson_empty_name_validation(
-        self,
-        authenticated_client: TestClient,
-        teacher_program
+        self, authenticated_client: TestClient, teacher_program
     ):
         """Test PUT /api/programs/lessons/{id} rejects empty name"""
         # Create a lesson first
         lesson_response = authenticated_client.post(
             f"/api/programs/{teacher_program.id}/lessons",
-            json={"name": "Valid Lesson", "description": "Test"}
+            json={"name": "Valid Lesson", "description": "Test"},
         )
         assert lesson_response.status_code == 201
         lesson_id = lesson_response.json()["id"]
@@ -757,7 +759,7 @@ class TestTeacherScope:
         # RED Phase: Try to update with empty name (whitespace only)
         response = authenticated_client.put(
             f"/api/programs/lessons/{lesson_id}?scope=teacher",
-            json={"name": "   ", "description": "Valid"}
+            json={"name": "   ", "description": "Valid"},
         )
 
         # Should return 400 or 422 for validation error
@@ -769,51 +771,45 @@ class TestTeacherScope:
         else:
             # FastAPI validation returns list of errors
             detail_str = str(detail).lower()
-            assert "name" in detail_str or "cannot be empty" in detail_str or "whitespace" in detail_str
+            assert (
+                "name" in detail_str
+                or "cannot be empty" in detail_str
+                or "whitespace" in detail_str
+            )
 
     def test_update_program_negative_estimated_hours(
-        self,
-        authenticated_client: TestClient,
-        teacher_program
+        self, authenticated_client: TestClient, teacher_program
     ):
         """Test PUT /api/programs/{id} rejects negative estimated_hours"""
         response = authenticated_client.put(
-            f"/api/programs/{teacher_program.id}",
-            json={"estimated_hours": -5}
+            f"/api/programs/{teacher_program.id}", json={"estimated_hours": -5}
         )
         assert response.status_code == 422
         detail = response.json()["detail"]
         assert "estimated_hours" in str(detail).lower()
 
     def test_update_program_description_too_long(
-        self,
-        authenticated_client,
-        teacher_program
+        self, authenticated_client, teacher_program
     ):
         """Test PUT /api/programs/{id} rejects description > 1000 chars"""
         response = authenticated_client.put(
-            f"/api/programs/{teacher_program.id}",
-            json={"description": "x" * 1001}
+            f"/api/programs/{teacher_program.id}", json={"description": "x" * 1001}
         )
         assert response.status_code == 422
 
     def test_update_lesson_negative_estimated_minutes(
-        self,
-        authenticated_client: TestClient,
-        teacher_program
+        self, authenticated_client: TestClient, teacher_program
     ):
         """Test PUT /api/programs/lessons/{id} rejects negative estimated_minutes"""
         # Create lesson first
         lesson_response = authenticated_client.post(
-            f"/api/programs/{teacher_program.id}/lessons",
-            json={"name": "Test Lesson"}
+            f"/api/programs/{teacher_program.id}/lessons", json={"name": "Test Lesson"}
         )
         lesson_id = lesson_response.json()["id"]
 
         # Try negative estimated_minutes
         response = authenticated_client.put(
-            f"/api/programs/lessons/{lesson_id}",
-            json={"estimated_minutes": -10}
+            f"/api/programs/lessons/{lesson_id}", json={"estimated_minutes": -10}
         )
         assert response.status_code == 422
         detail = response.json()["detail"]
@@ -834,7 +830,7 @@ class TestOrganizationScope:
         test_db: Session,
         org_owner_membership,
         test_organization,
-        org_program
+        org_program,
     ):
         """Test GET /api/programs?scope=organization&organization_id={id}"""
         response = org_owner_client.get(
@@ -859,15 +855,12 @@ class TestOrganizationScope:
         test_db: Session,
         org_owner_user,
         org_owner_membership,
-        test_organization
+        test_organization,
     ):
         """Test POST /api/programs with scope=organization creates org program"""
         response = org_owner_client.post(
             f"/api/programs?scope=organization&organization_id={test_organization.id}",
-            json={
-                "name": "New Org Program",
-                "description": "Created for organization"
-            }
+            json={"name": "New Org Program", "description": "Created for organization"},
         )
 
         assert response.status_code == 201
@@ -887,15 +880,15 @@ class TestOrganizationScope:
         org_admin_client: TestClient,
         test_db: Session,
         org_admin_membership,
-        test_organization
+        test_organization,
     ):
         """Test org_admin with manage_materials permission can create programs"""
         response = org_admin_client.post(
             f"/api/programs?scope=organization&organization_id={test_organization.id}",
             json={
                 "name": "Admin Created Program",
-                "description": "Created by org admin"
-            }
+                "description": "Created by org admin",
+            },
         )
 
         assert response.status_code == 201
@@ -903,18 +896,12 @@ class TestOrganizationScope:
         assert data["name"] == "Admin Created Program"
 
     def test_teacher_cannot_manage_org_materials(
-        self,
-        authenticated_client: TestClient,
-        test_db: Session,
-        test_organization
+        self, authenticated_client: TestClient, test_db: Session, test_organization
     ):
         """Test regular teacher cannot create organization programs"""
         response = authenticated_client.post(
             f"/api/programs?scope=organization&organization_id={test_organization.id}",
-            json={
-                "name": "Unauthorized Program",
-                "description": "Should fail"
-            }
+            json={"name": "Unauthorized Program", "description": "Should fail"},
         )
 
         assert response.status_code == 403
@@ -927,7 +914,7 @@ class TestOrganizationScope:
         test_organization,
         org_program,
         org_owner_user,
-        org_owner_membership
+        org_owner_membership,
     ):
         """Test PUT /api/programs/{id}?scope=organization updates org program"""
         # Ensure org_owner has membership for permission check
@@ -935,8 +922,8 @@ class TestOrganizationScope:
             f"/api/programs/{org_program.id}?scope=organization&organization_id={test_organization.id}",
             json={
                 "name": "Updated Org Program",
-                "description": "Updated org description"
-            }
+                "description": "Updated org description",
+            },
         )
 
         assert response.status_code == 200
@@ -956,13 +943,13 @@ class TestOrganizationScope:
         test_db: Session,
         test_organization,
         org_program,
-        org_owner_membership
+        org_owner_membership,
     ):
         """Test PUT /api/programs/lessons/{id}?scope=organization updates lesson"""
         # RED Phase: Create a lesson first
         lesson_response = org_owner_client.post(
             f"/api/programs/{org_program.id}/lessons?scope=organization&organization_id={test_organization.id}",
-            json={"name": "Org Lesson", "description": "Test Description"}
+            json={"name": "Org Lesson", "description": "Test Description"},
         )
         assert lesson_response.status_code == 201
         lesson_id = lesson_response.json()["id"]
@@ -972,8 +959,8 @@ class TestOrganizationScope:
             f"/api/programs/lessons/{lesson_id}?scope=organization&organization_id={test_organization.id}",
             json={
                 "name": "Updated Org Lesson",
-                "description": "Updated org description"
-            }
+                "description": "Updated org description",
+            },
         )
 
         assert response.status_code == 200
@@ -983,6 +970,7 @@ class TestOrganizationScope:
 
         # Verify in database
         from models import Lesson
+
         lesson = test_db.query(Lesson).filter(Lesson.id == lesson_id).first()
         assert lesson.name == "Updated Org Lesson"
         assert lesson.description == "Updated org description"
@@ -997,19 +985,12 @@ class TestLessonCRUD:
     """Test lesson CRUD operations with automatic permission checking"""
 
     def test_create_lesson_in_teacher_program(
-        self,
-        authenticated_client: TestClient,
-        test_db: Session,
-        teacher_program
+        self, authenticated_client: TestClient, test_db: Session, teacher_program
     ):
         """Test POST /api/programs/{program_id}/lessons for teacher program"""
         response = authenticated_client.post(
             f"/api/programs/{teacher_program.id}/lessons",
-            json={
-                "name": "New Lesson",
-                "description": "Test lesson",
-                "order_index": 1
-            }
+            json={"name": "New Lesson", "description": "Test lesson", "order_index": 1},
         )
 
         assert response.status_code == 201
@@ -1027,7 +1008,7 @@ class TestLessonCRUD:
         org_owner_client: TestClient,
         test_db: Session,
         org_owner_membership,
-        org_program
+        org_program,
     ):
         """Test POST /api/programs/{program_id}/lessons for org program"""
         response = org_owner_client.post(
@@ -1035,8 +1016,8 @@ class TestLessonCRUD:
             json={
                 "name": "Org Lesson",
                 "description": "Lesson in org program",
-                "order_index": 1
-            }
+                "order_index": 1,
+            },
         )
 
         assert response.status_code == 201
@@ -1044,20 +1025,14 @@ class TestLessonCRUD:
         assert data["name"] == "Org Lesson"
 
     def test_update_lesson_checks_program_permission(
-        self,
-        authenticated_client: TestClient,
-        test_db: Session,
-        program_with_lesson
+        self, authenticated_client: TestClient, test_db: Session, program_with_lesson
     ):
         """Test PUT /api/lessons/{lesson_id} checks program ownership"""
         lesson = program_with_lesson._lesson
 
         response = authenticated_client.put(
             f"/api/programs/lessons/{lesson.id}",
-            json={
-                "name": "Updated Lesson",
-                "description": "Updated description"
-            }
+            json={"name": "Updated Lesson", "description": "Updated description"},
         )
 
         assert response.status_code == 200
@@ -1065,17 +1040,12 @@ class TestLessonCRUD:
         assert data["name"] == "Updated Lesson"
 
     def test_delete_lesson_checks_program_permission(
-        self,
-        authenticated_client: TestClient,
-        test_db: Session,
-        program_with_lesson
+        self, authenticated_client: TestClient, test_db: Session, program_with_lesson
     ):
         """Test DELETE /api/lessons/{lesson_id} checks program ownership"""
         lesson = program_with_lesson._lesson
 
-        response = authenticated_client.delete(
-            f"/api/programs/lessons/{lesson.id}"
-        )
+        response = authenticated_client.delete(f"/api/programs/lessons/{lesson.id}")
 
         assert response.status_code == 200
 
@@ -1093,21 +1063,14 @@ class TestContentCRUD:
     """Test content CRUD operations with automatic permission checking"""
 
     def test_create_content_in_lesson(
-        self,
-        authenticated_client: TestClient,
-        test_db: Session,
-        program_with_lesson
+        self, authenticated_client: TestClient, test_db: Session, program_with_lesson
     ):
         """Test POST /api/lessons/{lesson_id}/contents"""
         lesson = program_with_lesson._lesson
 
         response = authenticated_client.post(
             f"/api/programs/lessons/{lesson.id}/contents",
-            json={
-                "type": "vocabulary_set",
-                "title": "New Content",
-                "order_index": 1
-            }
+            json={"type": "vocabulary_set", "title": "New Content", "order_index": 1},
         )
 
         assert response.status_code == 201
@@ -1116,22 +1079,19 @@ class TestContentCRUD:
         assert data["lesson_id"] == lesson.id
 
     def test_delete_content_checks_lesson_program_permission(
-        self,
-        authenticated_client: TestClient,
-        test_db: Session,
-        lesson_with_content
+        self, authenticated_client: TestClient, test_db: Session, lesson_with_content
     ):
         """Test DELETE /api/contents/{content_id} checks lesson->program permission"""
         content = lesson_with_content._content
 
-        response = authenticated_client.delete(
-            f"/api/programs/contents/{content.id}"
-        )
+        response = authenticated_client.delete(f"/api/programs/contents/{content.id}")
 
         assert response.status_code == 200
 
         # Verify soft delete
-        deleted_content = test_db.query(Content).filter(Content.id == content.id).first()
+        deleted_content = (
+            test_db.query(Content).filter(Content.id == content.id).first()
+        )
         assert deleted_content.is_active is False
 
 
@@ -1144,29 +1104,22 @@ class TestCrossPermissionDenial:
     """Test that users cannot access resources they don't own"""
 
     def test_teacher_cannot_update_org_program(
-        self,
-        authenticated_client: TestClient,
-        test_db: Session,
-        org_program
+        self, authenticated_client: TestClient, test_db: Session, org_program
     ):
         """Test teacher cannot update organization program"""
         response = authenticated_client.put(
-            f"/api/programs/{org_program.id}",
-            json={"name": "Hacked Program"}
+            f"/api/programs/{org_program.id}", json={"name": "Hacked Program"}
         )
 
         assert response.status_code == 403
 
     def test_teacher_cannot_create_lesson_in_org_program(
-        self,
-        authenticated_client: TestClient,
-        test_db: Session,
-        org_program
+        self, authenticated_client: TestClient, test_db: Session, org_program
     ):
         """Test teacher cannot create lesson in organization program"""
         response = authenticated_client.post(
             f"/api/programs/{org_program.id}/lessons",
-            json={"name": "Unauthorized Lesson", "order_index": 1}
+            json={"name": "Unauthorized Lesson", "order_index": 1},
         )
 
         assert response.status_code == 403
@@ -1180,35 +1133,37 @@ class TestCrossPermissionDenial:
 class TestEdgeCases:
     """Test edge cases and validation"""
 
-    def test_missing_scope_parameter_returns_400(self, authenticated_client: TestClient):
+    def test_missing_scope_parameter_returns_400(
+        self, authenticated_client: TestClient
+    ):
         """Test GET /api/programs without scope parameter returns 400"""
-        response = authenticated_client.get(
-            "/api/programs"
-        )
+        response = authenticated_client.get("/api/programs")
 
         assert response.status_code == 422  # FastAPI validation error
         detail = response.json()["detail"]
-        detail_str = str(detail).lower() if not isinstance(detail, str) else detail.lower()
+        detail_str = (
+            str(detail).lower() if not isinstance(detail, str) else detail.lower()
+        )
         assert "scope" in detail_str or "required" in detail_str
 
     def test_organization_scope_requires_org_id(self, org_owner_client: TestClient):
         """Test scope=organization requires organization_id parameter"""
-        response = org_owner_client.get(
-            "/api/programs?scope=organization"
-        )
+        response = org_owner_client.get("/api/programs?scope=organization")
 
         assert response.status_code == 400
         detail = response.json()["detail"]
-        detail_str = str(detail).lower() if not isinstance(detail, str) else detail.lower()
+        detail_str = (
+            str(detail).lower() if not isinstance(detail, str) else detail.lower()
+        )
         assert "organization_id" in detail_str
 
     def test_invalid_scope_returns_400(self, authenticated_client: TestClient):
         """Test invalid scope value returns 400"""
-        response = authenticated_client.get(
-            "/api/programs?scope=invalid"
-        )
+        response = authenticated_client.get("/api/programs?scope=invalid")
 
-        assert response.status_code == 422  # FastAPI validation error for invalid enum value
+        assert (
+            response.status_code == 422
+        )  # FastAPI validation error for invalid enum value
 
 
 # ============================================================================
@@ -1263,7 +1218,10 @@ class TestProgramCopyUnified:
         data = response.json()
         assert data["classroom_id"] == second_teacher_classroom.id
         assert data["source_type"] == "classroom"
-        assert data["source_metadata"]["source_program_id"] == classroom_program_with_tree.id
+        assert (
+            data["source_metadata"]["source_program_id"]
+            == classroom_program_with_tree.id
+        )
 
     def test_copy_organization_program_to_school(
         self,
@@ -1285,7 +1243,9 @@ class TestProgramCopyUnified:
         assert response.status_code == 201
         data = response.json()
         assert data["school_id"] == str(test_school.id)
-        assert data["source_metadata"]["organization_id"] == str(org_program_with_tree.organization_id)
+        assert data["source_metadata"]["organization_id"] == str(
+            org_program_with_tree.organization_id
+        )
         assert data["source_metadata"]["program_id"] == org_program_with_tree.id
 
     def test_organization_program_copy_to_classroom_rejected(
@@ -1338,7 +1298,9 @@ class TestProgramCopyUnified:
         assert data["classroom_id"] is None
         assert data["school_id"] is None
         assert data["is_template"] is True
-        assert data["source_metadata"]["school_id"] == str(school_program_with_tree.school_id)
+        assert data["source_metadata"]["school_id"] == str(
+            school_program_with_tree.school_id
+        )
 
     def test_copy_school_program_to_classroom(
         self,
@@ -1359,4 +1321,6 @@ class TestProgramCopyUnified:
         assert response.status_code == 201
         data = response.json()
         assert data["classroom_id"] == teacher_classroom.id
-        assert data["source_metadata"]["school_id"] == str(school_program_with_tree.school_id)
+        assert data["source_metadata"]["school_id"] == str(
+            school_program_with_tree.school_id
+        )

@@ -802,7 +802,9 @@ from services import program_service
 
 @router.get("", response_model=List[ProgramResponse])
 async def list_programs(
-    scope: Literal["teacher", "organization", "school"] = Query(..., description="Scope: teacher, organization, or school"),
+    scope: Literal["teacher", "organization", "school"] = Query(
+        ..., description="Scope: teacher, organization, or school"
+    ),
     organization_id: str = Query(None, description="Required if scope=organization"),
     school_id: str = Query(None, description="Required if scope=school"),
     db: Session = Depends(get_db),
@@ -819,16 +821,17 @@ async def list_programs(
     if scope == "organization" and not organization_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="organization_id is required when scope=organization"
+            detail="organization_id is required when scope=organization",
         )
     if scope == "school" and not school_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="school_id is required when scope=school"
+            detail="school_id is required when scope=school",
         )
 
     try:
         import uuid as uuid_module
+
         org_uuid = uuid_module.UUID(organization_id) if organization_id else None
         sch_uuid = uuid_module.UUID(school_id) if school_id else None
         programs = program_service.get_programs_by_scope(
@@ -877,7 +880,7 @@ async def list_programs(
                     "description": lesson.description,
                     "order_index": lesson.order_index,
                     "is_active": lesson.is_active,
-                    "contents": []
+                    "contents": [],
                 }
 
                 for content in sorted(lesson.contents, key=lambda x: x.order_index):
@@ -897,8 +900,10 @@ async def list_programs(
                                 "translation": item.translation,
                                 "audio_url": item.audio_url,
                             }
-                            for item in sorted(content.content_items, key=lambda x: x.order_index)
-                        ]
+                            for item in sorted(
+                                content.content_items, key=lambda x: x.order_index
+                            )
+                        ],
                     }
                     lesson_data["contents"].append(content_data)
 
@@ -909,15 +914,9 @@ async def list_programs(
         return result
 
     except PermissionError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 def _has_school_access(teacher_id: int, school_id: uuid.UUID, db: Session) -> bool:
@@ -955,7 +954,10 @@ def _has_school_access(teacher_id: int, school_id: uuid.UUID, db: Session) -> bo
     if not membership or not membership.roles:
         return False
 
-    return any(role in ["school_admin", "school_director", "teacher"] for role in membership.roles)
+    return any(
+        role in ["school_admin", "school_director", "teacher"]
+        for role in membership.roles
+    )
 
 
 def _has_school_manage_permission(
@@ -1106,11 +1108,7 @@ async def copy_program(
                 detail="School materials can only be copied to teacher or classroom",
             )
 
-        school = (
-            db.query(School)
-            .filter(School.id == source_program.school_id)
-            .first()
-        )
+        school = db.query(School).filter(School.id == source_program.school_id).first()
         if not school:
             raise HTTPException(status_code=404, detail="School not found")
 
@@ -1316,7 +1314,9 @@ async def copy_program(
                         "translation": item.translation,
                         "audio_url": item.audio_url,
                     }
-                    for item in sorted(content.content_items, key=lambda x: x.order_index)
+                    for item in sorted(
+                        content.content_items, key=lambda x: x.order_index
+                    )
                 ],
             }
             lesson_data["contents"].append(content_data)
@@ -1329,7 +1329,9 @@ async def copy_program(
 @router.post("", response_model=ProgramResponse, status_code=201)
 async def create_program(
     payload: ProgramCreate,
-    scope: Literal["teacher", "organization", "school"] = Query(..., description="Scope: teacher, organization, or school"),
+    scope: Literal["teacher", "organization", "school"] = Query(
+        ..., description="Scope: teacher, organization, or school"
+    ),
     organization_id: str = Query(None, description="Required if scope=organization"),
     school_id: str = Query(None, description="Required if scope=school"),
     db: Session = Depends(get_db),
@@ -1346,16 +1348,17 @@ async def create_program(
     if scope == "organization" and not organization_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="organization_id is required when scope=organization"
+            detail="organization_id is required when scope=organization",
         )
     if scope == "school" and not school_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="school_id is required when scope=school"
+            detail="school_id is required when scope=school",
         )
 
     try:
         import uuid as uuid_module
+
         org_uuid = uuid_module.UUID(organization_id) if organization_id else None
         sch_uuid = uuid_module.UUID(school_id) if school_id else None
         program = program_service.create_program(
@@ -1370,15 +1373,9 @@ async def create_program(
         return ProgramResponse.from_orm(program)
 
     except PermissionError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.put("/{program_id}", response_model=ProgramResponse)
@@ -1404,15 +1401,9 @@ async def update_program(
         return ProgramResponse.from_orm(program)
 
     except PermissionError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Lesson endpoints
@@ -1429,6 +1420,7 @@ async def create_lesson(
     Automatically checks program permission (works for both teacher and org programs).
     """
     import logging
+
     logger = logging.getLogger(__name__)
 
     logger.info(
@@ -1454,11 +1446,16 @@ async def create_lesson(
 
         # Double-check: Count lessons with same name in this program
         from models import Lesson
-        duplicate_count = db.query(Lesson).filter(
-            Lesson.program_id == program_id,
-            Lesson.name == lesson.name,
-            Lesson.is_active == True
-        ).count()
+
+        duplicate_count = (
+            db.query(Lesson)
+            .filter(
+                Lesson.program_id == program_id,
+                Lesson.name == lesson.name,
+                Lesson.is_active == True,
+            )
+            .count()
+        )
         logger.info(
             "[CREATE_LESSON_ENDPOINT] Duplicate check: %s lessons found in program %s",
             duplicate_count,
@@ -1474,21 +1471,17 @@ async def create_lesson(
             "is_active": lesson.is_active,
         }
 
-        logger.info("[CREATE_LESSON_ENDPOINT] Returning response for lesson_id=%s", lesson.id)
+        logger.info(
+            "[CREATE_LESSON_ENDPOINT] Returning response for lesson_id=%s", lesson.id
+        )
         return response
 
     except PermissionError as e:
         logger.error("[CREATE_LESSON_ENDPOINT] PermissionError: %s", str(e))
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except ValueError as e:
         logger.error("[CREATE_LESSON_ENDPOINT] ValueError: %s", str(e))
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.put("/lessons/{lesson_id}", response_model=LessonResponse)
@@ -1517,15 +1510,9 @@ async def update_lesson(
         return LessonResponse.from_orm(lesson)
 
     except PermissionError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.delete("/lessons/{lesson_id}")
@@ -1549,15 +1536,9 @@ async def delete_lesson(
         return result
 
     except PermissionError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 # Content endpoints
@@ -1586,7 +1567,9 @@ async def create_content(
             data=payload.dict(),
             db=db,
         )
-        logger.info("[CREATE_CONTENT_ENDPOINT] Content created successfully: id=%s", content.id)
+        logger.info(
+            "[CREATE_CONTENT_ENDPOINT] Content created successfully: id=%s", content.id
+        )
 
         return {
             "id": content.id,
@@ -1598,30 +1581,27 @@ async def create_content(
         }
 
     except PermissionError as e:
-        logger.error("Permission denied creating content in lesson %s: %s", lesson_id, e)
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
+        logger.error(
+            "Permission denied creating content in lesson %s: %s", lesson_id, e
         )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except ValueError as e:
         logger.error("Invalid data creating content in lesson %s: %s", lesson_id, e)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except SQLAlchemyError as e:
         logger.error("Database error creating content in lesson %s: %s", lesson_id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error occurred"
+            detail="Database error occurred",
         )
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         logger.error("Unexpected error creating content in lesson %s: %s", lesson_id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred"
+            detail="An unexpected error occurred",
         )
 
 
@@ -1646,15 +1626,10 @@ async def delete_content(
         return result
 
     except PermissionError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
 
 # ============================================================================
 # Reorder Endpoints (Scope-Aware)
@@ -1681,12 +1656,12 @@ async def reorder_programs(
     if scope == "organization" and not organization_id:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="organization_id is required when scope=organization"
+            detail="organization_id is required when scope=organization",
         )
     if scope == "school" and not school_id:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="school_id is required when scope=school"
+            detail="school_id is required when scope=school",
         )
 
     # Build query based on scope
@@ -1705,24 +1680,20 @@ async def reorder_programs(
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid organization_id format"
+                detail="Invalid organization_id format",
             )
         # Organization programs don't have teacher_id (they are NULL)
-        query = query.filter(
-            Program.organization_id == org_uuid
-        )
+        query = query.filter(Program.organization_id == org_uuid)
     elif scope == "school":
         try:
             sch_uuid = uuid.UUID(school_id)
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid school_id format"
+                detail="Invalid school_id format",
             )
         # School programs don't have teacher_id (they are NULL)
-        query = query.filter(
-            Program.school_id == sch_uuid
-        )
+        query = query.filter(Program.school_id == sch_uuid)
 
     # Get all programs in scope
     programs = query.all()
@@ -1756,12 +1727,12 @@ async def reorder_lessons(
     if scope == "organization" and not organization_id:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="organization_id is required when scope=organization"
+            detail="organization_id is required when scope=organization",
         )
     if scope == "school" and not school_id:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="school_id is required when scope=school"
+            detail="school_id is required when scope=school",
         )
 
     # Verify program exists and matches scope
@@ -1781,24 +1752,20 @@ async def reorder_lessons(
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid organization_id format"
+                detail="Invalid organization_id format",
             )
         # Organization programs don't have teacher_id (they are NULL)
-        query = query.filter(
-            Program.organization_id == org_uuid
-        )
+        query = query.filter(Program.organization_id == org_uuid)
     elif scope == "school":
         try:
             sch_uuid = uuid.UUID(school_id)
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid school_id format"
+                detail="Invalid school_id format",
             )
         # School programs don't have teacher_id (they are NULL)
-        query = query.filter(
-            Program.school_id == sch_uuid
-        )
+        query = query.filter(Program.school_id == sch_uuid)
 
     program = query.first()
     if not program:
@@ -1806,10 +1773,11 @@ async def reorder_lessons(
 
     # Reorder lessons
     lesson_ids = [item["id"] for item in order_data]
-    lessons_list = db.query(Lesson).filter(
-        Lesson.id.in_(lesson_ids),
-        Lesson.program_id == program_id
-    ).all()
+    lessons_list = (
+        db.query(Lesson)
+        .filter(Lesson.id.in_(lesson_ids), Lesson.program_id == program_id)
+        .all()
+    )
 
     lessons_dict = {lesson.id: lesson for lesson in lessons_list}
 
@@ -1838,12 +1806,12 @@ async def reorder_contents(
     if scope == "organization" and not organization_id:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="organization_id is required when scope=organization"
+            detail="organization_id is required when scope=organization",
         )
     if scope == "school" and not school_id:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="school_id is required when scope=school"
+            detail="school_id is required when scope=school",
         )
 
     # Verify lesson's program matches scope
@@ -1863,24 +1831,20 @@ async def reorder_contents(
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid organization_id format"
+                detail="Invalid organization_id format",
             )
         # Organization programs don't have teacher_id (they are NULL)
-        query = query.filter(
-            Program.organization_id == org_uuid
-        )
+        query = query.filter(Program.organization_id == org_uuid)
     elif scope == "school":
         try:
             sch_uuid = uuid.UUID(school_id)
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid school_id format"
+                detail="Invalid school_id format",
             )
         # School programs don't have teacher_id (they are NULL)
-        query = query.filter(
-            Program.school_id == sch_uuid
-        )
+        query = query.filter(Program.school_id == sch_uuid)
 
     lesson = query.first()
     if not lesson:
@@ -1888,10 +1852,11 @@ async def reorder_contents(
 
     # Reorder contents
     content_ids = [item["id"] for item in order_data]
-    contents_list = db.query(Content).filter(
-        Content.id.in_(content_ids),
-        Content.lesson_id == lesson_id
-    ).all()
+    contents_list = (
+        db.query(Content)
+        .filter(Content.id.in_(content_ids), Content.lesson_id == lesson_id)
+        .all()
+    )
 
     contents_dict = {content.id: content for content in contents_list}
 

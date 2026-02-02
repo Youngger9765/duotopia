@@ -26,10 +26,12 @@ def test_db(tmp_path):
     from database import Base
 
     db_path = tmp_path / "test_classroom_workflow.db"
-    engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        f"sqlite:///{db_path}", connect_args={"check_same_thread": False}
+    )
     Base.metadata.create_all(bind=engine)
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    
+
     db = TestingSessionLocal()
     try:
         yield db
@@ -40,12 +42,13 @@ def test_db(tmp_path):
 @pytest.fixture
 def client(test_db):
     """Create test client with database override"""
+
     def override_get_db():
         try:
             yield test_db
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -71,10 +74,14 @@ def test_complete_classroom_lifecycle(client, test_db):
     test_db.add(org)
 
     school_id = uuid.uuid4()
-    school = School(id=school_id, organization_id=org_id, name="Test School", is_active=True)
+    school = School(
+        id=school_id, organization_id=org_id, name="Test School", is_active=True
+    )
     test_db.add(school)
 
-    admin = Teacher(email="admin@test.com", name="Admin", password_hash="hashed", is_active=True)
+    admin = Teacher(
+        email="admin@test.com", name="Admin", password_hash="hashed", is_active=True
+    )
     test_db.add(admin)
     test_db.flush()
 
@@ -88,8 +95,12 @@ def test_complete_classroom_lifecycle(client, test_db):
     test_db.add_all([org_link, school_link])
 
     # Create teachers to assign
-    teacher1 = Teacher(email="t1@test.com", name="Teacher 1", password_hash="hashed", is_active=True)
-    teacher2 = Teacher(email="t2@test.com", name="Teacher 2", password_hash="hashed", is_active=True)
+    teacher1 = Teacher(
+        email="t1@test.com", name="Teacher 1", password_hash="hashed", is_active=True
+    )
+    teacher2 = Teacher(
+        email="t2@test.com", name="Teacher 2", password_hash="hashed", is_active=True
+    )
     test_db.add_all([teacher1, teacher2])
     test_db.commit()
     test_db.refresh(admin)
@@ -102,7 +113,7 @@ def test_complete_classroom_lifecycle(client, test_db):
     response = client.post(
         f"/api/schools/{school_id}/classrooms",
         json={"name": "一年級 A 班", "level": "A1"},
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
     data = response.json()
@@ -112,17 +123,19 @@ def test_complete_classroom_lifecycle(client, test_db):
     response = client.put(
         f"/api/classrooms/{classroom_id}/teacher",
         json={"teacher_id": teacher1.id},
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
     data = response.json()
-    assert data.get("teacher_id") == teacher1.id or data.get("teacher_name") == "Teacher 1"
+    assert (
+        data.get("teacher_id") == teacher1.id or data.get("teacher_name") == "Teacher 1"
+    )
 
     # Step 3: Update details
     response = client.put(
         f"/api/classrooms/{classroom_id}",
         json={"name": "一年級 A 班（進階）", "level": "A2"},
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -133,17 +146,19 @@ def test_complete_classroom_lifecycle(client, test_db):
     response = client.put(
         f"/api/classrooms/{classroom_id}/teacher",
         json={"teacher_id": teacher2.id},
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
     data = response.json()
-    assert data.get("teacher_id") == teacher2.id or data.get("teacher_name") == "Teacher 2"
+    assert (
+        data.get("teacher_id") == teacher2.id or data.get("teacher_name") == "Teacher 2"
+    )
 
     # Step 5: Deactivate
     response = client.put(
         f"/api/classrooms/{classroom_id}",
         json={"is_active": False},
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -152,10 +167,9 @@ def test_complete_classroom_lifecycle(client, test_db):
     # Verify classroom not in active list
     response = client.get(
         f"/api/schools/{school_id}/classrooms",
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
     active_classrooms = response.json()
     # Convert classroom_id to string for comparison since API returns IDs as strings
     assert str(classroom_id) not in [c["id"] for c in active_classrooms]
-

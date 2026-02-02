@@ -94,7 +94,9 @@ class TestManageMaterialsPermission:
             action="write",
         )
 
-        assert can_manage is False, "teacher should NOT have manage_materials permission"
+        assert (
+            can_manage is False
+        ), "teacher should NOT have manage_materials permission"
 
     def test_different_organizations_isolated(self):
         """Materials permissions should be isolated between organizations"""

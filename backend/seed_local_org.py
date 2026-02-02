@@ -1,6 +1,7 @@
 import os
 import sys
-sys.path.insert(0, '.')
+
+sys.path.insert(0, ".")
 
 from database import SessionLocal
 from models.user import Teacher
@@ -40,7 +41,7 @@ else:
         is_admin=True,
         email_verified=True,
         email_verified_at=datetime.now(),
-        created_at=datetime.now()
+        created_at=datetime.now(),
     )
     db.add(teacher)
     print("➕ Created new teacher")
@@ -60,7 +61,7 @@ if not org:
         is_active=True,
         teacher_limit=10,
         created_at=datetime.now(),
-        updated_at=datetime.now()
+        updated_at=datetime.now(),
     )
     db.add(org)
     print("➕ Created organization")
@@ -70,10 +71,14 @@ else:
 db.flush()
 
 # Check if teacher-org link exists
-teacher_org = db.query(TeacherOrganization).filter(
-    TeacherOrganization.teacher_id == teacher.id,
-    TeacherOrganization.organization_id == org_id
-).first()
+teacher_org = (
+    db.query(TeacherOrganization)
+    .filter(
+        TeacherOrganization.teacher_id == teacher.id,
+        TeacherOrganization.organization_id == org_id,
+    )
+    .first()
+)
 
 if not teacher_org:
     teacher_org = TeacherOrganization(
@@ -81,7 +86,7 @@ if not teacher_org:
         organization_id=org_id,
         role="org_owner",
         is_active=True,
-        created_at=datetime.now()
+        created_at=datetime.now(),
     )
     db.add(teacher_org)
     print("➕ Linked teacher to organization")

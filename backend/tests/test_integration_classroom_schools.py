@@ -266,9 +266,9 @@ class TestBasicCRUD:
         test_db.commit()
 
         # Assert: Verify soft deleted (not hard deleted)
-        all_links = test_db.query(ClassroomSchool).filter(
-            ClassroomSchool.id == link_id
-        ).first()
+        all_links = (
+            test_db.query(ClassroomSchool).filter(ClassroomSchool.id == link_id).first()
+        )
         assert all_links is not None
         assert all_links.is_active is False
 
@@ -428,9 +428,7 @@ class TestCascadeDelete:
 
         # But classrooms should still exist
         remaining_classrooms = (
-            test_db.query(Classroom)
-            .filter(Classroom.id.in_(classroom_ids))
-            .all()
+            test_db.query(Classroom).filter(Classroom.id.in_(classroom_ids)).all()
         )
         assert len(remaining_classrooms) == 3
 
@@ -469,9 +467,7 @@ class TestCascadeDelete:
         )
         assert remaining_link is None
 
-    def test_delete_organization_cascades_full_hierarchy(
-        self, test_db: Session
-    ):
+    def test_delete_organization_cascades_full_hierarchy(self, test_db: Session):
         """Test that deleting organization cascades through entire hierarchy"""
         # Arrange: Create org → school → classroom → classroom_schools
         org = Organization(
@@ -523,14 +519,23 @@ class TestCascadeDelete:
         test_db.commit()
 
         # Assert: Verify entire hierarchy cascade deleted
-        assert test_db.query(Organization).filter(Organization.id == org_id).first() is None
+        assert (
+            test_db.query(Organization).filter(Organization.id == org_id).first()
+            is None
+        )
         assert test_db.query(School).filter(School.id == school_id).first() is None
-        assert test_db.query(ClassroomSchool).filter(
-            ClassroomSchool.classroom_id == classroom_id
-        ).first() is None
+        assert (
+            test_db.query(ClassroomSchool)
+            .filter(ClassroomSchool.classroom_id == classroom_id)
+            .first()
+            is None
+        )
 
         # Classroom should still exist (not cascade from school)
-        assert test_db.query(Classroom).filter(Classroom.id == classroom_id).first() is not None
+        assert (
+            test_db.query(Classroom).filter(Classroom.id == classroom_id).first()
+            is not None
+        )
 
 
 # ============================================================================
@@ -580,9 +585,7 @@ class TestQueryOptimization:
         # Verify index exists (check table metadata)
         inspector = inspect(test_db.bind)
         indexes = inspector.get_indexes("classroom_schools")
-        index_columns = [
-            idx["column_names"] for idx in indexes
-        ]
+        index_columns = [idx["column_names"] for idx in indexes]
         # Should have composite index on (classroom_id, school_id, is_active)
         assert any("school_id" in cols for cols in index_columns)
 
@@ -679,13 +682,13 @@ class TestDataIntegrity:
             test_db.commit()
             # If commit succeeds, verify referential integrity manually
             school_exists = (
-                test_db.query(School)
-                .filter(School.id == invalid_school_id)
-                .first()
+                test_db.query(School).filter(School.id == invalid_school_id).first()
             )
             # In production with FK enforcement, this would have failed
             # For now, just verify the school doesn't exist
-            assert school_exists is None, "Link created with non-existent school (FK not enforced)"
+            assert (
+                school_exists is None
+            ), "Link created with non-existent school (FK not enforced)"
             test_db.rollback()
         except Exception as exc:
             # FK constraint properly enforced
@@ -720,7 +723,9 @@ class TestDataIntegrity:
             )
             # In production with FK enforcement, this would have failed
             # For now, just verify the classroom doesn't exist
-            assert classroom_exists is None, "Link created with non-existent classroom (FK not enforced)"
+            assert (
+                classroom_exists is None
+            ), "Link created with non-existent classroom (FK not enforced)"
             test_db.rollback()
         except Exception as exc:
             # FK constraint properly enforced

@@ -61,7 +61,11 @@ def test_db(shared_test_session: Session):
 def sample_students_data():
     """Sample student data for bulk creation"""
     return [
-        {"name": f"Student {i}", "email": f"student{i}@test.com", "birthdate": date(2010, 1, i % 28 + 1)}
+        {
+            "name": f"Student {i}",
+            "email": f"student{i}@test.com",
+            "birthdate": date(2010, 1, i % 28 + 1),
+        }
         for i in range(1, 11)
     ]
 
@@ -314,7 +318,11 @@ class TestDataPropagation:
         test_db.add(org)
         test_db.flush()
 
-        school = School(organization_id=org.id, name=f"school-{uuid.uuid4().hex[:8]}", is_active=True)
+        school = School(
+            organization_id=org.id,
+            name=f"school-{uuid.uuid4().hex[:8]}",
+            is_active=True,
+        )
         test_db.add(school)
         test_db.flush()
 
@@ -335,7 +343,9 @@ class TestDataPropagation:
         test_db.add(classroom)
         test_db.flush()
 
-        cs_link = ClassroomSchool(classroom_id=classroom.id, school_id=school.id, is_active=True)
+        cs_link = ClassroomSchool(
+            classroom_id=classroom.id, school_id=school.id, is_active=True
+        )
         test_db.add(cs_link)
         test_db.flush()
 
@@ -452,7 +462,11 @@ class TestCascadeDelete:
         test_db.add(org)
         test_db.flush()
 
-        school = School(organization_id=org.id, name=f"cascade-school-{uuid.uuid4().hex[:8]}", is_active=True)
+        school = School(
+            organization_id=org.id,
+            name=f"cascade-school-{uuid.uuid4().hex[:8]}",
+            is_active=True,
+        )
         test_db.add(school)
         test_db.flush()
 
@@ -465,11 +479,15 @@ class TestCascadeDelete:
         test_db.add(teacher)
         test_db.flush()
 
-        classroom = Classroom(name="Cascade Classroom", teacher_id=teacher.id, is_active=True)
+        classroom = Classroom(
+            name="Cascade Classroom", teacher_id=teacher.id, is_active=True
+        )
         test_db.add(classroom)
         test_db.flush()
 
-        cs_link = ClassroomSchool(classroom_id=classroom.id, school_id=school.id, is_active=True)
+        cs_link = ClassroomSchool(
+            classroom_id=classroom.id, school_id=school.id, is_active=True
+        )
         test_db.add(cs_link)
         test_db.flush()
 
@@ -486,7 +504,9 @@ class TestCascadeDelete:
             test_db.flush()
             students.append(student)
 
-            enrollment = ClassroomStudent(classroom_id=classroom.id, student_id=student.id, is_active=True)
+            enrollment = ClassroomStudent(
+                classroom_id=classroom.id, student_id=student.id, is_active=True
+            )
             test_db.add(enrollment)
 
         test_db.commit()
@@ -502,25 +522,34 @@ class TestCascadeDelete:
 
         # Verify cascade:
         # - Organization deleted
-        assert test_db.query(Organization).filter(Organization.id == org_id).first() is None
+        assert (
+            test_db.query(Organization).filter(Organization.id == org_id).first()
+            is None
+        )
 
         # - Schools cascade deleted (due to CASCADE on FK)
         assert test_db.query(School).filter(School.id == school_id).first() is None
 
         # - ClassroomSchool relationships cascade deleted
-        assert test_db.query(ClassroomSchool).filter(ClassroomSchool.school_id == school_id).first() is None
+        assert (
+            test_db.query(ClassroomSchool)
+            .filter(ClassroomSchool.school_id == school_id)
+            .first()
+            is None
+        )
 
         # - Students remain (not cascade deleted from organization)
         remaining_students = (
-            test_db.query(Student)
-            .filter(Student.id.in_(student_ids))
-            .all()
+            test_db.query(Student).filter(Student.id.in_(student_ids)).all()
         )
         assert len(remaining_students) == 10
 
         # - But students lose classroom link if classroom was deleted
         # (Classroom not cascade deleted from school, so still exists)
-        assert test_db.query(Classroom).filter(Classroom.id == classroom_id).first() is not None
+        assert (
+            test_db.query(Classroom).filter(Classroom.id == classroom_id).first()
+            is not None
+        )
 
     def test_delete_school_cascades_to_classrooms_and_students(self, test_db: Session):
         """
@@ -537,7 +566,11 @@ class TestCascadeDelete:
         test_db.add(org)
         test_db.flush()
 
-        school = School(organization_id=org.id, name=f"school-{uuid.uuid4().hex[:8]}", is_active=True)
+        school = School(
+            organization_id=org.id,
+            name=f"school-{uuid.uuid4().hex[:8]}",
+            is_active=True,
+        )
         test_db.add(school)
         test_db.flush()
 
@@ -554,12 +587,16 @@ class TestCascadeDelete:
         student_ids = []
 
         for c in range(3):
-            classroom = Classroom(name=f"Classroom {c}", teacher_id=teacher.id, is_active=True)
+            classroom = Classroom(
+                name=f"Classroom {c}", teacher_id=teacher.id, is_active=True
+            )
             test_db.add(classroom)
             test_db.flush()
             classroom_ids.append(classroom.id)
 
-            cs_link = ClassroomSchool(classroom_id=classroom.id, school_id=school.id, is_active=True)
+            cs_link = ClassroomSchool(
+                classroom_id=classroom.id, school_id=school.id, is_active=True
+            )
             test_db.add(cs_link)
             test_db.flush()
 
@@ -575,7 +612,9 @@ class TestCascadeDelete:
                 test_db.flush()
                 student_ids.append(student.id)
 
-                enrollment = ClassroomStudent(classroom_id=classroom.id, student_id=student.id, is_active=True)
+                enrollment = ClassroomStudent(
+                    classroom_id=classroom.id, student_id=student.id, is_active=True
+                )
                 test_db.add(enrollment)
 
         test_db.commit()
@@ -597,17 +636,13 @@ class TestCascadeDelete:
 
         # - All 3 classrooms still exist (not cascade from school)
         remaining_classrooms = (
-            test_db.query(Classroom)
-            .filter(Classroom.id.in_(classroom_ids))
-            .all()
+            test_db.query(Classroom).filter(Classroom.id.in_(classroom_ids)).all()
         )
         assert len(remaining_classrooms) == 3
 
         # - All 15 students still exist
         remaining_students = (
-            test_db.query(Student)
-            .filter(Student.id.in_(student_ids))
-            .all()
+            test_db.query(Student).filter(Student.id.in_(student_ids)).all()
         )
         assert len(remaining_students) == 15
 
@@ -630,7 +665,9 @@ class TestCascadeDelete:
         test_db.add(teacher)
         test_db.flush()
 
-        classroom = Classroom(name="Delete Test Classroom", teacher_id=teacher.id, is_active=True)
+        classroom = Classroom(
+            name="Delete Test Classroom", teacher_id=teacher.id, is_active=True
+        )
         test_db.add(classroom)
         test_db.flush()
 
@@ -647,7 +684,9 @@ class TestCascadeDelete:
             test_db.flush()
             student_ids.append(student.id)
 
-            enrollment = ClassroomStudent(classroom_id=classroom.id, student_id=student.id, is_active=True)
+            enrollment = ClassroomStudent(
+                classroom_id=classroom.id, student_id=student.id, is_active=True
+            )
             test_db.add(enrollment)
 
         test_db.commit()
@@ -661,9 +700,7 @@ class TestCascadeDelete:
         # Verify:
         # - Students still exist (not hard deleted)
         remaining_students = (
-            test_db.query(Student)
-            .filter(Student.id.in_(student_ids))
-            .all()
+            test_db.query(Student).filter(Student.id.in_(student_ids)).all()
         )
         assert len(remaining_students) == 10
 
@@ -737,11 +774,17 @@ class TestRoleBasedAccess:
 
         for school in schools:
             for c in range(2):
-                classroom = Classroom(name=f"Classroom S{school.name[-1]}C{c}", teacher_id=teacher.id, is_active=True)
+                classroom = Classroom(
+                    name=f"Classroom S{school.name[-1]}C{c}",
+                    teacher_id=teacher.id,
+                    is_active=True,
+                )
                 test_db.add(classroom)
                 test_db.flush()
 
-                cs_link = ClassroomSchool(classroom_id=classroom.id, school_id=school.id, is_active=True)
+                cs_link = ClassroomSchool(
+                    classroom_id=classroom.id, school_id=school.id, is_active=True
+                )
                 test_db.add(cs_link)
                 test_db.flush()
 
@@ -756,7 +799,9 @@ class TestRoleBasedAccess:
                     test_db.add(student)
                     test_db.flush()
 
-                    enrollment = ClassroomStudent(classroom_id=classroom.id, student_id=student.id, is_active=True)
+                    enrollment = ClassroomStudent(
+                        classroom_id=classroom.id, student_id=student.id, is_active=True
+                    )
                     test_db.add(enrollment)
 
         test_db.commit()
@@ -777,9 +822,7 @@ class TestRoleBasedAccess:
 
         # Access all schools under organization
         org_schools = (
-            test_db.query(School)
-            .filter(School.organization_id == org.id)
-            .all()
+            test_db.query(School).filter(School.organization_id == org.id).all()
         )
         assert len(org_schools) == 2
 
@@ -851,13 +894,21 @@ class TestRoleBasedAccess:
         test_db.add(teacher)
         test_db.flush()
 
-        classroom_a = Classroom(name="Classroom A", teacher_id=teacher.id, is_active=True)
-        classroom_b = Classroom(name="Classroom B", teacher_id=teacher.id, is_active=True)
+        classroom_a = Classroom(
+            name="Classroom A", teacher_id=teacher.id, is_active=True
+        )
+        classroom_b = Classroom(
+            name="Classroom B", teacher_id=teacher.id, is_active=True
+        )
         test_db.add_all([classroom_a, classroom_b])
         test_db.flush()
 
-        cs_link_a = ClassroomSchool(classroom_id=classroom_a.id, school_id=school_a.id, is_active=True)
-        cs_link_b = ClassroomSchool(classroom_id=classroom_b.id, school_id=school_b.id, is_active=True)
+        cs_link_a = ClassroomSchool(
+            classroom_id=classroom_a.id, school_id=school_a.id, is_active=True
+        )
+        cs_link_b = ClassroomSchool(
+            classroom_id=classroom_b.id, school_id=school_b.id, is_active=True
+        )
         test_db.add_all([cs_link_a, cs_link_b])
         test_db.commit()
 
@@ -930,12 +981,16 @@ class TestRoleBasedAccess:
             test_db.flush()
             teachers.append(teacher)
 
-            classroom = Classroom(name=f"Classroom {i}", teacher_id=teacher.id, is_active=True)
+            classroom = Classroom(
+                name=f"Classroom {i}", teacher_id=teacher.id, is_active=True
+            )
             test_db.add(classroom)
             test_db.flush()
             classrooms.append(classroom)
 
-            cs_link = ClassroomSchool(classroom_id=classroom.id, school_id=school.id, is_active=True)
+            cs_link = ClassroomSchool(
+                classroom_id=classroom.id, school_id=school.id, is_active=True
+            )
             test_db.add(cs_link)
             test_db.flush()
 
@@ -951,7 +1006,9 @@ class TestRoleBasedAccess:
                 test_db.add(student)
                 test_db.flush()
 
-                enrollment = ClassroomStudent(classroom_id=classroom.id, student_id=student.id, is_active=True)
+                enrollment = ClassroomStudent(
+                    classroom_id=classroom.id, student_id=student.id, is_active=True
+                )
                 test_db.add(enrollment)
 
         test_db.commit()
@@ -1157,9 +1214,7 @@ class TestCrossHierarchyIsolation:
 
         # Verify org_owner can access both schools
         org_owner_schools = (
-            test_db.query(School)
-            .filter(School.organization_id == org.id)
-            .all()
+            test_db.query(School).filter(School.organization_id == org.id).all()
         )
         assert len(org_owner_schools) == 2
 
@@ -1201,11 +1256,15 @@ class TestDataMigration:
         test_db.add(teacher)
         test_db.flush()
 
-        classroom = Classroom(name="Mobile Classroom", teacher_id=teacher.id, is_active=True)
+        classroom = Classroom(
+            name="Mobile Classroom", teacher_id=teacher.id, is_active=True
+        )
         test_db.add(classroom)
         test_db.flush()
 
-        cs_link_a = ClassroomSchool(classroom_id=classroom.id, school_id=school_a.id, is_active=True)
+        cs_link_a = ClassroomSchool(
+            classroom_id=classroom.id, school_id=school_a.id, is_active=True
+        )
         test_db.add(cs_link_a)
         test_db.flush()
 
@@ -1222,7 +1281,9 @@ class TestDataMigration:
             test_db.flush()
             students.append(student)
 
-            enrollment = ClassroomStudent(classroom_id=classroom.id, student_id=student.id, is_active=True)
+            enrollment = ClassroomStudent(
+                classroom_id=classroom.id, student_id=student.id, is_active=True
+            )
             test_db.add(enrollment)
 
         test_db.commit()
@@ -1232,7 +1293,9 @@ class TestDataMigration:
         test_db.delete(cs_link_a)
         test_db.flush()
 
-        cs_link_b = ClassroomSchool(classroom_id=classroom.id, school_id=school_b.id, is_active=True)
+        cs_link_b = ClassroomSchool(
+            classroom_id=classroom.id, school_id=school_b.id, is_active=True
+        )
         test_db.add(cs_link_b)
         test_db.commit()
 
@@ -1273,8 +1336,12 @@ class TestDataMigration:
         test_db.add(teacher)
         test_db.flush()
 
-        classroom_a = Classroom(name="Classroom A", teacher_id=teacher.id, is_active=True)
-        classroom_b = Classroom(name="Classroom B", teacher_id=teacher.id, is_active=True)
+        classroom_a = Classroom(
+            name="Classroom A", teacher_id=teacher.id, is_active=True
+        )
+        classroom_b = Classroom(
+            name="Classroom B", teacher_id=teacher.id, is_active=True
+        )
         test_db.add_all([classroom_a, classroom_b])
         test_db.flush()
 
@@ -1289,7 +1356,9 @@ class TestDataMigration:
         test_db.add(student)
         test_db.flush()
 
-        enrollment_a = ClassroomStudent(classroom_id=classroom_a.id, student_id=student.id, is_active=True)
+        enrollment_a = ClassroomStudent(
+            classroom_id=classroom_a.id, student_id=student.id, is_active=True
+        )
         test_db.add(enrollment_a)
         test_db.commit()
 
@@ -1297,7 +1366,9 @@ class TestDataMigration:
         enrollment_a.is_active = False
         test_db.flush()
 
-        enrollment_b = ClassroomStudent(classroom_id=classroom_b.id, student_id=student.id, is_active=True)
+        enrollment_b = ClassroomStudent(
+            classroom_id=classroom_b.id, student_id=student.id, is_active=True
+        )
         test_db.add(enrollment_b)
         test_db.commit()
 
@@ -1369,9 +1440,7 @@ class TestBulkOperations:
 
         # Verify all schools linked to organization
         created_schools = (
-            test_db.query(School)
-            .filter(School.organization_id == org.id)
-            .all()
+            test_db.query(School).filter(School.organization_id == org.id).all()
         )
         assert len(created_schools) == 10
 
@@ -1462,7 +1531,9 @@ class TestBulkOperations:
         test_db.add(teacher)
         test_db.flush()
 
-        classroom = Classroom(name="Bulk Classroom", teacher_id=teacher.id, is_active=True)
+        classroom = Classroom(
+            name="Bulk Classroom", teacher_id=teacher.id, is_active=True
+        )
         test_db.add(classroom)
         test_db.flush()
 
@@ -1696,14 +1767,14 @@ class TestEdgeCases:
         - Classroom with no students
         """
         # Organization with no schools
-        org_empty = Organization(name=f"empty-org-{uuid.uuid4().hex[:8]}", is_active=True)
+        org_empty = Organization(
+            name=f"empty-org-{uuid.uuid4().hex[:8]}", is_active=True
+        )
         test_db.add(org_empty)
         test_db.commit()
 
         schools = (
-            test_db.query(School)
-            .filter(School.organization_id == org_empty.id)
-            .all()
+            test_db.query(School).filter(School.organization_id == org_empty.id).all()
         )
         assert len(schools) == 0
 
@@ -1712,7 +1783,9 @@ class TestEdgeCases:
         test_db.add(org)
         test_db.flush()
 
-        school_empty = School(organization_id=org.id, name="empty-school", is_active=True)
+        school_empty = School(
+            organization_id=org.id, name="empty-school", is_active=True
+        )
         test_db.add(school_empty)
         test_db.commit()
 
@@ -1733,7 +1806,9 @@ class TestEdgeCases:
         test_db.add(teacher)
         test_db.flush()
 
-        classroom_empty = Classroom(name="Empty Classroom", teacher_id=teacher.id, is_active=True)
+        classroom_empty = Classroom(
+            name="Empty Classroom", teacher_id=teacher.id, is_active=True
+        )
         test_db.add(classroom_empty)
         test_db.commit()
 
@@ -1781,7 +1856,9 @@ class TestEdgeCases:
         test_db.add(teacher)
         test_db.flush()
 
-        classroom_orphan = Classroom(name="Orphan Classroom", teacher_id=teacher.id, is_active=True)
+        classroom_orphan = Classroom(
+            name="Orphan Classroom", teacher_id=teacher.id, is_active=True
+        )
         test_db.add(classroom_orphan)
         test_db.commit()
 

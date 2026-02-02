@@ -7,6 +7,7 @@ from datetime import date, datetime
 
 class SchoolStudentCreate(BaseModel):
     """Request to create student in school"""
+
     name: str = Field(..., min_length=1, max_length=100)
     email: Optional[str] = Field(None, max_length=255)
     student_number: Optional[str] = Field(None, max_length=50)
@@ -25,6 +26,7 @@ class SchoolStudentCreate(BaseModel):
         if len(v) > 50:
             raise ValueError("學號長度不能超過 50 個字符")
         import re
+
         if not re.match(r"^[a-zA-Z0-9_-]+$", v):
             raise ValueError("學號只能包含字母、數字、連字號和底線")
         return v
@@ -45,13 +47,14 @@ class SchoolStudentCreate(BaseModel):
                 "email": "zhang@example.com",
                 "student_number": "001",
                 "birthdate": "2010-01-01",
-                "phone": "0912345678"
+                "phone": "0912345678",
             }
         }
 
 
 class SchoolStudentUpdate(BaseModel):
     """Request to update student"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     email: Optional[str] = Field(None, max_length=255)
     student_number: Optional[str] = Field(None, max_length=50)
@@ -71,6 +74,7 @@ class SchoolStudentUpdate(BaseModel):
         if len(v) > 50:
             raise ValueError("學號長度不能超過 50 個字符")
         import re
+
         if not re.match(r"^[a-zA-Z0-9_-]+$", v):
             raise ValueError("學號只能包含字母、數字、連字號和底線")
         return v
@@ -86,15 +90,13 @@ class SchoolStudentUpdate(BaseModel):
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "name": "張三（更新）",
-                "email": "zhang_new@example.com"
-            }
+            "example": {"name": "張三（更新）", "email": "zhang_new@example.com"}
         }
 
 
 class SchoolInfo(BaseModel):
     """School information"""
+
     id: str
     name: str
 
@@ -104,6 +106,7 @@ class SchoolInfo(BaseModel):
 
 class ClassroomInfo(BaseModel):
     """Classroom information"""
+
     id: int
     name: str
     school_id: str
@@ -114,6 +117,7 @@ class ClassroomInfo(BaseModel):
 
 class SchoolStudentResponse(BaseModel):
     """Response for school student"""
+
     id: int
     name: str
     email: Optional[str]
@@ -130,30 +134,25 @@ class SchoolStudentResponse(BaseModel):
 
 class AssignClassroomRequest(BaseModel):
     """Request to assign student to classroom"""
+
     classroom_id: int
 
     class Config:
-        json_schema_extra = {
-            "example": {
-                "classroom_id": 5
-            }
-        }
+        json_schema_extra = {"example": {"classroom_id": 5}}
 
 
 class BatchAssignRequest(BaseModel):
     """Request to batch assign students to classroom"""
+
     student_ids: List[int] = Field(..., min_items=1)
 
     class Config:
-        json_schema_extra = {
-            "example": {
-                "student_ids": [1, 2, 3]
-            }
-        }
+        json_schema_extra = {"example": {"student_ids": [1, 2, 3]}}
 
 
 class BatchStudentImportItem(BaseModel):
     """Single student import item"""
+
     name: str = Field(..., min_length=1, max_length=100)
     email: Optional[str] = Field(None, max_length=255)
     student_number: Optional[str] = Field(None, max_length=50)
@@ -173,6 +172,7 @@ class BatchStudentImportItem(BaseModel):
         if len(v) > 50:
             raise ValueError("學號長度不能超過 50 個字符")
         import re
+
         if not re.match(r"^[a-zA-Z0-9_-]+$", v):
             raise ValueError("學號只能包含字母、數字、連字號和底線")
         return v
@@ -189,6 +189,7 @@ class BatchStudentImportItem(BaseModel):
 
 class BatchStudentImport(BaseModel):
     """Request to batch import students"""
+
     students: List[BatchStudentImportItem] = Field(..., min_items=1)
     duplicate_action: str = Field(default="skip", pattern="^(skip|update|add_suffix)$")
 
@@ -201,10 +202,9 @@ class BatchStudentImport(BaseModel):
                         "email": "zhang@example.com",
                         "student_number": "001",
                         "birthdate": "2010-01-01",
-                        "classroom_id": 5
+                        "classroom_id": 5,
                     }
                 ],
-                "duplicate_action": "skip"
+                "duplicate_action": "skip",
             }
         }
-

@@ -28,8 +28,12 @@ router = APIRouter()
 
 @router.get("/classrooms")
 async def get_teacher_classrooms(
-    mode: Optional[str] = Query(None, description="Filter mode: personal|school|organization"),
-    school_id: Optional[str] = Query(None, description="School UUID (requires mode=school)"),
+    mode: Optional[str] = Query(
+        None, description="Filter mode: personal|school|organization"
+    ),
+    school_id: Optional[str] = Query(
+        None, description="School UUID (requires mode=school)"
+    ),
     organization_id: Optional[str] = Query(None, description="Organization UUID"),
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
@@ -45,9 +49,9 @@ async def get_teacher_classrooms(
         )
         .options(
             selectinload(Classroom.students).selectinload(ClassroomStudent.student),
-            selectinload(Classroom.classroom_schools).selectinload(
-                ClassroomSchool.school
-            ).selectinload(School.organization),
+            selectinload(Classroom.classroom_schools)
+            .selectinload(ClassroomSchool.school)
+            .selectinload(School.organization),
         )
         .all()
     )
@@ -144,43 +148,47 @@ async def get_teacher_classrooms(
                 if active_cs.school.organization:
                     organization_id = str(active_cs.school.organization.id)
 
-        result.append({
-            "id": classroom.id,
-            "name": classroom.name,
-            "description": classroom.description,
-            "level": classroom.level.value if classroom.level else "A1",
-            "student_count": len([s for s in classroom.students if s.is_active]),
-            "program_count": program_count_map.get(classroom.id, 0),  # Efficient lookup
-            "created_at": (
-                classroom.created_at.isoformat() if classroom.created_at else None
-            ),
-            "school_id": school_id,
-            "school_name": school_name,
-            "organization_id": organization_id,
-            "students": [
-                {
-                    "id": cs.student.id,
-                    "name": cs.student.name,
-                    "email": cs.student.email,
-                    "student_number": cs.student.student_number,
-                    "birthdate": (
-                        cs.student.birthdate.isoformat()
-                        if cs.student.birthdate
-                        else None
-                    ),
-                    "password_changed": cs.student.password_changed,
-                    "last_login": (
-                        cs.student.last_login.isoformat()
-                        if cs.student.last_login
-                        else None
-                    ),
-                    "phone": "",  # Privacy: don't expose phone numbers in list
-                    "status": "active" if cs.student.is_active else "inactive",
-                }
-                for cs in classroom.students
-                if cs.is_active
-            ],
-        })
+        result.append(
+            {
+                "id": classroom.id,
+                "name": classroom.name,
+                "description": classroom.description,
+                "level": classroom.level.value if classroom.level else "A1",
+                "student_count": len([s for s in classroom.students if s.is_active]),
+                "program_count": program_count_map.get(
+                    classroom.id, 0
+                ),  # Efficient lookup
+                "created_at": (
+                    classroom.created_at.isoformat() if classroom.created_at else None
+                ),
+                "school_id": school_id,
+                "school_name": school_name,
+                "organization_id": organization_id,
+                "students": [
+                    {
+                        "id": cs.student.id,
+                        "name": cs.student.name,
+                        "email": cs.student.email,
+                        "student_number": cs.student.student_number,
+                        "birthdate": (
+                            cs.student.birthdate.isoformat()
+                            if cs.student.birthdate
+                            else None
+                        ),
+                        "password_changed": cs.student.password_changed,
+                        "last_login": (
+                            cs.student.last_login.isoformat()
+                            if cs.student.last_login
+                            else None
+                        ),
+                        "phone": "",  # Privacy: don't expose phone numbers in list
+                        "status": "active" if cs.student.is_active else "inactive",
+                    }
+                    for cs in classroom.students
+                    if cs.is_active
+                ],
+            }
+        )
 
     return result
 
@@ -296,7 +304,7 @@ async def update_classroom(
 ):
     """更新班級資料"""
     from utils.permissions import check_classroom_is_personal
-    
+
     classroom = (
         db.query(Classroom)
         .filter(
@@ -307,13 +315,10 @@ async def update_classroom(
 
     if not classroom:
         raise HTTPException(status_code=404, detail="Classroom not found")
-    
+
     # Check if classroom belongs to school (should not be allowed)
     if not check_classroom_is_personal(classroom.id, db):
-        raise HTTPException(
-            status_code=403,
-            detail="此班級屬於學校，請通過學校後台編輯"
-        )
+        raise HTTPException(status_code=403, detail="此班級屬於學校，請通過學校後台編輯")
 
     if update_data.name is not None:
         classroom.name = update_data.name
@@ -343,7 +348,7 @@ async def delete_classroom(
 ):
     """刪除班級"""
     from utils.permissions import check_classroom_is_personal
-    
+
     classroom = (
         db.query(Classroom)
         .filter(
@@ -354,13 +359,10 @@ async def delete_classroom(
 
     if not classroom:
         raise HTTPException(status_code=404, detail="Classroom not found")
-    
+
     # Check if classroom belongs to school (should not be allowed)
     if not check_classroom_is_personal(classroom.id, db):
-        raise HTTPException(
-            status_code=403,
-            detail="此班級屬於學校，請通過學校後台刪除"
-        )
+        raise HTTPException(status_code=403, detail="此班級屬於學校，請通過學校後台刪除")
 
     # Soft delete by setting is_active = False
     classroom.is_active = False

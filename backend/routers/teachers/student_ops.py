@@ -29,8 +29,12 @@ router = APIRouter()
 
 @router.get("/students")
 async def get_all_students(
-    mode: Optional[str] = Query(None, description="Filter mode: personal|school|organization"),
-    school_id: Optional[str] = Query(None, description="School UUID (requires mode=school)"),
+    mode: Optional[str] = Query(
+        None, description="Filter mode: personal|school|organization"
+    ),
+    school_id: Optional[str] = Query(
+        None, description="School UUID (requires mode=school)"
+    ),
     organization_id: Optional[str] = Query(None, description="Organization UUID"),
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
@@ -125,9 +129,9 @@ async def get_all_students(
             db.query(Classroom)
             .filter(Classroom.id.in_(classroom_ids))
             .options(
-                selectinload(Classroom.classroom_schools).selectinload(
-                    ClassroomSchool.school
-                ).selectinload(School.organization)
+                selectinload(Classroom.classroom_schools)
+                .selectinload(ClassroomSchool.school)
+                .selectinload(School.organization)
             )
             .all()
         )
@@ -245,7 +249,7 @@ async def create_student(
     if student_data.classroom_id:
         from utils.permissions import check_classroom_is_personal
         from models import ClassroomSchool
-        
+
         classroom = (
             db.query(Classroom)
             .filter(
@@ -257,13 +261,10 @@ async def create_student(
 
         if not classroom:
             raise HTTPException(status_code=404, detail="Classroom not found")
-        
+
         # Check if classroom belongs to school (should not be allowed)
         if not check_classroom_is_personal(classroom.id, db):
-            raise HTTPException(
-                status_code=403,
-                detail="此班級屬於學校，請通過學校管理頁面創建學生"
-            )
+            raise HTTPException(status_code=403, detail="此班級屬於學校，請通過學校管理頁面創建學生")
 
     # Parse birthdate with error handling
     try:

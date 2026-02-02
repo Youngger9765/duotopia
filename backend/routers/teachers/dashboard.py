@@ -28,8 +28,12 @@ router = APIRouter()
 
 @router.get("/dashboard", response_model=TeacherDashboard)
 async def get_teacher_dashboard(
-    mode: Optional[str] = Query(None, description="Filter mode: personal|school|organization"),
-    school_id: Optional[str] = Query(None, description="School UUID (requires mode=school)"),
+    mode: Optional[str] = Query(
+        None, description="Filter mode: personal|school|organization"
+    ),
+    school_id: Optional[str] = Query(
+        None, description="School UUID (requires mode=school)"
+    ),
     organization_id: Optional[str] = Query(None, description="Organization UUID"),
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
@@ -104,9 +108,9 @@ async def get_teacher_dashboard(
         )
         .options(
             selectinload(Classroom.students).selectinload(ClassroomStudent.student),
-            selectinload(Classroom.classroom_schools).selectinload(
-                ClassroomSchool.school
-            ).selectinload(School.organization),
+            selectinload(Classroom.classroom_schools)
+            .selectinload(ClassroomSchool.school)
+            .selectinload(School.organization),
         )
         .all()
     )

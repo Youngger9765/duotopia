@@ -7,7 +7,15 @@ in the wrong workspace due to missing server-side filtering.
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from models import Teacher, Classroom, ClassroomSchool, School, Organization, Student, ClassroomStudent
+from models import (
+    Teacher,
+    Classroom,
+    ClassroomSchool,
+    School,
+    Organization,
+    Student,
+    ClassroomStudent,
+)
 from models import TeacherSchool
 import uuid
 from datetime import date
@@ -177,15 +185,37 @@ def test_students_mode_personal_returns_only_personal(
         )
     )
 
-    school_student1 = Student(name="School Student 1", email="s1@test.com", password_hash=get_password_hash("test123"), birthdate=date(2010, 1, 1), is_active=True)
-    school_student2 = Student(name="School Student 2", email="s2@test.com", password_hash=get_password_hash("test123"), birthdate=date(2010, 1, 1), is_active=True)
+    school_student1 = Student(
+        name="School Student 1",
+        email="s1@test.com",
+        password_hash=get_password_hash("test123"),
+        birthdate=date(2010, 1, 1),
+        is_active=True,
+    )
+    school_student2 = Student(
+        name="School Student 2",
+        email="s2@test.com",
+        password_hash=get_password_hash("test123"),
+        birthdate=date(2010, 1, 1),
+        is_active=True,
+    )
     test_session.add_all([school_student1, school_student2])
     test_session.flush()
 
-    test_session.add_all([
-        ClassroomStudent(student_id=school_student1.id, classroom_id=school_classroom.id, is_active=True),
-        ClassroomStudent(student_id=school_student2.id, classroom_id=school_classroom.id, is_active=True),
-    ])
+    test_session.add_all(
+        [
+            ClassroomStudent(
+                student_id=school_student1.id,
+                classroom_id=school_classroom.id,
+                is_active=True,
+            ),
+            ClassroomStudent(
+                student_id=school_student2.id,
+                classroom_id=school_classroom.id,
+                is_active=True,
+            ),
+        ]
+    )
 
     # Create personal classroom with 1 student
     personal_classroom = Classroom(
@@ -196,7 +226,13 @@ def test_students_mode_personal_returns_only_personal(
     test_session.add(personal_classroom)
     test_session.flush()
 
-    personal_student = Student(name="Personal Student", email="p@test.com", password_hash=get_password_hash("test123"), birthdate=date(2010, 1, 1), is_active=True)
+    personal_student = Student(
+        name="Personal Student",
+        email="p@test.com",
+        password_hash=get_password_hash("test123"),
+        birthdate=date(2010, 1, 1),
+        is_active=True,
+    )
     test_session.add(personal_student)
     test_session.flush()
 
@@ -266,30 +302,74 @@ def test_students_mode_school_returns_only_school_students(
     )
 
     # Create classrooms for both schools
-    school1_classroom = Classroom(name="School 1 Class", teacher_id=demo_teacher.id, is_active=True)
-    school2_classroom = Classroom(name="School 2 Class", teacher_id=demo_teacher.id, is_active=True)
-    personal_classroom = Classroom(name="Personal Class", teacher_id=demo_teacher.id, is_active=True)
+    school1_classroom = Classroom(
+        name="School 1 Class", teacher_id=demo_teacher.id, is_active=True
+    )
+    school2_classroom = Classroom(
+        name="School 2 Class", teacher_id=demo_teacher.id, is_active=True
+    )
+    personal_classroom = Classroom(
+        name="Personal Class", teacher_id=demo_teacher.id, is_active=True
+    )
     test_session.add_all([school1_classroom, school2_classroom, personal_classroom])
     test_session.flush()
 
     # Link classrooms to schools
-    test_session.add_all([
-        ClassroomSchool(classroom_id=school1_classroom.id, school_id=school1.id, is_active=True),
-        ClassroomSchool(classroom_id=school2_classroom.id, school_id=school2.id, is_active=True),
-    ])
+    test_session.add_all(
+        [
+            ClassroomSchool(
+                classroom_id=school1_classroom.id, school_id=school1.id, is_active=True
+            ),
+            ClassroomSchool(
+                classroom_id=school2_classroom.id, school_id=school2.id, is_active=True
+            ),
+        ]
+    )
 
     # Create students
-    s1_student = Student(name="School 1 Student", email="s1@test.com", password_hash=get_password_hash("test123"), birthdate=date(2010, 1, 1), is_active=True)
-    s2_student = Student(name="School 2 Student", email="s2@test.com", password_hash=get_password_hash("test123"), birthdate=date(2010, 1, 1), is_active=True)
-    personal_student = Student(name="Personal Student", email="p@test.com", password_hash=get_password_hash("test123"), birthdate=date(2010, 1, 1), is_active=True)
+    s1_student = Student(
+        name="School 1 Student",
+        email="s1@test.com",
+        password_hash=get_password_hash("test123"),
+        birthdate=date(2010, 1, 1),
+        is_active=True,
+    )
+    s2_student = Student(
+        name="School 2 Student",
+        email="s2@test.com",
+        password_hash=get_password_hash("test123"),
+        birthdate=date(2010, 1, 1),
+        is_active=True,
+    )
+    personal_student = Student(
+        name="Personal Student",
+        email="p@test.com",
+        password_hash=get_password_hash("test123"),
+        birthdate=date(2010, 1, 1),
+        is_active=True,
+    )
     test_session.add_all([s1_student, s2_student, personal_student])
     test_session.flush()
 
-    test_session.add_all([
-        ClassroomStudent(student_id=s1_student.id, classroom_id=school1_classroom.id, is_active=True),
-        ClassroomStudent(student_id=s2_student.id, classroom_id=school2_classroom.id, is_active=True),
-        ClassroomStudent(student_id=personal_student.id, classroom_id=personal_classroom.id, is_active=True),
-    ])
+    test_session.add_all(
+        [
+            ClassroomStudent(
+                student_id=s1_student.id,
+                classroom_id=school1_classroom.id,
+                is_active=True,
+            ),
+            ClassroomStudent(
+                student_id=s2_student.id,
+                classroom_id=school2_classroom.id,
+                is_active=True,
+            ),
+            ClassroomStudent(
+                student_id=personal_student.id,
+                classroom_id=personal_classroom.id,
+                is_active=True,
+            ),
+        ]
+    )
     test_session.commit()
 
     # Call API with mode=school&school_id=school1.id
@@ -350,7 +430,13 @@ def test_students_mode_school_requires_authorization(
     )
 
     # Create student
-    student = Student(name="Student", email="s@test.com", password_hash=get_password_hash("test123"), birthdate=date(2010, 1, 1), is_active=True)
+    student = Student(
+        name="Student",
+        email="s@test.com",
+        password_hash=get_password_hash("test123"),
+        birthdate=date(2010, 1, 1),
+        is_active=True,
+    )
     test_session.add(student)
     test_session.flush()
 
@@ -371,5 +457,7 @@ def test_students_mode_school_requires_authorization(
 
     # Should return 403 Forbidden
     assert response.status_code == 403, f"Expected 403, got {response.status_code}"
-    assert "Access denied" in response.json()["detail"] or \
-           "permission" in response.json()["detail"].lower()
+    assert (
+        "Access denied" in response.json()["detail"]
+        or "permission" in response.json()["detail"].lower()
+    )

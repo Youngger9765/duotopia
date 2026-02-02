@@ -64,18 +64,24 @@ def get_test_engine():
         # 使用 alembic 創建測試數據庫 schema
         env = os.environ.copy()
         env["DATABASE_URL"] = TEST_DATABASE_URL
-        env["SKIP_MIGRATION_VALIDATION"] = "true"  # Allow creating all tables in test DB
+        env[
+            "SKIP_MIGRATION_VALIDATION"
+        ] = "true"  # Allow creating all tables in test DB
 
         result = subprocess.run(
             ["alembic", "upgrade", "head"],
             env=env,
             capture_output=True,
             text=True,
-            cwd=os.path.dirname(os.path.dirname(__file__))  # Run from backend directory
+            cwd=os.path.dirname(
+                os.path.dirname(__file__)
+            ),  # Run from backend directory
         )
 
         if result.returncode != 0:
-            print(f"⚠️  Alembic migration failed, falling back to Base.metadata.create_all()")
+            print(
+                f"⚠️  Alembic migration failed, falling back to Base.metadata.create_all()"
+            )
             print(f"STDERR: {result.stderr}")
 
         # 創建引擎（StaticPool for single shared connection）

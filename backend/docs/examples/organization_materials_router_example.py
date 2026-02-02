@@ -11,7 +11,9 @@ from typing import List
 from services.casbin_service import get_casbin_service
 from dependencies import get_current_teacher
 
-router = APIRouter(prefix="/api/organizations/{org_id}/programs", tags=["organization_programs"])
+router = APIRouter(
+    prefix="/api/organizations/{org_id}/programs", tags=["organization_programs"]
+)
 
 
 # ============================================
@@ -21,6 +23,7 @@ router = APIRouter(prefix="/api/organizations/{org_id}/programs", tags=["organiz
 
 class OrganizationProgramCreate(BaseModel):
     """Create organization program request"""
+
     name: str
     description: str | None = None
     is_public: bool = False
@@ -28,6 +31,7 @@ class OrganizationProgramCreate(BaseModel):
 
 class OrganizationProgramResponse(BaseModel):
     """Organization program response"""
+
     id: int
     organization_id: str
     name: str

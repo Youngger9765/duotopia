@@ -24,8 +24,7 @@ class AdminOrganizationCreate(BaseModel):
 
     # Project staff assignment
     project_staff_emails: Optional[List[EmailStr]] = Field(
-        default=None,
-        description="專案服務人員 Email 列表（org_admin 角色）"
+        default=None, description="專案服務人員 Email 列表（org_admin 角色）"
     )
 
     class Config:
@@ -40,7 +39,7 @@ class AdminOrganizationCreate(BaseModel):
                 "contact_phone": "02-1234-5678",
                 "address": "台北市信義區信義路五段7號",
                 "owner_email": "wang@abc.edu.tw",
-                "project_staff_emails": ["staff@duotopia.com"]
+                "project_staff_emails": ["staff@duotopia.com"],
             }
         }
 
@@ -53,8 +52,7 @@ class AdminOrganizationResponse(BaseModel):
     owner_email: str
     owner_id: int
     project_staff_assigned: Optional[List[str]] = Field(
-        default=None,
-        description="Project staff emails assigned as org_admin"
+        default=None, description="Project staff emails assigned as org_admin"
     )
     message: str
 
@@ -66,7 +64,7 @@ class AdminOrganizationResponse(BaseModel):
                 "owner_email": "wang@abc.edu.tw",
                 "owner_id": 42,
                 "project_staff_assigned": ["staff@duotopia.com"],
-                "message": "Organization created successfully. Owner wang@abc.edu.tw has been assigned org_owner role. 1 project staff assigned."
+                "message": "Organization created successfully. Owner wang@abc.edu.tw has been assigned org_owner role. 1 project staff assigned.",
             }
         }
 
@@ -75,7 +73,9 @@ class OrganizationStatisticsResponse(BaseModel):
     """Organization teacher statistics"""
 
     teacher_count: int = Field(..., description="Active teachers in organization")
-    teacher_limit: Optional[int] = Field(None, description="Maximum teachers allowed (None = unlimited)")
+    teacher_limit: Optional[int] = Field(
+        None, description="Maximum teachers allowed (None = unlimited)"
+    )
     usage_percentage: float = Field(..., description="Percentage of limit used (0-100)")
 
     class Config:
@@ -83,7 +83,7 @@ class OrganizationStatisticsResponse(BaseModel):
             "example": {
                 "teacher_count": 5,
                 "teacher_limit": 10,
-                "usage_percentage": 50.0
+                "usage_percentage": 50.0,
             }
         }
 
@@ -105,6 +105,6 @@ class TeacherLookupResponse(BaseModel):
                 "email": "teacher@example.com",
                 "name": "John Doe",
                 "phone": "0912345678",
-                "email_verified": True
+                "email_verified": True,
             }
         }

@@ -68,6 +68,7 @@ async def teacher_login(
 ):
     """教師登入"""
     import logging
+
     logger = logging.getLogger(__name__)
 
     logger.info(f"🔍 Login attempt for email: {login_req.email}")

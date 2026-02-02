@@ -30,7 +30,7 @@ from schemas import ProgramResponse
 from routers.schemas.classroom import (
     SchoolClassroomCreate,
     SchoolClassroomUpdate,
-    AssignTeacherRequest
+    AssignTeacherRequest,
 )
 
 
@@ -143,7 +143,11 @@ class ClassroomInfo(BaseModel):
 
     @classmethod
     def from_orm_with_counts(
-        cls, classroom: Classroom, student_count: int, assignment_count: int, program_count: int = 0
+        cls,
+        classroom: Classroom,
+        student_count: int,
+        assignment_count: int,
+        program_count: int = 0,
     ):
         return cls(
             id=str(classroom.id),
@@ -390,7 +394,7 @@ async def list_school_classrooms(
         .group_by(Assignment.classroom_id)
         .subquery()
     )
-    
+
     # Count programs for classrooms
     program_counts = (
         db.query(Program.classroom_id, func.count(Program.id).label("count"))
@@ -434,7 +438,7 @@ async def list_school_classrooms(
 @router.post(
     "/api/schools/{school_id}/classrooms",
     status_code=status.HTTP_201_CREATED,
-    response_model=ClassroomInfo
+    response_model=ClassroomInfo,
 )
 async def create_school_classroom(
     school_id: uuid.UUID,
@@ -450,27 +454,29 @@ async def create_school_classroom(
     if not has_school_materials_permission(teacher.id, school_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions to create classroom in this school"
+            detail="Insufficient permissions to create classroom in this school",
         )
 
     # Verify school exists
     school = db.query(School).filter(School.id == school_id).first()
     if not school:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="School not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="School not found"
         )
 
     # Verify teacher exists if provided
     if classroom_data.teacher_id:
-        assigned_teacher = db.query(Teacher).filter(
-            Teacher.id == classroom_data.teacher_id,
-            Teacher.is_active.is_(True)
-        ).first()
+        assigned_teacher = (
+            db.query(Teacher)
+            .filter(
+                Teacher.id == classroom_data.teacher_id, Teacher.is_active.is_(True)
+            )
+            .first()
+        )
         if not assigned_teacher:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Assigned teacher not found"
+                detail="Assigned teacher not found",
             )
 
     # Convert level string to ProgramLevel enum
@@ -494,16 +500,14 @@ async def create_school_classroom(
         description=classroom_data.description,
         level=program_level,
         teacher_id=classroom_data.teacher_id,
-        is_active=True
+        is_active=True,
     )
     db.add(classroom)
     db.flush()  # Get classroom ID without committing
 
     # Link to school
     link = ClassroomSchool(
-        classroom_id=classroom.id,
-        school_id=school_id,
-        is_active=True
+        classroom_id=classroom.id, school_id=school_id, is_active=True
     )
     db.add(link)
     db.commit()
@@ -513,10 +517,7 @@ async def create_school_classroom(
     return ClassroomInfo.from_orm_with_counts(classroom, 0, 0, 0)
 
 
-@router.put(
-    "/api/classrooms/{classroom_id}/teacher",
-    response_model=ClassroomInfo
-)
+@router.put("/api/classrooms/{classroom_id}/teacher", response_model=ClassroomInfo)
 async def assign_teacher_to_classroom(
     classroom_id: int,
     request: AssignTeacherRequest,
@@ -529,41 +530,44 @@ async def assign_teacher_to_classroom(
     Requires school_admin or org-level permissions.
     """
     # Get classroom and verify it belongs to a school
-    link = db.query(ClassroomSchool).filter(
-        ClassroomSchool.classroom_id == classroom_id,
-        ClassroomSchool.is_active.is_(True)
-    ).first()
+    link = (
+        db.query(ClassroomSchool)
+        .filter(
+            ClassroomSchool.classroom_id == classroom_id,
+            ClassroomSchool.is_active.is_(True),
+        )
+        .first()
+    )
 
     if not link:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Classroom not found in any school"
+            detail="Classroom not found in any school",
         )
 
     # Check permission
     if not has_school_materials_permission(teacher.id, link.school_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions to assign teacher"
+            detail="Insufficient permissions to assign teacher",
         )
 
     classroom = db.query(Classroom).filter(Classroom.id == classroom_id).first()
     if not classroom:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Classroom not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Classroom not found"
         )
 
     # Verify new teacher exists if provided
     if request.teacher_id:
-        new_teacher = db.query(Teacher).filter(
-            Teacher.id == request.teacher_id,
-            Teacher.is_active.is_(True)
-        ).first()
+        new_teacher = (
+            db.query(Teacher)
+            .filter(Teacher.id == request.teacher_id, Teacher.is_active.is_(True))
+            .first()
+        )
         if not new_teacher:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Teacher not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
             )
 
     # Update assignment
@@ -572,27 +576,38 @@ async def assign_teacher_to_classroom(
     db.refresh(classroom)
 
     # Get counts
-    student_count = db.query(ClassroomStudent).filter(
-        ClassroomStudent.classroom_id == classroom_id,
-        ClassroomStudent.is_active.is_(True),
-    ).count()
-    assignment_count = db.query(Assignment).filter(
-        Assignment.classroom_id == classroom_id,
-        Assignment.is_active.is_(True),
-    ).count()
-    program_count = db.query(Program).filter(
-        Program.classroom_id == classroom_id,
-        Program.is_active.is_(True),
-        Program.deleted_at.is_(None),
-    ).count()
+    student_count = (
+        db.query(ClassroomStudent)
+        .filter(
+            ClassroomStudent.classroom_id == classroom_id,
+            ClassroomStudent.is_active.is_(True),
+        )
+        .count()
+    )
+    assignment_count = (
+        db.query(Assignment)
+        .filter(
+            Assignment.classroom_id == classroom_id,
+            Assignment.is_active.is_(True),
+        )
+        .count()
+    )
+    program_count = (
+        db.query(Program)
+        .filter(
+            Program.classroom_id == classroom_id,
+            Program.is_active.is_(True),
+            Program.deleted_at.is_(None),
+        )
+        .count()
+    )
 
-    return ClassroomInfo.from_orm_with_counts(classroom, student_count, assignment_count, program_count)
+    return ClassroomInfo.from_orm_with_counts(
+        classroom, student_count, assignment_count, program_count
+    )
 
 
-@router.put(
-    "/api/classrooms/{classroom_id}",
-    response_model=ClassroomInfo
-)
+@router.put("/api/classrooms/{classroom_id}", response_model=ClassroomInfo)
 async def update_classroom(
     classroom_id: int,
     update_data: SchoolClassroomUpdate,
@@ -605,29 +620,32 @@ async def update_classroom(
     Requires school_admin or org-level permissions.
     """
     # Get classroom and verify it belongs to a school
-    link = db.query(ClassroomSchool).filter(
-        ClassroomSchool.classroom_id == classroom_id,
-        ClassroomSchool.is_active.is_(True)
-    ).first()
+    link = (
+        db.query(ClassroomSchool)
+        .filter(
+            ClassroomSchool.classroom_id == classroom_id,
+            ClassroomSchool.is_active.is_(True),
+        )
+        .first()
+    )
 
     if not link:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Classroom not found in any school"
+            detail="Classroom not found in any school",
         )
 
     # Check permission
     if not has_school_materials_permission(teacher.id, link.school_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions to update classroom"
+            detail="Insufficient permissions to update classroom",
         )
 
     classroom = db.query(Classroom).filter(Classroom.id == classroom_id).first()
     if not classroom:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Classroom not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Classroom not found"
         )
 
     # Update fields
@@ -656,24 +674,41 @@ async def update_classroom(
     db.refresh(classroom)
 
     # Get counts
-    student_count = db.query(ClassroomStudent).filter(
-        ClassroomStudent.classroom_id == classroom_id,
-        ClassroomStudent.is_active.is_(True),
-    ).count()
-    assignment_count = db.query(Assignment).filter(
-        Assignment.classroom_id == classroom_id,
-        Assignment.is_active.is_(True),
-    ).count()
-    program_count = db.query(Program).filter(
-        Program.classroom_id == classroom_id,
-        Program.is_active.is_(True),
-        Program.deleted_at.is_(None),
-    ).count()
+    student_count = (
+        db.query(ClassroomStudent)
+        .filter(
+            ClassroomStudent.classroom_id == classroom_id,
+            ClassroomStudent.is_active.is_(True),
+        )
+        .count()
+    )
+    assignment_count = (
+        db.query(Assignment)
+        .filter(
+            Assignment.classroom_id == classroom_id,
+            Assignment.is_active.is_(True),
+        )
+        .count()
+    )
+    program_count = (
+        db.query(Program)
+        .filter(
+            Program.classroom_id == classroom_id,
+            Program.is_active.is_(True),
+            Program.deleted_at.is_(None),
+        )
+        .count()
+    )
 
-    return ClassroomInfo.from_orm_with_counts(classroom, student_count, assignment_count, program_count)
+    return ClassroomInfo.from_orm_with_counts(
+        classroom, student_count, assignment_count, program_count
+    )
 
 
-@router.get("/api/schools/{school_id}/classrooms/{classroom_id}/programs", response_model=List[ProgramResponse])
+@router.get(
+    "/api/schools/{school_id}/classrooms/{classroom_id}/programs",
+    response_model=List[ProgramResponse],
+)
 async def get_school_classroom_programs(
     school_id: uuid.UUID,
     classroom_id: int,
@@ -682,32 +717,31 @@ async def get_school_classroom_programs(
 ):
     """
     Get all programs for a classroom in a school.
-    
+
     Permission: Must have access to the school and classroom must belong to the school.
     """
     from datetime import datetime
-    
+
     # Verify school exists and teacher has access
     school = db.query(School).filter(School.id == school_id).first()
     if not school:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="School not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="School not found"
         )
-    
+
     if not has_school_materials_permission(teacher.id, school_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions to access this school"
+            detail="Insufficient permissions to access this school",
         )
-    
+
     # Verify classroom belongs to school
     if not check_classroom_in_school(classroom_id, school_id, db):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Classroom not found in this school"
+            detail="Classroom not found in this school",
         )
-    
+
     # Query programs for the classroom
     programs = (
         db.query(Program)
@@ -719,7 +753,7 @@ async def get_school_classroom_programs(
         .order_by(Program.order_index, Program.created_at)
         .all()
     )
-    
+
     # Convert to response models
     result = []
     for program in programs:
@@ -750,5 +784,5 @@ async def get_school_classroom_programs(
                 lessons=[],
             )
         )
-    
+
     return result

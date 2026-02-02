@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 class SchoolInfo(BaseModel):
     """School information in organization context"""
+
     id: str
     name: str
     roles: Optional[List[str]] = None  # teacher's roles in this school (if any)
@@ -35,6 +36,7 @@ class SchoolInfo(BaseModel):
 
 class OrganizationInfo(BaseModel):
     """Organization information with nested schools"""
+
     id: str
     name: str
     role: str  # teacher's role in this organization
@@ -46,6 +48,7 @@ class OrganizationInfo(BaseModel):
 
 class TeacherOrganizationsResponse(BaseModel):
     """Response for GET /api/teachers/{teacher_id}/organizations"""
+
     organizations: List[OrganizationInfo]
 
 
@@ -57,7 +60,7 @@ class TeacherOrganizationsResponse(BaseModel):
 @router.get(
     "/{teacher_id}/organizations",
     response_model=TeacherOrganizationsResponse,
-    status_code=status.HTTP_200_OK
+    status_code=status.HTTP_200_OK,
 )
 def get_teacher_organizations(
     teacher_id: int,
@@ -89,7 +92,7 @@ def get_teacher_organizations(
     if current_teacher.id != teacher_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only view your own organizations"
+            detail="You can only view your own organizations",
         )
 
     try:
@@ -100,7 +103,7 @@ def get_teacher_organizations(
             .filter(
                 TeacherOrganization.teacher_id == teacher_id,
                 TeacherOrganization.is_active == True,  # Only active memberships
-                Organization.is_active == True  # Only active organizations
+                Organization.is_active == True,  # Only active organizations
             )
             .options(joinedload(TeacherOrganization.organization))
             .all()
@@ -117,7 +120,7 @@ def get_teacher_organizations(
             db.query(School)
             .filter(
                 School.organization_id.in_(all_org_ids),
-                School.is_active == True  # Only active schools
+                School.is_active == True,  # Only active schools
             )
             .all()
         )
@@ -134,7 +137,7 @@ def get_teacher_organizations(
             .filter(
                 TeacherSchool.teacher_id == teacher_id,
                 TeacherSchool.school_id.in_(all_school_ids),
-                TeacherSchool.is_active == True  # Only active memberships
+                TeacherSchool.is_active == True,  # Only active memberships
             )
             .all()
         )
@@ -153,7 +156,7 @@ def get_teacher_organizations(
                 SchoolInfo(
                     id=str(school.id),
                     name=school.name,
-                    roles=teacher_school_roles.get(school.id)
+                    roles=teacher_school_roles.get(school.id),
                 )
                 for school in schools_in_org
             ]
@@ -164,15 +167,17 @@ def get_teacher_organizations(
                     id=str(org.id),
                     name=org.name,
                     role=teacher_org.role,
-                    schools=schools
+                    schools=schools,
                 )
             )
 
         return TeacherOrganizationsResponse(organizations=organizations)
 
     except SQLAlchemyError as e:
-        logger.error(f"Database error in get_teacher_organizations for teacher {teacher_id}: {str(e)}")
+        logger.error(
+            f"Database error in get_teacher_organizations for teacher {teacher_id}: {str(e)}"
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch organizations"
+            detail="Failed to fetch organizations",
         )

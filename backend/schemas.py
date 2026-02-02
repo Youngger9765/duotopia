@@ -57,18 +57,18 @@ class ProgramUpdate(BaseModel):
     estimated_hours: Optional[int] = Field(None, ge=0)
     tags: Optional[List[str]] = None
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def validate_fields(cls, data):
         """Validate that name is not empty or whitespace"""
         if isinstance(data, dict):
-            if 'name' in data and data['name'] is not None:
-                stripped = data['name'].strip()
+            if "name" in data and data["name"] is not None:
+                stripped = data["name"].strip()
                 if not stripped:
-                    raise ValueError('Name cannot be empty or whitespace')
-                data['name'] = stripped
-            if 'description' in data and data['description'] is not None:
-                data['description'] = data['description'].strip()
+                    raise ValueError("Name cannot be empty or whitespace")
+                data["name"] = stripped
+            if "description" in data and data["description"] is not None:
+                data["description"] = data["description"].strip()
         return data
 
 
@@ -92,23 +92,25 @@ class ProgramResponse(ProgramBase):
     is_duplicate: Optional[bool] = None
     lessons: List["LessonResponse"] = []
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def convert_uuid_fields(cls, data):
         """Convert UUID fields to strings before validation"""
-        if hasattr(data, 'organization_id') and data.organization_id is not None:
+        if hasattr(data, "organization_id") and data.organization_id is not None:
             if not isinstance(data.organization_id, str):
-                object.__setattr__(data, 'organization_id', str(data.organization_id))
-        elif isinstance(data, dict) and 'organization_id' in data:
-            if data['organization_id'] is not None and not isinstance(data['organization_id'], str):
-                data['organization_id'] = str(data['organization_id'])
+                object.__setattr__(data, "organization_id", str(data.organization_id))
+        elif isinstance(data, dict) and "organization_id" in data:
+            if data["organization_id"] is not None and not isinstance(
+                data["organization_id"], str
+            ):
+                data["organization_id"] = str(data["organization_id"])
 
-        if hasattr(data, 'school_id') and data.school_id is not None:
+        if hasattr(data, "school_id") and data.school_id is not None:
             if not isinstance(data.school_id, str):
-                object.__setattr__(data, 'school_id', str(data.school_id))
-        elif isinstance(data, dict) and 'school_id' in data:
-            if data['school_id'] is not None and not isinstance(data['school_id'], str):
-                data['school_id'] = str(data['school_id'])
+                object.__setattr__(data, "school_id", str(data.school_id))
+        elif isinstance(data, dict) and "school_id" in data:
+            if data["school_id"] is not None and not isinstance(data["school_id"], str):
+                data["school_id"] = str(data["school_id"])
         return data
 
     class Config:
@@ -151,18 +153,18 @@ class LessonUpdate(BaseModel):
     order_index: Optional[int] = None
     estimated_minutes: Optional[int] = Field(None, ge=0)
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def validate_fields(cls, data):
         """Validate that name is not empty or whitespace"""
         if isinstance(data, dict):
-            if 'name' in data and data['name'] is not None:
-                stripped = data['name'].strip()
+            if "name" in data and data["name"] is not None:
+                stripped = data["name"].strip()
                 if not stripped:
-                    raise ValueError('Name cannot be empty or whitespace')
-                data['name'] = stripped
-            if 'description' in data and data['description'] is not None:
-                data['description'] = data['description'].strip()
+                    raise ValueError("Name cannot be empty or whitespace")
+                data["name"] = stripped
+            if "description" in data and data["description"] is not None:
+                data["description"] = data["description"].strip()
         return data
 
 
@@ -181,6 +183,7 @@ class LessonResponse(LessonBase):
 # Content Item schemas
 class ContentItemResponse(BaseModel):
     """Response model for content item"""
+
     id: int
     content_id: int
     order_index: int
@@ -195,6 +198,7 @@ class ContentItemResponse(BaseModel):
 # Content schemas
 class ContentCreate(BaseModel):
     """Request model for creating content"""
+
     type: str
     title: str
     order_index: int = 1
@@ -202,6 +206,7 @@ class ContentCreate(BaseModel):
 
 class ContentResponse(BaseModel):
     """Response model for content"""
+
     id: int
     lesson_id: int
     type: str
