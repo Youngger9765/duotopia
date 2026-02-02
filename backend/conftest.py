@@ -25,6 +25,7 @@ def test_engine():
     使用 alembic migrations 確保測試 DB schema 與生產一致
     """
     import pathlib
+
     db_path = pathlib.Path("./test.db")
 
     # 先刪除舊的測試數據庫
@@ -43,7 +44,7 @@ def test_engine():
         env=env,
         capture_output=True,
         text=True,
-        cwd=os.path.dirname(__file__)  # Run from backend directory
+        cwd=os.path.dirname(__file__),  # Run from backend directory
     )
 
     if result.returncode != 0:

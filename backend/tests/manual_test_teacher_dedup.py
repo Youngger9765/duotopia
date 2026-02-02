@@ -276,8 +276,8 @@ def test_multiple_teachers_with_overlapping_roles(shared_test_session, test_clie
     else:
         print("❌ FAIL: Teachers not properly deduplicated")
 
-    assert data["total_teachers"] == 3, (
-        f"Should count 3 unique teachers, got {data['total_teachers']}"
-    )
+    assert (
+        data["total_teachers"] == 3
+    ), f"Should count 3 unique teachers, got {data['total_teachers']}"
 
     print("=" * 70 + "\n")

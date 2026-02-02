@@ -86,7 +86,9 @@ def test_classrooms_returns_school_id_and_organization_id(
     assert lion_in_response["organization_id"] == str(org.id)
 
     # Personal classroom should have null school_id
-    personal_in_response = next((c for c in data if c["name"] == "Personal Class"), None)
+    personal_in_response = next(
+        (c for c in data if c["name"] == "Personal Class"), None
+    )
     assert personal_in_response is not None
     assert personal_in_response["school_id"] is None
     assert personal_in_response["organization_id"] is None
@@ -132,18 +134,20 @@ def test_classrooms_mode_personal_returns_only_personal(
     test_session.flush()
 
     # Link to school
-    test_session.add_all([
-        ClassroomSchool(
-            classroom_id=school_classroom1.id,
-            school_id=school.id,
-            is_active=True,
-        ),
-        ClassroomSchool(
-            classroom_id=school_classroom2.id,
-            school_id=school.id,
-            is_active=True,
-        ),
-    ])
+    test_session.add_all(
+        [
+            ClassroomSchool(
+                classroom_id=school_classroom1.id,
+                school_id=school.id,
+                is_active=True,
+            ),
+            ClassroomSchool(
+                classroom_id=school_classroom2.id,
+                school_id=school.id,
+                is_active=True,
+            ),
+        ]
+    )
 
     # Create 1 personal classroom
     personal_classroom = Classroom(
@@ -230,18 +234,20 @@ def test_classrooms_mode_school_returns_only_school_classrooms(
     test_session.flush()
 
     # Link classrooms to schools
-    test_session.add_all([
-        ClassroomSchool(
-            classroom_id=school1_classroom.id,
-            school_id=school1.id,
-            is_active=True,
-        ),
-        ClassroomSchool(
-            classroom_id=school2_classroom.id,
-            school_id=school2.id,
-            is_active=True,
-        ),
-    ])
+    test_session.add_all(
+        [
+            ClassroomSchool(
+                classroom_id=school1_classroom.id,
+                school_id=school1.id,
+                is_active=True,
+            ),
+            ClassroomSchool(
+                classroom_id=school2_classroom.id,
+                school_id=school2.id,
+                is_active=True,
+            ),
+        ]
+    )
     test_session.commit()
 
     # Call API with mode=school&school_id=school1.id
@@ -310,5 +316,7 @@ def test_classrooms_mode_school_requires_authorization(
 
     # Should return 403 Forbidden
     assert response.status_code == 403, f"Expected 403, got {response.status_code}"
-    assert "Access denied" in response.json()["detail"] or \
-           "permission" in response.json()["detail"].lower()
+    assert (
+        "Access denied" in response.json()["detail"]
+        or "permission" in response.json()["detail"].lower()
+    )

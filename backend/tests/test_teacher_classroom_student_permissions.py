@@ -14,8 +14,14 @@ from datetime import date
 
 from main import app
 from models import (
-    Teacher, School, Organization, TeacherSchool, Classroom,
-    ClassroomSchool, Student, ClassroomStudent
+    Teacher,
+    School,
+    Organization,
+    TeacherSchool,
+    Classroom,
+    ClassroomSchool,
+    Student,
+    ClassroomStudent,
 )
 from models.base import ProgramLevel
 from database import get_db
@@ -30,10 +36,12 @@ def test_db(tmp_path):
     from database import Base
 
     db_path = tmp_path / "test_teacher_permissions.db"
-    engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        f"sqlite:///{db_path}", connect_args={"check_same_thread": False}
+    )
     Base.metadata.create_all(bind=engine)
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    
+
     db = TestingSessionLocal()
     try:
         yield db
@@ -44,12 +52,13 @@ def test_db(tmp_path):
 @pytest.fixture
 def client(test_db):
     """Create test client with database override"""
+
     def override_get_db():
         try:
             yield test_db
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -134,7 +143,7 @@ def school_classroom(test_db: Session, teacher: Teacher, school: School):
     )
     test_db.add(classroom)
     test_db.flush()
-    
+
     # Create ClassroomSchool relationship
     classroom_school = ClassroomSchool(
         classroom_id=classroom.id,
@@ -181,7 +190,10 @@ class TestTeacherCreateStudentPermissions:
             },
         )
         assert response.status_code == 403
-        assert "學校" in response.json()["detail"] or "school" in response.json()["detail"].lower()
+        assert (
+            "學校" in response.json()["detail"]
+            or "school" in response.json()["detail"].lower()
+        )
 
 
 class TestTeacherUpdateClassroomPermissions:
@@ -215,7 +227,10 @@ class TestTeacherUpdateClassroomPermissions:
             },
         )
         assert response.status_code == 403
-        assert "學校" in response.json()["detail"] or "school" in response.json()["detail"].lower()
+        assert (
+            "學校" in response.json()["detail"]
+            or "school" in response.json()["detail"].lower()
+        )
 
 
 class TestTeacherDeleteClassroomPermissions:
@@ -240,7 +255,10 @@ class TestTeacherDeleteClassroomPermissions:
             headers={"Authorization": f"Bearer {auth_token}"},
         )
         assert response.status_code == 403
-        assert "學校" in response.json()["detail"] or "school" in response.json()["detail"].lower()
+        assert (
+            "學校" in response.json()["detail"]
+            or "school" in response.json()["detail"].lower()
+        )
 
 
 class TestTeacherUpdateStudentPermissions:
@@ -259,7 +277,7 @@ class TestTeacherUpdateStudentPermissions:
         )
         test_db.add(student)
         test_db.flush()
-        
+
         enrollment = ClassroomStudent(
             classroom_id=personal_classroom.id,
             student_id=student.id,
@@ -284,4 +302,3 @@ class TestTeacherUpdateStudentPermissions:
         assert response.status_code == 200
         data = response.json()
         assert data["name"] == "Updated Personal Student"
-

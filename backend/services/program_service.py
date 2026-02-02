@@ -266,7 +266,9 @@ def get_programs_by_scope(
             Program.is_template.is_(True),
         )
     else:
-        raise ValueError(f"Invalid scope: {scope}. Must be 'teacher', 'organization', or 'school'")
+        raise ValueError(
+            f"Invalid scope: {scope}. Must be 'teacher', 'organization', or 'school'"
+        )
 
     if not include_inactive:
         query = query.filter(Program.is_active.is_(True))
@@ -310,11 +312,16 @@ def create_program(
             raise ValueError("Organization not found")
 
         # Calculate next order_index (put at end)
-        max_order = db.query(func.max(Program.order_index)).filter(
-            Program.organization_id == organization_id,
-            Program.is_template == True,
-            Program.is_active == True
-        ).scalar() or 0
+        max_order = (
+            db.query(func.max(Program.order_index))
+            .filter(
+                Program.organization_id == organization_id,
+                Program.is_template == True,
+                Program.is_active == True,
+            )
+            .scalar()
+            or 0
+        )
 
         program = Program(
             name=data["name"],
@@ -346,11 +353,16 @@ def create_program(
             raise ValueError("School not found")
 
         # Calculate next order_index (put at end)
-        max_order = db.query(func.max(Program.order_index)).filter(
-            Program.school_id == school_id,
-            Program.is_template == True,
-            Program.is_active == True
-        ).scalar() or 0
+        max_order = (
+            db.query(func.max(Program.order_index))
+            .filter(
+                Program.school_id == school_id,
+                Program.is_template == True,
+                Program.is_active == True,
+            )
+            .scalar()
+            or 0
+        )
 
         program = Program(
             name=data["name"],
@@ -369,12 +381,17 @@ def create_program(
         )
     elif scope == "teacher":
         # Calculate next order_index (put at end)
-        max_order = db.query(func.max(Program.order_index)).filter(
-            Program.teacher_id == teacher_id,
-            Program.is_template == True,
-            Program.is_active == True,
-            Program.organization_id.is_(None)
-        ).scalar() or 0
+        max_order = (
+            db.query(func.max(Program.order_index))
+            .filter(
+                Program.teacher_id == teacher_id,
+                Program.is_template == True,
+                Program.is_active == True,
+                Program.organization_id.is_(None),
+            )
+            .scalar()
+            or 0
+        )
 
         program = Program(
             name=data["name"],
@@ -463,20 +480,28 @@ def create_lesson(
 
     Automatically checks program permission.
     """
-    logger.info(f"[SERVICE_CREATE_LESSON] Called with program_id={program_id}, teacher_id={teacher_id}, data={data}")
+    logger.info(
+        f"[SERVICE_CREATE_LESSON] Called with program_id={program_id}, teacher_id={teacher_id}, data={data}"
+    )
 
     # Check program permission
     if not has_program_permission(db, program_id, teacher_id, "write"):
-        logger.error(f"[SERVICE_CREATE_LESSON] Permission denied for teacher_id={teacher_id}, program_id={program_id}")
+        logger.error(
+            f"[SERVICE_CREATE_LESSON] Permission denied for teacher_id={teacher_id}, program_id={program_id}"
+        )
         raise PermissionError("No permission to create lessons in this program")
 
-    logger.info(f"[SERVICE_CREATE_LESSON] Permission check passed. Creating lesson object...")
+    logger.info(
+        f"[SERVICE_CREATE_LESSON] Permission check passed. Creating lesson object..."
+    )
 
     # Calculate next order_index (put at end)
-    max_order = db.query(func.max(Lesson.order_index)).filter(
-        Lesson.program_id == program_id,
-        Lesson.is_active == True
-    ).scalar() or 0
+    max_order = (
+        db.query(func.max(Lesson.order_index))
+        .filter(Lesson.program_id == program_id, Lesson.is_active == True)
+        .scalar()
+        or 0
+    )
 
     lesson = Lesson(
         program_id=program_id,
@@ -487,7 +512,9 @@ def create_lesson(
         is_active=True,
     )
 
-    logger.info(f"[SERVICE_CREATE_LESSON] Lesson object created (not yet added to DB): name={lesson.name}")
+    logger.info(
+        f"[SERVICE_CREATE_LESSON] Lesson object created (not yet added to DB): name={lesson.name}"
+    )
 
     db.add(lesson)
     logger.info(f"[SERVICE_CREATE_LESSON] db.add() called")
@@ -496,18 +523,28 @@ def create_lesson(
     logger.info(f"[SERVICE_CREATE_LESSON] db.commit() called")
 
     db.refresh(lesson)
-    logger.info(f"[SERVICE_CREATE_LESSON] db.refresh() called. Final lesson_id={lesson.id}, name={lesson.name}")
+    logger.info(
+        f"[SERVICE_CREATE_LESSON] db.refresh() called. Final lesson_id={lesson.id}, name={lesson.name}"
+    )
 
     # Post-commit verification
-    duplicate_count = db.query(Lesson).filter(
-        Lesson.program_id == program_id,
-        Lesson.name == lesson.name,
-        Lesson.is_active == True
-    ).count()
-    logger.info(f"[SERVICE_CREATE_LESSON] Post-commit check: Found {duplicate_count} lessons with name '{lesson.name}' in program {program_id}")
+    duplicate_count = (
+        db.query(Lesson)
+        .filter(
+            Lesson.program_id == program_id,
+            Lesson.name == lesson.name,
+            Lesson.is_active == True,
+        )
+        .count()
+    )
+    logger.info(
+        f"[SERVICE_CREATE_LESSON] Post-commit check: Found {duplicate_count} lessons with name '{lesson.name}' in program {program_id}"
+    )
 
     if duplicate_count > 1:
-        logger.error(f"[SERVICE_CREATE_LESSON] !!!! DUPLICATE DETECTED !!!! {duplicate_count} lessons found")
+        logger.error(
+            f"[SERVICE_CREATE_LESSON] !!!! DUPLICATE DETECTED !!!! {duplicate_count} lessons found"
+        )
 
     return lesson
 
@@ -582,10 +619,12 @@ def create_content(
         raise PermissionError("No permission to create contents in this lesson")
 
     # Calculate next order_index (put at end)
-    max_order = db.query(func.max(Content.order_index)).filter(
-        Content.lesson_id == lesson_id,
-        Content.is_active == True
-    ).scalar() or 0
+    max_order = (
+        db.query(func.max(Content.order_index))
+        .filter(Content.lesson_id == lesson_id, Content.is_active == True)
+        .scalar()
+        or 0
+    )
 
     content = Content(
         lesson_id=lesson_id,

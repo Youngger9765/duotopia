@@ -28,10 +28,12 @@ def test_db(tmp_path):
     from database import Base
 
     db_path = tmp_path / "test_school_programs.db"
-    engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        f"sqlite:///{db_path}", connect_args={"check_same_thread": False}
+    )
     Base.metadata.create_all(bind=engine)
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    
+
     db = TestingSessionLocal()
     try:
         yield db
@@ -42,12 +44,13 @@ def test_db(tmp_path):
 @pytest.fixture
 def client(test_db):
     """Create test client with database override"""
+
     def override_get_db():
         try:
             yield test_db
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -365,4 +368,3 @@ class TestSchoolProgramsCRUD:
         # Verify soft delete
         test_db.refresh(program)
         assert program.is_active is False
-

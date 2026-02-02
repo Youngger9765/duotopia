@@ -6,7 +6,8 @@ Fixed: TeacherSchool records now created for owner
 """
 import os
 import sys
-sys.path.insert(0, '.')
+
+sys.path.insert(0, ".")
 
 from database import SessionLocal
 from models.user import Teacher
@@ -46,10 +47,11 @@ schools_data = [
 
 schools = []
 for school_data in schools_data:
-    existing = db.query(School).filter(
-        School.organization_id == org_id,
-        School.name == school_data["name"]
-    ).first()
+    existing = (
+        db.query(School)
+        .filter(School.organization_id == org_id, School.name == school_data["name"])
+        .first()
+    )
 
     if not existing:
         school = School(
@@ -59,7 +61,7 @@ for school_data in schools_data:
             description=school_data["description"],
             is_active=True,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
         db.add(school)
         db.flush()
@@ -80,10 +82,14 @@ if not owner_teacher:
     exit(1)
 
 for school in schools:
-    existing_link = db.query(TeacherSchool).filter(
-        TeacherSchool.teacher_id == owner_teacher.id,
-        TeacherSchool.school_id == school.id
-    ).first()
+    existing_link = (
+        db.query(TeacherSchool)
+        .filter(
+            TeacherSchool.teacher_id == owner_teacher.id,
+            TeacherSchool.school_id == school.id,
+        )
+        .first()
+    )
 
     if not existing_link:
         teacher_school = TeacherSchool(
@@ -91,7 +97,7 @@ for school in schools:
             school_id=school.id,
             roles=["school_admin"],
             is_active=True,
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
         db.add(teacher_school)
         print(f"  ➕ Linked owner to {school.name} as school_admin")
@@ -106,14 +112,57 @@ db.commit()
 print("\n👥 Creating teachers...")
 
 teachers_data = [
-    {"email": "demo@duotopia.com", "name": "Demo 老師", "phone": "0900-000-001", "role": "teacher", "is_demo": True},
-    {"email": "trial@duotopia.com", "name": "試用老師", "phone": "0900-000-002", "role": "teacher", "is_demo": False},
-    {"email": "expired@duotopia.com", "name": "過期老師", "phone": "0900-000-003", "role": "teacher", "is_demo": False},
-    {"email": "chen@duotopia.com", "name": "陳美玲", "phone": "0912-345-678", "role": "org_admin"},
-    {"email": "wang@duotopia.com", "name": "王建國", "phone": "0923-456-789", "role": "teacher"},
-    {"email": "liu@duotopia.com", "name": "劉芳華", "phone": "0934-567-890", "role": "teacher"},
-    {"email": "zhang@duotopia.com", "name": "張志明", "phone": "0945-678-901", "role": "teacher"},
-    {"email": "lee@duotopia.com", "name": "李雅婷", "phone": "0956-789-012", "role": "teacher"},
+    {
+        "email": "demo@duotopia.com",
+        "name": "Demo 老師",
+        "phone": "0900-000-001",
+        "role": "teacher",
+        "is_demo": True,
+    },
+    {
+        "email": "trial@duotopia.com",
+        "name": "試用老師",
+        "phone": "0900-000-002",
+        "role": "teacher",
+        "is_demo": False,
+    },
+    {
+        "email": "expired@duotopia.com",
+        "name": "過期老師",
+        "phone": "0900-000-003",
+        "role": "teacher",
+        "is_demo": False,
+    },
+    {
+        "email": "chen@duotopia.com",
+        "name": "陳美玲",
+        "phone": "0912-345-678",
+        "role": "org_admin",
+    },
+    {
+        "email": "wang@duotopia.com",
+        "name": "王建國",
+        "phone": "0923-456-789",
+        "role": "teacher",
+    },
+    {
+        "email": "liu@duotopia.com",
+        "name": "劉芳華",
+        "phone": "0934-567-890",
+        "role": "teacher",
+    },
+    {
+        "email": "zhang@duotopia.com",
+        "name": "張志明",
+        "phone": "0945-678-901",
+        "role": "teacher",
+    },
+    {
+        "email": "lee@duotopia.com",
+        "name": "李雅婷",
+        "phone": "0956-789-012",
+        "role": "teacher",
+    },
 ]
 
 for teacher_data in teachers_data:
@@ -130,7 +179,7 @@ for teacher_data in teachers_data:
             is_admin=False,
             email_verified=True,
             email_verified_at=datetime.now(),
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
         db.add(teacher)
         db.flush()
@@ -141,7 +190,7 @@ for teacher_data in teachers_data:
             organization_id=org_id,
             role=teacher_data["role"],
             is_active=True,
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
         db.add(teacher_org)
         db.flush()
@@ -171,10 +220,11 @@ programs_data = [
 ]
 
 for program_data in programs_data:
-    existing = db.query(Program).filter(
-        Program.organization_id == org_id,
-        Program.name == program_data["name"]
-    ).first()
+    existing = (
+        db.query(Program)
+        .filter(Program.organization_id == org_id, Program.name == program_data["name"])
+        .first()
+    )
 
     if not existing:
         program = Program(
@@ -185,7 +235,7 @@ for program_data in programs_data:
             level=program_data["level"],
             is_template=False,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
         db.add(program)
         print(f"  ➕ Created program: {program.name} ({program.level})")
@@ -213,22 +263,46 @@ template_programs_data = [
                 "description": "學習基本的自我介紹用語",
                 "order": 0,
                 "contents": [
-                    {"title": "詞彙：個人資訊", "type": ContentType.READING_ASSESSMENT, "order": 0},
-                    {"title": "句型：What's your name?", "type": ContentType.READING_ASSESSMENT, "order": 1},
-                    {"title": "對話練習：初次見面", "type": ContentType.READING_ASSESSMENT, "order": 2},
-                ]
+                    {
+                        "title": "詞彙：個人資訊",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 0,
+                    },
+                    {
+                        "title": "句型：What's your name?",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 1,
+                    },
+                    {
+                        "title": "對話練習：初次見面",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 2,
+                    },
+                ],
             },
             {
                 "title": "數字與時間",
                 "description": "學習數字、日期、時間表達",
                 "order": 1,
                 "contents": [
-                    {"title": "詞彙：數字 1-100", "type": ContentType.READING_ASSESSMENT, "order": 0},
-                    {"title": "時間表達法", "type": ContentType.READING_ASSESSMENT, "order": 1},
-                    {"title": "對話：約時間", "type": ContentType.READING_ASSESSMENT, "order": 2},
-                ]
+                    {
+                        "title": "詞彙：數字 1-100",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 0,
+                    },
+                    {
+                        "title": "時間表達法",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 1,
+                    },
+                    {
+                        "title": "對話：約時間",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 2,
+                    },
+                ],
             },
-        ]
+        ],
     },
     {
         "name": "商務英語基礎",
@@ -242,22 +316,46 @@ template_programs_data = [
                 "description": "學習撰寫專業商務郵件",
                 "order": 0,
                 "contents": [
-                    {"title": "Email 格式與架構", "type": ContentType.READING_ASSESSMENT, "order": 0},
-                    {"title": "常用商務用語", "type": ContentType.READING_ASSESSMENT, "order": 1},
-                    {"title": "實戰練習：詢價信", "type": ContentType.READING_ASSESSMENT, "order": 2},
-                ]
+                    {
+                        "title": "Email 格式與架構",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 0,
+                    },
+                    {
+                        "title": "常用商務用語",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 1,
+                    },
+                    {
+                        "title": "實戰練習：詢價信",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 2,
+                    },
+                ],
             },
             {
                 "title": "會議英語",
                 "description": "參與英語會議的必備技巧",
                 "order": 1,
                 "contents": [
-                    {"title": "會議常用句型", "type": ContentType.READING_ASSESSMENT, "order": 0},
-                    {"title": "表達意見與提問", "type": ContentType.READING_ASSESSMENT, "order": 1},
-                    {"title": "模擬會議", "type": ContentType.READING_ASSESSMENT, "order": 2},
-                ]
+                    {
+                        "title": "會議常用句型",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 0,
+                    },
+                    {
+                        "title": "表達意見與提問",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 1,
+                    },
+                    {
+                        "title": "模擬會議",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 2,
+                    },
+                ],
             },
-        ]
+        ],
     },
     {
         "name": "多益衝刺 600+",
@@ -271,31 +369,59 @@ template_programs_data = [
                 "description": "照片描述與問答題型攻略",
                 "order": 0,
                 "contents": [
-                    {"title": "題型分析", "type": ContentType.READING_ASSESSMENT, "order": 0},
-                    {"title": "高頻詞彙", "type": ContentType.READING_ASSESSMENT, "order": 1},
-                    {"title": "模擬練習 20 題", "type": ContentType.READING_ASSESSMENT, "order": 2},
-                ]
+                    {
+                        "title": "題型分析",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 0,
+                    },
+                    {
+                        "title": "高頻詞彙",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 1,
+                    },
+                    {
+                        "title": "模擬練習 20 題",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 2,
+                    },
+                ],
             },
             {
                 "title": "閱讀技巧：Part 5-6",
                 "description": "文法與短文填空",
                 "order": 1,
                 "contents": [
-                    {"title": "文法重點整理", "type": ContentType.READING_ASSESSMENT, "order": 0},
-                    {"title": "解題技巧", "type": ContentType.READING_ASSESSMENT, "order": 1},
-                    {"title": "模擬練習 30 題", "type": ContentType.READING_ASSESSMENT, "order": 2},
-                ]
+                    {
+                        "title": "文法重點整理",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 0,
+                    },
+                    {
+                        "title": "解題技巧",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 1,
+                    },
+                    {
+                        "title": "模擬練習 30 題",
+                        "type": ContentType.READING_ASSESSMENT,
+                        "order": 2,
+                    },
+                ],
             },
-        ]
+        ],
     },
 ]
 
 for tmpl_data in template_programs_data:
-    existing_tmpl = db.query(Program).filter(
-        Program.teacher_id == owner.id,
-        Program.name == tmpl_data["name"],
-        Program.is_template.is_(True)
-    ).first()
+    existing_tmpl = (
+        db.query(Program)
+        .filter(
+            Program.teacher_id == owner.id,
+            Program.name == tmpl_data["name"],
+            Program.is_template.is_(True),
+        )
+        .first()
+    )
 
     if not existing_tmpl:
         # Create template program
@@ -311,7 +437,7 @@ for tmpl_data in template_programs_data:
             is_active=True,
             order_index=0,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
         db.add(template_program)
         db.flush()
@@ -324,7 +450,7 @@ for tmpl_data in template_programs_data:
                 description=lesson_data.get("description"),
                 order_index=lesson_data["order"],
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             )
             db.add(lesson)
             db.flush()
@@ -336,19 +462,21 @@ for tmpl_data in template_programs_data:
                     title=content_data["title"],
                     type=content_data["type"],
                     order_index=content_data["order"],
-                    created_at=datetime.now()
+                    created_at=datetime.now(),
                 )
                 db.add(content)
 
-        print(f"  ➕ Created template: {template_program.name} with {len(tmpl_data.get('lessons', []))} lessons")
+        print(
+            f"  ➕ Created template: {template_program.name} with {len(tmpl_data.get('lessons', []))} lessons"
+        )
     else:
         print(f"  ✓ Template exists: {existing_tmpl.name}")
 
 db.commit()
 
-print("\n" + "="*60)
+print("\n" + "=" * 60)
 print("✅ Demo data seed complete!")
-print("="*60)
+print("=" * 60)
 print(f"\n📊 Summary:")
 print(f"  - Organization: {org.name}")
 print(f"  - Schools: {len(schools)} created")
@@ -372,4 +500,3 @@ print(f"\n🌐 Visit: http://localhost:5173/organization/{org_id}")
 db.close()
 
 # Fixed URL regex validation
-

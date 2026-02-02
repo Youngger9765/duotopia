@@ -20,10 +20,12 @@ def test_db(tmp_path):
     from database import Base
 
     db_path = tmp_path / "test_school_classrooms.db"
-    engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        f"sqlite:///{db_path}", connect_args={"check_same_thread": False}
+    )
     Base.metadata.create_all(bind=engine)
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    
+
     db = TestingSessionLocal()
     try:
         yield db
@@ -34,12 +36,13 @@ def test_db(tmp_path):
 @pytest.fixture
 def client(test_db):
     """Create test client with database override"""
+
     def override_get_db():
         try:
             yield test_db
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -52,7 +55,7 @@ def school_admin_teacher(test_db: Session):
         email="admin@test.com",
         name="School Admin",
         password_hash="hashed",
-        is_active=True
+        is_active=True,
     )
     test_db.add(teacher)
     test_db.commit()
@@ -65,10 +68,7 @@ def school(test_db: Session):
     """Create test school"""
     org_id = uuid.uuid4()
     school = School(
-        id=uuid.uuid4(),
-        organization_id=org_id,
-        name="Test School",
-        is_active=True
+        id=uuid.uuid4(), organization_id=org_id, name="Test School", is_active=True
     )
     test_db.add(school)
     test_db.commit()
@@ -83,7 +83,7 @@ def link_teacher_to_school(test_db: Session, school_admin_teacher, school):
         teacher_id=school_admin_teacher.id,
         school_id=school.id,
         roles=["school_admin"],
-        is_active=True
+        is_active=True,
     )
     test_db.add(link)
     test_db.commit()
@@ -101,12 +101,8 @@ def test_create_classroom_without_teacher_assignment(
     # This test will FAIL until we implement the endpoint
     response = client.post(
         f"/api/schools/{school.id}/classrooms",
-        json={
-            "name": "一年級 A 班",
-            "description": "Test classroom",
-            "level": "A1"
-        },
-        headers={"Authorization": f"Bearer {get_test_token(school_admin_teacher.id)}"}
+        json={"name": "一年級 A 班", "description": "Test classroom", "level": "A1"},
+        headers={"Authorization": f"Bearer {get_test_token(school_admin_teacher.id)}"},
     )
 
     assert response.status_code == 201
@@ -122,10 +118,7 @@ def test_create_classroom_with_teacher_assignment(
     """Test: School admin can create classroom and assign teacher"""
     # Create another teacher to assign
     teacher = Teacher(
-        email="teacher@test.com",
-        name="Teacher",
-        password_hash="hashed",
-        is_active=True
+        email="teacher@test.com", name="Teacher", password_hash="hashed", is_active=True
     )
     test_db.add(teacher)
     test_db.commit()
@@ -133,12 +126,8 @@ def test_create_classroom_with_teacher_assignment(
 
     response = client.post(
         f"/api/schools/{school.id}/classrooms",
-        json={
-            "name": "一年級 B 班",
-            "level": "A1",
-            "teacher_id": teacher.id
-        },
-        headers={"Authorization": f"Bearer {get_test_token(school_admin_teacher.id)}"}
+        json={"name": "一年級 B 班", "level": "A1", "teacher_id": teacher.id},
+        headers={"Authorization": f"Bearer {get_test_token(school_admin_teacher.id)}"},
     )
 
     assert response.status_code == 201
@@ -152,10 +141,7 @@ def test_create_classroom_with_teacher_assignment(
 def test_create_classroom_without_permission_fails(client, test_db, school):
     """Test: Regular teacher cannot create classroom in school"""
     teacher = Teacher(
-        email="regular@test.com",
-        name="Regular",
-        password_hash="hashed",
-        is_active=True
+        email="regular@test.com", name="Regular", password_hash="hashed", is_active=True
     )
     test_db.add(teacher)
     test_db.commit()
@@ -164,7 +150,7 @@ def test_create_classroom_without_permission_fails(client, test_db, school):
     response = client.post(
         f"/api/schools/{school.id}/classrooms",
         json={"name": "Unauthorized", "level": "A1"},
-        headers={"Authorization": f"Bearer {get_test_token(teacher.id)}"}
+        headers={"Authorization": f"Bearer {get_test_token(teacher.id)}"},
     )
 
     assert response.status_code == 403
@@ -180,17 +166,16 @@ def test_assign_teacher_to_classroom(
     test_db.flush()
 
     # Link to school
-    link = ClassroomSchool(classroom_id=classroom.id, school_id=school.id, is_active=True)
+    link = ClassroomSchool(
+        classroom_id=classroom.id, school_id=school.id, is_active=True
+    )
     test_db.add(link)
     test_db.commit()
     test_db.refresh(classroom)
 
     # Create teacher to assign
     teacher = Teacher(
-        email="new@test.com",
-        name="New Teacher",
-        password_hash="hashed",
-        is_active=True
+        email="new@test.com", name="New Teacher", password_hash="hashed", is_active=True
     )
     test_db.add(teacher)
     test_db.commit()
@@ -199,12 +184,15 @@ def test_assign_teacher_to_classroom(
     response = client.put(
         f"/api/classrooms/{classroom.id}/teacher",
         json={"teacher_id": teacher.id},
-        headers={"Authorization": f"Bearer {get_test_token(school_admin_teacher.id)}"}
+        headers={"Authorization": f"Bearer {get_test_token(school_admin_teacher.id)}"},
     )
 
     assert response.status_code == 200
     data = response.json()
-    assert data.get("teacher_id") == teacher.id or data.get("teacher_name") == "New Teacher"
+    assert (
+        data.get("teacher_id") == teacher.id
+        or data.get("teacher_name") == "New Teacher"
+    )
 
 
 def test_unassign_teacher_from_classroom(
@@ -215,21 +203,20 @@ def test_unassign_teacher_from_classroom(
         email="assigned@test.com",
         name="Assigned",
         password_hash="hashed",
-        is_active=True
+        is_active=True,
     )
     test_db.add(teacher)
     test_db.flush()
 
     classroom = Classroom(
-        name="Test",
-        level=ProgramLevel.A1,
-        teacher_id=teacher.id,
-        is_active=True
+        name="Test", level=ProgramLevel.A1, teacher_id=teacher.id, is_active=True
     )
     test_db.add(classroom)
     test_db.flush()
 
-    link = ClassroomSchool(classroom_id=classroom.id, school_id=school.id, is_active=True)
+    link = ClassroomSchool(
+        classroom_id=classroom.id, school_id=school.id, is_active=True
+    )
     test_db.add(link)
     test_db.commit()
     test_db.refresh(classroom)
@@ -237,7 +224,7 @@ def test_unassign_teacher_from_classroom(
     response = client.put(
         f"/api/classrooms/{classroom.id}/teacher",
         json={"teacher_id": None},
-        headers={"Authorization": f"Bearer {get_test_token(school_admin_teacher.id)}"}
+        headers={"Authorization": f"Bearer {get_test_token(school_admin_teacher.id)}"},
     )
 
     assert response.status_code == 200
@@ -253,24 +240,22 @@ def test_update_classroom_details(
         name="Old Name",
         description="Old description",
         level=ProgramLevel.A1,
-        is_active=True
+        is_active=True,
     )
     test_db.add(classroom)
     test_db.flush()
 
-    link = ClassroomSchool(classroom_id=classroom.id, school_id=school.id, is_active=True)
+    link = ClassroomSchool(
+        classroom_id=classroom.id, school_id=school.id, is_active=True
+    )
     test_db.add(link)
     test_db.commit()
     test_db.refresh(classroom)
 
     response = client.put(
         f"/api/classrooms/{classroom.id}",
-        json={
-            "name": "New Name",
-            "description": "New description",
-            "level": "A2"
-        },
-        headers={"Authorization": f"Bearer {get_test_token(school_admin_teacher.id)}"}
+        json={"name": "New Name", "description": "New description", "level": "A2"},
+        headers={"Authorization": f"Bearer {get_test_token(school_admin_teacher.id)}"},
     )
 
     assert response.status_code == 200
@@ -287,7 +272,9 @@ def test_deactivate_classroom(
     test_db.add(classroom)
     test_db.flush()
 
-    link = ClassroomSchool(classroom_id=classroom.id, school_id=school.id, is_active=True)
+    link = ClassroomSchool(
+        classroom_id=classroom.id, school_id=school.id, is_active=True
+    )
     test_db.add(link)
     test_db.commit()
     test_db.refresh(classroom)
@@ -295,10 +282,9 @@ def test_deactivate_classroom(
     response = client.put(
         f"/api/classrooms/{classroom.id}",
         json={"is_active": False},
-        headers={"Authorization": f"Bearer {get_test_token(school_admin_teacher.id)}"}
+        headers={"Authorization": f"Bearer {get_test_token(school_admin_teacher.id)}"},
     )
 
     assert response.status_code == 200
     data = response.json()
     assert data["is_active"] is False
-

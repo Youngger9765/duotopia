@@ -591,7 +591,9 @@ async def get_teacher_classrooms(
             ),
             # Add school and organization info
             "school_id": classroom_school_map.get(classroom.id, {}).get("school_id"),
-            "school_name": classroom_school_map.get(classroom.id, {}).get("school_name"),
+            "school_name": classroom_school_map.get(classroom.id, {}).get(
+                "school_name"
+            ),
             "organization_id": classroom_school_map.get(classroom.id, {}).get(
                 "organization_id"
             ),
@@ -697,8 +699,7 @@ async def get_teacher_programs(
         # Personal mode: 只顯示個人課程（沒有 school_id 和 organization_id）
         # 但如果已指定 classroom_id，則不套用此過濾（班級課程可能有 school_id）
         query = query.filter(
-            Program.school_id.is_(None),
-            Program.organization_id.is_(None)
+            Program.school_id.is_(None), Program.organization_id.is_(None)
         )
 
     programs = query.order_by(Program.order_index).all()
@@ -2432,7 +2433,9 @@ async def update_lesson(
     from utils.permissions import check_lesson_access
 
     # Unified permission check (supports teacher & org programs)
-    program, lesson = check_lesson_access(db, lesson_id, current_teacher, require_owner=True)
+    program, lesson = check_lesson_access(
+        db, lesson_id, current_teacher, require_owner=True
+    )
 
     # 更新資料
     lesson.name = lesson_data.name
@@ -2462,7 +2465,9 @@ async def delete_lesson(
     from utils.permissions import check_lesson_access
 
     # Unified permission check (supports teacher & org programs)
-    program, lesson = check_lesson_access(db, lesson_id, current_teacher, require_owner=True)
+    program, lesson = check_lesson_access(
+        db, lesson_id, current_teacher, require_owner=True
+    )
 
     # 檢查相關資料
     content_count = (

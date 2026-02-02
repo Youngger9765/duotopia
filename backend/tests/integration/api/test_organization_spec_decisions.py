@@ -55,7 +55,13 @@ def auth_headers(test_owner: Teacher):
 # ============================================================================
 
 
-def create_org_via_api(test_client, auth_headers, name: str, tax_id: Optional[str] = None, teacher_limit: Optional[int] = None):
+def create_org_via_api(
+    test_client,
+    auth_headers,
+    name: str,
+    tax_id: Optional[str] = None,
+    teacher_limit: Optional[int] = None,
+):
     """Helper: Create organization via API"""
     payload = {"name": name}
     if tax_id:
@@ -89,7 +95,9 @@ def list_orgs_via_api(test_client, auth_headers):
     return response
 
 
-def invite_teacher_via_api(test_client, auth_headers, org_id: str, email: str, name: str, role: str = "teacher"):
+def invite_teacher_via_api(
+    test_client, auth_headers, org_id: str, email: str, name: str, role: str = "teacher"
+):
     """Helper: Invite teacher to organization via API"""
     response = test_client.post(
         f"/api/organizations/{org_id}/teachers/invite",
@@ -118,7 +126,9 @@ class TestDecision1SoftDelete:
     def test_soft_delete_hides_from_list(self, test_client, auth_headers):
         """Test that soft deleted orgs don't appear in organization list"""
         # Create test org
-        create_resp = create_org_via_api(test_client, auth_headers, "Soft Delete Test Org")
+        create_resp = create_org_via_api(
+            test_client, auth_headers, "Soft Delete Test Org"
+        )
         assert create_resp.status_code == 201
         org_data = create_resp.json()
         org_id = org_data["id"]
@@ -138,7 +148,9 @@ class TestDecision1SoftDelete:
         list_resp = list_orgs_via_api(test_client, auth_headers)
         assert list_resp.status_code == 200
         org_ids_after = [org["id"] for org in list_resp.json()]
-        assert org_id not in org_ids_after, "Org should NOT appear in list after soft delete"
+        assert (
+            org_id not in org_ids_after
+        ), "Org should NOT appear in list after soft delete"
 
 
 # ============================================================================
@@ -158,14 +170,26 @@ class TestDecision2TaxIdReuse:
         test_tax_id = f"TAX{uuid.uuid4().hex[:8]}"
 
         # Create first org with tax_id
-        resp1 = create_org_via_api(test_client, auth_headers, "Tax ID Test Org 1", tax_id=test_tax_id)
+        resp1 = create_org_via_api(
+            test_client, auth_headers, "Tax ID Test Org 1", tax_id=test_tax_id
+        )
         assert resp1.status_code == 201
         org1 = resp1.json()
 
         # Try to create second org with SAME tax_id (should fail)
-        resp2 = create_org_via_api(test_client, auth_headers, "Tax ID Test Org 2", tax_id=test_tax_id)
-        assert resp2.status_code in [400, 409], f"Expected 400/409, got {resp2.status_code}: {resp2.text}"
-        assert "tax_id" in resp2.text.lower() or "統一編號" in resp2.text or "duplicate" in resp2.text.lower() or "已被使用" in resp2.text
+        resp2 = create_org_via_api(
+            test_client, auth_headers, "Tax ID Test Org 2", tax_id=test_tax_id
+        )
+        assert resp2.status_code in [
+            400,
+            409,
+        ], f"Expected 400/409, got {resp2.status_code}: {resp2.text}"
+        assert (
+            "tax_id" in resp2.text.lower()
+            or "統一編號" in resp2.text
+            or "duplicate" in resp2.text.lower()
+            or "已被使用" in resp2.text
+        )
 
         # Cleanup
         delete_org_via_api(test_client, auth_headers, org1["id"])
@@ -175,7 +199,9 @@ class TestDecision2TaxIdReuse:
         test_tax_id = f"TAX{uuid.uuid4().hex[:8]}"
 
         # Create first org with tax_id
-        resp1 = create_org_via_api(test_client, auth_headers, "Tax ID Reuse Test 1", tax_id=test_tax_id)
+        resp1 = create_org_via_api(
+            test_client, auth_headers, "Tax ID Reuse Test 1", tax_id=test_tax_id
+        )
         assert resp1.status_code == 201
         org1 = resp1.json()
 
@@ -185,8 +211,12 @@ class TestDecision2TaxIdReuse:
 
         # Now create org with SAME tax_id (should succeed)
         time.sleep(0.1)  # Small delay
-        resp2 = create_org_via_api(test_client, auth_headers, "Tax ID Reuse Test 2", tax_id=test_tax_id)
-        assert resp2.status_code == 201, f"Expected 201, got {resp2.status_code}: {resp2.text}"
+        resp2 = create_org_via_api(
+            test_client, auth_headers, "Tax ID Reuse Test 2", tax_id=test_tax_id
+        )
+        assert (
+            resp2.status_code == 201
+        ), f"Expected 201, got {resp2.status_code}: {resp2.text}"
         org2 = resp2.json()
         assert org2["tax_id"] == test_tax_id
 
@@ -205,7 +235,9 @@ class TestDecision3OrgOwnerUniqueness:
     - Each org can only have ONE active org_owner
     """
 
-    def test_org_has_single_org_owner(self, test_client, auth_headers, shared_test_session: Session):
+    def test_org_has_single_org_owner(
+        self, test_client, auth_headers, shared_test_session: Session
+    ):
         """Test that organization has exactly one org_owner after creation"""
         # Create test org
         create_resp = create_org_via_api(test_client, auth_headers, "Org Owner Test")
@@ -246,7 +278,9 @@ class TestDecision4TeacherLimit:
         teacher_limit = 2
 
         # Create org with teacher_limit
-        create_resp = create_org_via_api(test_client, auth_headers, "Teacher Limit Test", teacher_limit=teacher_limit)
+        create_resp = create_org_via_api(
+            test_client, auth_headers, "Teacher Limit Test", teacher_limit=teacher_limit
+        )
         assert create_resp.status_code == 201
         org_data = create_resp.json()
         org_id = org_data["id"]
@@ -256,12 +290,16 @@ class TestDecision4TeacherLimit:
         for i in range(1, 4):
             email = f"teacher{i}_{uuid.uuid4().hex[:8]}@test.com"
             name = f"Test Teacher {i}"
-            resp = invite_teacher_via_api(test_client, auth_headers, org_id, email, name)
-            results.append({
-                "request": i,
-                "status": resp.status_code,
-                "success": resp.status_code in [200, 201],
-            })
+            resp = invite_teacher_via_api(
+                test_client, auth_headers, org_id, email, name
+            )
+            results.append(
+                {
+                    "request": i,
+                    "status": resp.status_code,
+                    "success": resp.status_code in [200, 201],
+                }
+            )
 
             # Small delay between requests
             time.sleep(0.1)
@@ -288,13 +326,20 @@ class TestDecision5RaceConditionPrevention:
     - Success count never exceeds teacher_limit
     """
 
-    def test_concurrent_teacher_invitations_prevent_race_condition(self, test_client, auth_headers):
+    def test_concurrent_teacher_invitations_prevent_race_condition(
+        self, test_client, auth_headers
+    ):
         """Test that concurrent invitations don't bypass teacher_limit"""
         teacher_limit = 2
         concurrent_requests = 5
 
         # Create org with teacher_limit
-        create_resp = create_org_via_api(test_client, auth_headers, "Concurrent Test Org", teacher_limit=teacher_limit)
+        create_resp = create_org_via_api(
+            test_client,
+            auth_headers,
+            "Concurrent Test Org",
+            teacher_limit=teacher_limit,
+        )
         assert create_resp.status_code == 201
         org_data = create_resp.json()
         org_id = org_data["id"]
@@ -305,7 +350,9 @@ class TestDecision5RaceConditionPrevention:
             email = f"concurrent{request_num}_{uuid.uuid4().hex[:8]}@test.com"
             name = f"Concurrent Teacher {request_num}"
             start_time = time.time()
-            resp = invite_teacher_via_api(test_client, auth_headers, org_id, email, name)
+            resp = invite_teacher_via_api(
+                test_client, auth_headers, org_id, email, name
+            )
             duration = time.time() - start_time
 
             return {
@@ -318,7 +365,10 @@ class TestDecision5RaceConditionPrevention:
         # Execute concurrent invitations
         results = []
         with ThreadPoolExecutor(max_workers=concurrent_requests) as executor:
-            futures = [executor.submit(invite_concurrent, i) for i in range(1, concurrent_requests + 1)]
+            futures = [
+                executor.submit(invite_concurrent, i)
+                for i in range(1, concurrent_requests + 1)
+            ]
 
             for future in as_completed(futures):
                 result = future.result()
@@ -352,7 +402,9 @@ class TestDecision5RaceConditionPrevention:
 class TestOrganizationSpecDecisionsE2E:
     """End-to-end test covering all spec decisions"""
 
-    def test_complete_organization_workflow(self, test_client, auth_headers, shared_test_session: Session):
+    def test_complete_organization_workflow(
+        self, test_client, auth_headers, shared_test_session: Session
+    ):
         """
         Complete workflow testing all spec decisions:
         1. Create org with tax_id and teacher_limit
@@ -366,10 +418,11 @@ class TestOrganizationSpecDecisionsE2E:
 
         # Step 1: Create organization
         create_resp = create_org_via_api(
-            test_client, auth_headers,
+            test_client,
+            auth_headers,
             "E2E Test Organization",
             tax_id=test_tax_id,
-            teacher_limit=teacher_limit
+            teacher_limit=teacher_limit,
         )
         assert create_resp.status_code == 201
         org = create_resp.json()
@@ -390,13 +443,20 @@ class TestOrganizationSpecDecisionsE2E:
         # Step 3: Test teacher limit
         for i in range(1, 3):  # Invite 2 teachers (at limit)
             email = f"e2e_teacher{i}_{uuid.uuid4().hex[:8]}@test.com"
-            resp = invite_teacher_via_api(test_client, auth_headers, org_id, email, f"E2E Teacher {i}")
+            resp = invite_teacher_via_api(
+                test_client, auth_headers, org_id, email, f"E2E Teacher {i}"
+            )
             assert resp.status_code in [200, 201]
 
         # 3rd invitation should fail
         email = f"e2e_teacher3_{uuid.uuid4().hex[:8]}@test.com"
-        resp = invite_teacher_via_api(test_client, auth_headers, org_id, email, "E2E Teacher 3")
-        assert resp.status_code not in [200, 201], "3rd invitation should fail (limit reached)"
+        resp = invite_teacher_via_api(
+            test_client, auth_headers, org_id, email, "E2E Teacher 3"
+        )
+        assert resp.status_code not in [
+            200,
+            201,
+        ], "3rd invitation should fail (limit reached)"
 
         # Step 4: Soft delete
         delete_resp = delete_org_via_api(test_client, auth_headers, org_id)
@@ -408,7 +468,9 @@ class TestOrganizationSpecDecisionsE2E:
         assert org_id not in org_ids
 
         # Step 5: Reuse tax_id
-        create_resp2 = create_org_via_api(test_client, auth_headers, "E2E Reuse Org", tax_id=test_tax_id)
+        create_resp2 = create_org_via_api(
+            test_client, auth_headers, "E2E Reuse Org", tax_id=test_tax_id
+        )
         assert create_resp2.status_code == 201
         org2 = create_resp2.json()
         assert org2["tax_id"] == test_tax_id

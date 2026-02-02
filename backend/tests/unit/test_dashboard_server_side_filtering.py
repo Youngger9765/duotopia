@@ -52,18 +52,20 @@ def test_dashboard_mode_personal_returns_only_personal_classrooms(
     test_session.flush()
 
     # Link to school
-    test_session.add_all([
-        ClassroomSchool(
-            classroom_id=school_classroom1.id,
-            school_id=school.id,
-            is_active=True,
-        ),
-        ClassroomSchool(
-            classroom_id=school_classroom2.id,
-            school_id=school.id,
-            is_active=True,
-        ),
-    ])
+    test_session.add_all(
+        [
+            ClassroomSchool(
+                classroom_id=school_classroom1.id,
+                school_id=school.id,
+                is_active=True,
+            ),
+            ClassroomSchool(
+                classroom_id=school_classroom2.id,
+                school_id=school.id,
+                is_active=True,
+            ),
+        ]
+    )
 
     # Create 1 personal classroom
     personal_classroom = Classroom(
@@ -84,8 +86,9 @@ def test_dashboard_mode_personal_returns_only_personal_classrooms(
     data = response.json()
 
     # Should return ONLY 1 classroom (personal)
-    assert len(data["classrooms"]) == 1, \
-        f"Expected 1 classroom, got {len(data['classrooms'])}"
+    assert (
+        len(data["classrooms"]) == 1
+    ), f"Expected 1 classroom, got {len(data['classrooms'])}"
     assert data["classrooms"][0]["name"] == "Personal Class"
     assert data["classrooms"][0]["school_id"] is None
 
@@ -151,18 +154,20 @@ def test_dashboard_mode_school_returns_only_school_classrooms(
     test_session.flush()
 
     # Link classrooms to schools
-    test_session.add_all([
-        ClassroomSchool(
-            classroom_id=school1_classroom.id,
-            school_id=school1.id,
-            is_active=True,
-        ),
-        ClassroomSchool(
-            classroom_id=school2_classroom.id,
-            school_id=school2.id,
-            is_active=True,
-        ),
-    ])
+    test_session.add_all(
+        [
+            ClassroomSchool(
+                classroom_id=school1_classroom.id,
+                school_id=school1.id,
+                is_active=True,
+            ),
+            ClassroomSchool(
+                classroom_id=school2_classroom.id,
+                school_id=school2.id,
+                is_active=True,
+            ),
+        ]
+    )
     test_session.commit()
 
     # Call dashboard API with mode=school&school_id=school1.id
@@ -175,8 +180,9 @@ def test_dashboard_mode_school_returns_only_school_classrooms(
     data = response.json()
 
     # Should return ONLY 1 classroom (school1's classroom)
-    assert len(data["classrooms"]) == 1, \
-        f"Expected 1 classroom, got {len(data['classrooms'])}"
+    assert (
+        len(data["classrooms"]) == 1
+    ), f"Expected 1 classroom, got {len(data['classrooms'])}"
     assert data["classrooms"][0]["name"] == "School 1 Class"
     assert data["classrooms"][0]["school_id"] == str(school1.id)
 
@@ -231,10 +237,11 @@ def test_dashboard_mode_school_requires_authorization(
     )
 
     # Should return 403 Forbidden
-    assert response.status_code == 403, \
-        f"Expected 403, got {response.status_code}"
-    assert "Access denied" in response.json()["detail"] or \
-           "permission" in response.json()["detail"].lower()
+    assert response.status_code == 403, f"Expected 403, got {response.status_code}"
+    assert (
+        "Access denied" in response.json()["detail"]
+        or "permission" in response.json()["detail"].lower()
+    )
 
 
 def test_dashboard_no_mode_returns_all_classrooms_backward_compatible(
@@ -295,5 +302,6 @@ def test_dashboard_no_mode_returns_all_classrooms_backward_compatible(
     data = response.json()
 
     # Should return ALL classrooms (2)
-    assert len(data["classrooms"]) == 2, \
-        f"Expected 2 classrooms, got {len(data['classrooms'])}"
+    assert (
+        len(data["classrooms"]) == 2
+    ), f"Expected 2 classrooms, got {len(data['classrooms'])}"

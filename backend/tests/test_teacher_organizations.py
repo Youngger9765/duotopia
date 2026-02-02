@@ -17,76 +17,49 @@ def test_data(shared_test_session: Session):
     teacher = Teacher(
         name="Test Teacher",
         email="test_teacher_org@test.com",
-        password_hash="hashed_password"
+        password_hash="hashed_password",
     )
     db.add(teacher)
     db.flush()
 
     # Create organization 1
     org1 = Organization(
-        id=str(uuid4()),
-        name="Happy English School",
-        description="Test org 1"
+        id=str(uuid4()), name="Happy English School", description="Test org 1"
     )
     db.add(org1)
     db.flush()
 
     # Create organization 2
-    org2 = Organization(
-        id=str(uuid4()),
-        name="Fast Learning",
-        description="Test org 2"
-    )
+    org2 = Organization(id=str(uuid4()), name="Fast Learning", description="Test org 2")
     db.add(org2)
     db.flush()
 
     # Create schools for org1
-    school1_1 = School(
-        id=str(uuid4()),
-        name="Nangang Branch",
-        organization_id=org1.id
-    )
-    school1_2 = School(
-        id=str(uuid4()),
-        name="Xinyi Branch",
-        organization_id=org1.id
-    )
+    school1_1 = School(id=str(uuid4()), name="Nangang Branch", organization_id=org1.id)
+    school1_2 = School(id=str(uuid4()), name="Xinyi Branch", organization_id=org1.id)
     db.add_all([school1_1, school1_2])
     db.flush()
 
     # Create school for org2
-    school2_1 = School(
-        id=str(uuid4()),
-        name="Taipei Campus",
-        organization_id=org2.id
-    )
+    school2_1 = School(id=str(uuid4()), name="Taipei Campus", organization_id=org2.id)
     db.add(school2_1)
     db.flush()
 
     # Link teacher to org1 as org_admin (ACTIVE)
     teacher_org1 = TeacherOrganization(
-        teacher_id=teacher.id,
-        organization_id=org1.id,
-        role="org_admin",
-        is_active=True
+        teacher_id=teacher.id, organization_id=org1.id, role="org_admin", is_active=True
     )
     db.add(teacher_org1)
 
     # Link teacher to school1_1 as teacher (ACTIVE)
     teacher_school1 = TeacherSchool(
-        teacher_id=teacher.id,
-        school_id=school1_1.id,
-        roles=["teacher"],
-        is_active=True
+        teacher_id=teacher.id, school_id=school1_1.id, roles=["teacher"], is_active=True
     )
     db.add(teacher_school1)
 
     # Link teacher to org2 as teacher (ACTIVE)
     teacher_org2 = TeacherOrganization(
-        teacher_id=teacher.id,
-        organization_id=org2.id,
-        role="teacher",
-        is_active=True
+        teacher_id=teacher.id, organization_id=org2.id, role="teacher", is_active=True
     )
     db.add(teacher_org2)
 
@@ -95,7 +68,7 @@ def test_data(shared_test_session: Session):
         teacher_id=teacher.id,
         school_id=school2_1.id,
         roles=["school_admin"],
-        is_active=True
+        is_active=True,
     )
     db.add(teacher_school2)
 
@@ -152,7 +125,9 @@ def test_get_teacher_organizations_success(test_data, authenticated_client):
     assert len(data["organizations"]) == 2
 
     # Check org1 structure
-    org1_data = next(o for o in data["organizations"] if o["name"] == "Happy English School")
+    org1_data = next(
+        o for o in data["organizations"] if o["name"] == "Happy English School"
+    )
     assert org1_data["role"] == "org_admin"
     assert len(org1_data["schools"]) == 2
 
@@ -181,7 +156,7 @@ def test_get_teacher_organizations_no_orgs(shared_test_session: Session):
     teacher = Teacher(
         name="Solo Teacher",
         email="solo_teacher_org@test.com",
-        password_hash="hashed_password"
+        password_hash="hashed_password",
     )
     db.add(teacher)
     db.commit()
@@ -221,7 +196,7 @@ def test_get_teacher_organizations_forbidden(shared_test_session: Session, test_
     other_teacher = Teacher(
         name="Other Teacher",
         email="other_teacher_org@test.com",
-        password_hash="hashed_password"
+        password_hash="hashed_password",
     )
     db.add(other_teacher)
     db.commit()

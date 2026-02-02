@@ -733,16 +733,17 @@ async def create_organization_as_admin(
     """
 
     # Validate owner exists and is verified
-    owner = db.query(Teacher).filter(
-        Teacher.email == org_data.owner_email,
-        Teacher.email_verified == True
-    ).first()
+    owner = (
+        db.query(Teacher)
+        .filter(Teacher.email == org_data.owner_email, Teacher.email_verified == True)
+        .first()
+    )
 
     if not owner:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Teacher with email {org_data.owner_email} not found or not verified. "
-                   "Owner must be a registered and verified user."
+            "Owner must be a registered and verified user.",
         )
 
     # Validate project staff if provided
@@ -759,20 +760,21 @@ async def create_organization_as_admin(
         if duplicate_emails:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Duplicate emails in project staff list: {', '.join(sorted(duplicate_emails))}"
+                detail=f"Duplicate emails in project staff list: {', '.join(sorted(duplicate_emails))}",
             )
 
         for staff_email in org_data.project_staff_emails:
-            staff_teacher = db.query(Teacher).filter(
-                Teacher.email == staff_email,
-                Teacher.email_verified == True
-            ).first()
+            staff_teacher = (
+                db.query(Teacher)
+                .filter(Teacher.email == staff_email, Teacher.email_verified == True)
+                .first()
+            )
 
             if not staff_teacher:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Teacher {staff_email} not found or not verified. "
-                           "Project staff must be registered and verified users."
+                    "Project staff must be registered and verified users.",
                 )
 
             # Prevent owner from being in project staff
@@ -780,20 +782,20 @@ async def create_organization_as_admin(
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Owner {staff_email} cannot also be project staff. "
-                           "Owner already has org_owner role."
+                    "Owner already has org_owner role.",
                 )
 
             project_staff_teachers.append(staff_teacher)
 
     # Check duplicate organization name
-    existing_org = db.query(Organization).filter(
-        Organization.name == org_data.name
-    ).first()
+    existing_org = (
+        db.query(Organization).filter(Organization.name == org_data.name).first()
+    )
 
     if existing_org:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Organization with name '{org_data.name}' already exists."
+            detail=f"Organization with name '{org_data.name}' already exists.",
         )
 
     # Create organization
@@ -844,7 +846,7 @@ async def create_organization_as_admin(
         casbin_service.add_role_for_user(
             teacher_id=owner.id,
             role="org_owner",
-            domain=str(new_org.id)  # Convert UUID to string
+            domain=str(new_org.id),  # Convert UUID to string
         )
 
         # Add Casbin roles for project staff
@@ -852,7 +854,7 @@ async def create_organization_as_admin(
             casbin_service.add_role_for_user(
                 teacher_id=staff_teacher.id,
                 role="org_admin",
-                domain=str(new_org.id)  # Convert UUID to string
+                domain=str(new_org.id),  # Convert UUID to string
             )
     except Exception as e:
         # Rollback database changes if Casbin fails
@@ -862,7 +864,7 @@ async def create_organization_as_admin(
         db.commit()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to assign permissions. Organization created but deactivated. Please contact support."
+            detail=f"Failed to assign permissions. Organization created but deactivated. Please contact support.",
         )
 
     # Build response message
@@ -874,15 +876,17 @@ async def create_organization_as_admin(
         organization_name=new_org.name,
         owner_email=owner.email,
         owner_id=owner.id,
-        project_staff_assigned=[t.email for t in project_staff_teachers] if project_staff_teachers else None,
-        message=f"Organization created successfully. Owner {owner.email} has been assigned org_owner role.{staff_msg}"
+        project_staff_assigned=[t.email for t in project_staff_teachers]
+        if project_staff_teachers
+        else None,
+        message=f"Organization created successfully. Owner {owner.email} has been assigned org_owner role.{staff_msg}",
     )
 
 
 @router.get(
     "/organizations/{org_id}/statistics",
     response_model=OrganizationStatisticsResponse,
-    summary="Get organization statistics (Admin only)"
+    summary="Get organization statistics (Admin only)",
 )
 async def get_organization_statistics(
     org_id: str,
@@ -905,7 +909,7 @@ async def get_organization_statistics(
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Organization with ID {org_id} not found"
+            detail=f"Organization with ID {org_id} not found",
         )
 
     # Count active teachers
@@ -913,7 +917,7 @@ async def get_organization_statistics(
         db.query(TeacherOrganization)
         .filter(
             TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.is_active == True
+            TeacherOrganization.is_active == True,
         )
         .count()
     )
@@ -927,14 +931,14 @@ async def get_organization_statistics(
     return OrganizationStatisticsResponse(
         teacher_count=active_teacher_count,
         teacher_limit=org.teacher_limit,
-        usage_percentage=round(usage_percentage, 1)
+        usage_percentage=round(usage_percentage, 1),
     )
 
 
 @router.get(
     "/teachers/lookup",
     response_model=TeacherLookupResponse,
-    summary="Lookup teacher by email (Admin only)"
+    summary="Lookup teacher by email (Admin only)",
 )
 async def get_teacher_by_email(
     email: EmailStr = Query(..., description="Teacher email address"),
@@ -961,7 +965,7 @@ async def get_teacher_by_email(
     if not teacher:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Teacher with email {email} not found"
+            detail=f"Teacher with email {email} not found",
         )
 
     return TeacherLookupResponse(
@@ -969,5 +973,5 @@ async def get_teacher_by_email(
         email=teacher.email,
         name=teacher.name,
         phone=teacher.phone,
-        email_verified=teacher.email_verified
+        email_verified=teacher.email_verified,
     )

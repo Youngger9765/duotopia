@@ -19,6 +19,7 @@ from services.casbin_service import get_casbin_service
 # Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def test_db(shared_test_session: Session):
     """Provide test database session"""
@@ -123,6 +124,7 @@ def teacher_headers(regular_teacher: Teacher):
 # ============================================================================
 # Test Cases
 # ============================================================================
+
 
 class TestUpdateTeacherRole:
     """Test suite for PUT /{org_id}/teachers/{teacher_id} endpoint"""
@@ -254,7 +256,9 @@ class TestUpdateTeacherRole:
 
         # Grant manage_teachers permission
         casbin_service = get_casbin_service()
-        casbin_service.add_role_for_user(org_admin.id, "org_admin", f"org-{test_org.id}")
+        casbin_service.add_role_for_user(
+            org_admin.id, "org_admin", f"org-{test_org.id}"
+        )
 
         # Add regular teacher to org
         teacher_rel = TeacherOrganization(

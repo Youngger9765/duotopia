@@ -148,7 +148,9 @@ def test_org_admin_with_permission(
 
 
 @pytest.fixture
-def test_org_with_materials(test_db: Session, test_org: Organization, org_owner: Teacher):
+def test_org_with_materials(
+    test_db: Session, test_org: Organization, org_owner: Teacher
+):
     """Create organization with sample materials"""
     materials = []
 
@@ -828,7 +830,9 @@ class TestSoftDeleteMaterial:
         assert response.status_code == 200
 
         # Material still exists in database
-        deleted_material = test_db.query(Program).filter(Program.id == material_id).first()
+        deleted_material = (
+            test_db.query(Program).filter(Program.id == material_id).first()
+        )
         assert deleted_material is not None
         assert deleted_material.is_active is False
 
@@ -941,7 +945,9 @@ class TestCopyToClassroom:
         classroom = test_teacher_with_classroom["classroom"]
 
         # Get original structure
-        original_lessons = test_db.query(Lesson).filter(Lesson.program_id == material.id).all()
+        original_lessons = (
+            test_db.query(Lesson).filter(Lesson.program_id == material.id).all()
+        )
         original_lesson_count = len(original_lessons)
 
         payload = {

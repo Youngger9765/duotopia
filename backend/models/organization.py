@@ -358,7 +358,9 @@ class OrganizationPointsLog(Base):
 
     # 點數使用資訊
     points_used = Column(Integer, nullable=False)  # 使用的點數
-    feature_type = Column(String(50), nullable=True)  # 功能類型 (ai_generation, translation, etc.)
+    feature_type = Column(
+        String(50), nullable=True
+    )  # 功能類型 (ai_generation, translation, etc.)
     description = Column(Text, nullable=True)  # 詳細描述
 
     # 時間戳記

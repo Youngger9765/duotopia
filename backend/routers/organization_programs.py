@@ -153,18 +153,20 @@ class ProgramResponse(BaseModel):
     source_metadata: Optional[dict]
     lessons: List[LessonResponse] = []
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def convert_uuid_fields(cls, data):
         """Convert UUID fields to strings before validation"""
-        if hasattr(data, 'organization_id') and data.organization_id is not None:
+        if hasattr(data, "organization_id") and data.organization_id is not None:
             # Handle SQLAlchemy model
             if not isinstance(data.organization_id, str):
-                object.__setattr__(data, 'organization_id', str(data.organization_id))
-        elif isinstance(data, dict) and 'organization_id' in data:
+                object.__setattr__(data, "organization_id", str(data.organization_id))
+        elif isinstance(data, dict) and "organization_id" in data:
             # Handle dict
-            if data['organization_id'] is not None and not isinstance(data['organization_id'], str):
-                data['organization_id'] = str(data['organization_id'])
+            if data["organization_id"] is not None and not isinstance(
+                data["organization_id"], str
+            ):
+                data["organization_id"] = str(data["organization_id"])
         return data
 
     class Config:
@@ -380,7 +382,9 @@ async def list_organization_materials(
                 # Build items
                 content_data.items = [
                     ContentItemResponse.from_orm(item)
-                    for item in sorted(content.content_items, key=lambda x: x.order_index)
+                    for item in sorted(
+                        content.content_items, key=lambda x: x.order_index
+                    )
                 ]
 
                 lesson_data.contents.append(content_data)
@@ -665,9 +669,7 @@ async def copy_material_to_classroom(
         )
 
     # Verify classroom exists
-    classroom = (
-        db.query(Classroom).filter(Classroom.id == payload.classroom_id).first()
-    )
+    classroom = db.query(Classroom).filter(Classroom.id == payload.classroom_id).first()
 
     if not classroom:
         raise HTTPException(
@@ -732,7 +734,7 @@ async def copy_material_to_classroom(
         db.rollback()
         logger.error(
             f"Failed to copy material {program_id} to classroom {payload.classroom_id}: {str(e)}",
-            exc_info=True
+            exc_info=True,
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

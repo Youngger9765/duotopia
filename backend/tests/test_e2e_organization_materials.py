@@ -291,7 +291,11 @@ class TestE2EOrganizationMaterials:
         assert len(contents) == 1
 
         content = contents[0]
-        items = self.db.query(ContentItem).filter(ContentItem.content_id == content.id).all()
+        items = (
+            self.db.query(ContentItem)
+            .filter(ContentItem.content_id == content.id)
+            .all()
+        )
         assert len(items) == 3
         assert items[0].text == "Hello"
         assert items[1].text == "Good morning"
@@ -398,7 +402,9 @@ class TestE2EOrganizationMaterials:
 
         # Get copied program from database
         copied_program_id = copied_data["id"]
-        copied_program = self.db.query(Program).filter(Program.id == copied_program_id).first()
+        copied_program = (
+            self.db.query(Program).filter(Program.id == copied_program_id).first()
+        )
 
         # 5.1: Edit copied program
         copied_program.name = "初級會話教材 (信義分校版)"
@@ -422,11 +428,15 @@ class TestE2EOrganizationMaterials:
         self.db.commit()
 
         # Verify original still has only 1 lesson
-        original_lessons = self.db.query(Lesson).filter(Lesson.program_id == material.id).all()
+        original_lessons = (
+            self.db.query(Lesson).filter(Lesson.program_id == material.id).all()
+        )
         assert len(original_lessons) == 1
 
         # Verify copied program now has 2 lessons
-        copied_lessons = self.db.query(Lesson).filter(Lesson.program_id == copied_program.id).all()
+        copied_lessons = (
+            self.db.query(Lesson).filter(Lesson.program_id == copied_program.id).all()
+        )
         assert len(copied_lessons) == 2
 
         # 5.3: Soft delete copied program

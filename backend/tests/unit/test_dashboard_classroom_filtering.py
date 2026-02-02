@@ -77,13 +77,9 @@ def test_dashboard_returns_classroom_with_school_id(
     data = response.json()
 
     # Find Lion classroom in response
-    lion_classroom = next(
-        (c for c in data["classrooms"] if c["name"] == "Lion"),
-        None
-    )
+    lion_classroom = next((c for c in data["classrooms"] if c["name"] == "Lion"), None)
     personal_class = next(
-        (c for c in data["classrooms"] if c["name"] == "Personal Class"),
-        None
+        (c for c in data["classrooms"] if c["name"] == "Personal Class"), None
     )
 
     assert lion_classroom is not None, "Lion classroom should be in response"
@@ -94,18 +90,22 @@ def test_dashboard_returns_classroom_with_school_id(
     assert "organization_id" in lion_classroom, "organization_id should be present"
 
     # Lion should have school_id
-    assert lion_classroom["school_id"] == str(school.id), \
-        f"Lion should have school_id={school.id}"
+    assert lion_classroom["school_id"] == str(
+        school.id
+    ), f"Lion should have school_id={school.id}"
 
     # Lion should have organization_id
-    assert lion_classroom["organization_id"] == str(org.id), \
-        f"Lion should have organization_id={org.id}"
+    assert lion_classroom["organization_id"] == str(
+        org.id
+    ), f"Lion should have organization_id={org.id}"
 
     # Personal classroom should NOT have school_id or organization_id
-    assert personal_class.get("school_id") is None, \
-        "Personal classroom should not have school_id"
-    assert personal_class.get("organization_id") is None, \
-        "Personal classroom should not have organization_id"
+    assert (
+        personal_class.get("school_id") is None
+    ), "Personal classroom should not have school_id"
+    assert (
+        personal_class.get("organization_id") is None
+    ), "Personal classroom should not have organization_id"
 
 
 def test_personal_mode_filter_logic(
@@ -145,10 +145,14 @@ def test_personal_mode_filter_logic(
     test_session.flush()
 
     # Link to school
-    test_session.add_all([
-        ClassroomSchool(classroom_id=lion.id, school_id=school.id, is_active=True),
-        ClassroomSchool(classroom_id=rabbit.id, school_id=school.id, is_active=True),
-    ])
+    test_session.add_all(
+        [
+            ClassroomSchool(classroom_id=lion.id, school_id=school.id, is_active=True),
+            ClassroomSchool(
+                classroom_id=rabbit.id, school_id=school.id, is_active=True
+            ),
+        ]
+    )
 
     # Create 1 personal classroom
     personal = Classroom(
@@ -170,11 +174,13 @@ def test_personal_mode_filter_logic(
     # Frontend should filter based on school_id/organization_id
     # Personal mode: show only classrooms where school_id is None AND organization_id is None
     personal_mode_classrooms = [
-        c for c in data["classrooms"]
+        c
+        for c in data["classrooms"]
         if c.get("school_id") is None and c.get("organization_id") is None
     ]
 
     # Should only return Personal classroom
-    assert len(personal_mode_classrooms) == 1, \
-        f"Personal mode should show 1 classroom, got {len(personal_mode_classrooms)}"
+    assert (
+        len(personal_mode_classrooms) == 1
+    ), f"Personal mode should show 1 classroom, got {len(personal_mode_classrooms)}"
     assert personal_mode_classrooms[0]["name"] == "Personal"
