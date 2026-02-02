@@ -64,7 +64,7 @@ jobs:
       working-directory: ./backend
       run: |
         echo "Running Flake8 linting..."
-        flake8 .
+        flake8 . --config=../.flake8
 
     - name: Run pytest (Parallel)
       working-directory: ./backend
