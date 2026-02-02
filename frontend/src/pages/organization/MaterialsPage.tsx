@@ -41,9 +41,12 @@ export default function MaterialsPage() {
   });
 
   // Memoized callback to prevent infinite loop
-  const handleProgramsChange = useCallback((updatedPrograms: ProgramTreeProgram[]) => {
-    setPrograms(updatedPrograms as OrganizationProgram[]);
-  }, []);
+  const handleProgramsChange = useCallback(
+    (updatedPrograms: ProgramTreeProgram[]) => {
+      setPrograms(updatedPrograms as OrganizationProgram[]);
+    },
+    [],
+  );
 
   useEffect(() => {
     const fetchOrg = async () => {

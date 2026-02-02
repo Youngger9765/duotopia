@@ -48,9 +48,12 @@ export default function SchoolMaterialsPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   // Memoized callback to prevent infinite loop
-  const handleProgramsChange = useCallback((updatedPrograms: ProgramTreeProgram[]) => {
-    setPrograms(updatedPrograms as Program[]);
-  }, []);
+  const handleProgramsChange = useCallback(
+    (updatedPrograms: ProgramTreeProgram[]) => {
+      setPrograms(updatedPrograms as Program[]);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (schoolId) {
