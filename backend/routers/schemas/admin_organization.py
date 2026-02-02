@@ -27,6 +27,9 @@ class AdminOrganizationCreate(BaseModel):
         default=None, description="專案服務人員 Email 列表（org_admin 角色）"
     )
 
+    # Points allocation
+    total_points: int = Field(default=0, ge=0, description="組織總點數配額")
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -40,6 +43,7 @@ class AdminOrganizationCreate(BaseModel):
                 "address": "台北市信義區信義路五段7號",
                 "owner_email": "wang@abc.edu.tw",
                 "project_staff_emails": ["staff@duotopia.com"],
+                "total_points": 10000,
             }
         }
 

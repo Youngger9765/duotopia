@@ -810,6 +810,9 @@ async def create_organization_as_admin(
         contact_phone=org_data.contact_phone,
         address=org_data.address,
         is_active=True,
+        total_points=org_data.total_points,
+        used_points=0,
+        last_points_update=datetime.now(timezone.utc) if org_data.total_points > 0 else None,
     )
 
     db.add(new_org)
