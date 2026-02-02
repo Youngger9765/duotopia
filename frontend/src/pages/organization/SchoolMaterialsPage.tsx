@@ -6,6 +6,7 @@ import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { ProgramTreeView } from "@/components/shared/ProgramTreeView";
+import { ProgramTreeProgram, ProgramTreeLesson } from "@/hooks/useProgramTree";
 import { SchoolProgramCreateDialog } from "@/components/shared/SchoolProgramCreateDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen } from "lucide-react";
@@ -28,7 +29,7 @@ interface Program {
   description?: string;
   is_active: boolean;
   total_hours?: number;
-  lessons?: any[];
+  lessons?: ProgramTreeLesson[];
 }
 
 /**
@@ -47,7 +48,7 @@ export default function SchoolMaterialsPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   // Memoized callback to prevent infinite loop
-  const handleProgramsChange = useCallback((updatedPrograms: any) => {
+  const handleProgramsChange = useCallback((updatedPrograms: ProgramTreeProgram[]) => {
     setPrograms(updatedPrograms as Program[]);
   }, []);
 

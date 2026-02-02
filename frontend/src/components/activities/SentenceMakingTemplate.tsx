@@ -847,7 +847,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           // 清除前端狀態 - 必須創建新物件才能觸發重新渲染
                           setAssessmentResults((prev) => {
                             // Remove the key using destructuring
-                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                             
                             const { [currentQuestionIndex]: _, ...newResults } =
                               prev;
                             return newResults;
@@ -1102,7 +1102,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                       // 清除前端狀態 - 必須創建新物件才能觸發重新渲染
                       setAssessmentResults((prev) => {
                         // Remove the key using destructuring
-                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                         
                         const { [currentQuestionIndex]: _, ...newResults } =
                           prev;
                         return newResults;

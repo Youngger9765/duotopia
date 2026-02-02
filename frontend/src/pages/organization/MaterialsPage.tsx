@@ -8,6 +8,7 @@ import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { ProgramTreeView } from "@/components/shared/ProgramTreeView";
+import { ProgramTreeProgram } from "@/hooks/useProgramTree";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OrganizationProgram } from "@/types/organizationPrograms";
 import { BookOpen } from "lucide-react";
@@ -40,7 +41,7 @@ export default function MaterialsPage() {
   });
 
   // Memoized callback to prevent infinite loop
-  const handleProgramsChange = useCallback((updatedPrograms: any) => {
+  const handleProgramsChange = useCallback((updatedPrograms: ProgramTreeProgram[]) => {
     setPrograms(updatedPrograms as OrganizationProgram[]);
   }, []);
 

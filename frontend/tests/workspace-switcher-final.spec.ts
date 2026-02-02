@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect as _expect } from '@playwright/test';
 
 /**
  * 最終測試：Workspace Switcher 完整功能驗證
@@ -30,7 +30,7 @@ test.describe('Workspace Switcher - 最終驗證', () => {
     try {
       await page.waitForURL('**/teacher/dashboard', { timeout: 10000 });
       console.log('✅ 成功導向 dashboard');
-    } catch (e) {
+    } catch (_e) {
       console.log('⚠️ 未導向 dashboard，當前 URL:', page.url());
       await page.screenshot({
         path: 'workspace-final-screenshots/02-after-login.png',

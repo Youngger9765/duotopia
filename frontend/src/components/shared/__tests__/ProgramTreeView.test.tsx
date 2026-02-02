@@ -106,7 +106,7 @@ describe("ProgramTreeView", () => {
       try {
         const createButton = screen.getByText("新增方案");
         await user.click(createButton);
-      } catch (error) {
+      } catch (_error) {
         // Expected: Button might not exist or click doesn't work
       }
 

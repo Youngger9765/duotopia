@@ -118,7 +118,7 @@ export function EditStudentDialog({
       toast.success("學生資訊更新成功");
       onSuccess();
       handleClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError("Failed to update student", error, {
         schoolId,
         studentId: student.id,
@@ -126,8 +126,9 @@ export function EditStudentDialog({
       });
 
       // Handle specific error messages
-      if (error?.detail) {
-        toast.error(error.detail);
+      const errorDetail = (error as { detail?: string })?.detail;
+      if (errorDetail) {
+        toast.error(errorDetail);
       } else {
         toast.error("更新學生失敗，請稍後再試");
       }

@@ -411,9 +411,10 @@ export function ImportStudentsDialog({
         );
         onSuccess();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError("Failed to import students", error, { schoolId });
-      toast.error(error?.detail || "匯入失敗，請稍後再試");
+      const errorDetail = (error as { detail?: string })?.detail;
+      toast.error(errorDetail || "匯入失敗，請稍後再試");
     } finally {
       setImporting(false);
     }

@@ -55,10 +55,22 @@ interface SentenceMakingState {
   completing: boolean;
 }
 
+interface WordItem {
+  word?: string;
+  text?: string;
+  translation?: string;
+  example_sentence?: string;
+  example_sentence_translation?: string;
+}
+
+interface ActivityContent {
+  words?: WordItem[];
+}
+
 interface SentenceMakingActivityProps {
   assignmentId?: number; // Optional: undefined in organization material context
   onComplete?: () => void;
-  activityContent?: any; // Optional: provide content for preview mode
+  activityContent?: ActivityContent; // Optional: provide content for preview mode
 }
 
 const SentenceMakingActivity: React.FC<SentenceMakingActivityProps> = ({
@@ -224,7 +236,7 @@ const SentenceMakingActivity: React.FC<SentenceMakingActivityProps> = ({
           單字列表預覽
         </h3>
         <div className="space-y-4">
-          {words.map((word: any, index: number) => (
+          {words.map((word: WordItem, index: number) => (
             <div key={index} className="p-4 bg-white rounded-lg border">
               <div className="font-semibold text-lg text-gray-900">
                 {word.word || word.text || "(未填寫)"}

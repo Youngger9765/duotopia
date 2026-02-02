@@ -956,8 +956,8 @@ class ApiClient {
         selectedLanguage?: string;
         audio_url?: string;
         // Explicit optional fields for backend compatibility
-        options?: any[];
-        correct_answer?: any;
+        options?: Array<unknown>;
+        correct_answer?: unknown;
         question_type?: string;
         example_sentence?: string;
         example_sentence_translation?: string;

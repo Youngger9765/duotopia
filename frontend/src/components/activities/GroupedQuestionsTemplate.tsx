@@ -126,7 +126,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   onFileUpload,
   formatTime = (s) =>
     `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   progressId: _progressId, // Legacy prop (not used with Azure direct calls)
   progressIds = [], // 接收 progress_id 數組
   initialAssessmentResults,
@@ -783,7 +783,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           // 清除前端狀態 - 必須創建新物件才能觸發重新渲染
                           setAssessmentResults((prev) => {
                             // Remove the key using destructuring
-                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                             
                             const { [currentQuestionIndex]: _, ...newResults } =
                               prev;
                             return newResults;
@@ -1103,7 +1103,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                       // 清除前端狀態 - 必須創建新物件才能觸發重新渲染
                       setAssessmentResults((prev) => {
                         // Remove the key using destructuring
-                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                         
                         const { [currentQuestionIndex]: _, ...newResults } =
                           prev;
                         return newResults;

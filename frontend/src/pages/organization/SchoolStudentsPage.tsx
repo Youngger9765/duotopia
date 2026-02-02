@@ -122,7 +122,7 @@ export default function SchoolStudentsPage() {
     try {
       setError(null);
 
-      const params: any = {};
+      const params: { search?: string } = {};
       if (searchTerm) {
         params.search = searchTerm;
       }

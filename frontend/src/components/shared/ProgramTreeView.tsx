@@ -810,7 +810,7 @@ export function ProgramTreeView({
                     },
                     onCancel: closeSentenceMakingEditor,
                     isCreating: true,
-                  } as any)}
+                  } as unknown as React.ComponentProps<typeof SentenceMakingPanel>)}
                 />
               </div>
             </div>
@@ -867,7 +867,7 @@ export function ProgramTreeView({
                         if (onRefresh) onRefresh();
                       },
                       onCancel: closeSentenceMakingEditor,
-                    } as any)}
+                    } as unknown as React.ComponentProps<typeof SentenceMakingPanel>)}
                   />
                 </div>
               </div>
