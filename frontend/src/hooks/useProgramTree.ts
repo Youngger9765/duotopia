@@ -16,7 +16,7 @@ export interface ProgramTreeProgram {
 }
 
 export function useProgramTree<T extends ProgramTreeProgram>(
-  initialPrograms: T[] = []
+  initialPrograms: T[] = [],
 ) {
   const [programs, setPrograms] = useState<T[]>(initialPrograms);
 
@@ -26,7 +26,7 @@ export function useProgramTree<T extends ProgramTreeProgram>(
 
   const updateProgramContent = (
     contentId: number,
-    updatedContent: Partial<Content>
+    updatedContent: Partial<Content>,
   ) => {
     setPrograms((prevPrograms) =>
       prevPrograms.map(
@@ -38,11 +38,11 @@ export function useProgramTree<T extends ProgramTreeProgram>(
               contents: lesson.contents?.map((content) =>
                 content.id === contentId
                   ? { ...content, ...updatedContent }
-                  : content
+                  : content,
               ),
             })),
-          }) as T
-      )
+          }) as T,
+      ),
     );
   };
 
@@ -61,8 +61,8 @@ export function useProgramTree<T extends ProgramTreeProgram>(
               }
               return lesson;
             }),
-          }) as T
-      )
+          }) as T,
+      ),
     );
   };
 

@@ -9,16 +9,21 @@ export function useContentEditor() {
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
 
   // Sentence Making Editor
-  const [showSentenceMakingEditor, setShowSentenceMakingEditor] = useState(false);
-  const [sentenceMakingLessonId, setSentenceMakingLessonId] = useState<number | null>(null);
-  const [sentenceMakingContentId, setSentenceMakingContentId] = useState<number | null>(null);
+  const [showSentenceMakingEditor, setShowSentenceMakingEditor] =
+    useState(false);
+  const [sentenceMakingLessonId, setSentenceMakingLessonId] = useState<
+    number | null
+  >(null);
+  const [sentenceMakingContentId, setSentenceMakingContentId] = useState<
+    number | null
+  >(null);
 
   const openContentEditor = (
     content: Content & {
       lessonName?: string;
       programName?: string;
       lesson_id?: number;
-    }
+    },
   ) => {
     const contentType = content.type?.toLowerCase();
 

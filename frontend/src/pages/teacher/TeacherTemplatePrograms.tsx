@@ -82,10 +82,10 @@ function TeacherTemplateProgramsInner() {
 
       // 使用 teachers API，已包含完整的 lessons/contents 和排序（teachers.py Line 300, 304）
       const response = await apiClient.getTeacherPrograms(
-        true,           // is_template
-        undefined,      // classroom_id
-        undefined,      // school_id (不傳，永遠查詢 teacher's own)
-        undefined,      // organization_id (不傳，永遠查詢 teacher's own)
+        true, // is_template
+        undefined, // classroom_id
+        undefined, // school_id (不傳，永遠查詢 teacher's own)
+        undefined, // organization_id (不傳，永遠查詢 teacher's own)
       );
       setPrograms(response as Program[]);
     } catch (err) {
@@ -465,77 +465,172 @@ function TeacherTemplateProgramsInner() {
 
   return (
     <div className="relative h-full bg-gray-50">
-        <div
-          className={`p-6 space-y-4 transition-all duration-300 ${
-            showReadingEditor && editorContentId !== null
-              ? "pr-[calc(50%+2rem)]"
-              : ""
-          }`}
-        >
-          <RecursiveTreeAccordion
-            data={programs}
-            config={programTreeConfig}
-            title={t("teacherTemplatePrograms.title")}
-            showCreateButton
-            createButtonText={t("teacherTemplatePrograms.buttons.addProgram")}
-            onCreateClick={handleCreateProgram}
-            onEdit={(item, level, parentId) => {
-              if (level === 0) handleEditProgram(item.id);
-              else if (level === 1)
-                handleEditLesson(parentId as number, item.id);
-            }}
-            onDelete={(item, level, parentId) => {
-              if (level === 0) handleDeleteProgram(item.id);
-              else if (level === 1)
-                handleDeleteLesson(parentId as number, item.id);
-              else if (level === 2)
-                handleDeleteContent(parentId as number, item.id, item.title);
-            }}
-            onClick={(item, level, parentId) => {
-              if (level === 2) {
-                const program = programs.find((p) =>
-                  p.lessons?.some((l) => l.id === parentId),
-                );
-                const lesson = program?.lessons?.find((l) => l.id === parentId);
-                handleContentClick({
-                  ...item,
-                  lesson_id: parentId as number,
-                  lessonName: lesson?.name,
-                  programName: program?.name,
-                });
+      <div
+        className={`p-6 space-y-4 transition-all duration-300 ${
+          showReadingEditor && editorContentId !== null
+            ? "pr-[calc(50%+2rem)]"
+            : ""
+        }`}
+      >
+        <RecursiveTreeAccordion
+          data={programs}
+          config={programTreeConfig}
+          title={t("teacherTemplatePrograms.title")}
+          showCreateButton
+          createButtonText={t("teacherTemplatePrograms.buttons.addProgram")}
+          onCreateClick={handleCreateProgram}
+          onEdit={(item, level, parentId) => {
+            if (level === 0) handleEditProgram(item.id);
+            else if (level === 1) handleEditLesson(parentId as number, item.id);
+          }}
+          onDelete={(item, level, parentId) => {
+            if (level === 0) handleDeleteProgram(item.id);
+            else if (level === 1)
+              handleDeleteLesson(parentId as number, item.id);
+            else if (level === 2)
+              handleDeleteContent(parentId as number, item.id, item.title);
+          }}
+          onClick={(item, level, parentId) => {
+            if (level === 2) {
+              const program = programs.find((p) =>
+                p.lessons?.some((l) => l.id === parentId),
+              );
+              const lesson = program?.lessons?.find((l) => l.id === parentId);
+              handleContentClick({
+                ...item,
+                lesson_id: parentId as number,
+                lessonName: lesson?.name,
+                programName: program?.name,
+              });
+            }
+          }}
+          onCreate={(level, parentId) => {
+            if (level === 1) {
+              // Creating lesson inside program
+              handleCreateLesson(parentId as number);
+            } else if (level === 2) {
+              // Creating content inside lesson - need to find program
+              const program = programs.find((p) =>
+                p.lessons?.some((l) => l.id === parentId),
+              );
+              if (program) {
+                handleCreateContent(program.id, parentId as number);
               }
-            }}
-            onCreate={(level, parentId) => {
-              if (level === 1) {
-                // Creating lesson inside program
-                handleCreateLesson(parentId as number);
-              } else if (level === 2) {
-                // Creating content inside lesson - need to find program
-                const program = programs.find((p) =>
-                  p.lessons?.some((l) => l.id === parentId),
-                );
-                if (program) {
-                  handleCreateContent(program.id, parentId as number);
-                }
-              }
-            }}
-            onReorder={(fromIndex, toIndex, level, parentId) => {
-              if (level === 0) handleReorderPrograms(fromIndex, toIndex);
-              else if (level === 1)
-                handleReorderLessons(parentId as number, fromIndex, toIndex);
-              else if (level === 2)
-                handleReorderContents(parentId as number, fromIndex, toIndex);
-            }}
-          />
-        </div>
+            }
+          }}
+          onReorder={(fromIndex, toIndex, level, parentId) => {
+            if (level === 0) handleReorderPrograms(fromIndex, toIndex);
+            else if (level === 1)
+              handleReorderLessons(parentId as number, fromIndex, toIndex);
+            else if (level === 2)
+              handleReorderContents(parentId as number, fromIndex, toIndex);
+          }}
+        />
+      </div>
 
-        {/* Reading Assessment Modal (新增模式) */}
-        {showReadingEditor && editorLessonId && editorContentId === null && (
-          <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold">
-                  {t("teacherTemplatePrograms.dialogs.addReadingTitle")}
+      {/* Reading Assessment Modal (新增模式) */}
+      {showReadingEditor && editorLessonId && editorContentId === null && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">
+                {t("teacherTemplatePrograms.dialogs.addReadingTitle")}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowReadingEditor(false);
+                  setEditorLessonId(null);
+                  setEditorContentId(null);
+                  setSelectedContent(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="關閉"
+              >
+                <svg
+                  className="w-5 h-5 text-gray-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <ReadingAssessmentPanel
+                lessonId={editorLessonId}
+                isCreating={true}
+                onSave={async (
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  newContent?: any,
+                ) => {
+                  // 如果有返回新內容，直接更新前端狀態，不重整頁面
+                  if (newContent && editorLessonId) {
+                    setPrograms(
+                      programs.map((program) => ({
+                        ...program,
+                        lessons: program.lessons?.map((lesson) => {
+                          if (lesson.id === editorLessonId) {
+                            return {
+                              ...lesson,
+                              contents: [
+                                ...(lesson.contents || []),
+                                newContent,
+                              ],
+                            };
+                          }
+                          return lesson;
+                        }),
+                      })),
+                    );
+                  }
+                  setShowReadingEditor(false);
+                  setEditorLessonId(null);
+                  setEditorContentId(null);
+                  setSelectedContent(null);
+                  toast.success(
+                    t("teacherTemplatePrograms.messages.contentSaved"),
+                  );
+                }}
+                onCancel={() => {
+                  setShowReadingEditor(false);
+                  setEditorLessonId(null);
+                  setEditorContentId(null);
+                  setSelectedContent(null);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reading Assessment Panel (編輯模式 - 側邊欄) */}
+      {showReadingEditor &&
+        editorLessonId &&
+        editorContentId !== null &&
+        selectedContent && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black bg-opacity-20 z-40 transition-opacity"
+              onClick={() => {
+                setShowReadingEditor(false);
+                setEditorLessonId(null);
+                setEditorContentId(null);
+                setSelectedContent(null);
+              }}
+            />
+
+            {/* Panel */}
+            <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t("teacherTemplatePrograms.dialogs.editContentTitle")}
                 </h2>
                 <button
                   onClick={() => {
@@ -562,38 +657,37 @@ function TeacherTemplateProgramsInner() {
                   </svg>
                 </button>
               </div>
-              <div className="flex-1 overflow-hidden">
+
+              <div className="p-6">
                 <ReadingAssessmentPanel
                   lessonId={editorLessonId}
-                  isCreating={true}
+                  contentId={editorContentId}
+                  content={{
+                    id: selectedContent.id,
+                    title: selectedContent.title,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    items: (selectedContent.items || []) as any,
+                  }}
                   onSave={async (
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    newContent?: any,
+                    updatedContent?: any,
                   ) => {
-                    // 如果有返回新內容，直接更新前端狀態，不重整頁面
-                    if (newContent && editorLessonId) {
-                      setPrograms(
-                        programs.map((program) => ({
+                    // 直接更新前端 state，不重新載入整個 tree
+                    if (updatedContent && editorContentId) {
+                      setPrograms((prevPrograms) =>
+                        prevPrograms.map((program) => ({
                           ...program,
-                          lessons: program.lessons?.map((lesson) => {
-                            if (lesson.id === editorLessonId) {
-                              return {
-                                ...lesson,
-                                contents: [
-                                  ...(lesson.contents || []),
-                                  newContent,
-                                ],
-                              };
-                            }
-                            return lesson;
-                          }),
+                          lessons: program.lessons?.map((lesson) => ({
+                            ...lesson,
+                            contents: lesson.contents?.map((content) =>
+                              content.id === editorContentId
+                                ? { ...content, title: updatedContent.title }
+                                : content,
+                            ),
+                          })),
                         })),
                       );
                     }
-                    setShowReadingEditor(false);
-                    setEditorLessonId(null);
-                    setEditorContentId(null);
-                    setSelectedContent(null);
                     toast.success(
                       t("teacherTemplatePrograms.messages.contentSaved"),
                     );
@@ -607,284 +701,189 @@ function TeacherTemplateProgramsInner() {
                 />
               </div>
             </div>
+          </>
+        )}
+
+      {/* Sentence Making Editor (新增模式 - 彈窗) */}
+      {showVocabularySetEditor &&
+        vocabularySetLessonId &&
+        !vocabularySetContentId && (
+          <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">
+                  {t("vocabularySet.dialogTitle")}
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowVocabularySetEditor(false);
+                    setVocabularySetLessonId(null);
+                    setVocabularySetContentId(null);
+                  }}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <VocabularySetPanel
+                  content={undefined}
+                  editingContent={{
+                    id: vocabularySetContentId || undefined,
+                  }}
+                  lessonId={vocabularySetLessonId}
+                  onUpdateContent={(updatedContent) => {
+                    console.log("Content updated:", updatedContent);
+                  }}
+                  onSave={async () => {
+                    setShowVocabularySetEditor(false);
+                    setVocabularySetLessonId(null);
+                    setVocabularySetContentId(null);
+                    await fetchTemplatePrograms();
+                    toast.success("內容已成功儲存");
+                  }}
+                  onCancel={() => {
+                    setShowVocabularySetEditor(false);
+                    setVocabularySetLessonId(null);
+                    setVocabularySetContentId(null);
+                  }}
+                  isCreating={!vocabularySetContentId}
+                />
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Reading Assessment Panel (編輯模式 - 側邊欄) */}
-        {showReadingEditor &&
-          editorLessonId &&
-          editorContentId !== null &&
-          selectedContent && (
-            <>
-              {/* Backdrop */}
-              <div
-                className="fixed inset-0 bg-black bg-opacity-20 z-40 transition-opacity"
-                onClick={() => {
-                  setShowReadingEditor(false);
-                  setEditorLessonId(null);
-                  setEditorContentId(null);
-                  setSelectedContent(null);
-                }}
-              />
+      {/* Sentence Making Editor (編輯模式 - 側邊欄) */}
+      {showVocabularySetEditor &&
+        vocabularySetLessonId &&
+        vocabularySetContentId && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black bg-opacity-20 z-40 transition-opacity"
+              onClick={() => {
+                setShowVocabularySetEditor(false);
+                setVocabularySetLessonId(null);
+                setVocabularySetContentId(null);
+              }}
+            />
 
-              {/* Panel */}
-              <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    {t("teacherTemplatePrograms.dialogs.editContentTitle")}
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setShowReadingEditor(false);
-                      setEditorLessonId(null);
-                      setEditorContentId(null);
-                      setSelectedContent(null);
-                    }}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    aria-label="關閉"
-                  >
-                    <svg
-                      className="w-5 h-5 text-gray-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="p-6">
-                  <ReadingAssessmentPanel
-                    lessonId={editorLessonId}
-                    contentId={editorContentId}
-                    content={{
-                      id: selectedContent.id,
-                      title: selectedContent.title,
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      items: (selectedContent.items || []) as any,
-                    }}
-                    onSave={async (
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      updatedContent?: any,
-                    ) => {
-                      // 直接更新前端 state，不重新載入整個 tree
-                      if (updatedContent && editorContentId) {
-                        setPrograms((prevPrograms) =>
-                          prevPrograms.map((program) => ({
-                            ...program,
-                            lessons: program.lessons?.map((lesson) => ({
-                              ...lesson,
-                              contents: lesson.contents?.map((content) =>
-                                content.id === editorContentId
-                                  ? { ...content, title: updatedContent.title }
-                                  : content,
-                              ),
-                            })),
-                          })),
-                        );
-                      }
-                      toast.success(
-                        t("teacherTemplatePrograms.messages.contentSaved"),
-                      );
-                    }}
-                    onCancel={() => {
-                      setShowReadingEditor(false);
-                      setEditorLessonId(null);
-                      setEditorContentId(null);
-                      setSelectedContent(null);
-                    }}
-                  />
-                </div>
+            {/* Panel */}
+            <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t("vocabularySet.editTitle")}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowVocabularySetEditor(false);
+                    setVocabularySetLessonId(null);
+                    setVocabularySetContentId(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="關閉"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
               </div>
-            </>
-          )}
 
-        {/* Sentence Making Editor (新增模式 - 彈窗) */}
-        {showVocabularySetEditor &&
-          vocabularySetLessonId &&
-          !vocabularySetContentId && (
-            <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-              <div className="relative w-full max-w-7xl max-h-[90vh] bg-white rounded-lg p-6 flex flex-col">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-2xl font-bold">
-                    {t("vocabularySet.dialogTitle")}
-                  </h2>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setShowVocabularySetEditor(false);
-                      setVocabularySetLessonId(null);
-                      setVocabularySetContentId(null);
-                    }}
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <VocabularySetPanel
-                    content={undefined}
-                    editingContent={{
-                      id: vocabularySetContentId || undefined,
-                    }}
-                    lessonId={vocabularySetLessonId}
-                    onUpdateContent={(updatedContent) => {
-                      console.log("Content updated:", updatedContent);
-                    }}
-                    onSave={async () => {
-                      setShowVocabularySetEditor(false);
-                      setVocabularySetLessonId(null);
-                      setVocabularySetContentId(null);
-                      await fetchTemplatePrograms();
-                      toast.success("內容已成功儲存");
-                    }}
-                    onCancel={() => {
-                      setShowVocabularySetEditor(false);
-                      setVocabularySetLessonId(null);
-                      setVocabularySetContentId(null);
-                    }}
-                    isCreating={!vocabularySetContentId}
-                  />
-                </div>
+              <div className="p-6">
+                <VocabularySetPanel
+                  content={{ id: vocabularySetContentId }}
+                  editingContent={{ id: vocabularySetContentId }}
+                  lessonId={vocabularySetLessonId}
+                  onUpdateContent={(updatedContent) => {
+                    console.log("Content updated:", updatedContent);
+                  }}
+                  onSave={async () => {
+                    setShowVocabularySetEditor(false);
+                    setVocabularySetLessonId(null);
+                    setVocabularySetContentId(null);
+                    await fetchTemplatePrograms();
+                    toast.success("內容已成功儲存");
+                  }}
+                  onCancel={() => {
+                    setShowVocabularySetEditor(false);
+                    setVocabularySetLessonId(null);
+                    setVocabularySetContentId(null);
+                  }}
+                  isCreating={false}
+                />
               </div>
             </div>
-          )}
-
-        {/* Sentence Making Editor (編輯模式 - 側邊欄) */}
-        {showVocabularySetEditor &&
-          vocabularySetLessonId &&
-          vocabularySetContentId && (
-            <>
-              {/* Backdrop */}
-              <div
-                className="fixed inset-0 bg-black bg-opacity-20 z-40 transition-opacity"
-                onClick={() => {
-                  setShowVocabularySetEditor(false);
-                  setVocabularySetLessonId(null);
-                  setVocabularySetContentId(null);
-                }}
-              />
-
-              {/* Panel */}
-              <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    {t("vocabularySet.editTitle")}
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setShowVocabularySetEditor(false);
-                      setVocabularySetLessonId(null);
-                      setVocabularySetContentId(null);
-                    }}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    aria-label="關閉"
-                  >
-                    <X className="w-5 h-5 text-gray-500" />
-                  </button>
-                </div>
-
-                <div className="p-6">
-                  <VocabularySetPanel
-                    content={{ id: vocabularySetContentId }}
-                    editingContent={{ id: vocabularySetContentId }}
-                    lessonId={vocabularySetLessonId}
-                    onUpdateContent={(updatedContent) => {
-                      console.log("Content updated:", updatedContent);
-                    }}
-                    onSave={async () => {
-                      setShowVocabularySetEditor(false);
-                      setVocabularySetLessonId(null);
-                      setVocabularySetContentId(null);
-                      await fetchTemplatePrograms();
-                      toast.success("內容已成功儲存");
-                    }}
-                    onCancel={() => {
-                      setShowVocabularySetEditor(false);
-                      setVocabularySetLessonId(null);
-                      setVocabularySetContentId(null);
-                    }}
-                    isCreating={false}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-        {/* Dialogs */}
-        <ProgramDialog
-          program={selectedProgram}
-          dialogType={programDialogType}
-          isTemplate={true}
-          onClose={() => {
-            setProgramDialogType(null);
-            setSelectedProgram(null);
-          }}
-          onSave={handleSaveProgram}
-          onDelete={handleDeleteProgramConfirm}
-        />
-
-        <LessonDialog
-          lesson={selectedLesson}
-          dialogType={lessonDialogType}
-          programId={lessonProgramId}
-          onClose={() => {
-            setLessonDialogType(null);
-            setSelectedLesson(null);
-            setLessonProgramId(undefined);
-          }}
-          onSave={handleSaveLesson}
-          onDelete={handleDeleteLessonConfirm}
-        />
-
-        {contentLessonInfo && (
-          <ContentTypeDialog
-            open={showContentTypeDialog}
-            lessonInfo={contentLessonInfo}
-            onClose={() => {
-              setShowContentTypeDialog(false);
-              setContentLessonInfo(null);
-            }}
-            onSelect={(selection) => {
-              setShowContentTypeDialog(false);
-              setContentLessonInfo(null);
-
-              // Handle different content types
-              // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
-              if (
-                selection.type === "reading_assessment" ||
-                selection.type === "example_sentences" ||
-                selection.type === "EXAMPLE_SENTENCES"
-              ) {
-                // Open modal for new content
-                setEditorLessonId(selection.lessonId);
-                setEditorContentId(null); // null = new content
-                setSelectedContent(null); // No existing content
-                setShowReadingEditor(true);
-              } else if (
-                selection.type === "SENTENCE_MAKING" ||
-                selection.type === "sentence_making" ||
-                selection.type === "vocabulary_set" ||
-                selection.type === "VOCABULARY_SET"
-              ) {
-                // For sentence_making/vocabulary_set, use popup for new content creation
-                setVocabularySetLessonId(selection.lessonId);
-                setVocabularySetContentId(null); // null for new content
-                setShowVocabularySetEditor(true);
-              } else {
-                toast.info(
-                  `${t("teacherTemplatePrograms.messages.featureInDevelopment", { type: selection.type })}`,
-                );
-              }
-            }}
-          />
+          </>
         )}
-      </div>
+
+      {/* Dialogs */}
+      <ProgramDialog
+        program={selectedProgram}
+        dialogType={programDialogType}
+        isTemplate={true}
+        onClose={() => {
+          setProgramDialogType(null);
+          setSelectedProgram(null);
+        }}
+        onSave={handleSaveProgram}
+        onDelete={handleDeleteProgramConfirm}
+      />
+
+      <LessonDialog
+        lesson={selectedLesson}
+        dialogType={lessonDialogType}
+        programId={lessonProgramId}
+        onClose={() => {
+          setLessonDialogType(null);
+          setSelectedLesson(null);
+          setLessonProgramId(undefined);
+        }}
+        onSave={handleSaveLesson}
+        onDelete={handleDeleteLessonConfirm}
+      />
+
+      {contentLessonInfo && (
+        <ContentTypeDialog
+          open={showContentTypeDialog}
+          lessonInfo={contentLessonInfo}
+          onClose={() => {
+            setShowContentTypeDialog(false);
+            setContentLessonInfo(null);
+          }}
+          onSelect={(selection) => {
+            setShowContentTypeDialog(false);
+            setContentLessonInfo(null);
+
+            // Handle different content types
+            // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
+            if (
+              selection.type === "reading_assessment" ||
+              selection.type === "example_sentences" ||
+              selection.type === "EXAMPLE_SENTENCES"
+            ) {
+              // Open modal for new content
+              setEditorLessonId(selection.lessonId);
+              setEditorContentId(null); // null = new content
+              setSelectedContent(null); // No existing content
+              setShowReadingEditor(true);
+            } else if (
+              selection.type === "SENTENCE_MAKING" ||
+              selection.type === "sentence_making" ||
+              selection.type === "vocabulary_set" ||
+              selection.type === "VOCABULARY_SET"
+            ) {
+              // For sentence_making/vocabulary_set, use popup for new content creation
+              setVocabularySetLessonId(selection.lessonId);
+              setVocabularySetContentId(null); // null for new content
+              setShowVocabularySetEditor(true);
+            } else {
+              toast.info(
+                `${t("teacherTemplatePrograms.messages.featureInDevelopment", { type: selection.type })}`,
+              );
+            }
+          }}
+        />
+      )}
+    </div>
   );
 }

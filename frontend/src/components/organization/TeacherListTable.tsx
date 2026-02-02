@@ -34,7 +34,11 @@ interface TeacherListTableProps {
   onRoleUpdated?: () => void;
 }
 
-export function TeacherListTable({ teachers, schoolId, onRoleUpdated }: TeacherListTableProps) {
+export function TeacherListTable({
+  teachers,
+  schoolId,
+  onRoleUpdated,
+}: TeacherListTableProps) {
   const token = useTeacherAuthStore((state) => state.token);
   const currentUser = useTeacherAuthStore((state) => state.user);
   const [updatingRoleId, setUpdatingRoleId] = useState<number | null>(null);
@@ -73,7 +77,7 @@ export function TeacherListTable({ teachers, schoolId, onRoleUpdated }: TeacherL
   const handleRoleChange = async (teacherId: number, newRole: string) => {
     try {
       setUpdatingRoleId(teacherId);
-      
+
       const response = await fetch(
         `${API_URL}/api/schools/${schoolId}/teachers/${teacherId}`,
         {
@@ -83,7 +87,7 @@ export function TeacherListTable({ teachers, schoolId, onRoleUpdated }: TeacherL
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ roles: [newRole] }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -94,7 +98,11 @@ export function TeacherListTable({ teachers, schoolId, onRoleUpdated }: TeacherL
       toast.success("角色已更新");
       onRoleUpdated?.();
     } catch (error) {
-      logError("Failed to update teacher role", error, { teacherId, newRole, schoolId });
+      logError("Failed to update teacher role", error, {
+        teacherId,
+        newRole,
+        schoolId,
+      });
       toast.error("更新角色失敗，請稍後再試");
     } finally {
       setUpdatingRoleId(null);
@@ -120,7 +128,9 @@ export function TeacherListTable({ teachers, schoolId, onRoleUpdated }: TeacherL
               {canEditRoles && teacher.id !== currentUser?.id ? (
                 <Select
                   value={getPrimaryRole(teacher.roles)}
-                  onValueChange={(newRole) => handleRoleChange(teacher.id, newRole)}
+                  onValueChange={(newRole) =>
+                    handleRoleChange(teacher.id, newRole)
+                  }
                   disabled={updatingRoleId === teacher.id}
                 >
                   <SelectTrigger className="w-[150px]">

@@ -38,7 +38,6 @@ export function ClassroomListTable({
   onViewStudents,
   onViewMaterials,
 }: ClassroomListTableProps) {
-
   const getLevelBadge = (level: string) => {
     const levelColors: Record<string, string> = {
       PREA: "bg-gray-100 text-gray-800",
@@ -49,7 +48,8 @@ export function ClassroomListTable({
       C1: "bg-red-100 text-red-800",
       C2: "bg-orange-100 text-orange-800",
     };
-    const color = levelColors[level?.toUpperCase()] || "bg-gray-100 text-gray-800";
+    const color =
+      levelColors[level?.toUpperCase()] || "bg-gray-100 text-gray-800";
     return (
       <span
         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${color}`}
@@ -75,9 +75,7 @@ export function ClassroomListTable({
       <TableBody>
         {classrooms.map((classroom) => (
           <TableRow key={classroom.id}>
-            <TableCell className="font-medium">
-              {classroom.name}
-            </TableCell>
+            <TableCell className="font-medium">{classroom.name}</TableCell>
             <TableCell>{getLevelBadge(classroom.program_level)}</TableCell>
             <TableCell>
               {classroom.teacher_name ? (

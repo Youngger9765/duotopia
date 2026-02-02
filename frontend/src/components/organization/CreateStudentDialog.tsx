@@ -94,7 +94,10 @@ export function CreateStudentDialog({
         requestData.phone = formData.phone.trim();
       }
 
-      const result = await apiClient.createSchoolStudent(schoolId, requestData) as { default_password?: string };
+      const result = (await apiClient.createSchoolStudent(
+        schoolId,
+        requestData,
+      )) as { default_password?: string };
 
       toast.success("學生建立成功", {
         description: result.default_password
@@ -186,7 +189,11 @@ export function CreateStudentDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={isSubmitting}
+          >
             取消
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
@@ -197,4 +204,3 @@ export function CreateStudentDialog({
     </Dialog>
   );
 }
-

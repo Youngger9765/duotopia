@@ -75,7 +75,9 @@ export function OrganizationInfoCard({
                 </span>
                 <span className="text-sm text-gray-500">
                   建立時間：
-                  {new Date(organization.created_at).toLocaleDateString("zh-TW")}
+                  {new Date(organization.created_at).toLocaleDateString(
+                    "zh-TW",
+                  )}
                 </span>
               </div>
               {organization.description && (
@@ -257,7 +259,12 @@ export function SchoolsSection({
             查看全部
             <ArrowRight className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" className="gap-2" onClick={onCreate}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={onCreate}
+          >
             <Plus className="h-4 w-4" />
             新增學校
           </Button>
@@ -319,7 +326,12 @@ export function StaffSection({
             查看全部
             <ArrowRight className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" className="gap-2" onClick={onInvite}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={onInvite}
+          >
             <UserPlus className="h-4 w-4" />
             新增工作人員
           </Button>

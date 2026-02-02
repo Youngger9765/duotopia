@@ -48,7 +48,10 @@ interface TeacherLayoutInnerProps extends TeacherLayoutProps {
   teacherProfile: TeacherProfile;
 }
 
-function TeacherLayoutInner({ children, teacherProfile }: TeacherLayoutInnerProps) {
+function TeacherLayoutInner({
+  children,
+  teacherProfile,
+}: TeacherLayoutInnerProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
@@ -86,8 +89,8 @@ function TeacherLayoutInner({ children, teacherProfile }: TeacherLayoutInnerProp
   // Determine which sidebar items are read-only
   const readOnlyItemIds = useMemo(() => {
     // In organization mode with a school selected, classrooms and students are read-only
-    if (mode === 'organization' && selectedSchool) {
-      return ['classrooms', 'students'];
+    if (mode === "organization" && selectedSchool) {
+      return ["classrooms", "students"];
     }
     return [];
   }, [mode, selectedSchool]);
@@ -107,17 +110,17 @@ function TeacherLayoutInner({ children, teacherProfile }: TeacherLayoutInnerProp
     return visibleGroups
       .filter((group) => {
         // 個人模式下過濾掉組織管理 group
-        if (mode === 'personal' && group.id === "organization-hub") {
+        if (mode === "personal" && group.id === "organization-hub") {
           return false;
         }
         return true;
       })
       .map((group) => {
         // 個人模式下過濾掉「學校教材」item
-        if (mode === 'personal' && group.id === 'class-management') {
+        if (mode === "personal" && group.id === "class-management") {
           return {
             ...group,
-            items: group.items.filter((item) => item.id !== 'school-materials'),
+            items: group.items.filter((item) => item.id !== "school-materials"),
           };
         }
         return group;
@@ -347,8 +350,8 @@ function TeacherLayoutInner({ children, teacherProfile }: TeacherLayoutInnerProp
   );
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        {/* Mobile Header */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      {/* Mobile Header */}
       <div className="md:hidden bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-50">
         <div className="flex items-center justify-between p-4">
           <div>
@@ -401,7 +404,9 @@ function TeacherLayoutInner({ children, teacherProfile }: TeacherLayoutInnerProp
 
 // Wrapper component that provides workspace context
 export default function TeacherLayout({ children }: TeacherLayoutProps) {
-  const [teacherProfile, setTeacherProfile] = useState<TeacherProfile | null>(null);
+  const [teacherProfile, setTeacherProfile] = useState<TeacherProfile | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const hasFetchedProfile = useRef(false);
@@ -456,7 +461,9 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
 
   return (
     <WorkspaceProvider teacherId={teacherProfile.id}>
-      <TeacherLayoutInner teacherProfile={teacherProfile}>{children}</TeacherLayoutInner>
+      <TeacherLayoutInner teacherProfile={teacherProfile}>
+        {children}
+      </TeacherLayoutInner>
     </WorkspaceProvider>
   );
 }

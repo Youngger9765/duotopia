@@ -17,7 +17,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 export default function SchoolMaterialsPage() {
   const { t } = useTranslation();
   const { selectedSchool, selectedOrganization, mode } = useWorkspace();
-  const isOrgMode = mode === 'organization';
+  const isOrgMode = mode === "organization";
 
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
@@ -491,7 +491,8 @@ export default function SchoolMaterialsPage() {
           {workspaceInfo && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 mb-4">
               <p className="text-sm text-blue-700">
-                <span className="font-medium">目前工作區：</span> {workspaceInfo}
+                <span className="font-medium">目前工作區：</span>{" "}
+                {workspaceInfo}
               </p>
             </div>
           )}

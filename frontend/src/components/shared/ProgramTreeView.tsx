@@ -110,19 +110,28 @@ interface ProgramTreeViewProps {
   onEdit?: (item: TreeItem, level: number, parentId?: string | number) => void;
 
   /** Optional: Custom handler for deleting programs/lessons/content. Fallback: Internal API call */
-  onDelete?: (item: TreeItem, level: number, parentId?: string | number) => void;
+  onDelete?: (
+    item: TreeItem,
+    level: number,
+    parentId?: string | number,
+  ) => void;
 
   /** Optional: Custom handler for creating lessons. Fallback: Internal API call (content uses dialog) */
   onCreate?: (level: number, parentId: string | number) => void;
 
   /** Optional: Custom handler for reordering at any level. Fallback: Internal API call with optimistic updates */
-  onReorder?: (fromIndex: number, toIndex: number, level: number, parentId?: string | number) => void;
+  onReorder?: (
+    fromIndex: number,
+    toIndex: number,
+    level: number,
+    parentId?: string | number,
+  ) => void;
 
   /** Optional: Callback to refresh data after mutations (called by internal handlers) */
   onRefresh?: () => void;
 
   /** Required: Authorization scope for API calls (teacher/organization/school) */
-  scope: 'teacher' | 'organization' | 'school';
+  scope: "teacher" | "organization" | "school";
 
   /** Optional: Organization ID (required when scope='organization' or scope='school') */
   organizationId?: string;
@@ -199,23 +208,35 @@ export function ProgramTreeView({
     fromIndex: number,
     toIndex: number,
     level: number,
-    parentId?: string | number
+    parentId?: string | number,
   ) => {
-    console.log('🔍 [ProgramTreeView] handleInternalReorder called:', { fromIndex, toIndex, level, parentId, scope, organizationId, schoolId });
+    console.log("🔍 [ProgramTreeView] handleInternalReorder called:", {
+      fromIndex,
+      toIndex,
+      level,
+      parentId,
+      scope,
+      organizationId,
+      schoolId,
+    });
     try {
       if (level === 0) {
         // Reorder programs - use INSERT logic (splice)
         const newPrograms = [...programs];
-        const [movedItem] = newPrograms.splice(fromIndex, 1);  // Remove from old position
-        newPrograms.splice(toIndex, 0, movedItem);             // Insert at new position
+        const [movedItem] = newPrograms.splice(fromIndex, 1); // Remove from old position
+        newPrograms.splice(toIndex, 0, movedItem); // Insert at new position
 
         const orderData = newPrograms
           .filter((p) => p.id !== undefined)
           .map((program, index) => ({
             id: program.id!,
-            order_index: index,  // Use the new index directly
+            order_index: index, // Use the new index directly
           }));
-        console.log('📤 [ProgramTreeView] Sending reorder request:', { orderData, scope, organizationId });
+        console.log("📤 [ProgramTreeView] Sending reorder request:", {
+          orderData,
+          scope,
+          organizationId,
+        });
         await programAPI.reorderPrograms(orderData);
 
         // Update local state immediately (no refresh)
@@ -225,11 +246,13 @@ export function ProgramTreeView({
         }
       } else if (level === 1) {
         // Reorder lessons within a program
-        const programId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
-        if (!programId) throw new Error('Program ID is required for lesson reorder');
+        const programId =
+          typeof parentId === "string" ? parseInt(parentId) : parentId;
+        if (!programId)
+          throw new Error("Program ID is required for lesson reorder");
 
         const program = programs.find((p) => p.id === programId);
-        if (!program?.lessons) throw new Error('Program or lessons not found');
+        if (!program?.lessons) throw new Error("Program or lessons not found");
 
         // Use INSERT logic
         const newLessons = [...program.lessons];
@@ -240,13 +263,13 @@ export function ProgramTreeView({
           .filter((l) => l.id !== undefined)
           .map((lesson, index) => ({
             id: lesson.id!,
-            order_index: index,  // Use the new index directly
+            order_index: index, // Use the new index directly
           }));
         await programAPI.reorderLessons(programId, orderData);
 
         // Update local state immediately (no refresh)
-        const updatedPrograms = programs.map(p =>
-          p.id === programId ? { ...p, lessons: newLessons } : p
+        const updatedPrograms = programs.map((p) =>
+          p.id === programId ? { ...p, lessons: newLessons } : p,
         );
         setPrograms(updatedPrograms);
         if (onProgramsChange) {
@@ -254,12 +277,16 @@ export function ProgramTreeView({
         }
       } else if (level === 2) {
         // Reorder contents within a lesson
-        const lessonId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
-        if (!lessonId) throw new Error('Lesson ID is required for content reorder');
+        const lessonId =
+          typeof parentId === "string" ? parseInt(parentId) : parentId;
+        if (!lessonId)
+          throw new Error("Lesson ID is required for content reorder");
 
-        const program = programs.find((p) => p.lessons?.some((l) => l.id === lessonId));
+        const program = programs.find((p) =>
+          p.lessons?.some((l) => l.id === lessonId),
+        );
         const lesson = program?.lessons?.find((l) => l.id === lessonId);
-        if (!lesson?.contents) throw new Error('Lesson or contents not found');
+        if (!lesson?.contents) throw new Error("Lesson or contents not found");
 
         // Use INSERT logic
         const newContents = [...lesson.contents];
@@ -270,18 +297,18 @@ export function ProgramTreeView({
           .filter((c) => c.id !== undefined)
           .map((content, index) => ({
             id: content.id!,
-            order_index: index,  // Use the new index directly
+            order_index: index, // Use the new index directly
           }));
         await programAPI.reorderContents(lessonId, orderData);
 
         // Update local state immediately (no refresh)
-        const updatedPrograms = programs.map(p => {
-          if (p.lessons?.some(l => l.id === lessonId)) {
+        const updatedPrograms = programs.map((p) => {
+          if (p.lessons?.some((l) => l.id === lessonId)) {
             return {
               ...p,
-              lessons: p.lessons.map(l =>
-                l.id === lessonId ? { ...l, contents: newContents } : l
-              )
+              lessons: p.lessons.map((l) =>
+                l.id === lessonId ? { ...l, contents: newContents } : l,
+              ),
             };
           }
           return p;
@@ -292,10 +319,10 @@ export function ProgramTreeView({
         }
       }
 
-      toast.success('順序已更新');
+      toast.success("順序已更新");
     } catch (error) {
-      console.error('Reorder failed:', error);
-      toast.error('更新順序失敗');
+      console.error("Reorder failed:", error);
+      toast.error("更新順序失敗");
       // Rollback UI by refreshing
       if (onRefresh) {
         await onRefresh();
@@ -308,7 +335,7 @@ export function ProgramTreeView({
     // Open dialog for user to input name and description
     setProgramEditDialog({
       open: true,
-      program: { name: '', description: '' } as ProgramTreeProgram, // Empty program for create
+      program: { name: "", description: "" } as ProgramTreeProgram, // Empty program for create
     });
   };
 
@@ -324,7 +351,7 @@ export function ProgramTreeView({
 
     // Confirmation dialog
     const confirmed = window.confirm(
-      `確定要刪除教材「${program.name}」嗎？\n\n⚠️ 此操作將同時刪除所有課程和內容，且無法復原。`
+      `確定要刪除教材「${program.name}」嗎？\n\n⚠️ 此操作將同時刪除所有課程和內容，且無法復原。`,
     );
 
     if (!confirmed) return;
@@ -332,7 +359,7 @@ export function ProgramTreeView({
     try {
       await programAPI.deleteProgram(program.id!);
 
-      toast.success('Program deleted successfully');
+      toast.success("Program deleted successfully");
 
       // Local update: remove from programs array
       const updatedPrograms = programs.filter((p) => p.id !== program.id);
@@ -341,57 +368,71 @@ export function ProgramTreeView({
         onProgramsChange(updatedPrograms);
       }
     } catch (error) {
-      console.error('Failed to delete program:', error);
-      toast.error('Failed to delete program');
+      console.error("Failed to delete program:", error);
+      toast.error("Failed to delete program");
     }
   };
 
   // Internal Lesson CRUD handlers
-  const handleCreateLesson = async (level: number, parentId: string | number) => {
+  const handleCreateLesson = async (
+    level: number,
+    parentId: string | number,
+  ) => {
     if (level !== 1) return; // Only handle lesson level
 
-    const programId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
+    const programId =
+      typeof parentId === "string" ? parseInt(parentId) : parentId;
 
     // Open dialog for user to input name and description
     setLessonEditDialog({
       open: true,
-      lesson: { name: '', description: '' } as ProgramTreeLesson, // Empty lesson for create
+      lesson: { name: "", description: "" } as ProgramTreeLesson, // Empty lesson for create
       programId,
     });
   };
 
-  const handleEditLesson = (item: TreeItem, level: number, parentId?: string | number) => {
+  const handleEditLesson = (
+    item: TreeItem,
+    level: number,
+    parentId?: string | number,
+  ) => {
     if (level !== 1) return; // Only handle lesson level
 
     const lesson = item as ProgramTreeLesson;
-    const programId = typeof parentId === 'string' ? parseInt(parentId) : (parentId ?? null);
+    const programId =
+      typeof parentId === "string" ? parseInt(parentId) : (parentId ?? null);
 
     if (!programId) {
-      console.error('Program ID is required for lesson edit');
+      console.error("Program ID is required for lesson edit");
       return;
     }
 
     setLessonEditDialog({
       open: true,
       lesson,
-      programId
+      programId,
     });
   };
 
-  const handleDeleteLesson = async (item: TreeItem, level: number, parentId?: string | number) => {
+  const handleDeleteLesson = async (
+    item: TreeItem,
+    level: number,
+    parentId?: string | number,
+  ) => {
     if (level !== 1) return; // Only handle lesson level
 
     const lesson = item as ProgramTreeLesson;
-    const programId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
+    const programId =
+      typeof parentId === "string" ? parseInt(parentId) : parentId;
 
     if (!programId) {
-      console.error('Program ID is required for lesson delete');
+      console.error("Program ID is required for lesson delete");
       return;
     }
 
     // Confirmation dialog
     const confirmed = window.confirm(
-      `確定要刪除課程「${lesson.name}」嗎？\n\n⚠️ 此操作將同時刪除所有內容，且無法復原。`
+      `確定要刪除課程「${lesson.name}」嗎？\n\n⚠️ 此操作將同時刪除所有內容，且無法復原。`,
     );
 
     if (!confirmed) return;
@@ -399,7 +440,7 @@ export function ProgramTreeView({
     try {
       await programAPI.deleteLesson(lesson.id!);
 
-      toast.success('Lesson deleted successfully');
+      toast.success("Lesson deleted successfully");
 
       // Local update: remove lesson from program
       const updatedPrograms = programs.map((program) => {
@@ -416,26 +457,31 @@ export function ProgramTreeView({
         onProgramsChange(updatedPrograms);
       }
     } catch (error) {
-      console.error('Failed to delete lesson:', error);
-      toast.error('Failed to delete lesson');
+      console.error("Failed to delete lesson:", error);
+      toast.error("Failed to delete lesson");
     }
   };
 
   // Internal Content Delete handler
-  const handleDeleteContent = async (item: TreeItem, level: number, parentId?: string | number) => {
+  const handleDeleteContent = async (
+    item: TreeItem,
+    level: number,
+    parentId?: string | number,
+  ) => {
     if (level !== 2) return; // Only handle content level
 
     const content = item as Content;
-    const lessonId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
+    const lessonId =
+      typeof parentId === "string" ? parseInt(parentId) : parentId;
 
     if (!lessonId) {
-      console.error('Lesson ID is required for content delete');
+      console.error("Lesson ID is required for content delete");
       return;
     }
 
     // Confirmation dialog
     const confirmed = window.confirm(
-      `確定要刪除內容「${content.title}」嗎？\n\n⚠️ 此操作無法復原。`
+      `確定要刪除內容「${content.title}」嗎？\n\n⚠️ 此操作無法復原。`,
     );
 
     if (!confirmed) return;
@@ -443,7 +489,7 @@ export function ProgramTreeView({
     try {
       await programAPI.deleteContent(content.id!);
 
-      toast.success('Content deleted successfully');
+      toast.success("Content deleted successfully");
 
       // Local update: remove content from lesson
       const updatedPrograms = programs.map((program) => {
@@ -451,7 +497,8 @@ export function ProgramTreeView({
           if (lesson.id === lessonId) {
             return {
               ...lesson,
-              contents: lesson.contents?.filter((c) => c.id !== content.id) || [],
+              contents:
+                lesson.contents?.filter((c) => c.id !== content.id) || [],
             };
           }
           return lesson;
@@ -463,19 +510,23 @@ export function ProgramTreeView({
         onProgramsChange(updatedPrograms);
       }
     } catch (error) {
-      console.error('Failed to delete content:', error);
-      toast.error('Failed to delete content');
+      console.error("Failed to delete content:", error);
+      toast.error("Failed to delete content");
     }
   };
 
-  const handleContentClick = (item: TreeItem, level: number, parentId?: string | number) => {
+  const handleContentClick = (
+    item: TreeItem,
+    level: number,
+    parentId?: string | number,
+  ) => {
     if (level === 2) {
       // Content level
       const content = item as Content;
       const numericParentId =
         typeof parentId === "string" ? parseInt(parentId) : parentId;
       const program = programs.find((p) =>
-        p.lessons?.some((l) => l.id === numericParentId)
+        p.lessons?.some((l) => l.id === numericParentId),
       );
       const lesson = program?.lessons?.find((l) => l.id === numericParentId);
 
@@ -489,7 +540,8 @@ export function ProgramTreeView({
           audioUrl: contentItem.audio_url,
           audio_url: contentItem.audio_url,
           example_sentence: contentItem.example_sentence,
-          example_sentence_translation: contentItem.example_sentence_translation,
+          example_sentence_translation:
+            contentItem.example_sentence_translation,
         }),
       );
 
@@ -509,7 +561,7 @@ export function ProgramTreeView({
       const numericParentId =
         typeof parentId === "string" ? parseInt(parentId) : parentId;
       const program = programs.find((p) =>
-        p.lessons?.some((l) => l.id === numericParentId)
+        p.lessons?.some((l) => l.id === numericParentId),
       );
       const lesson = program?.lessons?.find((l) => l.id === numericParentId);
 
@@ -540,11 +592,13 @@ export function ProgramTreeView({
     }
   };
 
-  const readingPanelContent: {
-    id?: number;
-    title?: string;
-    items?: ReadingPanelRow[];
-  } | undefined = selectedContent
+  const readingPanelContent:
+    | {
+        id?: number;
+        title?: string;
+        items?: ReadingPanelRow[];
+      }
+    | undefined = selectedContent
     ? {
         id: selectedContent.id,
         title: selectedContent.title,
@@ -563,7 +617,11 @@ export function ProgramTreeView({
     : undefined;
 
   // Combined handlers that delegate to Program or Lesson handlers based on level
-  const handleInternalEdit = (item: TreeItem, level: number, parentId?: string | number) => {
+  const handleInternalEdit = (
+    item: TreeItem,
+    level: number,
+    parentId?: string | number,
+  ) => {
     if (level === 0) {
       handleEditProgram(item, level);
     } else if (level === 1) {
@@ -571,7 +629,11 @@ export function ProgramTreeView({
     }
   };
 
-  const handleInternalDelete = (item: TreeItem, level: number, parentId?: string | number) => {
+  const handleInternalDelete = (
+    item: TreeItem,
+    level: number,
+    parentId?: string | number,
+  ) => {
     if (level === 0) {
       handleDeleteProgram(item, level);
     } else if (level === 1) {
@@ -632,7 +694,7 @@ export function ProgramTreeView({
                       addContentToLesson(editorLessonId, newContent);
                     }
                     toast.success("內容已儲存");
-                    closeReadingEditor();  // Close dialog after save to prevent duplicate creation
+                    closeReadingEditor(); // Close dialog after save to prevent duplicate creation
                   }}
                   onCancel={closeReadingEditor}
                 />
@@ -655,13 +717,25 @@ export function ProgramTreeView({
             <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
-                <h2 className="text-xl font-semibold text-gray-900">編輯內容</h2>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  編輯內容
+                </h2>
                 <button
                   onClick={closeReadingEditor}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -722,7 +796,9 @@ export function ProgramTreeView({
                 <SentenceMakingPanel
                   {...({
                     content: undefined,
-                    editingContent: { id: sentenceMakingContentId || undefined },
+                    editingContent: {
+                      id: sentenceMakingContentId || undefined,
+                    },
                     lessonId: sentenceMakingLessonId,
                     onSave: async (newContent?: Content) => {
                       if (newContent && sentenceMakingLessonId) {
@@ -753,13 +829,25 @@ export function ProgramTreeView({
             <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
-                <h2 className="text-xl font-semibold text-gray-900">編輯內容</h2>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  編輯內容
+                </h2>
                 <button
                   onClick={closeSentenceMakingEditor}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -820,12 +908,19 @@ export function ProgramTreeView({
       )}
 
       {/* Program Edit Dialog */}
-      <Dialog open={programEditDialog.open} onOpenChange={(open) => setProgramEditDialog({ open, program: null })}>
+      <Dialog
+        open={programEditDialog.open}
+        onOpenChange={(open) => setProgramEditDialog({ open, program: null })}
+      >
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{programEditDialog.program?.id ? '編輯教材' : '新增教材'}</DialogTitle>
+            <DialogTitle>
+              {programEditDialog.program?.id ? "編輯教材" : "新增教材"}
+            </DialogTitle>
             <DialogDescription>
-              {programEditDialog.program?.id ? '修改教材的名稱和描述' : '輸入新教材的名稱和描述'}
+              {programEditDialog.program?.id
+                ? "修改教材的名稱和描述"
+                : "輸入新教材的名稱和描述"}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -833,15 +928,15 @@ export function ProgramTreeView({
               <Label htmlFor="program-name">名稱</Label>
               <Input
                 id="program-name"
-                value={programEditDialog.program?.name || ''}
+                value={programEditDialog.program?.name || ""}
                 onChange={(e) => {
                   if (programEditDialog.program) {
                     setProgramEditDialog({
                       ...programEditDialog,
                       program: {
                         ...programEditDialog.program,
-                        name: e.target.value
-                      }
+                        name: e.target.value,
+                      },
                     });
                   }
                 }}
@@ -851,15 +946,15 @@ export function ProgramTreeView({
               <Label htmlFor="program-description">描述</Label>
               <Textarea
                 id="program-description"
-                value={programEditDialog.program?.description || ''}
+                value={programEditDialog.program?.description || ""}
                 onChange={(e) => {
                   if (programEditDialog.program) {
                     setProgramEditDialog({
                       ...programEditDialog,
                       program: {
                         ...programEditDialog.program,
-                        description: e.target.value
-                      }
+                        description: e.target.value,
+                      },
                     });
                   }
                 }}
@@ -870,7 +965,9 @@ export function ProgramTreeView({
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setProgramEditDialog({ open: false, program: null })}
+              onClick={() =>
+                setProgramEditDialog({ open: false, program: null })
+              }
             >
               取消
             </Button>
@@ -881,15 +978,20 @@ export function ProgramTreeView({
                 try {
                   if (programEditDialog.program.id) {
                     // Update existing program
-                    const updatedProgram = await programAPI.updateProgram(programEditDialog.program.id, {
-                      name: programEditDialog.program.name,
-                      description: programEditDialog.program.description,
-                    });
-                    toast.success('教材更新成功');
+                    const updatedProgram = await programAPI.updateProgram(
+                      programEditDialog.program.id,
+                      {
+                        name: programEditDialog.program.name,
+                        description: programEditDialog.program.description,
+                      },
+                    );
+                    toast.success("教材更新成功");
 
                     // Local update: replace updated program in array
                     const updatedPrograms = programs.map((p) =>
-                      p.id === programEditDialog.program!.id ? { ...p, ...updatedProgram } : p
+                      p.id === programEditDialog.program!.id
+                        ? { ...p, ...updatedProgram }
+                        : p,
                     );
                     setPrograms(updatedPrograms);
                     if (onProgramsChange) {
@@ -901,11 +1003,11 @@ export function ProgramTreeView({
                       name: programEditDialog.program.name,
                       description: programEditDialog.program.description,
                     });
-                    toast.success('教材建立成功');
+                    toast.success("教材建立成功");
 
                     // Local update: append new program to end
                     const updatedPrograms = [...programs, newProgram];
-                    setPrograms(updatedPrograms);  // Update internal state
+                    setPrograms(updatedPrograms); // Update internal state
                     if (onProgramsChange) {
                       onProgramsChange(updatedPrograms);
                     }
@@ -913,24 +1015,37 @@ export function ProgramTreeView({
 
                   setProgramEditDialog({ open: false, program: null });
                 } catch (error) {
-                  console.error('Failed to save program:', error);
-                  toast.error(programEditDialog.program.id ? '更新教材失敗' : '建立教材失敗');
+                  console.error("Failed to save program:", error);
+                  toast.error(
+                    programEditDialog.program.id
+                      ? "更新教材失敗"
+                      : "建立教材失敗",
+                  );
                 }
               }}
             >
-              {programEditDialog.program?.id ? '儲存' : '建立'}
+              {programEditDialog.program?.id ? "儲存" : "建立"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Lesson Edit Dialog */}
-      <Dialog open={lessonEditDialog.open} onOpenChange={(open) => setLessonEditDialog({ open, lesson: null, programId: null })}>
+      <Dialog
+        open={lessonEditDialog.open}
+        onOpenChange={(open) =>
+          setLessonEditDialog({ open, lesson: null, programId: null })
+        }
+      >
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{lessonEditDialog.lesson?.id ? '編輯課程' : '新增課程'}</DialogTitle>
+            <DialogTitle>
+              {lessonEditDialog.lesson?.id ? "編輯課程" : "新增課程"}
+            </DialogTitle>
             <DialogDescription>
-              {lessonEditDialog.lesson?.id ? '修改課程的名稱和描述' : '輸入新課程的名稱和描述'}
+              {lessonEditDialog.lesson?.id
+                ? "修改課程的名稱和描述"
+                : "輸入新課程的名稱和描述"}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -938,15 +1053,15 @@ export function ProgramTreeView({
               <Label htmlFor="lesson-name">名稱</Label>
               <Input
                 id="lesson-name"
-                value={lessonEditDialog.lesson?.name || ''}
+                value={lessonEditDialog.lesson?.name || ""}
                 onChange={(e) => {
                   if (lessonEditDialog.lesson) {
                     setLessonEditDialog({
                       ...lessonEditDialog,
                       lesson: {
                         ...lessonEditDialog.lesson,
-                        name: e.target.value
-                      }
+                        name: e.target.value,
+                      },
                     });
                   }
                 }}
@@ -956,15 +1071,15 @@ export function ProgramTreeView({
               <Label htmlFor="lesson-description">描述</Label>
               <Textarea
                 id="lesson-description"
-                value={lessonEditDialog.lesson?.description || ''}
+                value={lessonEditDialog.lesson?.description || ""}
                 onChange={(e) => {
                   if (lessonEditDialog.lesson) {
                     setLessonEditDialog({
                       ...lessonEditDialog,
                       lesson: {
                         ...lessonEditDialog.lesson,
-                        description: e.target.value
-                      }
+                        description: e.target.value,
+                      },
                     });
                   }
                 }}
@@ -975,22 +1090,32 @@ export function ProgramTreeView({
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setLessonEditDialog({ open: false, lesson: null, programId: null })}
+              onClick={() =>
+                setLessonEditDialog({
+                  open: false,
+                  lesson: null,
+                  programId: null,
+                })
+              }
             >
               取消
             </Button>
             <Button
               onClick={async () => {
-                if (!lessonEditDialog.lesson || !lessonEditDialog.programId) return;
+                if (!lessonEditDialog.lesson || !lessonEditDialog.programId)
+                  return;
 
                 try {
                   if (lessonEditDialog.lesson.id) {
                     // Update existing lesson
-                    const updatedLesson = await programAPI.updateLesson(lessonEditDialog.lesson.id, {
-                      name: lessonEditDialog.lesson.name,
-                      description: lessonEditDialog.lesson.description || '',
-                    });
-                    toast.success('課程更新成功');
+                    const updatedLesson = await programAPI.updateLesson(
+                      lessonEditDialog.lesson.id,
+                      {
+                        name: lessonEditDialog.lesson.name,
+                        description: lessonEditDialog.lesson.description || "",
+                      },
+                    );
+                    toast.success("課程更新成功");
 
                     // Local update: replace updated lesson in program
                     const updatedPrograms = programs.map((program) => {
@@ -998,7 +1123,9 @@ export function ProgramTreeView({
                         return {
                           ...program,
                           lessons: (program.lessons || []).map((lesson) =>
-                            lesson.id === lessonEditDialog.lesson!.id ? { ...lesson, ...updatedLesson } : lesson
+                            lesson.id === lessonEditDialog.lesson!.id
+                              ? { ...lesson, ...updatedLesson }
+                              : lesson,
                           ),
                         };
                       }
@@ -1010,11 +1137,14 @@ export function ProgramTreeView({
                     }
                   } else {
                     // Create new lesson - get server response with ID
-                    const newLesson = await programAPI.createLesson(lessonEditDialog.programId, {
-                      name: lessonEditDialog.lesson.name,
-                      description: lessonEditDialog.lesson.description || '',
-                    });
-                    toast.success('課程建立成功');
+                    const newLesson = await programAPI.createLesson(
+                      lessonEditDialog.programId,
+                      {
+                        name: lessonEditDialog.lesson.name,
+                        description: lessonEditDialog.lesson.description || "",
+                      },
+                    );
+                    toast.success("課程建立成功");
 
                     // Local update: add new lesson to program
                     const updatedPrograms = programs.map((program) => {
@@ -1032,14 +1162,22 @@ export function ProgramTreeView({
                     }
                   }
 
-                  setLessonEditDialog({ open: false, lesson: null, programId: null });
+                  setLessonEditDialog({
+                    open: false,
+                    lesson: null,
+                    programId: null,
+                  });
                 } catch (error) {
-                  console.error('Failed to save lesson:', error);
-                  toast.error(lessonEditDialog.lesson.id ? '更新課程失敗' : '建立課程失敗');
+                  console.error("Failed to save lesson:", error);
+                  toast.error(
+                    lessonEditDialog.lesson.id
+                      ? "更新課程失敗"
+                      : "建立課程失敗",
+                  );
                 }
               }}
             >
-              {lessonEditDialog.lesson?.id ? '儲存' : '建立'}
+              {lessonEditDialog.lesson?.id ? "儲存" : "建立"}
             </Button>
           </DialogFooter>
         </DialogContent>

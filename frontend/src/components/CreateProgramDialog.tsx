@@ -71,16 +71,20 @@ export default function CreateProgramDialog({
 }: CreateProgramDialogProps) {
   const { t } = useTranslation();
   const { mode, selectedSchool } = useWorkspace();
-  const isOrganizationMode = mode === 'organization' && selectedSchool;
+  const isOrganizationMode = mode === "organization" && selectedSchool;
 
-  const [activeTab, setActiveTab] = useState(isOrganizationMode ? "school" : "template");
+  const [activeTab, setActiveTab] = useState(
+    isOrganizationMode ? "school" : "template",
+  );
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const isCreatingRef = useRef(false); // 🔒 同步追蹤處理狀態，防止雙擊
 
   // 學校教材 (僅組織模式)
   const [schoolPrograms, setSchoolPrograms] = useState<Program[]>([]);
-  const [selectedSchoolPrograms, setSelectedSchoolPrograms] = useState<Program[]>([]);
+  const [selectedSchoolPrograms, setSelectedSchoolPrograms] = useState<
+    Program[]
+  >([]);
   const [schoolProgramName, setSchoolProgramName] = useState("");
 
   // 個人教材 (原 "公版模板")
@@ -155,14 +159,19 @@ export default function CreateProgramDialog({
         apiClient.getTemplatePrograms() as Promise<Program[]>,
         apiClient.getCopyablePrograms(
           classroomId,
-          isOrganizationMode && selectedSchool ? selectedSchool.id : undefined
+          isOrganizationMode && selectedSchool ? selectedSchool.id : undefined,
         ) as Promise<Program[]>,
       ];
 
       // 組織模式下載入學校教材
       if (isOrganizationMode && selectedSchool) {
         promises.push(
-          apiClient.getTeacherPrograms(true, undefined, selectedSchool.id, undefined) as Promise<Program[]>
+          apiClient.getTeacherPrograms(
+            true,
+            undefined,
+            selectedSchool.id,
+            undefined,
+          ) as Promise<Program[]>,
         );
       }
 
@@ -264,7 +273,9 @@ export default function CreateProgramDialog({
     if (e) e.stopPropagation();
     const isSelected = selectedSchoolPrograms.some((p) => p.id === program.id);
     if (isSelected) {
-      setSelectedSchoolPrograms((prev) => prev.filter((p) => p.id !== program.id));
+      setSelectedSchoolPrograms((prev) =>
+        prev.filter((p) => p.id !== program.id),
+      );
     } else {
       setSelectedSchoolPrograms((prev) => [...prev, program]);
     }
@@ -278,7 +289,9 @@ export default function CreateProgramDialog({
     isCreatingRef.current = true;
 
     // 檢查是否有重複課程
-    const duplicatePrograms = selectedSchoolPrograms.filter((p) => p.is_duplicate);
+    const duplicatePrograms = selectedSchoolPrograms.filter(
+      (p) => p.is_duplicate,
+    );
     if (duplicatePrograms.length > 0) {
       const duplicateNames = duplicatePrograms.map((p) => p.name).join("、");
       const confirmed = window.confirm(
@@ -501,7 +514,9 @@ export default function CreateProgramDialog({
           onValueChange={setActiveTab}
           className="flex-1 overflow-hidden"
         >
-          <TabsList className={`grid w-full bg-gray-100 ${isOrganizationMode ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          <TabsList
+            className={`grid w-full bg-gray-100 ${isOrganizationMode ? "grid-cols-4" : "grid-cols-3"}`}
+          >
             {isOrganizationMode && (
               <TabsTrigger
                 value="school"
@@ -544,7 +559,9 @@ export default function CreateProgramDialog({
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder={t("createProgramDialog.school.searchPlaceholder")}
+                    placeholder={t(
+                      "createProgramDialog.school.searchPlaceholder",
+                    )}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -561,8 +578,13 @@ export default function CreateProgramDialog({
                     <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={() => setSelectedSchoolPrograms(schoolPrograms)}
-                        disabled={selectedSchoolPrograms.length === schoolPrograms.length}
+                        onClick={() =>
+                          setSelectedSchoolPrograms(schoolPrograms)
+                        }
+                        disabled={
+                          selectedSchoolPrograms.length ===
+                          schoolPrograms.length
+                        }
                         className="text-xs text-blue-600 hover:text-blue-800 disabled:text-gray-400"
                       >
                         {t("createProgramDialog.school.selectAll")}
@@ -590,61 +612,68 @@ export default function CreateProgramDialog({
                     {t("createProgramDialog.school.empty")}
                   </div>
                 ) : (
-                  schoolPrograms.filter((p) =>
-                    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-                  ).map((program) => (
-                    <div
-                      key={program.id}
-                      onClick={(e) => toggleSchoolProgram(program, e)}
-                      className={`p-4 rounded-lg cursor-pointer transition-all ${
-                        selectedSchoolPrograms.some((p) => p.id === program.id)
-                          ? "bg-blue-50 border-2 border-blue-500 shadow-sm"
-                          : program.is_duplicate
-                            ? "border border-yellow-300 bg-yellow-50 hover:bg-yellow-100"
-                            : "border border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <School className="h-4 w-4 text-gray-400" />
-                            <h4 className="font-medium">{program.name}</h4>
+                  schoolPrograms
+                    .filter((p) =>
+                      p.name.toLowerCase().includes(searchTerm.toLowerCase()),
+                    )
+                    .map((program) => (
+                      <div
+                        key={program.id}
+                        onClick={(e) => toggleSchoolProgram(program, e)}
+                        className={`p-4 rounded-lg cursor-pointer transition-all ${
+                          selectedSchoolPrograms.some(
+                            (p) => p.id === program.id,
+                          )
+                            ? "bg-blue-50 border-2 border-blue-500 shadow-sm"
+                            : program.is_duplicate
+                              ? "border border-yellow-300 bg-yellow-50 hover:bg-yellow-100"
+                              : "border border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <School className="h-4 w-4 text-gray-400" />
+                              <h4 className="font-medium">{program.name}</h4>
+                              {program.is_duplicate && (
+                                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                              )}
+                              {selectedSchoolPrograms.some(
+                                (p) => p.id === program.id,
+                              ) && (
+                                <CheckCircle className="h-4 w-4 text-blue-500" />
+                              )}
+                            </div>
+                            {program.description && (
+                              <p className="text-sm text-gray-500 mt-1">
+                                {program.description}
+                              </p>
+                            )}
                             {program.is_duplicate && (
-                              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                              <p className="text-xs text-yellow-700 mt-1 bg-yellow-100 px-2 py-1 rounded">
+                                {t("createProgramDialog.school.duplicate")}
+                              </p>
                             )}
-                            {selectedSchoolPrograms.some((p) => p.id === program.id) && (
-                              <CheckCircle className="h-4 w-4 text-blue-500" />
-                            )}
-                          </div>
-                          {program.description && (
-                            <p className="text-sm text-gray-500 mt-1">
-                              {program.description}
-                            </p>
-                          )}
-                          {program.is_duplicate && (
-                            <p className="text-xs text-yellow-700 mt-1 bg-yellow-100 px-2 py-1 rounded">
-                              {t("createProgramDialog.school.duplicate")}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-4 mt-2">
-                            {program.level && getLevelBadge(program.level)}
-                            {program.estimated_hours && (
-                              <span className="text-xs text-gray-500">
-                                {t("createProgramDialog.common.hours", {
-                                  hours: program.estimated_hours,
-                                })}
-                              </span>
-                            )}
-                            {program.lesson_count && (
-                              <span className="text-xs text-gray-500">
-                                {program.lesson_count} {t("classroomDetail.stats.lessons")}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-4 mt-2">
+                              {program.level && getLevelBadge(program.level)}
+                              {program.estimated_hours && (
+                                <span className="text-xs text-gray-500">
+                                  {t("createProgramDialog.common.hours", {
+                                    hours: program.estimated_hours,
+                                  })}
+                                </span>
+                              )}
+                              {program.lesson_count && (
+                                <span className="text-xs text-gray-500">
+                                  {program.lesson_count}{" "}
+                                  {t("classroomDetail.stats.lessons")}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    ))
                 )}
               </div>
 

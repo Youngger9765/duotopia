@@ -96,22 +96,35 @@ export function EditStudentDialog({
     try {
       await apiClient.updateSchoolStudent(schoolId, student.id, {
         name: trimmedName !== student.name ? trimmedName : undefined,
-        email: formData.email !== (student.email || "") ? (formData.email || undefined) : undefined,
+        email:
+          formData.email !== (student.email || "")
+            ? formData.email || undefined
+            : undefined,
         student_number:
           formData.student_number !== (student.student_number || "")
-            ? (formData.student_number || undefined)
+            ? formData.student_number || undefined
             : undefined,
-        birthdate: formData.birthdate !== student.birthdate ? formData.birthdate : undefined,
+        birthdate:
+          formData.birthdate !== student.birthdate
+            ? formData.birthdate
+            : undefined,
         phone: formData.phone || undefined,
-        is_active: formData.is_active !== student.is_active ? formData.is_active : undefined,
+        is_active:
+          formData.is_active !== student.is_active
+            ? formData.is_active
+            : undefined,
       });
 
       toast.success("學生資訊更新成功");
       onSuccess();
       handleClose();
     } catch (error: any) {
-      logError("Failed to update student", error, { schoolId, studentId: student.id, formData });
-      
+      logError("Failed to update student", error, {
+        schoolId,
+        studentId: student.id,
+        formData,
+      });
+
       // Handle specific error messages
       if (error?.detail) {
         toast.error(error.detail);
@@ -213,7 +226,11 @@ export function EditStudentDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={isSubmitting}
+          >
             取消
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
@@ -224,4 +241,3 @@ export function EditStudentDialog({
     </Dialog>
   );
 }
-

@@ -8,8 +8,12 @@ interface TeacherUsageCardProps {
   organizationId: string;
 }
 
-export default function TeacherUsageCard({ organizationId }: TeacherUsageCardProps) {
-  const [stats, setStats] = useState<OrganizationStatisticsResponse | null>(null);
+export default function TeacherUsageCard({
+  organizationId,
+}: TeacherUsageCardProps) {
+  const [stats, setStats] = useState<OrganizationStatisticsResponse | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -18,7 +22,7 @@ export default function TeacherUsageCard({ organizationId }: TeacherUsageCardPro
       try {
         setLoading(true);
         const response = await apiClient.get<OrganizationStatisticsResponse>(
-          `/api/admin/organizations/${organizationId}/statistics`
+          `/api/admin/organizations/${organizationId}/statistics`,
         );
         setStats(response);
         setError("");

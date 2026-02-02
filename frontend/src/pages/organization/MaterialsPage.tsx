@@ -9,12 +9,8 @@ import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { ProgramTreeView } from "@/components/shared/ProgramTreeView";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  OrganizationProgram,
-} from "@/types/organizationPrograms";
-import {
-  BookOpen,
-} from "lucide-react";
+import { OrganizationProgram } from "@/types/organizationPrograms";
+import { BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
 /**
@@ -29,7 +25,9 @@ export default function MaterialsPage() {
   const [programs, setPrograms] = useState<OrganizationProgram[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [organization, setOrganization] = useState<{ name: string } | null>(null);
+  const [organization, setOrganization] = useState<{ name: string } | null>(
+    null,
+  );
 
   const effectiveOrgId =
     orgId ||
@@ -37,31 +35,31 @@ export default function MaterialsPage() {
 
   // Use unified Programs API
   const api = useProgramAPI({
-    scope: 'organization',
+    scope: "organization",
     organizationId: effectiveOrgId,
   });
 
   // Memoized callback to prevent infinite loop
-  const handleProgramsChange = useCallback(
-    (updatedPrograms: any) => {
-      setPrograms(updatedPrograms as OrganizationProgram[]);
-    },
-    []
-  );
+  const handleProgramsChange = useCallback((updatedPrograms: any) => {
+    setPrograms(updatedPrograms as OrganizationProgram[]);
+  }, []);
 
   useEffect(() => {
     const fetchOrg = async () => {
       if (!effectiveOrgId || !token) return;
       try {
-        const res = await fetch(`${API_URL}/api/organizations/${effectiveOrgId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await fetch(
+          `${API_URL}/api/organizations/${effectiveOrgId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         if (res.ok) {
           const data = await res.json();
           setOrganization(data);
         }
       } catch (error) {
-        console.error('Failed to fetch organization:', error);
+        console.error("Failed to fetch organization:", error);
       }
     };
     if (effectiveOrgId && token) {
@@ -109,11 +107,16 @@ export default function MaterialsPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb items={[
-        { label: "組織管理" },
-        { label: organization?.name || "...", href: `/organization/${orgId}` },
-        { label: "組織教材" }
-      ]} />
+      <Breadcrumb
+        items={[
+          { label: "組織管理" },
+          {
+            label: organization?.name || "...",
+            href: `/organization/${orgId}`,
+          },
+          { label: "組織教材" },
+        ]}
+      />
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -172,7 +175,10 @@ export default function MaterialsPage() {
           {loading ? (
             <LoadingSpinner />
           ) : error ? (
-            <ErrorMessage message={error} onRetry={() => window.location.reload()} />
+            <ErrorMessage
+              message={error}
+              onRetry={() => window.location.reload()}
+            />
           ) : programs.length === 0 ? (
             <div className="text-center py-12">
               <BookOpen className="w-16 h-16 mx-auto mb-4 text-gray-300" />
@@ -198,7 +204,6 @@ export default function MaterialsPage() {
           )}
         </CardContent>
       </Card>
-
     </div>
   );
 }

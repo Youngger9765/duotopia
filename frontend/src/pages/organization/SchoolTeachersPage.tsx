@@ -6,7 +6,10 @@ import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { InviteTeacherToSchoolDialog } from "@/components/organization/InviteTeacherToSchoolDialog";
-import { TeacherListTable, Teacher } from "@/components/organization/TeacherListTable";
+import {
+  TeacherListTable,
+  Teacher,
+} from "@/components/organization/TeacherListTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, UserPlus } from "lucide-react";
@@ -184,8 +187,8 @@ export default function SchoolTeachersPage() {
               <p className="text-sm text-gray-400">點擊上方按鈕邀請教師加入</p>
             </div>
           ) : (
-            <TeacherListTable 
-              teachers={teachers} 
+            <TeacherListTable
+              teachers={teachers}
               schoolId={schoolId || ""}
               onRoleUpdated={fetchTeachers}
             />

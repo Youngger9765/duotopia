@@ -110,7 +110,7 @@ export function LessonDialog({
                 description: formData.description,
                 order_index: formData.order_index,
               }),
-            }
+            },
           );
           if (!response.ok) throw new Error("Failed to create lesson");
           newLesson = await response.json();
@@ -141,7 +141,7 @@ export function LessonDialog({
                 description: formData.description,
                 order_index: formData.order_index,
               }),
-            }
+            },
           );
           if (!response.ok) throw new Error("Failed to update lesson");
         } else {

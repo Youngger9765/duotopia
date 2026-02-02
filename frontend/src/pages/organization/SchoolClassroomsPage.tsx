@@ -61,9 +61,14 @@ export default function SchoolClassroomsPage() {
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showStudentsSidebar, setShowStudentsSidebar] = useState(false);
   const [showMaterialsSidebar, setShowMaterialsSidebar] = useState(false);
-  const [editingClassroom, setEditingClassroom] = useState<Classroom | null>(null);
-  const [assigningClassroom, setAssigningClassroom] = useState<Classroom | null>(null);
-  const [viewingClassroom, setViewingClassroom] = useState<Classroom | null>(null);
+  const [editingClassroom, setEditingClassroom] = useState<Classroom | null>(
+    null,
+  );
+  const [assigningClassroom, setAssigningClassroom] =
+    useState<Classroom | null>(null);
+  const [viewingClassroom, setViewingClassroom] = useState<Classroom | null>(
+    null,
+  );
   const [teachers, setTeachers] = useState<Teacher[]>([]);
 
   useEffect(() => {
@@ -71,7 +76,6 @@ export default function SchoolClassroomsPage() {
       fetchSchool();
     }
     // Note: token is stable from store, no need to include in deps
-     
   }, [schoolId]);
 
   const fetchSchool = async () => {
@@ -210,10 +214,7 @@ export default function SchoolClassroomsPage() {
             {school?.name} - 管理學校內的所有班級
           </p>
         </div>
-        <Button
-          onClick={() => setShowCreateDialog(true)}
-          className="gap-2"
-        >
+        <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
           <Plus className="h-4 w-4" />
           建立班級
         </Button>

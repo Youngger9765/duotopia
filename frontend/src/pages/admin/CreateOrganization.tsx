@@ -76,7 +76,7 @@ export default function CreateOrganization() {
 
     try {
       const response = await apiClient.get<TeacherLookupResponse>(
-        `/api/admin/teachers/lookup?email=${encodeURIComponent(email)}`
+        `/api/admin/teachers/lookup?email=${encodeURIComponent(email)}`,
       );
       setOwnerInfo({
         name: response.name,
@@ -112,17 +112,20 @@ export default function CreateOrganization() {
   }, []);
 
   // Debounced lookup wrapper (300ms delay)
-  const lookupOwner = useCallback((email: string) => {
-    // Clear previous timeout
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
+  const lookupOwner = useCallback(
+    (email: string) => {
+      // Clear previous timeout
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
 
-    // Set new timeout
-    debounceTimeoutRef.current = setTimeout(() => {
-      performLookup(email);
-    }, 300);
-  }, [performLookup]);
+      // Set new timeout
+      debounceTimeoutRef.current = setTimeout(() => {
+        performLookup(email);
+      }, 300);
+    },
+    [performLookup],
+  );
 
   const addStaffEmail = () => {
     const email = staffEmailInput.trim().toLowerCase();
@@ -132,7 +135,7 @@ export default function CreateOrganization() {
     }
 
     // Prevent duplicates (case-insensitive)
-    if (formData.project_staff_emails?.some(e => e.toLowerCase() === email)) {
+    if (formData.project_staff_emails?.some((e) => e.toLowerCase() === email)) {
       toast.error("此 Email 已在列表中");
       return;
     }
@@ -153,7 +156,9 @@ export default function CreateOrganization() {
   const removeStaffEmail = (email: string) => {
     setFormData({
       ...formData,
-      project_staff_emails: formData.project_staff_emails?.filter(e => e !== email),
+      project_staff_emails: formData.project_staff_emails?.filter(
+        (e) => e !== email,
+      ),
     });
   };
 
@@ -189,17 +194,20 @@ export default function CreateOrganization() {
       if (formData.address) requestData.address = formData.address;
 
       // Add project staff if any
-      if (formData.project_staff_emails && formData.project_staff_emails.length > 0) {
+      if (
+        formData.project_staff_emails &&
+        formData.project_staff_emails.length > 0
+      ) {
         requestData.project_staff_emails = formData.project_staff_emails;
       }
 
       const response = await apiClient.post<AdminOrganizationCreateResponse>(
         "/api/admin/organizations",
-        requestData
+        requestData,
       );
 
       toast.success(
-        `機構創建成功！機構名稱：${response.organization_name}，擁有人：${response.owner_email}`
+        `機構創建成功！機構名稱：${response.organization_name}，擁有人：${response.owner_email}`,
       );
 
       // Redirect to admin dashboard with cleanup
@@ -218,12 +226,10 @@ export default function CreateOrganization() {
         if (apiError.response?.status === 403) {
           setError("權限不足：您必須是平台管理員才能創建機構");
         } else if (apiError.response?.status === 404) {
-          setError(
-            "找不到指定的擁有人 Email，請確認該用戶已註冊並完成驗證"
-          );
+          setError("找不到指定的擁有人 Email，請確認該用戶已註冊並完成驗證");
         } else if (apiError.response?.status === 400) {
           setError(
-            apiError.response.data?.detail || "創建失敗：機構名稱可能已存在"
+            apiError.response.data?.detail || "創建失敗：機構名稱可能已存在",
           );
         } else {
           setError("創建機構失敗，請稍後再試");
@@ -431,7 +437,8 @@ export default function CreateOrganization() {
 
               <Alert>
                 <AlertDescription>
-                  請輸入已註冊並完成驗證的老師 Email。該老師將被指派為機構擁有人（org_owner）。
+                  請輸入已註冊並完成驗證的老師
+                  Email。該老師將被指派為機構擁有人（org_owner）。
                 </AlertDescription>
               </Alert>
 
@@ -457,7 +464,9 @@ export default function CreateOrganization() {
                 </div>
                 {ownerInfo && (
                   <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200">
-                    <p className="text-sm font-medium text-blue-900">教師資訊</p>
+                    <p className="text-sm font-medium text-blue-900">
+                      教師資訊
+                    </p>
                     <p className="text-sm text-blue-700 mt-1">
                       姓名：{ownerInfo.name}
                     </p>
@@ -467,7 +476,9 @@ export default function CreateOrganization() {
                       </p>
                     )}
                     {ownerInfo.email_verified && (
-                      <p className="text-xs text-green-600 mt-1">✓ Email 已驗證</p>
+                      <p className="text-xs text-green-600 mt-1">
+                        ✓ Email 已驗證
+                      </p>
                     )}
                   </div>
                 )}
@@ -488,7 +499,8 @@ export default function CreateOrganization() {
 
               <Alert>
                 <AlertDescription>
-                  專案服務人員將被指派為 org_admin 角色，協助管理機構。可加入多位服務人員。
+                  專案服務人員將被指派為 org_admin
+                  角色，協助管理機構。可加入多位服務人員。
                 </AlertDescription>
               </Alert>
 
@@ -524,30 +536,33 @@ export default function CreateOrganization() {
                 </div>
               </div>
 
-              {formData.project_staff_emails && formData.project_staff_emails.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">已加入的服務人員（{formData.project_staff_emails.length}）</p>
+              {formData.project_staff_emails &&
+                formData.project_staff_emails.length > 0 && (
                   <div className="space-y-2">
-                    {formData.project_staff_emails.map((email) => (
-                      <div
-                        key={email}
-                        className="flex items-center justify-between p-2 bg-gray-50 rounded-md border"
-                      >
-                        <span className="text-sm">{email}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeStaffEmail(email)}
-                          disabled={isLoading}
+                    <p className="text-sm font-medium">
+                      已加入的服務人員（{formData.project_staff_emails.length}）
+                    </p>
+                    <div className="space-y-2">
+                      {formData.project_staff_emails.map((email) => (
+                        <div
+                          key={email}
+                          className="flex items-center justify-between p-2 bg-gray-50 rounded-md border"
                         >
-                          移除
-                        </Button>
-                      </div>
-                    ))}
+                          <span className="text-sm">{email}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeStaffEmail(email)}
+                            disabled={isLoading}
+                          >
+                            移除
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
 
             <div className="flex gap-4 pt-4">

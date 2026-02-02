@@ -21,14 +21,14 @@ export function LanguageSwitcher() {
   };
 
   // Normalize language code (e.g., "zh-TW-TW" -> "zh-TW", "en-US" -> "en")
-  const normalizedLanguage = i18n.language.startsWith('zh') ? 'zh-TW' : 'en';
+  const normalizedLanguage = i18n.language.startsWith("zh") ? "zh-TW" : "en";
 
   return (
     <div className="flex items-center gap-2">
       <Globe className="h-4 w-4 text-gray-500" />
       <Select value={normalizedLanguage} onValueChange={handleLanguageChange}>
         <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder={t('common.selectLanguage')} />
+          <SelectValue placeholder={t("common.selectLanguage")} />
         </SelectTrigger>
         <SelectContent>
           {languages.map((lang) => (

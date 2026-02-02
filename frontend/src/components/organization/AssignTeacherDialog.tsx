@@ -49,7 +49,7 @@ export function AssignTeacherDialog({
   onSuccess,
 }: AssignTeacherDialogProps) {
   const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(
-    null
+    null,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -72,14 +72,10 @@ export function AssignTeacherDialog({
     try {
       await apiClient.assignTeacherToClassroom(
         parseInt(classroom.id),
-        selectedTeacherId
+        selectedTeacherId,
       );
 
-      toast.success(
-        selectedTeacherId
-          ? "導師指派成功"
-          : "已取消導師指派"
-      );
+      toast.success(selectedTeacherId ? "導師指派成功" : "已取消導師指派");
       onSuccess();
       handleClose();
     } catch (error) {
@@ -131,9 +127,7 @@ export function AssignTeacherDialog({
                 {/* 如果當前導師不在列表中，也要顯示 */}
                 {classroom.teacher_id &&
                   !teachers.find((t) => t.id === classroom.teacher_id) && (
-                    <SelectItem
-                      value={classroom.teacher_id.toString()}
-                    >
+                    <SelectItem value={classroom.teacher_id.toString()}>
                       {classroom.teacher_name || "當前導師"}
                     </SelectItem>
                   )}
@@ -157,4 +151,3 @@ export function AssignTeacherDialog({
     </Dialog>
   );
 }
-

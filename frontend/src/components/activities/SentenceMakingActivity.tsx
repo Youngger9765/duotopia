@@ -220,18 +220,26 @@ const SentenceMakingActivity: React.FC<SentenceMakingActivityProps> = ({
     const words = activityContent.words || [];
     return (
       <div className="border rounded-lg p-6 bg-gray-50">
-        <h3 className="text-lg font-semibold mb-4 text-gray-900">單字列表預覽</h3>
+        <h3 className="text-lg font-semibold mb-4 text-gray-900">
+          單字列表預覽
+        </h3>
         <div className="space-y-4">
           {words.map((word: any, index: number) => (
             <div key={index} className="p-4 bg-white rounded-lg border">
-              <div className="font-semibold text-lg text-gray-900">{word.word || word.text || '(未填寫)'}</div>
-              <div className="text-gray-600 mt-1">{word.translation || '(未填寫)'}</div>
+              <div className="font-semibold text-lg text-gray-900">
+                {word.word || word.text || "(未填寫)"}
+              </div>
+              <div className="text-gray-600 mt-1">
+                {word.translation || "(未填寫)"}
+              </div>
               {word.example_sentence && (
                 <div className="mt-2 text-sm text-gray-500">
                   <div className="font-medium">例句：</div>
                   <div>{word.example_sentence}</div>
                   {word.example_sentence_translation && (
-                    <div className="text-gray-400 mt-1">{word.example_sentence_translation}</div>
+                    <div className="text-gray-400 mt-1">
+                      {word.example_sentence_translation}
+                    </div>
                   )}
                 </div>
               )}

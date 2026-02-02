@@ -50,7 +50,7 @@ export function AssignClassroomDialog({
 }: AssignClassroomDialogProps) {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [selectedClassroomId, setSelectedClassroomId] = useState<number | null>(
-    null
+    null,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -74,7 +74,7 @@ export function AssignClassroomDialog({
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (response.ok) {
@@ -107,7 +107,7 @@ export function AssignClassroomDialog({
       await apiClient.addStudentToClassroom(
         schoolId,
         student.id,
-        selectedClassroomId
+        selectedClassroomId,
       );
 
       toast.success("學生已成功指派到班級");
@@ -130,20 +130,23 @@ export function AssignClassroomDialog({
   // 過濾掉學生已經加入的班級（只顯示尚未被指派過的班級）
   // 確保 ID 類型一致（都轉換為數字進行比較）
   const studentClassroomIds = new Set(
-    student.classrooms?.map((c) => Number(c.id)) || []
+    student.classrooms?.map((c) => Number(c.id)) || [],
   );
   const availableClassrooms = classrooms.filter(
-    (classroom) => !studentClassroomIds.has(Number(classroom.id))
+    (classroom) => !studentClassroomIds.has(Number(classroom.id)),
   );
 
   // Debug: Log filtering results (only in development)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[AssignClassroomDialog] Filtering:', {
+  if (process.env.NODE_ENV === "development") {
+    console.log("[AssignClassroomDialog] Filtering:", {
       studentId: student.id,
       studentClassrooms: student.classrooms,
       studentClassroomIds: Array.from(studentClassroomIds),
-      allClassrooms: classrooms.map(c => ({ id: c.id, name: c.name })),
-      availableClassrooms: availableClassrooms.map(c => ({ id: c.id, name: c.name })),
+      allClassrooms: classrooms.map((c) => ({ id: c.id, name: c.name })),
+      availableClassrooms: availableClassrooms.map((c) => ({
+        id: c.id,
+        name: c.name,
+      })),
     });
   }
 
@@ -191,9 +194,7 @@ export function AssignClassroomDialog({
               </Select>
             )}
             {availableClassrooms.length === 0 && !loading && (
-              <p className="text-sm text-gray-500">
-                此學生已加入所有班級
-              </p>
+              <p className="text-sm text-gray-500">此學生已加入所有班級</p>
             )}
           </div>
         </div>
@@ -221,4 +222,3 @@ export function AssignClassroomDialog({
     </Dialog>
   );
 }
-

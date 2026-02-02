@@ -5,16 +5,21 @@
  * Two-phase navigation: select school first, then show switcher + menu.
  */
 
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { Building2, ChevronRight } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useWorkspace, Organization, School } from '@/contexts/WorkspaceContext';
-import { cn } from '@/lib/utils';
+import React from "react";
+import { useTranslation } from "react-i18next";
+import { Building2, ChevronRight } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  useWorkspace,
+  Organization,
+  School,
+} from "@/contexts/WorkspaceContext";
+import { cn } from "@/lib/utils";
 
 export const SchoolList: React.FC = () => {
   const { t } = useTranslation();
-  const { organizations, selectedSchool, selectSchool, loading } = useWorkspace();
+  const { organizations, selectedSchool, selectSchool, loading } =
+    useWorkspace();
 
   if (loading) {
     return (
@@ -34,7 +39,7 @@ export const SchoolList: React.FC = () => {
     return (
       <div className="px-3 py-6 text-center">
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          {t('workspace.organization.noOrganizations')}
+          {t("workspace.organization.noOrganizations")}
         </p>
       </div>
     );
@@ -82,7 +87,11 @@ interface SchoolItemProps {
   onSelect: () => void;
 }
 
-const SchoolItem: React.FC<SchoolItemProps> = ({ school, isSelected, onSelect }) => {
+const SchoolItem: React.FC<SchoolItemProps> = ({
+  school,
+  isSelected,
+  onSelect,
+}) => {
   const [isHovered, setIsHovered] = React.useState(false);
 
   return (
@@ -91,23 +100,23 @@ const SchoolItem: React.FC<SchoolItemProps> = ({ school, isSelected, onSelect })
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        'w-full px-3 py-2.5 rounded-md text-left flex items-center gap-3 transition-all duration-150',
+        "w-full px-3 py-2.5 rounded-md text-left flex items-center gap-3 transition-all duration-150",
         isSelected
-          ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 border-l-3 border-blue-600'
+          ? "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 border-l-3 border-blue-600"
           : isHovered
-          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-          : 'text-slate-700 dark:text-slate-300'
+            ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+            : "text-slate-700 dark:text-slate-300",
       )}
     >
       {/* Icon */}
       <Building2
         className={cn(
-          'h-4 w-4 flex-shrink-0 transition-colors',
+          "h-4 w-4 flex-shrink-0 transition-colors",
           isSelected
-            ? 'text-blue-600 dark:text-blue-400'
+            ? "text-blue-600 dark:text-blue-400"
             : isHovered
-            ? 'text-blue-600 dark:text-blue-400'
-            : 'text-slate-500 dark:text-slate-400'
+              ? "text-blue-600 dark:text-blue-400"
+              : "text-slate-500 dark:text-slate-400",
         )}
       />
 
@@ -118,7 +127,7 @@ const SchoolItem: React.FC<SchoolItemProps> = ({ school, isSelected, onSelect })
       {isHovered && (
         <ChevronRight
           className="h-4 w-4 text-blue-600 dark:text-blue-400 transition-transform duration-150"
-          style={{ transform: 'translateX(0)' }}
+          style={{ transform: "translateX(0)" }}
         />
       )}
     </button>

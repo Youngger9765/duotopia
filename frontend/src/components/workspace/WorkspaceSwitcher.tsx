@@ -6,14 +6,29 @@
  * - Select organization and school from a list
  */
 
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Building2, GraduationCap, User, ChevronDown, Check } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useWorkspace, Organization, School } from '@/contexts/WorkspaceContext';
-import { cn } from '@/lib/utils';
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  Building2,
+  GraduationCap,
+  User,
+  ChevronDown,
+  Check,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  useWorkspace,
+  Organization,
+  School,
+} from "@/contexts/WorkspaceContext";
+import { cn } from "@/lib/utils";
 
 export const WorkspaceSwitcher: React.FC = () => {
   const { t } = useTranslation();
@@ -32,20 +47,20 @@ export const WorkspaceSwitcher: React.FC = () => {
 
   // Determine current workspace display text
   const getCurrentWorkspaceLabel = () => {
-    if (mode === 'personal') {
-      return t('workspace.personalMode');
+    if (mode === "personal") {
+      return t("workspace.personalMode");
     }
 
     if (selectedSchool && selectedOrganization) {
       return `${selectedOrganization.name} - ${selectedSchool.name}`;
     }
 
-    return t('workspace.selectOrganization');
+    return t("workspace.selectOrganization");
   };
 
   // Handle selection
   const handleSelectPersonal = () => {
-    setMode('personal');
+    setMode("personal");
     setOpen(false);
   };
 
@@ -59,7 +74,8 @@ export const WorkspaceSwitcher: React.FC = () => {
   };
 
   // Icon for current mode
-  const CurrentIcon = mode === 'personal' ? User : selectedSchool ? GraduationCap : Building2;
+  const CurrentIcon =
+    mode === "personal" ? User : selectedSchool ? GraduationCap : Building2;
 
   return (
     <>
@@ -73,7 +89,7 @@ export const WorkspaceSwitcher: React.FC = () => {
           <CurrentIcon className="h-5 w-5 flex-shrink-0 text-slate-600 dark:text-slate-400" />
           <div className="flex flex-col items-start min-w-0 flex-1">
             <span className="text-xs text-slate-500 dark:text-slate-400">
-              {t('workspace.currentWorkspace')}
+              {t("workspace.currentWorkspace")}
             </span>
             <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate w-full text-left">
               {getCurrentWorkspaceLabel()}
@@ -87,7 +103,7 @@ export const WorkspaceSwitcher: React.FC = () => {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[500px] max-h-[80vh] flex flex-col p-0">
           <DialogHeader className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-            <DialogTitle>{t('workspace.selectWorkspace')}</DialogTitle>
+            <DialogTitle>{t("workspace.selectWorkspace")}</DialogTitle>
           </DialogHeader>
 
           <ScrollArea className="flex-1 px-6 py-4">
@@ -95,9 +111,9 @@ export const WorkspaceSwitcher: React.FC = () => {
               {/* Personal Mode Option */}
               <WorkspaceOption
                 icon={User}
-                label={t('workspace.personalMode')}
-                description={t('workspace.personal.description')}
-                isSelected={mode === 'personal'}
+                label={t("workspace.personalMode")}
+                description={t("workspace.personal.description")}
+                isSelected={mode === "personal"}
                 onClick={handleSelectPersonal}
               />
 
@@ -105,7 +121,10 @@ export const WorkspaceSwitcher: React.FC = () => {
               {loading ? (
                 <div className="space-y-2 py-4">
                   {[1, 2].map((i) => (
-                    <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse" />
+                    <div
+                      key={i}
+                      className="h-16 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse"
+                    />
                   ))}
                 </div>
               ) : organizations.length > 0 ? (
@@ -116,19 +135,22 @@ export const WorkspaceSwitcher: React.FC = () => {
                       organization={org}
                       isExpanded={expandedOrgId === org.id}
                       selectedSchoolId={
-                        mode === 'organization' && selectedOrganization?.id === org.id
+                        mode === "organization" &&
+                        selectedOrganization?.id === org.id
                           ? selectedSchool?.id
                           : null
                       }
                       onToggle={() => toggleOrganization(org.id)}
-                      onSelectSchool={(school) => handleSelectSchool(school, org)}
+                      onSelectSchool={(school) =>
+                        handleSelectSchool(school, org)
+                      }
                     />
                   ))}
                 </div>
               ) : (
                 <div className="py-8 text-center">
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    {t('workspace.organization.noOrganizations')}
+                    {t("workspace.organization.noOrganizations")}
                   </p>
                 </div>
               )}
@@ -163,20 +185,20 @@ const WorkspaceOption: React.FC<WorkspaceOptionProps> = ({
     <button
       onClick={onClick}
       className={cn(
-        'w-full p-4 rounded-lg border-2 transition-all duration-150 text-left',
-        'hover:border-blue-300 dark:hover:border-blue-700',
+        "w-full p-4 rounded-lg border-2 transition-all duration-150 text-left",
+        "hover:border-blue-300 dark:hover:border-blue-700",
         isSelected
-          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600'
-          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600"
+          : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800",
       )}
     >
       <div className="flex items-start gap-3">
         <Icon
           className={cn(
-            'h-5 w-5 flex-shrink-0 mt-0.5',
+            "h-5 w-5 flex-shrink-0 mt-0.5",
             isSelected
-              ? 'text-blue-600 dark:text-blue-400'
-              : 'text-slate-500 dark:text-slate-400'
+              ? "text-blue-600 dark:text-blue-400"
+              : "text-slate-500 dark:text-slate-400",
           )}
         />
         <div className="flex-1 min-w-0">
@@ -225,8 +247,10 @@ const OrganizationSection: React.FC<OrganizationSectionProps> = ({
       <button
         onClick={onToggle}
         className={cn(
-          'w-full p-4 flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors',
-          isExpanded && hasSchools && 'border-b border-slate-200 dark:border-slate-700'
+          "w-full p-4 flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors",
+          isExpanded &&
+            hasSchools &&
+            "border-b border-slate-200 dark:border-slate-700",
         )}
       >
         <Building2 className="h-5 w-5 text-slate-600 dark:text-slate-400 flex-shrink-0" />
@@ -236,15 +260,15 @@ const OrganizationSection: React.FC<OrganizationSectionProps> = ({
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {hasSchools
-              ? `${organization.schools.length} ${organization.schools.length === 1 ? 'school' : 'schools'}`
-              : t('workspace.noSchoolsInOrg')}
+              ? `${organization.schools.length} ${organization.schools.length === 1 ? "school" : "schools"}`
+              : t("workspace.noSchoolsInOrg")}
           </p>
         </div>
         {hasSchools && (
           <ChevronDown
             className={cn(
-              'h-4 w-4 text-slate-400 transition-transform duration-200 flex-shrink-0',
-              isExpanded && 'rotate-180'
+              "h-4 w-4 text-slate-400 transition-transform duration-200 flex-shrink-0",
+              isExpanded && "rotate-180",
             )}
           />
         )}
@@ -258,25 +282,27 @@ const OrganizationSection: React.FC<OrganizationSectionProps> = ({
               key={school.id}
               onClick={() => onSelectSchool(school)}
               className={cn(
-                'w-full px-4 py-3 flex items-center gap-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors',
-                index !== organization.schools.length - 1 && 'border-b border-slate-100 dark:border-slate-800',
-                selectedSchoolId === school.id && 'bg-blue-50 dark:bg-blue-900/20'
+                "w-full px-4 py-3 flex items-center gap-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors",
+                index !== organization.schools.length - 1 &&
+                  "border-b border-slate-100 dark:border-slate-800",
+                selectedSchoolId === school.id &&
+                  "bg-blue-50 dark:bg-blue-900/20",
               )}
             >
               <GraduationCap
                 className={cn(
-                  'h-4 w-4 flex-shrink-0',
+                  "h-4 w-4 flex-shrink-0",
                   selectedSchoolId === school.id
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-slate-500 dark:text-slate-400'
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-slate-500 dark:text-slate-400",
                 )}
               />
               <span
                 className={cn(
-                  'text-sm flex-1 text-left truncate',
+                  "text-sm flex-1 text-left truncate",
                   selectedSchoolId === school.id
-                    ? 'font-semibold text-blue-900 dark:text-blue-100'
-                    : 'text-slate-700 dark:text-slate-300'
+                    ? "font-semibold text-blue-900 dark:text-blue-100"
+                    : "text-slate-700 dark:text-slate-300",
                 )}
               >
                 {school.name}

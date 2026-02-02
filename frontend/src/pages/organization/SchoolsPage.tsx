@@ -59,12 +59,15 @@ export default function SchoolsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showAssignPrincipalDialog, setShowAssignPrincipalDialog] = useState(false);
+  const [showAssignPrincipalDialog, setShowAssignPrincipalDialog] =
+    useState(false);
   const [editingSchool, setEditingSchool] = useState<SchoolData | null>(null);
   const [selectedSchool, setSelectedSchool] = useState<SchoolData | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [organization, setOrganization] = useState<{ name: string } | null>(null);
+  const [organization, setOrganization] = useState<{ name: string } | null>(
+    null,
+  );
 
   const [formData, setFormData] = useState<FormData>({
     name: "",
@@ -81,15 +84,18 @@ export default function SchoolsPage() {
     const fetchOrg = async () => {
       if (!effectiveOrgId || !token) return;
       try {
-        const res = await fetch(`${API_URL}/api/organizations/${effectiveOrgId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await fetch(
+          `${API_URL}/api/organizations/${effectiveOrgId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         if (res.ok) {
           const data = await res.json();
           setOrganization(data);
         }
       } catch (error) {
-        console.error('Failed to fetch organization:', error);
+        console.error("Failed to fetch organization:", error);
       }
     };
     if (effectiveOrgId && token) {
@@ -231,11 +237,16 @@ export default function SchoolsPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb items={[
-        { label: "組織管理" },
-        { label: organization?.name || "...", href: `/organization/${orgId}` },
-        { label: "學校管理" }
-      ]} />
+      <Breadcrumb
+        items={[
+          { label: "組織管理" },
+          {
+            label: organization?.name || "...",
+            href: `/organization/${orgId}`,
+          },
+          { label: "學校管理" },
+        ]}
+      />
 
       {/* Header */}
       <div className="flex items-center justify-between">

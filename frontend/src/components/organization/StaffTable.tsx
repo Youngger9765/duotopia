@@ -47,8 +47,7 @@ export function StaffTable({
   const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
 
   // Check if current user can edit roles
-  const canEditRoles =
-    user?.role === "org_owner" || user?.role === "org_admin";
+  const canEditRoles = user?.role === "org_owner" || user?.role === "org_admin";
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -102,9 +101,10 @@ export function StaffTable({
         }
       } else {
         const data = await response.json();
-        const errorMessage = typeof data.detail === 'string'
-          ? data.detail
-          : JSON.stringify(data.detail) || "角色更新失敗";
+        const errorMessage =
+          typeof data.detail === "string"
+            ? data.detail
+            : JSON.stringify(data.detail) || "角色更新失敗";
         toast.error(errorMessage);
       }
     } catch (error) {
@@ -115,7 +115,11 @@ export function StaffTable({
     }
   };
 
-  const handleStatusChange = async (teacherId: number, currentRole: string, newStatus: string) => {
+  const handleStatusChange = async (
+    teacherId: number,
+    currentRole: string,
+    newStatus: string,
+  ) => {
     const isActive = newStatus === "active";
     setUpdatingStatusId(teacherId);
     try {
@@ -138,9 +142,10 @@ export function StaffTable({
         }
       } else {
         const data = await response.json();
-        const errorMessage = typeof data.detail === 'string'
-          ? data.detail
-          : JSON.stringify(data.detail) || "狀態更新失敗";
+        const errorMessage =
+          typeof data.detail === "string"
+            ? data.detail
+            : JSON.stringify(data.detail) || "狀態更新失敗";
         toast.error(errorMessage);
       }
     } catch (error) {

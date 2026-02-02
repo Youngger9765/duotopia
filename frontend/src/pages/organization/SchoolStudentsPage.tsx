@@ -7,7 +7,10 @@ import { logError } from "@/utils/errorLogger";
 import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
-import { StudentListTable, Student } from "@/components/organization/StudentListTable";
+import {
+  StudentListTable,
+  Student,
+} from "@/components/organization/StudentListTable";
 import { CreateStudentDialog } from "@/components/organization/CreateStudentDialog";
 import { EditStudentDialog } from "@/components/organization/EditStudentDialog";
 import { AssignClassroomDialog } from "@/components/organization/AssignClassroomDialog";
@@ -44,9 +47,12 @@ export default function SchoolStudentsPage() {
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
-  const [showRemoveFromClassroomConfirm, setShowRemoveFromClassroomConfirm] = useState(false);
+  const [showRemoveFromClassroomConfirm, setShowRemoveFromClassroomConfirm] =
+    useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [pendingRemoveStudentId, setPendingRemoveStudentId] = useState<number | null>(null);
+  const [pendingRemoveStudentId, setPendingRemoveStudentId] = useState<
+    number | null
+  >(null);
   const [pendingRemoveFromClassroom, setPendingRemoveFromClassroom] = useState<{
     studentId: number;
     classroomId: number;
@@ -57,7 +63,6 @@ export default function SchoolStudentsPage() {
     if (schoolId && token) {
       fetchSchool();
     }
-     
   }, [schoolId]);
 
   const fetchSchool = async () => {
@@ -90,7 +95,7 @@ export default function SchoolStudentsPage() {
 
   const fetchOrganization = async (orgId: string) => {
     if (!orgId) return;
-    
+
     try {
       const response = await fetch(`${API_URL}/api/organizations/${orgId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -100,7 +105,11 @@ export default function SchoolStudentsPage() {
         const data = await response.json();
         setOrganization(data);
       } else {
-        logError("Failed to fetch organization", new Error(response.statusText), { orgId });
+        logError(
+          "Failed to fetch organization",
+          new Error(response.statusText),
+          { orgId },
+        );
       }
     } catch (error) {
       logError("Failed to fetch organization", error, { orgId });
@@ -118,7 +127,10 @@ export default function SchoolStudentsPage() {
         params.search = searchTerm;
       }
 
-      const data = await apiClient.getSchoolStudents(schoolId, params) as Student[];
+      const data = (await apiClient.getSchoolStudents(
+        schoolId,
+        params,
+      )) as Student[];
       setStudents(data);
     } catch (error) {
       logError("Failed to fetch students", error, { schoolId });
@@ -134,7 +146,6 @@ export default function SchoolStudentsPage() {
 
       return () => clearTimeout(debounceTimer);
     }
-     
   }, [searchTerm, schoolId]);
 
   const handleCreateSuccess = () => {
@@ -174,7 +185,10 @@ export default function SchoolStudentsPage() {
     }
   };
 
-  const handleRemoveFromClassroom = (studentId: number, classroomId: number) => {
+  const handleRemoveFromClassroom = (
+    studentId: number,
+    classroomId: number,
+  ) => {
     setPendingRemoveFromClassroom({ studentId, classroomId });
     setShowRemoveFromClassroomConfirm(true);
   };
@@ -185,7 +199,11 @@ export default function SchoolStudentsPage() {
     const { studentId, classroomId } = pendingRemoveFromClassroom;
 
     try {
-      await apiClient.removeStudentFromClassroom(schoolId, studentId, classroomId);
+      await apiClient.removeStudentFromClassroom(
+        schoolId,
+        studentId,
+        classroomId,
+      );
       toast.success("學生已從班級移除");
       fetchStudents();
     } catch (error) {
@@ -351,13 +369,14 @@ export default function SchoolStudentsPage() {
           onOpenChange={setShowRemoveFromClassroomConfirm}
           title="從班級移除學生"
           description={`確定要將 ${
-            students.find((s) => s.id === pendingRemoveFromClassroom.studentId)?.name ||
-            "此學生"
+            students.find((s) => s.id === pendingRemoveFromClassroom.studentId)
+              ?.name || "此學生"
           } 從 ${
             students
               .find((s) => s.id === pendingRemoveFromClassroom.studentId)
-              ?.classrooms?.find((c) => c.id === pendingRemoveFromClassroom.classroomId)?.name ||
-            "此班級"
+              ?.classrooms?.find(
+                (c) => c.id === pendingRemoveFromClassroom.classroomId,
+              )?.name || "此班級"
           } 移除嗎？`}
           confirmText="確定移除"
           cancelText="取消"
@@ -368,4 +387,3 @@ export default function SchoolStudentsPage() {
     </div>
   );
 }
-

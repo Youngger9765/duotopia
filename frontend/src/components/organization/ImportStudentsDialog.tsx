@@ -82,7 +82,7 @@ export function ImportStudentsDialog({
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (response.ok) {
@@ -102,8 +102,22 @@ export function ImportStudentsDialog({
   const downloadTemplate = () => {
     const template = [
       ["姓名", "學號", "Email", "生日", "電話", "班級"],
-      ["張三", "S001", "zhang@example.com", "2012-01-01", "0912345678", "一年級A班"],
-      ["李四", "S002", "li@example.com", "2012-02-15", "0923456789", "一年級A班"],
+      [
+        "張三",
+        "S001",
+        "zhang@example.com",
+        "2012-01-01",
+        "0912345678",
+        "一年級A班",
+      ],
+      [
+        "李四",
+        "S002",
+        "li@example.com",
+        "2012-02-15",
+        "0923456789",
+        "一年級A班",
+      ],
       ["王五", "S003", "", "2012-03-20", "", "一年級B班"],
     ];
 
@@ -176,7 +190,8 @@ export function ImportStudentsDialog({
       (h) => h.includes("姓名") || h.includes("name") || h.includes("學生"),
     );
     const studentNumberIndex = headers.findIndex(
-      (h) => h.includes("學號") || h.includes("student") || h.includes("number"),
+      (h) =>
+        h.includes("學號") || h.includes("student") || h.includes("number"),
     );
     const emailIndex = headers.findIndex(
       (h) => h.includes("email") || h.includes("信箱"),
@@ -355,7 +370,7 @@ export function ImportStudentsDialog({
             name: student.name,
             birthdate: student.birthdate,
           };
-          
+
           // 只添加非空欄位
           if (student.email && student.email.trim()) {
             item.email = student.email.trim();
@@ -369,7 +384,7 @@ export function ImportStudentsDialog({
           if (student.classroom_id) {
             item.classroom_id = student.classroom_id;
           }
-          
+
           return item;
         }),
         duplicateAction,
@@ -398,9 +413,7 @@ export function ImportStudentsDialog({
       }
     } catch (error: any) {
       logError("Failed to import students", error, { schoolId });
-      toast.error(
-        error?.detail || "匯入失敗，請稍後再試",
-      );
+      toast.error(error?.detail || "匯入失敗，請稍後再試");
     } finally {
       setImporting(false);
     }
@@ -630,7 +643,9 @@ export function ImportStudentsDialog({
                   </div>
                   {importErrors.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-sm font-medium text-red-600">錯誤訊息：</p>
+                      <p className="text-sm font-medium text-red-600">
+                        錯誤訊息：
+                      </p>
                       <ul className="list-disc list-inside text-sm text-red-600">
                         {importErrors.map((error, index) => (
                           <li key={index}>{error}</li>
@@ -674,4 +689,3 @@ export function ImportStudentsDialog({
     </Dialog>
   );
 }
-

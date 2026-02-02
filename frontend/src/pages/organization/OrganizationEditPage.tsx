@@ -24,8 +24,12 @@ import { StaffMember } from "@/components/organization/StaffTable";
 export default function OrganizationEditPage() {
   const { orgId } = useParams<{ orgId: string }>();
   const token = useTeacherAuthStore((state) => state.token);
-  const { setSelectedNode, setExpandedOrgs, refreshSchools, refreshOrganizations } =
-    useOrganization();
+  const {
+    setSelectedNode,
+    setExpandedOrgs,
+    refreshSchools,
+    refreshOrganizations,
+  } = useOrganization();
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [schools, setSchools] = useState<School[]>([]);
   const [teachers, setTeachers] = useState<StaffMember[]>([]);

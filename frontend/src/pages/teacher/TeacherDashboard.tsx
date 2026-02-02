@@ -114,9 +114,7 @@ export default function TeacherDashboard() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">
-            {t("teacherDashboard.loading")}
-          </p>
+          <p className="mt-4 text-gray-600">{t("teacherDashboard.loading")}</p>
         </div>
       </div>
     );
@@ -162,7 +160,7 @@ export default function TeacherDashboard() {
   // Calculate filtered stats
   const filteredStudentCount = filteredClassrooms.reduce(
     (sum, c) => sum + c.student_count,
-    0
+    0,
   );
 
   return (
@@ -326,9 +324,7 @@ export default function TeacherDashboard() {
               <UserCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {filteredStudentCount}
-              </div>
+              <div className="text-2xl font-bold">{filteredStudentCount}</div>
             </CardContent>
           </Card>
 

@@ -5,17 +5,17 @@
  * between schools without going back to the list.
  */
 
-import React from 'react';
-import { Check, ChevronsUpDown, Building2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import { Check, ChevronsUpDown, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useWorkspace } from '@/contexts/WorkspaceContext';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/dropdown-menu";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { cn } from "@/lib/utils";
 
 export const SchoolSwitcher: React.FC = () => {
   const { selectedOrganization, selectedSchool, selectSchool } = useWorkspace();
@@ -49,16 +49,19 @@ export const SchoolSwitcher: React.FC = () => {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="w-[calc(100%-2rem)] max-h-[300px] overflow-y-auto" align="start">
+      <DropdownMenuContent
+        className="w-[calc(100%-2rem)] max-h-[300px] overflow-y-auto"
+        align="start"
+      >
         {selectedOrganization.schools.map((school) => (
           <DropdownMenuItem
             key={school.id}
             onClick={() => selectSchool(school, selectedOrganization)}
             className={cn(
-              'py-2.5 px-3 cursor-pointer',
+              "py-2.5 px-3 cursor-pointer",
               school.id === selectedSchool.id
-                ? 'bg-blue-100 dark:bg-blue-900/40'
-                : 'hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                ? "bg-blue-100 dark:bg-blue-900/40"
+                : "hover:bg-blue-50 dark:hover:bg-blue-900/20",
             )}
           >
             <div className="flex items-center justify-between w-full">

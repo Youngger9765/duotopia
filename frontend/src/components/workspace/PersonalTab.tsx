@@ -5,8 +5,8 @@
  * teacher sidebar menu items (my classes, my students, my materials)
  */
 
-import React from 'react';
-import { useTranslation } from 'react-i18next';
+import React from "react";
+import { useTranslation } from "react-i18next";
 
 export const PersonalTab: React.FC = () => {
   const { t } = useTranslation();
@@ -14,7 +14,7 @@ export const PersonalTab: React.FC = () => {
   return (
     <div className="px-3 py-2">
       <p className="text-xs text-slate-500 dark:text-slate-400">
-        {t('workspace.personal.description')}
+        {t("workspace.personal.description")}
       </p>
     </div>
   );

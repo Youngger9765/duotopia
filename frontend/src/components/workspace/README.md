@@ -22,17 +22,17 @@ workspace/
 在應用最上層包裹 `WorkspaceProvider`：
 
 ```tsx
-import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 
 <WorkspaceProvider teacherId={currentTeacher.id}>
   <App />
-</WorkspaceProvider>
+</WorkspaceProvider>;
 ```
 
 ### 2. 在 Sidebar 中使用
 
 ```tsx
-import { WorkspaceSwitcher } from '@/components/workspace';
+import { WorkspaceSwitcher } from "@/components/workspace";
 
 function Sidebar() {
   return (
@@ -49,12 +49,12 @@ function Sidebar() {
 ### 3. 使用 useWorkspace hook
 
 ```tsx
-import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 function MyComponent() {
   const { mode, selectedSchool, selectSchool } = useWorkspace();
 
-  if (mode === 'personal') {
+  if (mode === "personal") {
     // Personal mode logic
   } else {
     // Organization mode logic
@@ -66,6 +66,7 @@ function MyComponent() {
 ## 功能說明
 
 ### 個人模式（Personal Mode）
+
 - 完整權限
 - 管理自己的班級、學生、教材
 - 無限制
@@ -73,11 +74,13 @@ function MyComponent() {
 ### 機構模式（Organization Mode）
 
 **Phase 1 - 選擇學校**：
+
 - 顯示教師所屬的所有機構和學校
 - 以機構為分組顯示學校列表
 - 點擊學校進入 Phase 2
 
 **Phase 2 - 學校工作區**：
+
 - 顯示學校切換下拉選單（可快速切換學校）
 - 顯示權限限制橫幅（可關閉，localStorage 記憶）
 - 限制權限：
@@ -90,7 +93,7 @@ function MyComponent() {
 
 ```typescript
 interface WorkspaceContextState {
-  mode: 'personal' | 'organization';
+  mode: "personal" | "organization";
   organizations: Organization[];
   selectedOrganization: Organization | null;
   selectedSchool: School | null;
@@ -116,6 +119,7 @@ interface WorkspaceContextState {
 ### GET /api/teachers/{teacher_id}/organizations
 
 **Response**:
+
 ```json
 {
   "organizations": [
@@ -154,16 +158,19 @@ interface WorkspaceContextState {
 ## 待辦事項
 
 ### 整合到現有 Sidebar
+
 - [ ] 找到 TeacherDashboardWithSidebar 或其他 Sidebar 元件
 - [ ] 在頂部加入 WorkspaceSwitcher
 - [ ] 根據 mode 顯示對應的選單項目
 - [ ] 在機構模式的選單項目加入唯讀標記（Eye icon）
 
 ### 鍵盤快捷鍵
+
 - [ ] 實作 Cmd/Ctrl + 1 切換到個人模式
 - [ ] 實作 Cmd/Ctrl + 2 切換到機構模式
 
 ### 額外功能
+
 - [ ] Framer Motion 更流暢的轉場動畫（optional）
 - [ ] Toast 通知（成功切換、錯誤提示）
 - [ ] 無障礙測試（screen reader, keyboard only）

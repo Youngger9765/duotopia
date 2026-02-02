@@ -32,9 +32,10 @@ export default function TeacherStudents() {
   const { selectedSchool, selectedOrganization, mode } = useWorkspace();
 
   // 在機構學校內的老師只能查看，不能編輯或刪除學生
-  const isInOrganizationSchool = mode === 'organization' && selectedSchool !== null;
+  const isInOrganizationSchool =
+    mode === "organization" && selectedSchool !== null;
   const disableStudentActions = isInOrganizationSchool;
-  const disableReason = isInOrganizationSchool ? '只能在學校後台更改' : '';
+  const disableReason = isInOrganizationSchool ? "只能在學校後台更改" : "";
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
   const [allStudents, setAllStudents] = useState<Student[]>([]);

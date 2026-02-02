@@ -57,13 +57,19 @@ export const organizationRoutes = (
     <Route path="schools/:schoolId" element={<SchoolDetailPage />} />
 
     {/* School classrooms page */}
-    <Route path="schools/:schoolId/classrooms" element={<SchoolClassroomsPage />} />
+    <Route
+      path="schools/:schoolId/classrooms"
+      element={<SchoolClassroomsPage />}
+    />
 
     {/* School teachers page */}
     <Route path="schools/:schoolId/teachers" element={<SchoolTeachersPage />} />
 
     {/* School materials page */}
-    <Route path="schools/:schoolId/materials" element={<SchoolMaterialsPage />} />
+    <Route
+      path="schools/:schoolId/materials"
+      element={<SchoolMaterialsPage />}
+    />
 
     {/* School students page */}
     <Route path="schools/:schoolId/students" element={<SchoolStudentsPage />} />

@@ -106,9 +106,7 @@ export function TeacherRoleEditDialog({
   const roleOptions = [
     { value: "teacher", label: "教師" },
     { value: "org_admin", label: "組織管理員" },
-    ...(canSelectOwner
-      ? [{ value: "org_owner", label: "組織擁有者" }]
-      : []),
+    ...(canSelectOwner ? [{ value: "org_owner", label: "組織擁有者" }] : []),
   ];
 
   return (

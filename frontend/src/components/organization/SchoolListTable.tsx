@@ -52,9 +52,7 @@ export function SchoolListTable({
           <TableRow key={school.id}>
             <TableCell className="font-medium">
               <button
-                onClick={() =>
-                  navigate(`/organization/schools/${school.id}`)
-                }
+                onClick={() => navigate(`/organization/schools/${school.id}`)}
                 className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
               >
                 {school.display_name || school.name}
@@ -97,11 +95,7 @@ export function SchoolListTable({
               </span>
             </TableCell>
             <TableCell className="text-right">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onEdit(school)}
-              >
+              <Button variant="ghost" size="sm" onClick={() => onEdit(school)}>
                 <Edit2 className="h-4 w-4" />
                 編輯
               </Button>

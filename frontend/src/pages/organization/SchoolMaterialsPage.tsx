@@ -31,7 +31,6 @@ interface Program {
   lessons?: any[];
 }
 
-
 /**
  * SchoolMaterialsPage - Manage school-level materials
  */
@@ -48,12 +47,9 @@ export default function SchoolMaterialsPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   // Memoized callback to prevent infinite loop
-  const handleProgramsChange = useCallback(
-    (updatedPrograms: any) => {
-      setPrograms(updatedPrograms as Program[]);
-    },
-    []
-  );
+  const handleProgramsChange = useCallback((updatedPrograms: any) => {
+    setPrograms(updatedPrograms as Program[]);
+  }, []);
 
   useEffect(() => {
     if (schoolId) {
@@ -84,7 +80,7 @@ export default function SchoolMaterialsPage() {
         `${API_URL}/api/organizations/${schoolData.organization_id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (orgRes.ok) {
@@ -97,7 +93,7 @@ export default function SchoolMaterialsPage() {
         `${API_URL}/api/schools/${schoolId}/programs`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (programsRes.ok) {
@@ -172,9 +168,7 @@ export default function SchoolMaterialsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">學校教材</h1>
-          <p className="text-gray-600 mt-2">
-            {school.name} 的教學教材與課程
-          </p>
+          <p className="text-gray-600 mt-2">{school.name} 的教學教材與課程</p>
         </div>
       </div>
 

@@ -478,7 +478,9 @@ class ApiClient {
   }
 
   async getSchoolClassroomPrograms(schoolId: string, classroomId: number) {
-    return this.request(`/api/schools/${schoolId}/classrooms/${classroomId}/programs`);
+    return this.request(
+      `/api/schools/${schoolId}/classrooms/${classroomId}/programs`,
+    );
   }
 
   async softDeleteProgram(programId: number) {
@@ -523,7 +525,7 @@ class ApiClient {
       description?: string;
       level: string;
       teacher_id?: number | null;
-    }
+    },
   ) {
     return this.request(`/api/schools/${schoolId}/classrooms`, {
       method: "POST",
@@ -538,7 +540,7 @@ class ApiClient {
       description?: string;
       level?: string;
       is_active?: boolean;
-    }
+    },
   ) {
     return this.request(`/api/classrooms/${classroomId}`, {
       method: "PUT",
@@ -548,7 +550,7 @@ class ApiClient {
 
   async assignTeacherToClassroom(
     classroomId: number,
-    teacherId: number | null
+    teacherId: number | null,
   ) {
     return this.request(`/api/classrooms/${classroomId}/teacher`, {
       method: "PUT",
@@ -566,16 +568,18 @@ class ApiClient {
       status?: "active" | "inactive";
       classroom_id?: number;
       unassigned?: boolean;
-    }
+    },
   ) {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append("page", params.page.toString());
     if (params?.limit) queryParams.append("limit", params.limit.toString());
     if (params?.search) queryParams.append("search", params.search);
     if (params?.status) queryParams.append("status", params.status);
-    if (params?.classroom_id) queryParams.append("classroom_id", params.classroom_id.toString());
-    if (params?.unassigned !== undefined) queryParams.append("unassigned", params.unassigned.toString());
-    
+    if (params?.classroom_id)
+      queryParams.append("classroom_id", params.classroom_id.toString());
+    if (params?.unassigned !== undefined)
+      queryParams.append("unassigned", params.unassigned.toString());
+
     const queryString = queryParams.toString();
     const url = `/api/schools/${schoolId}/students${queryString ? `?${queryString}` : ""}`;
     return this.request(url);
@@ -589,7 +593,7 @@ class ApiClient {
       student_number?: string;
       birthdate: string; // YYYY-MM-DD
       phone?: string;
-    }
+    },
   ) {
     return this.request(`/api/schools/${schoolId}/students`, {
       method: "POST",
@@ -597,10 +601,7 @@ class ApiClient {
     });
   }
 
-  async addStudentToSchool(
-    schoolId: string,
-    studentId: number
-  ) {
+  async addStudentToSchool(schoolId: string, studentId: number) {
     return this.request(`/api/schools/${schoolId}/students/${studentId}`, {
       method: "POST",
     });
@@ -616,7 +617,7 @@ class ApiClient {
       birthdate?: string;
       phone?: string;
       is_active?: boolean;
-    }
+    },
   ) {
     return this.request(`/api/schools/${schoolId}/students/${studentId}`, {
       method: "PUT",
@@ -624,10 +625,7 @@ class ApiClient {
     });
   }
 
-  async removeStudentFromSchool(
-    schoolId: string,
-    studentId: number
-  ) {
+  async removeStudentFromSchool(schoolId: string, studentId: number) {
     return this.request(`/api/schools/${schoolId}/students/${studentId}`, {
       method: "DELETE",
     });
@@ -636,40 +634,48 @@ class ApiClient {
   async addStudentToClassroom(
     schoolId: string,
     studentId: number,
-    classroomId: number
+    classroomId: number,
   ) {
-    return this.request(`/api/schools/${schoolId}/students/${studentId}/classrooms`, {
-      method: "POST",
-      body: JSON.stringify({ classroom_id: classroomId }),
-    });
+    return this.request(
+      `/api/schools/${schoolId}/students/${studentId}/classrooms`,
+      {
+        method: "POST",
+        body: JSON.stringify({ classroom_id: classroomId }),
+      },
+    );
   }
 
   async removeStudentFromClassroom(
     schoolId: string,
     studentId: number,
-    classroomId: number
+    classroomId: number,
   ) {
-    return this.request(`/api/schools/${schoolId}/students/${studentId}/classrooms/${classroomId}`, {
-      method: "DELETE",
-    });
+    return this.request(
+      `/api/schools/${schoolId}/students/${studentId}/classrooms/${classroomId}`,
+      {
+        method: "DELETE",
+      },
+    );
   }
 
-  async getClassroomStudents(
-    schoolId: string,
-    classroomId: number
-  ) {
-    return this.request(`/api/schools/${schoolId}/classrooms/${classroomId}/students`);
+  async getClassroomStudents(schoolId: string, classroomId: number) {
+    return this.request(
+      `/api/schools/${schoolId}/classrooms/${classroomId}/students`,
+    );
   }
 
   async batchAddStudentsToClassroom(
     schoolId: string,
     classroomId: number,
-    studentIds: number[]
+    studentIds: number[],
   ) {
-    return this.request(`/api/schools/${schoolId}/classrooms/${classroomId}/students/batch`, {
-      method: "POST",
-      body: JSON.stringify({ student_ids: studentIds }),
-    });
+    return this.request(
+      `/api/schools/${schoolId}/classrooms/${classroomId}/students/batch`,
+      {
+        method: "POST",
+        body: JSON.stringify({ student_ids: studentIds }),
+      },
+    );
   }
 
   async batchImportStudentsForSchool(
@@ -682,7 +688,7 @@ class ApiClient {
       phone?: string;
       classroom_id?: number;
     }>,
-    duplicateAction: "skip" | "update" | "add_suffix" = "skip"
+    duplicateAction: "skip" | "update" | "add_suffix" = "skip",
   ) {
     return this.request(`/api/schools/${schoolId}/students/batch-import`, {
       method: "POST",

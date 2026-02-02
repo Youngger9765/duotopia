@@ -306,7 +306,8 @@ function RecursiveTreeNode({
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (!disableActions) onEdit(data, level, parentId);
+                                if (!disableActions)
+                                  onEdit(data, level, parentId);
                               }}
                               className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                               disabled={disableActions}
@@ -320,7 +321,8 @@ function RecursiveTreeNode({
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (!disableActions) onDelete(data, level, parentId);
+                                if (!disableActions)
+                                  onDelete(data, level, parentId);
                               }}
                               className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 focus:text-red-600"
                               disabled={disableActions}

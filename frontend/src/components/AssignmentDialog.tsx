@@ -256,12 +256,12 @@ export function AssignmentDialog({
     {},
   );
   const [currentStep, setCurrentStep] = useState(1);
-  const [activeTab, setActiveTab] = useState<"template" | "classroom" | "school">(
-    "template",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "template" | "classroom" | "school"
+  >("template");
 
   // 只在機構模式且選擇了學校時顯示「學校教材」tab
-  const showSchoolTab = mode === 'organization' && selectedSchool !== null;
+  const showSchoolTab = mode === "organization" && selectedSchool !== null;
 
   // 分別儲存公版和班級課程
   const [templatePrograms, setTemplatePrograms] = useState<Program[]>([]);
@@ -379,27 +379,27 @@ export function AssignmentDialog({
       const params = new URLSearchParams();
       params.append("is_template", "true");
 
-      console.log('[DEBUG] loadTemplatePrograms called with:', {
+      console.log("[DEBUG] loadTemplatePrograms called with:", {
         mode,
         selectedSchool: selectedSchool?.id,
         params: params.toString(),
-        url: `/api/teachers/programs?${params.toString()}`
+        url: `/api/teachers/programs?${params.toString()}`,
       });
 
       const response = await apiClient.get<Program[]>(
         `/api/teachers/programs?${params.toString()}`,
       );
 
-      console.log('[DEBUG] loadTemplatePrograms response:', {
+      console.log("[DEBUG] loadTemplatePrograms response:", {
         count: response.length,
-        programs: response.map(p => ({
+        programs: response.map((p) => ({
           id: p.id,
           name: p.name,
           school_id: p.school_id,
           organization_id: p.organization_id,
           teacher_id: p.teacher_id,
-          is_template: p.is_template
-        }))
+          is_template: p.is_template,
+        })),
       });
 
       setTemplatePrograms(response);
@@ -441,26 +441,26 @@ export function AssignmentDialog({
       params.append("school_id", selectedSchool.id);
       params.append("scope", "school");
 
-      console.log('[DEBUG] loadSchoolPrograms called with:', {
+      console.log("[DEBUG] loadSchoolPrograms called with:", {
         school_id: selectedSchool.id,
         params: params.toString(),
-        url: `/api/teachers/programs?${params.toString()}`
+        url: `/api/teachers/programs?${params.toString()}`,
       });
 
       const response = await apiClient.get<Program[]>(
         `/api/teachers/programs?${params.toString()}`,
       );
 
-      console.log('[DEBUG] loadSchoolPrograms response:', {
+      console.log("[DEBUG] loadSchoolPrograms response:", {
         count: response.length,
-        programs: response.map(p => ({
+        programs: response.map((p) => ({
           id: p.id,
           name: p.name,
           school_id: p.school_id,
           organization_id: p.organization_id,
           teacher_id: p.teacher_id,
-          is_template: p.is_template
-        }))
+          is_template: p.is_template,
+        })),
       });
 
       setSchoolPrograms(response);
@@ -1214,7 +1214,9 @@ export function AssignmentDialog({
                   }
                   className="flex-1 flex flex-col min-h-0"
                 >
-                  <TabsList className={`grid w-full ${showSchoolTab ? 'grid-cols-3' : 'grid-cols-2'} mb-2`}>
+                  <TabsList
+                    className={`grid w-full ${showSchoolTab ? "grid-cols-3" : "grid-cols-2"} mb-2`}
+                  >
                     <TabsTrigger
                       value="template"
                       className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
@@ -1519,7 +1521,10 @@ export function AssignmentDialog({
                         ) : (
                           <div className="space-y-2">
                             {schoolPrograms.map((program) => (
-                              <Card key={program.id} className="overflow-hidden">
+                              <Card
+                                key={program.id}
+                                className="overflow-hidden"
+                              >
                                 <button
                                   onClick={() => toggleProgram(program.id)}
                                   className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
@@ -2596,39 +2601,41 @@ export function AssignmentDialog({
                         );
                       })
                       .map((student) => (
-                      <div
-                        key={student.id}
-                        onClick={() => toggleStudent(student.id)}
-                        className={cn(
-                          "p-2 rounded-md border transition-all text-left relative cursor-pointer",
-                          formData.student_ids.includes(student.id)
-                            ? "bg-blue-50 border-blue-300 shadow-sm"
-                            : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm",
-                        )}
-                      >
-                        <div className="flex items-start gap-2">
-                          <Checkbox
-                            checked={formData.student_ids.includes(student.id)}
-                            className="data-[state=checked]:bg-blue-600 mt-0.5 h-4 w-4 pointer-events-none"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-xs truncate">
-                              {student.student_number
-                                ? `${student.student_number}.${student.name}`
-                                : student.name}
-                            </p>
-                            <p className="text-[10px] text-gray-500 truncate">
-                              {student.email}
-                            </p>
+                        <div
+                          key={student.id}
+                          onClick={() => toggleStudent(student.id)}
+                          className={cn(
+                            "p-2 rounded-md border transition-all text-left relative cursor-pointer",
+                            formData.student_ids.includes(student.id)
+                              ? "bg-blue-50 border-blue-300 shadow-sm"
+                              : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm",
+                          )}
+                        >
+                          <div className="flex items-start gap-2">
+                            <Checkbox
+                              checked={formData.student_ids.includes(
+                                student.id,
+                              )}
+                              className="data-[state=checked]:bg-blue-600 mt-0.5 h-4 w-4 pointer-events-none"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-xs truncate">
+                                {student.student_number
+                                  ? `${student.student_number}.${student.name}`
+                                  : student.name}
+                              </p>
+                              <p className="text-[10px] text-gray-500 truncate">
+                                {student.email}
+                              </p>
+                            </div>
                           </div>
+                          {formData.student_ids.includes(student.id) && (
+                            <div className="absolute top-1 right-1">
+                              <CheckCircle2 className="h-3 w-3 text-blue-600" />
+                            </div>
+                          )}
                         </div>
-                        {formData.student_ids.includes(student.id) && (
-                          <div className="absolute top-1 right-1">
-                            <CheckCircle2 className="h-3 w-3 text-blue-600" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 </ScrollArea>
               </div>

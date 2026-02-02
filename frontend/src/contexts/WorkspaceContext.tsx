@@ -5,8 +5,14 @@
  * and selected organization/school context.
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useTeacherAuthStore } from '@/stores/teacherAuthStore';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 
 // ============================================
 // Types
@@ -25,7 +31,7 @@ export interface Organization {
   schools: School[];
 }
 
-export type WorkspaceMode = 'personal' | 'organization';
+export type WorkspaceMode = "personal" | "organization";
 
 export interface WorkspaceContextState {
   mode: WorkspaceMode;
@@ -46,16 +52,18 @@ export interface WorkspaceContextState {
 // Context
 // ============================================
 
-const WorkspaceContext = createContext<WorkspaceContextState | undefined>(undefined);
+const WorkspaceContext = createContext<WorkspaceContextState | undefined>(
+  undefined,
+);
 
 // ============================================
 // localStorage keys
 // ============================================
 
 const STORAGE_KEYS = {
-  MODE: 'workspace:mode',
-  ORGANIZATION: 'workspace:organization',
-  SCHOOL: 'workspace:school',
+  MODE: "workspace:mode",
+  ORGANIZATION: "workspace:organization",
+  SCHOOL: "workspace:school",
 } as const;
 
 // ============================================
@@ -67,20 +75,26 @@ interface WorkspaceProviderProps {
   teacherId: number;
 }
 
-export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, teacherId }) => {
+export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
+  children,
+  teacherId,
+}) => {
   // Get token from auth store
   const token = useTeacherAuthStore((state) => state.token);
 
   const [mode, setModeState] = useState<WorkspaceMode>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.MODE);
-    return (saved === 'organization' ? 'organization' : 'personal') as WorkspaceMode;
+    return (
+      saved === "organization" ? "organization" : "personal"
+    ) as WorkspaceMode;
   });
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.ORGANIZATION);
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [selectedOrganization, setSelectedOrganization] =
+    useState<Organization | null>(() => {
+      const saved = localStorage.getItem(STORAGE_KEYS.ORGANIZATION);
+      return saved ? JSON.parse(saved) : null;
+    });
 
   const [selectedSchool, setSelectedSchool] = useState<School | null>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SCHOOL);
@@ -93,7 +107,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, 
   // Fetch organizations from API
   const fetchOrganizations = async () => {
     if (!token) {
-      console.warn('No token available, skipping organization fetch');
+      console.warn("No token available, skipping organization fetch");
       return;
     }
 
@@ -101,25 +115,31 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, 
     setError(null);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const apiUrl = import.meta.env.VITE_API_URL || "";
 
-      const response = await fetch(`${apiUrl}/api/teachers/${teacherId}/organizations`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+      const response = await fetch(
+        `${apiUrl}/api/teachers/${teacherId}/organizations`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch organizations: ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch organizations: ${response.statusText}`,
+        );
       }
 
       const data = await response.json();
       setOrganizations(data.organizations || []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch organizations';
+      const message =
+        err instanceof Error ? err.message : "Failed to fetch organizations";
       setError(message);
-      console.error('Error fetching organizations:', err);
+      console.error("Error fetching organizations:", err);
     } finally {
       setLoading(false);
     }
@@ -138,7 +158,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, 
     localStorage.setItem(STORAGE_KEYS.MODE, newMode);
 
     // Clear selection when switching to personal mode
-    if (newMode === 'personal') {
+    if (newMode === "personal") {
       clearSelection();
     }
   };
@@ -149,12 +169,15 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, 
     setSelectedSchool(school);
 
     // Persist to localStorage
-    localStorage.setItem(STORAGE_KEYS.ORGANIZATION, JSON.stringify(organization));
+    localStorage.setItem(
+      STORAGE_KEYS.ORGANIZATION,
+      JSON.stringify(organization),
+    );
     localStorage.setItem(STORAGE_KEYS.SCHOOL, JSON.stringify(school));
 
     // Auto-switch to organization mode if not already
-    if (mode !== 'organization') {
-      setMode('organization');
+    if (mode !== "organization") {
+      setMode("organization");
     }
   };
 
@@ -179,7 +202,11 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children, 
     fetchOrganizations,
   };
 
-  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
+  return (
+    <WorkspaceContext.Provider value={value}>
+      {children}
+    </WorkspaceContext.Provider>
+  );
 };
 
 // ============================================
@@ -190,7 +217,7 @@ export const useWorkspace = (): WorkspaceContextState => {
   const context = useContext(WorkspaceContext);
 
   if (context === undefined) {
-    throw new Error('useWorkspace must be used within a WorkspaceProvider');
+    throw new Error("useWorkspace must be used within a WorkspaceProvider");
   }
 
   return context;

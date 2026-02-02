@@ -44,12 +44,14 @@ export function ClassroomMaterialsSidebar({
   onSuccess,
 }: ClassroomMaterialsSidebarProps) {
   const token = useTeacherAuthStore((state) => state.token);
-  
+
   const [classroomPrograms, setClassroomPrograms] = useState<Program[]>([]);
   const [schoolPrograms, setSchoolPrograms] = useState<Program[]>([]);
   const [_loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedProgramIds, setSelectedProgramIds] = useState<Set<number>>(new Set());
+  const [selectedProgramIds, setSelectedProgramIds] = useState<Set<number>>(
+    new Set(),
+  );
 
   useEffect(() => {
     if (open && classroomId && schoolId) {
@@ -63,31 +65,44 @@ export function ClassroomMaterialsSidebar({
     try {
       setLoading(true);
       // Use school-level endpoint for organization admin access
-      const programs = await apiClient.getSchoolClassroomPrograms(schoolId, classroomId) as Program[];
+      const programs = (await apiClient.getSchoolClassroomPrograms(
+        schoolId,
+        classroomId,
+      )) as Program[];
       const classroomProgramsData = programs || [];
       setClassroomPrograms(classroomProgramsData);
       // 獲取班級教材後，立即更新可用教材列表
       await fetchSchoolPrograms(classroomProgramsData);
     } catch (error) {
-      logError("Failed to fetch classroom programs", error, { schoolId, classroomId });
+      logError("Failed to fetch classroom programs", error, {
+        schoolId,
+        classroomId,
+      });
       toast.error("載入班級教材失敗");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchSchoolPrograms = async (currentClassroomPrograms: Program[] = classroomPrograms) => {
+  const fetchSchoolPrograms = async (
+    currentClassroomPrograms: Program[] = classroomPrograms,
+  ) => {
     try {
-      const response = await fetch(`${API_URL}/api/schools/${schoolId}/programs`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
+      const response = await fetch(
+        `${API_URL}/api/schools/${schoolId}/programs`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
       if (response.ok) {
         const programs = await response.json();
         // 過濾掉已經在班級中的教材
-        const classroomProgramIds = new Set(currentClassroomPrograms.map((p) => p.id));
+        const classroomProgramIds = new Set(
+          currentClassroomPrograms.map((p) => p.id),
+        );
         const available = (programs || []).filter(
-          (p: Program) => !classroomProgramIds.has(p.id)
+          (p: Program) => !classroomProgramIds.has(p.id),
         );
         setSchoolPrograms(available);
       }
@@ -117,7 +132,7 @@ export function ClassroomMaterialsSidebar({
             body: JSON.stringify({
               classroom_id: classroomId,
             }),
-          }
+          },
         );
 
         if (!response.ok) {
@@ -125,7 +140,7 @@ export function ClassroomMaterialsSidebar({
           throw new Error(errorData.detail || "複製教材失敗");
         }
       }
-      
+
       toast.success("教材已成功加入班級");
       setSelectedProgramIds(new Set());
       await fetchClassroomPrograms();
@@ -156,7 +171,7 @@ export function ClassroomMaterialsSidebar({
     searchTerm
       ? program.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         program.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      : true
+      : true,
   );
 
   return (
@@ -173,7 +188,9 @@ export function ClassroomMaterialsSidebar({
           {/* 班級教材列表 */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-700">班級教材 ({classroomPrograms.length})</h3>
+              <h3 className="text-sm font-semibold text-gray-700">
+                班級教材 ({classroomPrograms.length})
+              </h3>
             </div>
             <ScrollArea className="h-[200px] border rounded-md p-3">
               {classroomPrograms.length === 0 ? (
@@ -189,12 +206,19 @@ export function ClassroomMaterialsSidebar({
                       className="flex items-center justify-between p-2 bg-gray-50 rounded"
                     >
                       <div className="flex-1">
-                        <div className="font-medium text-sm">{program.name}</div>
+                        <div className="font-medium text-sm">
+                          {program.name}
+                        </div>
                         {program.description && (
-                          <div className="text-xs text-gray-500 mt-1">{program.description}</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {program.description}
+                          </div>
                         )}
                       </div>
-                      <Badge variant={program.is_active ? "default" : "secondary"} className="ml-2">
+                      <Badge
+                        variant={program.is_active ? "default" : "secondary"}
+                        className="ml-2"
+                      >
                         {program.is_active ? "啟用" : "停用"}
                       </Badge>
                     </div>
@@ -253,9 +277,13 @@ export function ClassroomMaterialsSidebar({
                         }`}
                       >
                         <div className="flex-1">
-                          <div className="font-medium text-sm">{program.name}</div>
+                          <div className="font-medium text-sm">
+                            {program.name}
+                          </div>
                           {program.description && (
-                            <div className="text-xs text-gray-500 mt-1">{program.description}</div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {program.description}
+                            </div>
                           )}
                         </div>
                         {isSelected && (
@@ -276,4 +304,3 @@ export function ClassroomMaterialsSidebar({
     </Sheet>
   );
 }
-

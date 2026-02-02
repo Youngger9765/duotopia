@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { API_URL } from "@/config/api";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useProgramCopy } from "@/hooks/useProgramCopy";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,7 +73,7 @@ export function SchoolProgramCreateDialog({
           `${API_URL}/api/programs?scope=organization&organization_id=${organizationId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         );
         if (!response.ok) {
           throw new Error("Failed to load organization programs");
@@ -90,7 +95,7 @@ export function SchoolProgramCreateDialog({
     if (!search.trim()) return programs;
     const keyword = search.toLowerCase();
     return programs.filter((program) =>
-      program.name.toLowerCase().includes(keyword)
+      program.name.toLowerCase().includes(keyword),
     );
   }, [programs, search]);
 
@@ -149,17 +154,20 @@ export function SchoolProgramCreateDialog({
     setSaving(true);
     try {
       // 創建學校層級的教材（僅供此學校使用）
-      const response = await fetch(`${API_URL}/api/schools/${schoolId}/programs`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        `${API_URL}/api/schools/${schoolId}/programs`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: customName.trim(),
+            description: customDescription.trim() || undefined,
+          }),
         },
-        body: JSON.stringify({
-          name: customName.trim(),
-          description: customDescription.trim() || undefined,
-        }),
-      });
+      );
 
       if (!response.ok) {
         const err = await response.json();
@@ -218,7 +226,11 @@ export function SchoolProgramCreateDialog({
                 >
                   全選
                 </button>
-                <button type="button" className="text-gray-500" onClick={handleClear}>
+                <button
+                  type="button"
+                  className="text-gray-500"
+                  onClick={handleClear}
+                >
                   清除
                 </button>
               </div>
@@ -245,7 +257,9 @@ export function SchoolProgramCreateDialog({
                       onCheckedChange={() => toggleSelection(program.id)}
                     />
                     <div className="space-y-1">
-                      <div className="font-medium text-gray-900">{program.name}</div>
+                      <div className="font-medium text-gray-900">
+                        {program.name}
+                      </div>
                       {program.description && (
                         <div className="text-sm text-gray-500">
                           {program.description}
@@ -258,7 +272,11 @@ export function SchoolProgramCreateDialog({
             </div>
 
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={saving}
+              >
                 取消
               </Button>
               <Button onClick={handleCopy} disabled={saving || !selected.size}>
@@ -303,7 +321,11 @@ export function SchoolProgramCreateDialog({
               />
             </div>
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={saving}
+              >
                 取消
               </Button>
               <Button onClick={handleCreateCustom} disabled={saving}>

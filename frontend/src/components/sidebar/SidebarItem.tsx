@@ -49,7 +49,9 @@ export const SidebarItem = ({
                     <Eye className="h-3.5 w-3.5 text-slate-400 ml-2" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="text-xs">{t('workspace.permissions.readOnly')}</p>
+                    <p className="text-xs">
+                      {t("workspace.permissions.readOnly")}
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

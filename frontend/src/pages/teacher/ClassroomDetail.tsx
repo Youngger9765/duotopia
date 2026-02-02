@@ -84,7 +84,7 @@ export default function ClassroomDetail({
   const navigate = useNavigate();
   const location = useLocation();
   const { mode } = useWorkspace();
-  const isOrgMode = mode === 'organization';
+  const isOrgMode = mode === "organization";
   const [classroom, setClassroom] = useState<ClassroomInfo | null>(null);
   const [templateProgram, setTemplateProgram] = useState<Program | null>(null);
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -1051,10 +1051,7 @@ export default function ClassroomDetail({
         <p className="text-gray-500">
           {t("classroomDetail.messages.templateNotFound")}
         </p>
-        <Button
-          className="mt-4"
-          onClick={() => navigate("/teacher/programs")}
-        >
+        <Button className="mt-4" onClick={() => navigate("/teacher/programs")}>
           {t("classroomDetail.buttons.backToProgramList")}
         </Button>
       </div>

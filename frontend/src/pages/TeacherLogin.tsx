@@ -371,13 +371,17 @@ export default function TeacherLogin() {
                     type="button"
                     variant="outline"
                     className="w-full justify-start h-14 min-h-14 py-3"
-                    onClick={() => handleQuickLogin("liu@duotopia.com", "demo123")}
+                    onClick={() =>
+                      handleQuickLogin("liu@duotopia.com", "demo123")
+                    }
                     disabled={isLoading}
                   >
                     <Zap className="mr-2 h-4 w-4 text-purple-600 flex-shrink-0" />
                     <div className="flex-1 text-left">
                       <div className="font-medium">劉芳華（教師）</div>
-                      <div className="text-xs text-gray-500">liu@duotopia.com</div>
+                      <div className="text-xs text-gray-500">
+                        liu@duotopia.com
+                      </div>
                     </div>
                   </Button>
 
@@ -386,13 +390,17 @@ export default function TeacherLogin() {
                     type="button"
                     variant="outline"
                     className="w-full justify-start h-14 min-h-14 py-3"
-                    onClick={() => handleQuickLogin("zhang@duotopia.com", "demo123")}
+                    onClick={() =>
+                      handleQuickLogin("zhang@duotopia.com", "demo123")
+                    }
                     disabled={isLoading}
                   >
                     <Zap className="mr-2 h-4 w-4 text-amber-600 flex-shrink-0" />
                     <div className="flex-1 text-left">
                       <div className="font-medium">張志明（教師）</div>
-                      <div className="text-xs text-gray-500">zhang@duotopia.com</div>
+                      <div className="text-xs text-gray-500">
+                        zhang@duotopia.com
+                      </div>
                     </div>
                   </Button>
 

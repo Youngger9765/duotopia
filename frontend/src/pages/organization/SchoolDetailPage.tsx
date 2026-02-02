@@ -9,7 +9,15 @@ import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { SchoolEditDialog } from "@/components/organization/SchoolEditDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit2, School as SchoolIcon, Users, BookOpen, ArrowRight, GraduationCap, UserCheck } from "lucide-react";
+import {
+  Edit2,
+  School as SchoolIcon,
+  Users,
+  BookOpen,
+  ArrowRight,
+  GraduationCap,
+  UserCheck,
+} from "lucide-react";
 
 interface School {
   id: string;
@@ -312,7 +320,9 @@ export default function SchoolDetailPage() {
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
           <CardContent
             className="p-6"
-            onClick={() => navigate(`/organization/schools/${schoolId}/classrooms`)}
+            onClick={() =>
+              navigate(`/organization/schools/${schoolId}/classrooms`)
+            }
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -321,7 +331,9 @@ export default function SchoolDetailPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900">班級管理</h3>
-                  <p className="text-sm text-gray-500">{classrooms.length} 個班級</p>
+                  <p className="text-sm text-gray-500">
+                    {classrooms.length} 個班級
+                  </p>
                 </div>
               </div>
               <ArrowRight className="h-5 w-5 text-gray-400" />
@@ -332,7 +344,9 @@ export default function SchoolDetailPage() {
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
           <CardContent
             className="p-6"
-            onClick={() => navigate(`/organization/schools/${schoolId}/teachers`)}
+            onClick={() =>
+              navigate(`/organization/schools/${schoolId}/teachers`)
+            }
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -341,7 +355,9 @@ export default function SchoolDetailPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900">教師管理</h3>
-                  <p className="text-sm text-gray-500">{teachers.length} 位教師</p>
+                  <p className="text-sm text-gray-500">
+                    {teachers.length} 位教師
+                  </p>
                 </div>
               </div>
               <ArrowRight className="h-5 w-5 text-gray-400" />
@@ -352,7 +368,9 @@ export default function SchoolDetailPage() {
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
           <CardContent
             className="p-6"
-            onClick={() => navigate(`/organization/schools/${schoolId}/materials`)}
+            onClick={() =>
+              navigate(`/organization/schools/${schoolId}/materials`)
+            }
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -372,7 +390,9 @@ export default function SchoolDetailPage() {
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
           <CardContent
             className="p-6"
-            onClick={() => navigate(`/organization/schools/${schoolId}/students`)}
+            onClick={() =>
+              navigate(`/organization/schools/${schoolId}/students`)
+            }
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -397,7 +417,6 @@ export default function SchoolDetailPage() {
         onOpenChange={setEditDialogOpen}
         onSuccess={handleEditSuccess}
       />
-
     </div>
   );
 }

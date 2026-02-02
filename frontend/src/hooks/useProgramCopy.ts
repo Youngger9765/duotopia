@@ -21,7 +21,7 @@ export function useProgramCopy() {
     name,
   }: ProgramCopyRequest) => {
     const resolvedTargetId =
-      targetScope === "teacher" ? targetId ?? user?.id : targetId;
+      targetScope === "teacher" ? (targetId ?? user?.id) : targetId;
 
     if (!resolvedTargetId) {
       throw new Error("Missing targetId for copy");

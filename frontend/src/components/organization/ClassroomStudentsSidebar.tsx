@@ -43,7 +43,9 @@ export function ClassroomStudentsSidebar({
   const [availableStudents, setAvailableStudents] = useState<Student[]>([]);
   const [_loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<number>>(new Set());
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<number>>(
+    new Set(),
+  );
 
   useEffect(() => {
     if (open && classroomId && schoolId) {
@@ -56,25 +58,39 @@ export function ClassroomStudentsSidebar({
   const fetchClassroomStudents = async () => {
     try {
       setLoading(true);
-      const students = await apiClient.getClassroomStudents(schoolId, classroomId) as Student[];
+      const students = (await apiClient.getClassroomStudents(
+        schoolId,
+        classroomId,
+      )) as Student[];
       const classroomStudentsData = students || [];
       setClassroomStudents(classroomStudentsData);
       // 獲取班級學生後，立即更新可用學生列表
       await fetchAvailableStudents(classroomStudentsData);
     } catch (error) {
-      logError("Failed to fetch classroom students", error, { schoolId, classroomId });
+      logError("Failed to fetch classroom students", error, {
+        schoolId,
+        classroomId,
+      });
       toast.error("載入班級學生失敗");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchAvailableStudents = async (currentClassroomStudents: Student[] = classroomStudents) => {
+  const fetchAvailableStudents = async (
+    currentClassroomStudents: Student[] = classroomStudents,
+  ) => {
     try {
-      const students = await apiClient.getSchoolStudents(schoolId) as Student[];
+      const students = (await apiClient.getSchoolStudents(
+        schoolId,
+      )) as Student[];
       // 過濾掉已經在班級中的學生
-      const currentClassroomStudentIds = new Set(currentClassroomStudents.map((s) => s.id));
-      const available = (students || []).filter((s: Student) => !currentClassroomStudentIds.has(s.id));
+      const currentClassroomStudentIds = new Set(
+        currentClassroomStudents.map((s) => s.id),
+      );
+      const available = (students || []).filter(
+        (s: Student) => !currentClassroomStudentIds.has(s.id),
+      );
       setAvailableStudents(available);
     } catch (error) {
       logError("Failed to fetch available students", error, { schoolId });
@@ -92,7 +108,7 @@ export function ClassroomStudentsSidebar({
       await apiClient.batchAddStudentsToClassroom(
         schoolId,
         classroomId,
-        Array.from(selectedStudentIds)
+        Array.from(selectedStudentIds),
       );
       toast.success("學生已成功加入班級");
       setSelectedStudentIds(new Set());
@@ -110,7 +126,11 @@ export function ClassroomStudentsSidebar({
 
   const handleRemoveStudent = async (studentId: number) => {
     try {
-      await apiClient.removeStudentFromClassroom(schoolId, studentId, classroomId);
+      await apiClient.removeStudentFromClassroom(
+        schoolId,
+        studentId,
+        classroomId,
+      );
       toast.success("學生已從班級移除");
       await fetchClassroomStudents();
       onSuccess?.();
@@ -141,7 +161,7 @@ export function ClassroomStudentsSidebar({
       ? student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.student_number?.toLowerCase().includes(searchTerm.toLowerCase())
-      : true
+      : true,
   );
 
   return (
@@ -158,7 +178,9 @@ export function ClassroomStudentsSidebar({
           {/* 班級學生列表 */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-700">班級學生 ({classroomStudents.length})</h3>
+              <h3 className="text-sm font-semibold text-gray-700">
+                班級學生 ({classroomStudents.length})
+              </h3>
             </div>
             <ScrollArea className="h-[200px] border rounded-md p-3">
               {classroomStudents.length === 0 ? (
@@ -174,9 +196,12 @@ export function ClassroomStudentsSidebar({
                       className="flex items-center justify-between p-2 bg-gray-50 rounded hover:bg-gray-100"
                     >
                       <div>
-                        <div className="font-medium text-sm">{student.name}</div>
+                        <div className="font-medium text-sm">
+                          {student.name}
+                        </div>
                         <div className="text-xs text-gray-500">
-                          {student.student_number && `${student.student_number} • `}
+                          {student.student_number &&
+                            `${student.student_number} • `}
                           {student.email || "無 Email"}
                         </div>
                       </div>
@@ -244,9 +269,12 @@ export function ClassroomStudentsSidebar({
                         }`}
                       >
                         <div>
-                          <div className="font-medium text-sm">{student.name}</div>
+                          <div className="font-medium text-sm">
+                            {student.name}
+                          </div>
                           <div className="text-xs text-gray-500">
-                            {student.student_number && `${student.student_number} • `}
+                            {student.student_number &&
+                              `${student.student_number} • `}
                             {student.email || "無 Email"}
                           </div>
                         </div>
@@ -267,4 +295,3 @@ export function ClassroomStudentsSidebar({
     </Sheet>
   );
 }
-

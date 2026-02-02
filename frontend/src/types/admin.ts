@@ -12,7 +12,7 @@ export interface AdminOrganizationCreateRequest {
   contact_phone?: string;
   address?: string;
   owner_email: string;
-  project_staff_emails?: string[];  // NEW
+  project_staff_emails?: string[]; // NEW
 }
 
 export interface AdminOrganizationCreateResponse {
@@ -20,7 +20,7 @@ export interface AdminOrganizationCreateResponse {
   organization_name: string;
   owner_email: string;
   owner_id: number;
-  project_staff_assigned?: string[];  // NEW
+  project_staff_assigned?: string[]; // NEW
   message: string;
 }
 

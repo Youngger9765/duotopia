@@ -26,7 +26,9 @@ export default function TeachersPage() {
   const [teachers, setTeachers] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [organization, setOrganization] = useState<{ name: string } | null>(null);
+  const [organization, setOrganization] = useState<{ name: string } | null>(
+    null,
+  );
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   const effectiveOrgId =
@@ -37,15 +39,18 @@ export default function TeachersPage() {
     const fetchOrg = async () => {
       if (!effectiveOrgId || !token) return;
       try {
-        const res = await fetch(`${API_URL}/api/organizations/${effectiveOrgId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await fetch(
+          `${API_URL}/api/organizations/${effectiveOrgId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         if (res.ok) {
           const data = await res.json();
           setOrganization(data);
         }
       } catch (error) {
-        console.error('Failed to fetch organization:', error);
+        console.error("Failed to fetch organization:", error);
       }
     };
     if (effectiveOrgId && token) {
@@ -103,11 +108,16 @@ export default function TeachersPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb items={[
-        { label: "組織管理" },
-        { label: organization?.name || "...", href: `/organization/${orgId}` },
-        { label: "人員管理" }
-      ]} />
+      <Breadcrumb
+        items={[
+          { label: "組織管理" },
+          {
+            label: organization?.name || "...",
+            href: `/organization/${orgId}`,
+          },
+          { label: "人員管理" },
+        ]}
+      />
 
       {/* Header */}
       <div className="flex items-center justify-between">
