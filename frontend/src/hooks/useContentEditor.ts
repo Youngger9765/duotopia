@@ -18,6 +18,15 @@ export function useContentEditor() {
     number | null
   >(null);
 
+  // Vocabulary Set Editor
+  const [showVocabularySetEditor, setShowVocabularySetEditor] = useState(false);
+  const [vocabularySetLessonId, setVocabularySetLessonId] = useState<
+    number | null
+  >(null);
+  const [vocabularySetContentId, setVocabularySetContentId] = useState<
+    number | null
+  >(null);
+
   const openContentEditor = (
     content: Content & {
       lessonName?: string;
@@ -35,13 +44,14 @@ export function useContentEditor() {
       setEditorLessonId(content.lesson_id || null);
       setEditorContentId(content.id);
       setShowReadingEditor(true);
-    } else if (
-      contentType === "sentence_making" ||
-      contentType === "vocabulary_set"
-    ) {
+    } else if (contentType === "sentence_making") {
       setSentenceMakingLessonId(content.lesson_id || null);
       setSentenceMakingContentId(content.id);
       setShowSentenceMakingEditor(true);
+    } else if (contentType === "vocabulary_set") {
+      setVocabularySetLessonId(content.lesson_id || null);
+      setVocabularySetContentId(content.id);
+      setShowVocabularySetEditor(true);
     }
   };
 
@@ -58,6 +68,12 @@ export function useContentEditor() {
     setShowSentenceMakingEditor(true);
   };
 
+  const openVocabularySetCreateEditor = (lessonId: number) => {
+    setVocabularySetLessonId(lessonId);
+    setVocabularySetContentId(null);
+    setShowVocabularySetEditor(true);
+  };
+
   const closeReadingEditor = () => {
     setShowReadingEditor(false);
     setEditorLessonId(null);
@@ -69,6 +85,12 @@ export function useContentEditor() {
     setShowSentenceMakingEditor(false);
     setSentenceMakingLessonId(null);
     setSentenceMakingContentId(null);
+  };
+
+  const closeVocabularySetEditor = () => {
+    setShowVocabularySetEditor(false);
+    setVocabularySetLessonId(null);
+    setVocabularySetContentId(null);
   };
 
   return {
@@ -83,11 +105,18 @@ export function useContentEditor() {
     sentenceMakingLessonId,
     sentenceMakingContentId,
 
+    // Vocabulary Set Editor State
+    showVocabularySetEditor,
+    vocabularySetLessonId,
+    vocabularySetContentId,
+
     // Actions
     openContentEditor,
     openReadingCreateEditor,
     openSentenceMakingCreateEditor,
+    openVocabularySetCreateEditor,
     closeReadingEditor,
     closeSentenceMakingEditor,
+    closeVocabularySetEditor,
   };
 }

@@ -3,6 +3,7 @@ import { RecursiveTreeAccordion } from "./RecursiveTreeAccordion";
 import { programTreeConfig } from "./programTreeConfig";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
 import SentenceMakingPanel from "@/components/activities/SentenceMakingActivity";
+import VocabularySetPanel from "@/components/VocabularySetPanel";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
 import {
   ProgramTreeLesson,
@@ -168,11 +169,16 @@ export function ProgramTreeView({
     showSentenceMakingEditor,
     sentenceMakingLessonId,
     sentenceMakingContentId,
+    showVocabularySetEditor,
+    vocabularySetLessonId,
+    vocabularySetContentId,
     openContentEditor,
     openReadingCreateEditor,
     openSentenceMakingCreateEditor,
+    openVocabularySetCreateEditor,
     closeReadingEditor,
     closeSentenceMakingEditor,
+    closeVocabularySetEditor,
   } = useContentEditor();
 
   const [showContentTypeDialog, setShowContentTypeDialog] = useState(false);
@@ -879,6 +885,84 @@ export function ProgramTreeView({
           </>
         )}
 
+      {/* Vocabulary Set Modal - Create Mode */}
+      {showVocabularySetEditor &&
+        vocabularySetLessonId &&
+        vocabularySetContentId === null && (
+          <Dialog
+            open={true}
+            onOpenChange={() => closeVocabularySetEditor()}
+          >
+            <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>新增單字集</DialogTitle>
+              </DialogHeader>
+              <VocabularySetPanel
+                lessonId={vocabularySetLessonId}
+                isCreating={true}
+                onSave={async () => {
+                  closeVocabularySetEditor();
+                  toast.success("內容已儲存");
+                  if (onRefresh) onRefresh();
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+
+      {/* Vocabulary Set Panel - Edit Mode */}
+      {showVocabularySetEditor &&
+        vocabularySetLessonId &&
+        vocabularySetContentId !== null && (
+          <>
+            <div
+              className="fixed inset-0 bg-black bg-opacity-20 z-40 transition-opacity"
+              onClick={closeVocabularySetEditor}
+            />
+            <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  編輯單字集
+                </h2>
+                <button
+                  onClick={closeVocabularySetEditor}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+              {/* Content */}
+              <div className="flex-1 overflow-hidden flex flex-col">
+                <div className="flex-1 overflow-auto p-6 min-h-0">
+                  <VocabularySetPanel
+                    lessonId={vocabularySetLessonId}
+                    contentId={vocabularySetContentId}
+                    isCreating={false}
+                    onSave={async () => {
+                      closeVocabularySetEditor();
+                      toast.success("內容已儲存");
+                      if (onRefresh) onRefresh();
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
       {contentLessonInfo && (
         <ContentTypeDialog
           open={showContentTypeDialog}
@@ -899,11 +983,14 @@ export function ProgramTreeView({
               openReadingCreateEditor(selection.lessonId);
             } else if (
               selection.type === "SENTENCE_MAKING" ||
-              selection.type === "sentence_making" ||
+              selection.type === "sentence_making"
+            ) {
+              openSentenceMakingCreateEditor(selection.lessonId);
+            } else if (
               selection.type === "vocabulary_set" ||
               selection.type === "VOCABULARY_SET"
             ) {
-              openSentenceMakingCreateEditor(selection.lessonId);
+              openVocabularySetCreateEditor(selection.lessonId);
             } else {
               toast.info("此內容類型仍在開發中");
             }
