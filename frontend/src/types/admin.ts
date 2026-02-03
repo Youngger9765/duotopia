@@ -13,6 +13,9 @@ export interface AdminOrganizationCreateRequest {
   address?: string;
   owner_email: string;
   project_staff_emails?: string[]; // NEW
+  total_points?: number;
+  subscription_start_date?: string;
+  subscription_end_date?: string;
 }
 
 export interface AdminOrganizationCreateResponse {
@@ -59,6 +62,8 @@ export interface OrganizationListItem {
   remaining_points: number;
   is_active: boolean;
   created_at: string;
+  subscription_start_date: string | null;
+  subscription_end_date: string | null;
 }
 
 // Organization list response with pagination
@@ -79,6 +84,8 @@ export interface AdminOrganizationUpdateRequest {
   contact_phone?: string;
   address?: string;
   total_points?: number;
+  subscription_start_date?: string;
+  subscription_end_date?: string;
 }
 
 // Admin organization update response

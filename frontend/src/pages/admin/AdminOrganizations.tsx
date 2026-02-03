@@ -72,6 +72,8 @@ export default function AdminOrganizations() {
     contact_phone: "",
     address: "",
     total_points: "",
+    subscription_start_date: "",
+    subscription_end_date: "",
   });
 
   // Validation errors
@@ -156,6 +158,8 @@ export default function AdminOrganizations() {
       contact_phone: org.contact_phone || "",
       address: org.address || "",
       total_points: org.total_points.toString(),
+      subscription_start_date: org.subscription_start_date ? org.subscription_start_date.split('T')[0] : "",
+      subscription_end_date: org.subscription_end_date ? org.subscription_end_date.split('T')[0] : "",
     });
     setFormErrors({});
     setIsEditDialogOpen(true);
@@ -242,6 +246,12 @@ export default function AdminOrganizations() {
       }
       if (formData.address) {
         updateData.address = formData.address;
+      }
+      if (formData.subscription_start_date) {
+        updateData.subscription_start_date = formData.subscription_start_date;
+      }
+      if (formData.subscription_end_date) {
+        updateData.subscription_end_date = formData.subscription_end_date;
       }
       if (formData.total_points && Number(formData.total_points) !== selectedOrg.total_points) {
         updateData.total_points = Number(formData.total_points);
@@ -360,6 +370,7 @@ export default function AdminOrganizations() {
                       <TableHead className="font-semibold text-center">點數</TableHead>
                       <TableHead className="font-semibold text-center">狀態</TableHead>
                       <TableHead className="font-semibold text-center">創建日期</TableHead>
+                      <TableHead className="font-semibold text-center">訂閱到期</TableHead>
                       <TableHead className="font-semibold text-center">操作</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -440,6 +451,21 @@ export default function AdminOrganizations() {
                           {/* Created Date */}
                           <TableCell className="text-center text-sm text-gray-600">
                             {formatDate(org.created_at)}
+                          </TableCell>
+
+                          {/* Subscription End Date */}
+                          <TableCell className="text-center text-sm">
+                            {org.subscription_end_date ? (
+                              <span className={
+                                new Date(org.subscription_end_date) < new Date()
+                                  ? "text-red-600 font-semibold"
+                                  : "text-gray-600"
+                              }>
+                                {formatDate(org.subscription_end_date)}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">未設定</span>
+                            )}
                           </TableCell>
 
                           {/* Actions */}
@@ -621,6 +647,28 @@ export default function AdminOrganizations() {
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       placeholder="組織地址"
+                    />
+                  </div>
+
+                  {/* Subscription Start Date */}
+                  <div className="space-y-2">
+                    <Label htmlFor="subscription_start_date">訂閱開始時間</Label>
+                    <Input
+                      id="subscription_start_date"
+                      type="date"
+                      value={formData.subscription_start_date}
+                      onChange={(e) => setFormData({ ...formData, subscription_start_date: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Subscription End Date */}
+                  <div className="space-y-2">
+                    <Label htmlFor="subscription_end_date">訂閱結束時間</Label>
+                    <Input
+                      id="subscription_end_date"
+                      type="date"
+                      value={formData.subscription_end_date}
+                      onChange={(e) => setFormData({ ...formData, subscription_end_date: e.target.value })}
                     />
                   </div>
                 </div>
