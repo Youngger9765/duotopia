@@ -1244,6 +1244,45 @@ class ApiClient {
       onRetry,
     );
   }
+
+  // ============ Admin Organization Methods ============
+  async listOrganizations(params?: {
+    limit?: number;
+    offset?: number;
+    search?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.limit !== undefined)
+      queryParams.append("limit", params.limit.toString());
+    if (params?.offset !== undefined)
+      queryParams.append("offset", params.offset.toString());
+    if (params?.search) queryParams.append("search", params.search);
+
+    const queryString = queryParams.toString();
+    const url = `/api/admin/organizations${queryString ? `?${queryString}` : ""}`;
+    return this.request(url, {
+      method: "GET",
+    });
+  }
+
+  async updateOrganization(
+    orgId: string,
+    data: {
+      display_name?: string;
+      description?: string;
+      tax_id?: string;
+      teacher_limit?: number;
+      contact_email?: string;
+      contact_phone?: string;
+      address?: string;
+      total_points?: number;
+    },
+  ) {
+    return this.request(`/api/admin/organizations/${orgId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 // Export singleton instance

@@ -39,3 +39,47 @@ export interface OrganizationStatisticsResponse {
   teacher_limit: number | null;
   usage_percentage: number;
 }
+
+// Organization list item (for admin list view)
+export interface OrganizationListItem {
+  id: string;
+  name: string;
+  display_name: string | null;
+  owner_email: string;
+  owner_name: string | null;
+  teacher_count: number;
+  teacher_limit: number | null;
+  total_points: number;
+  used_points: number;
+  remaining_points: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+// Organization list response with pagination
+export interface OrganizationListResponse {
+  items: OrganizationListItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+// Admin organization update request
+export interface AdminOrganizationUpdateRequest {
+  display_name?: string;
+  description?: string;
+  tax_id?: string;
+  teacher_limit?: number;
+  contact_email?: string;
+  contact_phone?: string;
+  address?: string;
+  total_points?: number;
+}
+
+// Admin organization update response
+export interface AdminOrganizationUpdateResponse {
+  organization_id: string;
+  message: string;
+  points_adjusted: boolean;
+  points_change: number | null;
+}
