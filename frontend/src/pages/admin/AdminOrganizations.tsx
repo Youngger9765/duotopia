@@ -149,12 +149,12 @@ export default function AdminOrganizations() {
     setSelectedOrg(org);
     setFormData({
       display_name: org.display_name || "",
-      description: "", // Will be fetched from full org data if needed
-      tax_id: "", // Will be fetched from full org data if needed
+      description: org.description || "",
+      tax_id: org.tax_id || "",
       teacher_limit: org.teacher_limit?.toString() || "",
-      contact_email: "", // Will be fetched from full org data if needed
-      contact_phone: "", // Will be fetched from full org data if needed
-      address: "", // Will be fetched from full org data if needed
+      contact_email: org.contact_email || "",
+      contact_phone: org.contact_phone || "",
+      address: org.address || "",
       total_points: org.total_points.toString(),
     });
     setFormErrors({});

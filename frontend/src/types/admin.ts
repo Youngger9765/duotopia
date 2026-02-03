@@ -45,6 +45,11 @@ export interface OrganizationListItem {
   id: string;
   name: string;
   display_name: string | null;
+  description: string | null;
+  tax_id: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  address: string | null;
   owner_email: string;
   owner_name: string | null;
   teacher_count: number;

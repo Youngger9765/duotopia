@@ -124,6 +124,11 @@ class OrganizationListItem(BaseModel):
     id: str
     name: str
     display_name: Optional[str] = None
+    description: Optional[str] = None
+    tax_id: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    address: Optional[str] = None
     owner_email: str
     owner_name: Optional[str] = None
     teacher_count: int
