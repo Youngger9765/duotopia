@@ -572,3 +572,47 @@ def test_create_organization_duplicate_staff_emails(
     assert response.status_code == 400
     assert "duplicate" in response.json()["detail"].lower()
     assert "staff@duotopia.com" in response.json()["detail"]
+
+
+# ============ List Organizations Tests ============
+def test_list_organizations_requires_admin(auth_headers_regular, test_client):
+    """Non-admin should get 403"""
+    response = test_client.get(
+        "/api/admin/organizations",
+        headers=auth_headers_regular,
+    )
+    assert response.status_code == 403
+
+
+def test_list_organizations_success(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Admin can list organizations"""
+    # Create a test organization
+    test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={
+            "name": "Test Org List",
+            "owner_email": regular_teacher.email,
+            "total_points": 10000,
+        },
+    )
+
+    response = test_client.get(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "items" in data
+    assert "total" in data
+    assert data["total"] >= 1
+
+    # Check first org has required fields
+    org = data["items"][0]
+    assert "id" in org
+    assert "name" in org
+    assert "owner_email" in org
+    assert "total_points" in org
+    assert "remaining_points" in org

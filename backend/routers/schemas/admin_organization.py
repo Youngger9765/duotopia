@@ -116,3 +116,29 @@ class TeacherLookupResponse(BaseModel):
                 "email_verified": True,
             }
         }
+
+
+class OrganizationListItem(BaseModel):
+    """Organization list item for admin table"""
+
+    id: str
+    name: str
+    display_name: Optional[str] = None
+    owner_email: str
+    owner_name: Optional[str] = None
+    teacher_count: int
+    teacher_limit: Optional[int] = None
+    total_points: int
+    used_points: int
+    remaining_points: int
+    is_active: bool
+    created_at: str
+
+
+class OrganizationListResponse(BaseModel):
+    """Paginated organization list"""
+
+    items: list[OrganizationListItem]
+    total: int
+    limit: int
+    offset: int

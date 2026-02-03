@@ -38,6 +38,8 @@ from routers.schemas.admin_organization import (
     AdminOrganizationResponse,
     OrganizationStatisticsResponse,
     TeacherLookupResponse,
+    OrganizationListResponse,
+    OrganizationListItem,
 )
 import os
 import subprocess
@@ -936,6 +938,102 @@ async def get_organization_statistics(
         teacher_limit=org.teacher_limit,
         usage_percentage=round(usage_percentage, 1),
     )
+
+
+@router.get(
+    "/organizations",
+    response_model=OrganizationListResponse,
+    summary="List all organizations (Admin only)",
+)
+async def list_organizations(
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    search: Optional[str] = Query(None, description="Search by name or owner email"),
+    current_admin: Teacher = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    List all organizations with pagination and search.
+
+    **Admin only endpoint.**
+
+    Returns:
+    - Paginated list of organizations
+    - Each item includes owner info, teacher count, points balance
+    """
+    # Base query
+    query = db.query(Organization)
+
+    # Apply search filter
+    if search:
+        # Join with TeacherOrganization to search by owner email
+        query = (
+            query.outerjoin(
+                TeacherOrganization,
+                (TeacherOrganization.organization_id == Organization.id)
+                & (TeacherOrganization.role == "org_owner"),
+            )
+            .outerjoin(Teacher, Teacher.id == TeacherOrganization.teacher_id)
+            .filter(
+                or_(
+                    Organization.name.ilike(f"%{search}%"),
+                    Organization.display_name.ilike(f"%{search}%"),
+                    Teacher.email.ilike(f"%{search}%"),
+                )
+            )
+        )
+
+    # Get total count
+    total = query.count()
+
+    # Get paginated results
+    orgs = query.order_by(Organization.created_at.desc()).offset(offset).limit(limit).all()
+
+    # Build response items
+    items = []
+    for org in orgs:
+        # Get owner info
+        owner_rel = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.organization_id == org.id,
+                TeacherOrganization.role == "org_owner",
+            )
+            .first()
+        )
+
+        owner = None
+        if owner_rel:
+            owner = db.query(Teacher).filter(Teacher.id == owner_rel.teacher_id).first()
+
+        # Count active teachers
+        teacher_count = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.organization_id == org.id,
+                TeacherOrganization.is_active.is_(True),
+            )
+            .count()
+        )
+
+        items.append(
+            {
+                "id": str(org.id),
+                "name": org.name,
+                "display_name": org.display_name,
+                "owner_email": owner.email if owner else "Unknown",
+                "owner_name": owner.name if owner else None,
+                "teacher_count": teacher_count,
+                "teacher_limit": org.teacher_limit,
+                "total_points": org.total_points or 0,
+                "used_points": org.used_points or 0,
+                "remaining_points": (org.total_points or 0) - (org.used_points or 0),
+                "is_active": org.is_active,
+                "created_at": org.created_at.isoformat() if org.created_at else "",
+            }
+        )
+
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
 @router.get(
