@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { PointsHistory, PointsLogItem } from '../types/points';
 import { API_URL } from '../config/api';
+import { useTeacherAuthStore } from '../stores/teacherAuthStore';
 
 interface Props {
   organizationId: string;
 }
 
 export const OrganizationPointsHistory: React.FC<Props> = ({ organizationId }) => {
+  const token = useTeacherAuthStore((state) => state.token);
   const [history, setHistory] = useState<PointsHistory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +19,6 @@ export const OrganizationPointsHistory: React.FC<Props> = ({ organizationId }) =
     const fetchHistory = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('access_token');
         const offset = page * limit;
 
         const response = await fetch(
@@ -43,7 +44,7 @@ export const OrganizationPointsHistory: React.FC<Props> = ({ organizationId }) =
     };
 
     fetchHistory();
-  }, [organizationId, page]);
+  }, [organizationId, page, token]);
 
   if (loading) {
     return <div className="animate-pulse">Loading history...</div>;

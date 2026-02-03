@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { PointsBalance } from '../types/points';
 import { API_URL } from '../config/api';
+import { useTeacherAuthStore } from '../stores/teacherAuthStore';
 
 interface Props {
   organizationId: string;
 }
 
 export const OrganizationPointsBalance: React.FC<Props> = ({ organizationId }) => {
+  const token = useTeacherAuthStore((state) => state.token);
   const [balance, setBalance] = useState<PointsBalance | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +16,6 @@ export const OrganizationPointsBalance: React.FC<Props> = ({ organizationId }) =
   useEffect(() => {
     const fetchBalance = async () => {
       try {
-        const token = localStorage.getItem('access_token');
         const response = await fetch(
           `${API_URL}/api/organizations/${organizationId}/points`,
           {
@@ -38,7 +39,7 @@ export const OrganizationPointsBalance: React.FC<Props> = ({ organizationId }) =
     };
 
     fetchBalance();
-  }, [organizationId]);
+  }, [organizationId, token]);
 
   if (loading) {
     return <div className="animate-pulse">Loading points balance...</div>;
