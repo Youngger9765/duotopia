@@ -989,51 +989,65 @@ async def list_organizations(
     # Get paginated results
     orgs = query.order_by(Organization.created_at.desc()).offset(offset).limit(limit).all()
 
-    # Build response items
+    # Bulk fetch owner relationships for all organizations
+    org_ids = [org.id for org in orgs]
+
+    owner_rels = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.organization_id.in_(org_ids),
+            TeacherOrganization.role == "org_owner",
+        )
+        .all()
+    )
+
+    # Build owner_id map
+    owner_id_map = {rel.organization_id: rel.teacher_id for rel in owner_rels}
+
+    # Bulk fetch all owners
+    owner_ids = list(owner_id_map.values())
+    owners = db.query(Teacher).filter(Teacher.id.in_(owner_ids)).all() if owner_ids else []
+    owner_map = {owner.id: owner for owner in owners}
+
+    # Bulk fetch teacher counts
+    teacher_counts = (
+        db.query(
+            TeacherOrganization.organization_id,
+            func.count(TeacherOrganization.id).label('count')
+        )
+        .filter(
+            TeacherOrganization.organization_id.in_(org_ids),
+            TeacherOrganization.is_active.is_(True),
+        )
+        .group_by(TeacherOrganization.organization_id)
+        .all()
+    )
+    teacher_count_map = {org_id: count for org_id, count in teacher_counts}
+
+    # Build response items (NO MORE QUERIES IN LOOP)
     items = []
     for org in orgs:
-        # Get owner info
-        owner_rel = (
-            db.query(TeacherOrganization)
-            .filter(
-                TeacherOrganization.organization_id == org.id,
-                TeacherOrganization.role == "org_owner",
-            )
-            .first()
-        )
-
-        owner = None
-        if owner_rel:
-            owner = db.query(Teacher).filter(Teacher.id == owner_rel.teacher_id).first()
-
-        # Count active teachers
-        teacher_count = (
-            db.query(TeacherOrganization)
-            .filter(
-                TeacherOrganization.organization_id == org.id,
-                TeacherOrganization.is_active.is_(True),
-            )
-            .count()
-        )
+        owner_id = owner_id_map.get(org.id)
+        owner = owner_map.get(owner_id) if owner_id else None
 
         items.append(
-            {
-                "id": str(org.id),
-                "name": org.name,
-                "display_name": org.display_name,
-                "owner_email": owner.email if owner else "Unknown",
-                "owner_name": owner.name if owner else None,
-                "teacher_count": teacher_count,
-                "teacher_limit": org.teacher_limit,
-                "total_points": org.total_points or 0,
-                "used_points": org.used_points or 0,
-                "remaining_points": (org.total_points or 0) - (org.used_points or 0),
-                "is_active": org.is_active,
-                "created_at": org.created_at.isoformat() if org.created_at else "",
-            }
+            OrganizationListItem(
+                id=str(org.id),
+                name=org.name,
+                display_name=org.display_name,
+                owner_email=owner.email if owner else "Unknown",
+                owner_name=owner.name if owner else None,
+                teacher_count=teacher_count_map.get(org.id, 0),
+                teacher_limit=org.teacher_limit,
+                total_points=org.total_points or 0,
+                used_points=org.used_points or 0,
+                remaining_points=(org.total_points or 0) - (org.used_points or 0),
+                is_active=org.is_active,
+                created_at=org.created_at.isoformat() if org.created_at else "",
+            )
         )
 
-    return {"items": items, "total": total, "limit": limit, "offset": offset}
+    return OrganizationListResponse(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.get(
