@@ -889,10 +889,7 @@ export function ProgramTreeView({
       {showVocabularySetEditor &&
         vocabularySetLessonId &&
         vocabularySetContentId === null && (
-          <Dialog
-            open={true}
-            onOpenChange={() => closeVocabularySetEditor()}
-          >
+          <Dialog open={true} onOpenChange={() => closeVocabularySetEditor()}>
             <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>新增單字集</DialogTitle>
