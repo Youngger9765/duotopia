@@ -129,6 +129,13 @@ def upgrade():
     """
     )
 
+    # Enable RLS on organization_points_log table (security requirement)
+    op.execute(
+        """
+        ALTER TABLE organization_points_log ENABLE ROW LEVEL SECURITY;
+    """
+    )
+
 
 def downgrade():
     """
