@@ -142,3 +142,23 @@ class OrganizationListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class AdminOrganizationUpdate(BaseModel):
+    """Update organization request (admin only)"""
+    display_name: Optional[str] = None
+    description: Optional[str] = None
+    tax_id: Optional[str] = None
+    teacher_limit: Optional[int] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    address: Optional[str] = None
+    total_points: Optional[int] = None  # Can adjust points allocation
+
+
+class AdminOrganizationUpdateResponse(BaseModel):
+    """Update organization response"""
+    organization_id: str
+    message: str
+    points_adjusted: bool = False
+    points_change: Optional[int] = None

@@ -40,6 +40,8 @@ from routers.schemas.admin_organization import (
     TeacherLookupResponse,
     OrganizationListResponse,
     OrganizationListItem,
+    AdminOrganizationUpdate,
+    AdminOrganizationUpdateResponse,
 )
 import os
 import subprocess
@@ -1048,6 +1050,66 @@ async def list_organizations(
         )
 
     return OrganizationListResponse(items=items, total=total, limit=limit, offset=offset)
+
+
+@router.put(
+    "/organizations/{org_id}",
+    response_model=AdminOrganizationUpdateResponse,
+    summary="Update organization (Admin only)",
+)
+async def update_organization(
+    org_id: str,
+    org_update: AdminOrganizationUpdate,
+    current_admin: Teacher = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Update organization details and/or adjust points allocation.
+
+    **Admin only endpoint.**
+
+    Can update:
+    - Basic info (display_name, description, contact info)
+    - Teacher limit
+    - Total points allocation (does not affect used_points)
+
+    Returns update confirmation with points change details.
+    """
+    # Validate organization exists
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+
+    if not org:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Organization with ID {org_id} not found",
+        )
+
+    # Track points changes
+    points_adjusted = False
+    points_change = None
+    old_total_points = org.total_points or 0
+
+    # Update fields if provided
+    update_data = org_update.dict(exclude_unset=True)
+
+    for field, value in update_data.items():
+        if field == "total_points":
+            if value != old_total_points:
+                points_adjusted = True
+                points_change = value - old_total_points
+                org.last_points_update = datetime.now(timezone.utc)
+
+        setattr(org, field, value)
+
+    db.commit()
+    db.refresh(org)
+
+    return AdminOrganizationUpdateResponse(
+        organization_id=str(org.id),
+        message=f"Organization updated successfully",
+        points_adjusted=points_adjusted,
+        points_change=points_change,
+    )
 
 
 @router.get(
