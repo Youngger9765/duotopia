@@ -1,7 +1,7 @@
 """Add organization points system
 
 Revision ID: 20260203_0143
-Revises: 20260128_fix_auto_graded_historical_data
+Revises: 549b3ef65c5e
 Create Date: 2026-02-03 01:43:00
 
 Adds:
@@ -15,7 +15,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "20260203_0143"
-down_revision = "20260128_fix_auto_graded_historical_data"
+down_revision = "549b3ef65c5e"
 branch_labels = None
 depends_on = None
 
