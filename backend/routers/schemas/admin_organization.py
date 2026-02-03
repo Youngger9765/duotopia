@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional, List
+from datetime import datetime
 
 
 class AdminOrganizationCreate(BaseModel):
@@ -30,6 +31,10 @@ class AdminOrganizationCreate(BaseModel):
     # Points allocation
     total_points: int = Field(default=0, ge=0, description="組織總點數配額")
 
+    # Subscription dates
+    subscription_start_date: Optional[datetime] = Field(None, description="訂閱開始時間")
+    subscription_end_date: Optional[datetime] = Field(None, description="訂閱結束時間")
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -44,6 +49,8 @@ class AdminOrganizationCreate(BaseModel):
                 "owner_email": "wang@abc.edu.tw",
                 "project_staff_emails": ["staff@duotopia.com"],
                 "total_points": 10000,
+                "subscription_start_date": "2026-01-01T00:00:00Z",
+                "subscription_end_date": "2026-12-31T23:59:59Z",
             }
         }
 
@@ -138,6 +145,8 @@ class OrganizationListItem(BaseModel):
     remaining_points: int
     is_active: bool
     created_at: str
+    subscription_start_date: Optional[str] = None
+    subscription_end_date: Optional[str] = None
 
 
 class OrganizationListResponse(BaseModel):
@@ -159,6 +168,8 @@ class AdminOrganizationUpdate(BaseModel):
     contact_phone: Optional[str] = None
     address: Optional[str] = None
     total_points: Optional[int] = None  # Can adjust points allocation
+    subscription_start_date: Optional[datetime] = None
+    subscription_end_date: Optional[datetime] = None
 
 
 class AdminOrganizationUpdateResponse(BaseModel):

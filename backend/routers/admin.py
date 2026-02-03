@@ -817,6 +817,8 @@ async def create_organization_as_admin(
         total_points=org_data.total_points,
         used_points=0,
         last_points_update=datetime.now(timezone.utc) if org_data.total_points > 0 else None,
+        subscription_start_date=org_data.subscription_start_date,
+        subscription_end_date=org_data.subscription_end_date,
     )
 
     db.add(new_org)
@@ -1051,6 +1053,8 @@ async def list_organizations(
                 remaining_points=(org.total_points or 0) - (org.used_points or 0),
                 is_active=org.is_active,
                 created_at=org.created_at.isoformat() if org.created_at else "",
+                subscription_start_date=org.subscription_start_date.isoformat() if org.subscription_start_date else None,
+                subscription_end_date=org.subscription_end_date.isoformat() if org.subscription_end_date else None,
             )
         )
 
