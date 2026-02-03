@@ -1,8 +1,8 @@
 # TODO - Duotopia Project Tasks
 
-**Last Updated**: 2026-01-26
-**Current Branch**: `feat/issue-112-org-hierarchy`
-**Focus**: Teacher Workspace Switcher - 個人/機構工作區切換器設計
+**Last Updated**: 2026-02-03
+**Current Branch**: `feat/issue-198-migration`
+**Focus**: Organization Points System - Admin Organization CRUD (Phase 5 Complete)
 
 ---
 
@@ -67,16 +67,32 @@ Sidebar 頂部
 
 ## 🚧 In Progress / Next Up
 
-### Issue #198 - Organization Points System 驗證 🔴 URGENT
+### Issue #198 - Organization Points System ✅ COMPLETE
 
-**狀態**: ✅ Phase 4 已實作，✅ 基礎驗證完成，⏰ 完整驗證待案主測試
+**狀態**: ✅ Phase 1-5 已實作完成，⏰ 等待案主測試驗收
 
 **完成內容**:
+
+**Phase 1-4 (Points System)**:
 - ✅ Backend API (3 endpoints): GET points, POST deduct, GET history
 - ✅ Frontend Components: OrganizationPointsBalance, OrganizationPointsHistory
 - ✅ Dashboard Integration: Points section in OrganizationDashboard
 - ✅ Tests: 13/14 passing (92.9%)
 - ✅ Authentication Fix: 修復 401 錯誤 (使用 useTeacherAuthStore)
+
+**Phase 5 (Admin Organization CRUD - 2026-02-03)**:
+- ✅ Backend List API: GET /api/admin/organizations (pagination, search, N+1 optimization)
+- ✅ Backend Update API: PUT /api/admin/organizations/{id} (points adjustment tracking)
+- ✅ Frontend Types: OrganizationListItem, AdminOrganizationUpdate schemas
+- ✅ Frontend List Page: AdminOrganizations table (search, pagination, 25/50/100 per page)
+- ✅ Frontend Edit Dialog: Comprehensive form with points management
+  - Points validation (prevents reducing below used)
+  - Large adjustment warnings (>10,000 points)
+  - Email and numeric validation
+  - Only sends changed fields (efficient updates)
+- ✅ Backend Tests: 24/24 passing (test_admin_organizations.py + test_admin_organizations_points.py)
+- ✅ Code Review: Applied fixes (sonner toast, type safety, dialog protection)
+- ✅ Testing Checklist: 60+ manual test cases documented
 
 **基礎驗證結果 (2026-02-03)**:
 - ✅ **API 認證**: 修復 localStorage token 問題，改用 Zustand store
@@ -115,9 +131,16 @@ Sidebar 頂部
 **Preview URL**: https://duotopia-preview-issue-198-frontend-316409492201.asia-east1.run.app
 **Backend URL**: https://duotopia-preview-issue-198-backend-b2ovkkgl6a-de.a.run.app
 
-**下一步**: 等待案主完整測試，特別是:
-1. Admin 創建組織並分配 points
-2. 有實際 points 使用記錄的測試案例
+**測試文檔**:
+- `docs/plans/admin-organizations-crud-testing-checklist.md` - 完整測試清單
+- `docs/plans/2026-02-03-admin-organization-crud.md` - 實作計畫
+
+**下一步**: 等待案主完整測試驗收，重點項目:
+1. ✅ Admin 組織列表頁面 (`/admin` → 組織管理)
+2. ✅ 組織資料編輯功能（display_name, teacher_limit, contact info）
+3. ✅ Points 管理功能（增減點數、delta 顯示、驗證）
+4. Admin 創建組織並分配 points
+5. 有實際 points 使用記錄的完整流程測試
 3. 權限控制測試 (不同角色存取)
 
 **參考文檔**: `docs/plans/2026-02-03-organization-points-system.md`
