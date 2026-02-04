@@ -8,7 +8,7 @@
 ## 📊 Progress Overview
 
 - ✅ 需求確認 (100%)
-- ⏰ Phase 1: Service 建立 (0%)
+- ✅ Phase 1: Service 建立 (100%) - 34 tests passing
 - ⏰ Phase 2: Speech Assessment 整合 (0%)
 - ⏰ Phase 3: 其他活動整合 (0%)
 
@@ -26,54 +26,55 @@
 
 ---
 
-## ⏰ Phase 1: Service 建立
+## ✅ Phase 1: Service 建立 (COMPLETED)
 
 ### OrganizationPointsService
-- [ ] **建立 Service 檔案**
+- [x] **建立 Service 檔案**
   - 檔案: `backend/services/organization_points_service.py`
-  - [ ] 定義 `UNIT_CONVERSION` 常數
-  - [ ] 定義 `QUOTA_BUFFER_PERCENTAGE = 0.20`
+  - [x] 定義 `UNIT_CONVERSION` 常數
+  - [x] 定義 `QUOTA_BUFFER_PERCENTAGE = 0.20`
 
-- [ ] **convert_unit_to_points 方法**
-  - [ ] 實作單位換算邏輯
-  - [ ] 支援: 秒、字、張、分鐘
-  - [ ] 單元測試
+- [x] **convert_unit_to_points 方法**
+  - [x] 實作單位換算邏輯
+  - [x] 支援: 秒、字、張、分鐘
+  - [x] 單元測試 (6 tests)
 
-- [ ] **check_points 方法**
-  - [ ] 檢查機構點數是否足夠
-  - [ ] 返回 bool
-  - [ ] 單元測試
+- [x] **check_points 方法**
+  - [x] 檢查機構點數是否足夠
+  - [x] 返回 bool
+  - [x] 單元測試 (6 tests)
 
-- [ ] **get_points_info 方法**
-  - [ ] 返回 total, used, remaining, status
-  - [ ] 單元測試
+- [x] **get_points_info 方法**
+  - [x] 返回 total, used, remaining, status
+  - [x] 單元測試 (5 tests)
 
-- [ ] **deduct_points 方法**
-  - [ ] 參數: organization_id, teacher_id, student_id, assignment_id, feature_type, unit_count, unit_type, feature_detail
-  - [ ] 檢查機構存在
-  - [ ] 換算為點數
-  - [ ] 計算緩衝限制 (total * 1.20)
-  - [ ] 超過緩衝 → HTTPException 402
-  - [ ] 在緩衝區間 → 記錄 warning
-  - [ ] 更新 organization.used_points
-  - [ ] 建立 OrganizationPointsLog 記錄
-  - [ ] 單元測試
+- [x] **deduct_points 方法**
+  - [x] 參數: organization_id, teacher_id, student_id, assignment_id, feature_type, unit_count, unit_type, feature_detail
+  - [x] 檢查機構存在
+  - [x] 換算為點數
+  - [x] 計算緩衝限制 (total * 1.20)
+  - [x] 超過緩衝 → HTTPException 402
+  - [x] 在緩衝區間 → 記錄 warning
+  - [x] 更新 organization.used_points
+  - [x] 建立 OrganizationPointsLog 記錄
+  - [x] 單元測試 (9 tests)
 
-### 單元測試
-- [ ] **檔案**: `backend/tests/unit/test_organization_points_service.py`
-  - [ ] test_convert_unit_to_points_seconds
-  - [ ] test_convert_unit_to_points_characters
-  - [ ] test_convert_unit_to_points_images
-  - [ ] test_convert_unit_to_points_minutes
-  - [ ] test_convert_unit_to_points_invalid_unit
-  - [ ] test_check_points_sufficient
-  - [ ] test_check_points_insufficient
-  - [ ] test_check_points_no_org
-  - [ ] test_get_points_info
-  - [ ] test_deduct_points_success
-  - [ ] test_deduct_points_buffer_warning
-  - [ ] test_deduct_points_hard_limit_exceeded
-  - [ ] test_deduct_points_creates_log
+### 單元測試 (34 tests total - ALL PASSING)
+- [x] **檔案**: `backend/tests/unit/test_organization_points_service.py`
+  - [x] test_convert_unit_to_points_seconds
+  - [x] test_convert_unit_to_points_characters
+  - [x] test_convert_unit_to_points_images
+  - [x] test_convert_unit_to_points_minutes
+  - [x] test_convert_unit_to_points_invalid_unit
+  - [x] test_check_points_sufficient
+  - [x] test_check_points_insufficient
+  - [x] test_check_points_no_org
+  - [x] test_get_points_info
+  - [x] test_deduct_points_success
+  - [x] test_deduct_points_buffer_warning
+  - [x] test_deduct_points_hard_limit_exceeded
+  - [x] test_deduct_points_creates_log
+  - [x] + 21 additional edge case and buffer tests
 
 ---
 
