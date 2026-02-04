@@ -38,6 +38,10 @@ from routers.schemas.admin_organization import (
     AdminOrganizationResponse,
     OrganizationStatisticsResponse,
     TeacherLookupResponse,
+    OrganizationListResponse,
+    OrganizationListItem,
+    AdminOrganizationUpdate,
+    AdminOrganizationUpdateResponse,
 )
 import os
 import subprocess
@@ -810,6 +814,11 @@ async def create_organization_as_admin(
         contact_phone=org_data.contact_phone,
         address=org_data.address,
         is_active=True,
+        total_points=org_data.total_points,
+        used_points=0,
+        last_points_update=datetime.now(timezone.utc) if org_data.total_points > 0 else None,
+        subscription_start_date=org_data.subscription_start_date,
+        subscription_end_date=org_data.subscription_end_date,
     )
 
     db.add(new_org)
@@ -932,6 +941,183 @@ async def get_organization_statistics(
         teacher_count=active_teacher_count,
         teacher_limit=org.teacher_limit,
         usage_percentage=round(usage_percentage, 1),
+    )
+
+
+@router.get(
+    "/organizations",
+    response_model=OrganizationListResponse,
+    summary="List all organizations (Admin only)",
+)
+async def list_organizations(
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    search: Optional[str] = Query(None, description="Search by name or owner email"),
+    current_admin: Teacher = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    List all organizations with pagination and search.
+
+    **Admin only endpoint.**
+
+    Returns:
+    - Paginated list of organizations
+    - Each item includes owner info, teacher count, points balance
+    """
+    # Base query
+    query = db.query(Organization)
+
+    # Apply search filter
+    if search:
+        # Join with TeacherOrganization to search by owner email
+        query = (
+            query.outerjoin(
+                TeacherOrganization,
+                (TeacherOrganization.organization_id == Organization.id)
+                & (TeacherOrganization.role == "org_owner"),
+            )
+            .outerjoin(Teacher, Teacher.id == TeacherOrganization.teacher_id)
+            .filter(
+                or_(
+                    Organization.name.ilike(f"%{search}%"),
+                    Organization.display_name.ilike(f"%{search}%"),
+                    Teacher.email.ilike(f"%{search}%"),
+                )
+            )
+        )
+
+    # Get total count
+    total = query.count()
+
+    # Get paginated results
+    orgs = query.order_by(Organization.created_at.desc()).offset(offset).limit(limit).all()
+
+    # Bulk fetch owner relationships for all organizations
+    org_ids = [org.id for org in orgs]
+
+    owner_rels = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.organization_id.in_(org_ids),
+            TeacherOrganization.role == "org_owner",
+        )
+        .all()
+    )
+
+    # Build owner_id map
+    owner_id_map = {rel.organization_id: rel.teacher_id for rel in owner_rels}
+
+    # Bulk fetch all owners
+    owner_ids = list(owner_id_map.values())
+    owners = db.query(Teacher).filter(Teacher.id.in_(owner_ids)).all() if owner_ids else []
+    owner_map = {owner.id: owner for owner in owners}
+
+    # Bulk fetch teacher counts
+    teacher_counts = (
+        db.query(
+            TeacherOrganization.organization_id,
+            func.count(TeacherOrganization.id).label('count')
+        )
+        .filter(
+            TeacherOrganization.organization_id.in_(org_ids),
+            TeacherOrganization.is_active.is_(True),
+        )
+        .group_by(TeacherOrganization.organization_id)
+        .all()
+    )
+    teacher_count_map = {org_id: count for org_id, count in teacher_counts}
+
+    # Build response items (NO MORE QUERIES IN LOOP)
+    items = []
+    for org in orgs:
+        owner_id = owner_id_map.get(org.id)
+        owner = owner_map.get(owner_id) if owner_id else None
+
+        items.append(
+            OrganizationListItem(
+                id=str(org.id),
+                name=org.name,
+                display_name=org.display_name,
+                description=org.description,
+                tax_id=org.tax_id,
+                contact_email=org.contact_email,
+                contact_phone=org.contact_phone,
+                address=org.address,
+                owner_email=owner.email if owner else "Unknown",
+                owner_name=owner.name if owner else None,
+                teacher_count=teacher_count_map.get(org.id, 0),
+                teacher_limit=org.teacher_limit,
+                total_points=org.total_points or 0,
+                used_points=org.used_points or 0,
+                remaining_points=(org.total_points or 0) - (org.used_points or 0),
+                is_active=org.is_active,
+                created_at=org.created_at.isoformat() if org.created_at else "",
+                subscription_start_date=org.subscription_start_date.isoformat() if org.subscription_start_date else None,
+                subscription_end_date=org.subscription_end_date.isoformat() if org.subscription_end_date else None,
+            )
+        )
+
+    return OrganizationListResponse(items=items, total=total, limit=limit, offset=offset)
+
+
+@router.put(
+    "/organizations/{org_id}",
+    response_model=AdminOrganizationUpdateResponse,
+    summary="Update organization (Admin only)",
+)
+async def update_organization(
+    org_id: str,
+    org_update: AdminOrganizationUpdate,
+    current_admin: Teacher = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Update organization details and/or adjust points allocation.
+
+    **Admin only endpoint.**
+
+    Can update:
+    - Basic info (display_name, description, contact info)
+    - Teacher limit
+    - Total points allocation (does not affect used_points)
+
+    Returns update confirmation with points change details.
+    """
+    # Validate organization exists
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+
+    if not org:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Organization with ID {org_id} not found",
+        )
+
+    # Track points changes
+    points_adjusted = False
+    points_change = None
+    old_total_points = org.total_points or 0
+
+    # Update fields if provided
+    update_data = org_update.dict(exclude_unset=True)
+
+    for field, value in update_data.items():
+        if field == "total_points":
+            if value != old_total_points:
+                points_adjusted = True
+                points_change = value - old_total_points
+                org.last_points_update = datetime.now(timezone.utc)
+
+        setattr(org, field, value)
+
+    db.commit()
+    db.refresh(org)
+
+    return AdminOrganizationUpdateResponse(
+        organization_id=str(org.id),
+        message=f"Organization updated successfully",
+        points_adjusted=points_adjusted,
+        points_change=points_change,
     )
 
 

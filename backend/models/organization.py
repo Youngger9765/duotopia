@@ -60,6 +60,10 @@ class Organization(Base):
     used_points = Column(Integer, nullable=False, default=0)  # 已使用點數
     last_points_update = Column(DateTime(timezone=True), nullable=True)  # 最後更新時間
 
+    # 訂閱日期 (Subscription Dates)
+    subscription_start_date = Column(DateTime(timezone=True), nullable=True)  # 訂閱開始時間
+    subscription_end_date = Column(DateTime(timezone=True), nullable=True)  # 訂閱結束時間
+
     # 設定
     settings = Column(JSONType, nullable=True)  # 機構層級設定
 

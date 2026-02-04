@@ -572,3 +572,166 @@ def test_create_organization_duplicate_staff_emails(
     assert response.status_code == 400
     assert "duplicate" in response.json()["detail"].lower()
     assert "staff@duotopia.com" in response.json()["detail"]
+
+
+# ============ List Organizations Tests ============
+def test_list_organizations_requires_admin(auth_headers_regular, test_client):
+    """Non-admin should get 403"""
+    response = test_client.get(
+        "/api/admin/organizations",
+        headers=auth_headers_regular,
+    )
+    assert response.status_code == 403
+
+
+def test_list_organizations_success(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Admin can list organizations"""
+    # Create a test organization
+    test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={
+            "name": "Test Org List",
+            "owner_email": regular_teacher.email,
+            "total_points": 10000,
+        },
+    )
+
+    response = test_client.get(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "items" in data
+    assert "total" in data
+    assert data["total"] >= 1
+
+    # Check first org has required fields
+    org = data["items"][0]
+    assert "id" in org
+    assert "name" in org
+    assert "owner_email" in org
+    assert "total_points" in org
+    assert "remaining_points" in org
+
+
+# ============ Update Organization Tests ============
+def test_update_organization_requires_admin(
+    shared_test_session, regular_teacher, auth_headers_regular, test_client
+):
+    """Non-admin should get 403"""
+    # Create a test org first
+    from models import Organization
+    test_org = Organization(
+        id=str(__import__('uuid').uuid4()),
+        name="Test Org for Update",
+        is_active=True,
+    )
+    shared_test_session.add(test_org)
+    shared_test_session.commit()
+
+    response = test_client.put(
+        f"/api/admin/organizations/{test_org.id}",
+        headers=auth_headers_regular,
+        json={"display_name": "Updated Name"}
+    )
+    assert response.status_code == 403
+
+
+def test_update_organization_basic_fields(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Admin can update basic organization fields"""
+    # Create organization
+    create_response = test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={
+            "name": "Test Update Org",
+            "owner_email": regular_teacher.email,
+            "display_name": "Original Name",
+            "teacher_limit": 10,
+        },
+    )
+    assert create_response.status_code == 201
+    org_id = create_response.json()["organization_id"]
+
+    # Update organization
+    response = test_client.put(
+        f"/api/admin/organizations/{org_id}",
+        headers=auth_headers_admin,
+        json={
+            "display_name": "New Display Name",
+            "description": "Updated description",
+            "teacher_limit": 20,
+        }
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["organization_id"] == org_id
+    assert "message" in data
+
+    # Verify changes persisted
+    get_response = test_client.get(
+        "/api/admin/organizations",
+        headers=auth_headers_admin
+    )
+    orgs = get_response.json()["items"]
+    updated_org = next(o for o in orgs if o["id"] == org_id)
+    assert updated_org["display_name"] == "New Display Name"
+    assert updated_org["teacher_limit"] == 20
+
+
+def test_update_organization_points(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Admin can adjust total_points allocation"""
+    # Create organization with initial points
+    create_response = test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={
+            "name": "Test Points Org",
+            "owner_email": regular_teacher.email,
+            "total_points": 1000,
+        },
+    )
+    assert create_response.status_code == 201
+    org_id = create_response.json()["organization_id"]
+
+    # Manually set used_points in database
+    from models import Organization
+    org = shared_test_session.query(Organization).filter(Organization.id == org_id).first()
+    org.used_points = 300
+    shared_test_session.commit()
+
+    # Increase points
+    response = test_client.put(
+        f"/api/admin/organizations/{org_id}",
+        headers=auth_headers_admin,
+        json={"total_points": 2000}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["points_adjusted"] is True
+    assert data["points_change"] == 1000
+
+    # Verify new points
+    shared_test_session.refresh(org)
+    assert org.total_points == 2000
+    assert org.used_points == 300  # Unchanged
+    assert org.last_points_update is not None
+
+
+def test_update_organization_not_found(auth_headers_admin, test_client):
+    """Should return 404 for non-existent org"""
+    fake_id = "00000000-0000-0000-0000-000000000000"
+    response = test_client.put(
+        f"/api/admin/organizations/{fake_id}",
+        headers=auth_headers_admin,
+        json={"display_name": "Test"}
+    )
+    assert response.status_code == 404

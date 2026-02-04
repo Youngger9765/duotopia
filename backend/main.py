@@ -48,6 +48,7 @@ from routers import (
 )
 from routers import organization_programs
 from routers import school_programs
+from routers.organization_points import router as organization_points_router
 from routes import logs
 from api import debug
 
@@ -253,6 +254,7 @@ app.include_router(teachers.router)
 app.include_router(students.router)
 app.include_router(organizations.router)  # 機構管理路由
 app.include_router(organization_programs.router)  # 機構教材管理路由
+app.include_router(organization_points_router)  # 機構點數管理路由
 app.include_router(schools.router)  # 學校管理路由
 app.include_router(school_programs.router)  # 學校教材管理路由
 app.include_router(classroom_schools.router)  # 班級-學校關聯路由

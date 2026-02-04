@@ -1,24 +1,14 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Crown, DollarSign, AlertTriangle, Building } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import AdminSubscriptionDashboard from "./AdminSubscriptionDashboard";
 import AdminBillingDashboard from "./AdminBillingDashboard";
 import AdminAudioErrorDashboard from "./AdminAudioErrorDashboard";
+import AdminOrganizations from "./AdminOrganizations";
 import AdminLayout from "@/components/admin/AdminLayout";
-// import TeacherUsageCard from "@/components/organization/TeacherUsageCard";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("subscription");
-  const navigate = useNavigate();
 
   return (
     <AdminLayout
@@ -83,31 +73,7 @@ export default function AdminDashboard() {
 
         {/* Organization Management Tab */}
         <TabsContent value="organizations" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>組織管理</CardTitle>
-              <CardDescription>
-                創建和管理機構，分配組織擁有人權限
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-4">
-                <Button
-                  onClick={() => navigate("/admin/organizations/create")}
-                  className="flex items-center gap-2"
-                >
-                  <Building className="h-4 w-4" />
-                  創建機構
-                </Button>
-              </div>
-              <p className="text-sm text-gray-600">
-                機構創建功能可以讓平台管理員為已註冊的老師創建組織並指派擁有人權限。
-              </p>
-
-              {/* Add teacher usage example (optional - requires org ID) */}
-              {/* <TeacherUsageCard organizationId="example-org-id" /> */}
-            </CardContent>
-          </Card>
+          <AdminOrganizations />
         </TabsContent>
       </Tabs>
     </AdminLayout>

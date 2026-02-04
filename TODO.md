@@ -1,8 +1,8 @@
 # TODO - Duotopia Project Tasks
 
-**Last Updated**: 2026-01-26
-**Current Branch**: `feat/issue-112-org-hierarchy`
-**Focus**: Teacher Workspace Switcher - 個人/機構工作區切換器設計
+**Last Updated**: 2026-02-03
+**Current Branch**: `feat/issue-198-migration`
+**Focus**: Organization Points System - Admin Organization CRUD (Phase 5 Complete)
 
 ---
 
@@ -66,6 +66,86 @@ Sidebar 頂部
 ---
 
 ## 🚧 In Progress / Next Up
+
+### Issue #198 - Organization Points System ✅ COMPLETE
+
+**狀態**: ✅ Phase 1-5 已實作完成，⏰ 等待案主測試驗收
+
+**完成內容**:
+
+**Phase 1-4 (Points System)**:
+- ✅ Backend API (3 endpoints): GET points, POST deduct, GET history
+- ✅ Frontend Components: OrganizationPointsBalance, OrganizationPointsHistory
+- ✅ Dashboard Integration: Points section in OrganizationDashboard
+- ✅ Tests: 13/14 passing (92.9%)
+- ✅ Authentication Fix: 修復 401 錯誤 (使用 useTeacherAuthStore)
+
+**Phase 5 (Admin Organization CRUD - 2026-02-03)**:
+- ✅ Backend List API: GET /api/admin/organizations (pagination, search, N+1 optimization)
+- ✅ Backend Update API: PUT /api/admin/organizations/{id} (points adjustment tracking)
+- ✅ Frontend Types: OrganizationListItem, AdminOrganizationUpdate schemas
+- ✅ Frontend List Page: AdminOrganizations table (search, pagination, 25/50/100 per page)
+- ✅ Frontend Edit Dialog: Comprehensive form with points management
+  - Points validation (prevents reducing below used)
+  - Large adjustment warnings (>10,000 points)
+  - Email and numeric validation
+  - Only sends changed fields (efficient updates)
+- ✅ Backend Tests: 24/24 passing (test_admin_organizations.py + test_admin_organizations_points.py)
+- ✅ Code Review: Applied fixes (sonner toast, type safety, dialog protection)
+- ✅ Testing Checklist: 60+ manual test cases documented
+
+**基礎驗證結果 (2026-02-03)**:
+- ✅ **API 認證**: 修復 localStorage token 問題，改用 Zustand store
+- ✅ **元件渲染**: 兩個 Points 元件正確顯示在 Organization Dashboard
+- ✅ **API 呼叫**: GET /points (200 OK), GET /points/history (200 OK)
+- ✅ **預設狀態**: 正確顯示 0 points 組織狀態 (0/0 total, no history)
+- ✅ **CI/CD**: Preview 環境部署成功
+
+**待驗證項目**:
+1. ⏰ **Admin 創建組織流程** - 確認 owner email 驗證機制
+   - 路徑: `/admin/organizations/create`
+   - 測試項目:
+     - [ ] 輸入不存在的 email → 應該顯示錯誤
+     - [ ] 輸入未驗證的 email → 應該拒絕創建
+     - [ ] 輸入已驗證的 email → 成功創建並指派 org_owner 角色
+     - [ ] Owner lookup 功能正常顯示姓名、手機
+     - [ ] total_points 欄位正確儲存
+
+2. ✅ **Points 功能基礎測試** (Preview 環境) - 確認 Phase 4 實作
+   - 路徑: `/organization/dashboard` (選擇組織後)
+   - 測試項目:
+     - [x] Points balance 正確顯示 (total/used/remaining) ✅ 顯示 0/0 total
+     - [x] Progress bar 視覺化正確 ✅ 藍色進度條顯示
+     - [ ] Low balance warning 在 remaining < 20% 時顯示 (⏰ 需實際 points 資料測試)
+     - [x] History table 顯示使用記錄 ✅ 顯示 "No usage history yet."
+     - [ ] Pagination 正常運作 (20 items/page) (⏰ 需實際 history 資料測試)
+     - [ ] Feature type badges 顏色正確 (⏰ 需實際 history 資料測試)
+     - [ ] 日期格式正確 (toLocaleString) (⏰ 需實際 history 資料測試)
+
+3. ✅ **API Integration 基礎測試** (Preview 環境)
+   - [x] GET `/api/organizations/{id}/points` 回傳正確資料 ✅ Status 200
+   - [x] GET `/api/organizations/{id}/points/history` 分頁正確 ✅ Status 200 (limit=20&offset=0)
+   - [ ] 權限控制: 非 org_owner/org_admin 無法存取 (⏰ 需多帳號測試)
+   - [ ] Error handling: 404, 403 等錯誤正確處理 (⏰ 需實際錯誤場景測試)
+
+**Preview URL**: https://duotopia-preview-issue-198-frontend-316409492201.asia-east1.run.app
+**Backend URL**: https://duotopia-preview-issue-198-backend-b2ovkkgl6a-de.a.run.app
+
+**測試文檔**:
+- `docs/plans/admin-organizations-crud-testing-checklist.md` - 完整測試清單
+- `docs/plans/2026-02-03-admin-organization-crud.md` - 實作計畫
+
+**下一步**: 等待案主完整測試驗收，重點項目:
+1. ✅ Admin 組織列表頁面 (`/admin` → 組織管理)
+2. ✅ 組織資料編輯功能（display_name, teacher_limit, contact info）
+3. ✅ Points 管理功能（增減點數、delta 顯示、驗證）
+4. Admin 創建組織並分配 points
+5. 有實際 points 使用記錄的完整流程測試
+3. 權限控制測試 (不同角色存取)
+
+**參考文檔**: `docs/plans/2026-02-03-organization-points-system.md`
+
+---
 
 ### 學校學生管理功能（待開始）
 
