@@ -160,6 +160,7 @@ class OrganizationListResponse(BaseModel):
 
 class AdminOrganizationUpdate(BaseModel):
     """Update organization request (admin only)"""
+
     display_name: Optional[str] = None
     description: Optional[str] = None
     tax_id: Optional[str] = None
@@ -174,6 +175,7 @@ class AdminOrganizationUpdate(BaseModel):
 
 class AdminOrganizationUpdateResponse(BaseModel):
     """Update organization response"""
+
     organization_id: str
     message: str
     points_adjusted: bool = False

@@ -625,8 +625,9 @@ def test_update_organization_requires_admin(
     """Non-admin should get 403"""
     # Create a test org first
     from models import Organization
+
     test_org = Organization(
-        id=str(__import__('uuid').uuid4()),
+        id=str(__import__("uuid").uuid4()),
         name="Test Org for Update",
         is_active=True,
     )
@@ -636,7 +637,7 @@ def test_update_organization_requires_admin(
     response = test_client.put(
         f"/api/admin/organizations/{test_org.id}",
         headers=auth_headers_regular,
-        json={"display_name": "Updated Name"}
+        json={"display_name": "Updated Name"},
     )
     assert response.status_code == 403
 
@@ -667,7 +668,7 @@ def test_update_organization_basic_fields(
             "display_name": "New Display Name",
             "description": "Updated description",
             "teacher_limit": 20,
-        }
+        },
     )
     assert response.status_code == 200
     data = response.json()
@@ -676,8 +677,7 @@ def test_update_organization_basic_fields(
 
     # Verify changes persisted
     get_response = test_client.get(
-        "/api/admin/organizations",
-        headers=auth_headers_admin
+        "/api/admin/organizations", headers=auth_headers_admin
     )
     orgs = get_response.json()["items"]
     updated_org = next(o for o in orgs if o["id"] == org_id)
@@ -704,7 +704,12 @@ def test_update_organization_points(
 
     # Manually set used_points in database
     from models import Organization
-    org = shared_test_session.query(Organization).filter(Organization.id == org_id).first()
+
+    org = (
+        shared_test_session.query(Organization)
+        .filter(Organization.id == org_id)
+        .first()
+    )
     org.used_points = 300
     shared_test_session.commit()
 
@@ -712,7 +717,7 @@ def test_update_organization_points(
     response = test_client.put(
         f"/api/admin/organizations/{org_id}",
         headers=auth_headers_admin,
-        json={"total_points": 2000}
+        json={"total_points": 2000},
     )
     assert response.status_code == 200
     data = response.json()
@@ -732,6 +737,6 @@ def test_update_organization_not_found(auth_headers_admin, test_client):
     response = test_client.put(
         f"/api/admin/organizations/{fake_id}",
         headers=auth_headers_admin,
-        json={"display_name": "Test"}
+        json={"display_name": "Test"},
     )
     assert response.status_code == 404

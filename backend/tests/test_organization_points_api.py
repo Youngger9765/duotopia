@@ -451,11 +451,17 @@ class TestPointsHistory:
 
         # Verify our test logs are present
         # Note: There might be existing logs from deduction tests
-        recent_logs = [item for item in data["items"] if item["description"] and "Test usage" in item["description"]]
+        recent_logs = [
+            item
+            for item in data["items"]
+            if item["description"] and "Test usage" in item["description"]
+        ]
         assert len(recent_logs) == 3
 
         # Verify all expected points values are present (order may vary due to timestamp precision)
-        points_values = sorted([log["points_used"] for log in recent_logs], reverse=True)
+        points_values = sorted(
+            [log["points_used"] for log in recent_logs], reverse=True
+        )
         assert points_values == [300, 200, 100]
 
     def test_history_includes_teacher_name(
@@ -489,7 +495,14 @@ class TestPointsHistory:
         data = response.json()
 
         # Find our specific log entry
-        our_log = next((item for item in data["items"] if item["description"] == "Test with teacher name"), None)
+        our_log = next(
+            (
+                item
+                for item in data["items"]
+                if item["description"] == "Test with teacher name"
+            ),
+            None,
+        )
         assert our_log is not None
         assert our_log["teacher_name"] == org_owner.name
         assert our_log["teacher_id"] == org_owner.id

@@ -816,7 +816,9 @@ async def create_organization_as_admin(
         is_active=True,
         total_points=org_data.total_points,
         used_points=0,
-        last_points_update=datetime.now(timezone.utc) if org_data.total_points > 0 else None,
+        last_points_update=datetime.now(timezone.utc)
+        if org_data.total_points > 0
+        else None,
         subscription_start_date=org_data.subscription_start_date,
         subscription_end_date=org_data.subscription_end_date,
     )
@@ -991,7 +993,9 @@ async def list_organizations(
     total = query.count()
 
     # Get paginated results
-    orgs = query.order_by(Organization.created_at.desc()).offset(offset).limit(limit).all()
+    orgs = (
+        query.order_by(Organization.created_at.desc()).offset(offset).limit(limit).all()
+    )
 
     # Bulk fetch owner relationships for all organizations
     org_ids = [org.id for org in orgs]
@@ -1010,14 +1014,16 @@ async def list_organizations(
 
     # Bulk fetch all owners
     owner_ids = list(owner_id_map.values())
-    owners = db.query(Teacher).filter(Teacher.id.in_(owner_ids)).all() if owner_ids else []
+    owners = (
+        db.query(Teacher).filter(Teacher.id.in_(owner_ids)).all() if owner_ids else []
+    )
     owner_map = {owner.id: owner for owner in owners}
 
     # Bulk fetch teacher counts
     teacher_counts = (
         db.query(
             TeacherOrganization.organization_id,
-            func.count(TeacherOrganization.id).label('count')
+            func.count(TeacherOrganization.id).label("count"),
         )
         .filter(
             TeacherOrganization.organization_id.in_(org_ids),
@@ -1053,12 +1059,18 @@ async def list_organizations(
                 remaining_points=(org.total_points or 0) - (org.used_points or 0),
                 is_active=org.is_active,
                 created_at=org.created_at.isoformat() if org.created_at else "",
-                subscription_start_date=org.subscription_start_date.isoformat() if org.subscription_start_date else None,
-                subscription_end_date=org.subscription_end_date.isoformat() if org.subscription_end_date else None,
+                subscription_start_date=org.subscription_start_date.isoformat()
+                if org.subscription_start_date
+                else None,
+                subscription_end_date=org.subscription_end_date.isoformat()
+                if org.subscription_end_date
+                else None,
             )
         )
 
-    return OrganizationListResponse(items=items, total=total, limit=limit, offset=offset)
+    return OrganizationListResponse(
+        items=items, total=total, limit=limit, offset=offset
+    )
 
 
 @router.put(

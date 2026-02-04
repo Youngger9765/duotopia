@@ -68,20 +68,25 @@ async def get_organization_points(
     Permissions: org_owner or org_admin with manage_materials permission
     """
     # Check organization exists
-    organization = db.query(Organization).filter(
-        Organization.id == organization_id,
-        Organization.is_active.is_(True)
-    ).first()
+    organization = (
+        db.query(Organization)
+        .filter(Organization.id == organization_id, Organization.is_active.is_(True))
+        .first()
+    )
 
     if not organization:
         raise HTTPException(status_code=404, detail="Organization not found")
 
     # Check permission
-    membership = db.query(TeacherOrganization).filter(
-        TeacherOrganization.teacher_id == current_teacher.id,
-        TeacherOrganization.organization_id == organization_id,
-        TeacherOrganization.is_active.is_(True)
-    ).first()
+    membership = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == current_teacher.id,
+            TeacherOrganization.organization_id == organization_id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
 
     if not membership:
         raise HTTPException(status_code=403, detail="Not a member of this organization")
@@ -90,8 +95,7 @@ async def get_organization_points(
     if membership.role != "org_owner":
         if not has_manage_materials_permission(current_teacher.id, organization_id, db):
             raise HTTPException(
-                status_code=403,
-                detail="Insufficient permissions to view points"
+                status_code=403, detail="Insufficient permissions to view points"
             )
 
     return PointsBalanceResponse(
@@ -99,7 +103,7 @@ async def get_organization_points(
         total_points=organization.total_points,
         used_points=organization.used_points,
         remaining_points=organization.total_points - organization.used_points,
-        last_points_update=organization.last_points_update
+        last_points_update=organization.last_points_update,
     )
 
 
@@ -120,20 +124,25 @@ async def deduct_organization_points(
         raise HTTPException(status_code=400, detail="Points must be positive")
 
     # Check organization exists
-    organization = db.query(Organization).filter(
-        Organization.id == organization_id,
-        Organization.is_active.is_(True)
-    ).first()
+    organization = (
+        db.query(Organization)
+        .filter(Organization.id == organization_id, Organization.is_active.is_(True))
+        .first()
+    )
 
     if not organization:
         raise HTTPException(status_code=404, detail="Organization not found")
 
     # Check permission (same as GET points)
-    membership = db.query(TeacherOrganization).filter(
-        TeacherOrganization.teacher_id == current_teacher.id,
-        TeacherOrganization.organization_id == organization_id,
-        TeacherOrganization.is_active.is_(True)
-    ).first()
+    membership = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == current_teacher.id,
+            TeacherOrganization.organization_id == organization_id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
 
     if not membership:
         raise HTTPException(status_code=403, detail="Not a member of this organization")
@@ -141,8 +150,7 @@ async def deduct_organization_points(
     if membership.role != "org_owner":
         if not has_manage_materials_permission(current_teacher.id, organization_id, db):
             raise HTTPException(
-                status_code=403,
-                detail="Insufficient permissions to deduct points"
+                status_code=403, detail="Insufficient permissions to deduct points"
             )
 
     # Check sufficient balance
@@ -150,7 +158,7 @@ async def deduct_organization_points(
     if deduction.points > available:
         raise HTTPException(
             status_code=400,
-            detail=f"Insufficient points. Available: {available}, Requested: {deduction.points}"
+            detail=f"Insufficient points. Available: {available}, Requested: {deduction.points}",
         )
 
     # Deduct points
@@ -163,7 +171,7 @@ async def deduct_organization_points(
         teacher_id=current_teacher.id,
         points_used=deduction.points,
         feature_type=deduction.feature_type,
-        description=deduction.description
+        description=deduction.description,
     )
     db.add(log_entry)
     db.commit()
@@ -173,7 +181,7 @@ async def deduct_organization_points(
         organization_id=organization.id,
         points_deducted=deduction.points,
         remaining_points=organization.total_points - organization.used_points,
-        transaction_id=log_entry.id
+        transaction_id=log_entry.id,
     )
 
 
@@ -192,20 +200,25 @@ async def get_organization_points_history(
     Returns: Paginated list of points log entries, sorted by created_at DESC
     """
     # Check organization exists
-    organization = db.query(Organization).filter(
-        Organization.id == organization_id,
-        Organization.is_active.is_(True)
-    ).first()
+    organization = (
+        db.query(Organization)
+        .filter(Organization.id == organization_id, Organization.is_active.is_(True))
+        .first()
+    )
 
     if not organization:
         raise HTTPException(status_code=404, detail="Organization not found")
 
     # Check permission (same as GET points)
-    membership = db.query(TeacherOrganization).filter(
-        TeacherOrganization.teacher_id == current_teacher.id,
-        TeacherOrganization.organization_id == organization_id,
-        TeacherOrganization.is_active.is_(True)
-    ).first()
+    membership = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == current_teacher.id,
+            TeacherOrganization.organization_id == organization_id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
 
     if not membership:
         raise HTTPException(status_code=403, detail="Not a member of this organization")
@@ -214,13 +227,15 @@ async def get_organization_points_history(
         if not has_manage_materials_permission(current_teacher.id, organization_id, db):
             raise HTTPException(
                 status_code=403,
-                detail="Insufficient permissions to view points history"
+                detail="Insufficient permissions to view points history",
             )
 
     # Get total count
-    total = db.query(OrganizationPointsLog).filter(
-        OrganizationPointsLog.organization_id == organization_id
-    ).count()
+    total = (
+        db.query(OrganizationPointsLog)
+        .filter(OrganizationPointsLog.organization_id == organization_id)
+        .count()
+    )
 
     # Get paginated logs with teacher info
     logs = (
@@ -242,14 +257,9 @@ async def get_organization_points_history(
             points_used=log.points_used,
             feature_type=log.feature_type,
             description=log.description,
-            created_at=log.created_at
+            created_at=log.created_at,
         )
         for log, teacher_name in logs
     ]
 
-    return PointsHistoryResponse(
-        items=items,
-        total=total,
-        limit=limit,
-        offset=offset
-    )
+    return PointsHistoryResponse(items=items, total=total, limit=limit, offset=offset)
