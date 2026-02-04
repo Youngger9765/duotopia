@@ -99,7 +99,7 @@ jobs:
           # If stamped, ensure critical columns exist (stamping skips SQL)
           if [ "$STAMPED" = true ]; then
             echo "🔧 Ensuring critical columns exist after stamp..."
-            python3 -c "import os,psycopg2;c=psycopg2.connect(os.environ['DATABASE_URL']);x=c.cursor();x.execute(\"DO \\$\\$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='subscription_start_date') THEN ALTER TABLE organizations ADD COLUMN subscription_start_date TIMESTAMP WITH TIME ZONE; END IF; IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='subscription_end_date') THEN ALTER TABLE organizations ADD COLUMN subscription_end_date TIMESTAMP WITH TIME ZONE; END IF; END \\$\\$;\");c.commit();x.close();c.close();print('OK')"
+            python3 -c 'import os,psycopg2;c=psycopg2.connect(os.environ["DATABASE_URL"]);x=c.cursor();x.execute("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='"'"'organizations'"'"' AND column_name='"'"'subscription_start_date'"'"') THEN ALTER TABLE organizations ADD COLUMN subscription_start_date TIMESTAMP WITH TIME ZONE; END IF; IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='"'"'organizations'"'"' AND column_name='"'"'subscription_end_date'"'"') THEN ALTER TABLE organizations ADD COLUMN subscription_end_date TIMESTAMP WITH TIME ZONE; END IF; END $$;");c.commit();x.close();c.close();print("OK")'
           fi
           echo "✅ Migrations complete"
 
