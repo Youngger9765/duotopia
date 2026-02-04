@@ -7,10 +7,22 @@
 
 ## 📊 Progress Overview
 
+- ✅ 需求確認 (100%)
 - ⏰ Phase 1: Service 建立 (0%)
 - ⏰ Phase 2: Speech Assessment 整合 (0%)
 - ⏰ Phase 3: 其他活動整合 (0%)
-- ⏰ 等待開發
+
+---
+
+## ✅ 已確認需求
+
+| 問題 | 答案 |
+|------|------|
+| 換算規則 | 與個人模式相同（根據 unit_type） |
+| 緩衝機制 | 20% buffer |
+| 扣點對象 | 根據 classroom.organization_id |
+| 批次結算 | 初期只做即時扣點 (A) |
+| 退回作業 | 不返還已扣點數 |
 
 ---
 
