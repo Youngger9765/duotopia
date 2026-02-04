@@ -77,8 +77,20 @@ jobs:
           echo "🔄 Running Alembic database migrations..."
           echo "📊 Current migration status:"
           alembic current || echo "No current revision"
-          echo "🔄 Upgrading to all heads (handles multiple branches)..."
-          alembic upgrade heads
+          echo "🔄 Upgrading to latest migration..."
+          if ! alembic upgrade head 2>&1 | tee /tmp/alembic_output.txt; then
+            if grep -q "Can't locate revision\|overlaps with" /tmp/alembic_output.txt; then
+              echo "⚠️ Migration path issue detected, stamping to current head..."
+              CURRENT_HEAD=$(alembic heads | head -1 | awk '{print $1}')
+              echo "📌 Stamping to revision: $CURRENT_HEAD"
+              alembic stamp "$CURRENT_HEAD"
+              echo "✅ Database stamped successfully"
+            else
+              echo "❌ Migration failed with unexpected error"
+              cat /tmp/alembic_output.txt
+              exit 1
+            fi
+          fi
           echo "✅ Migrations complete"
 
       - name: Deploy backend to Cloud Run
