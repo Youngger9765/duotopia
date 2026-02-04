@@ -78,18 +78,65 @@ jobs:
           echo "📊 Current migration status:"
           alembic current || echo "No current revision"
           echo "🔄 Upgrading to latest migration..."
+          STAMPED=false
           if ! alembic upgrade head 2>&1 | tee /tmp/alembic_output.txt; then
             if grep -q "Can't locate revision\|overlaps with" /tmp/alembic_output.txt; then
               echo "⚠️ Migration path issue detected, stamping to current head..."
               CURRENT_HEAD=$(alembic heads | head -1 | awk '{print $1}')
               echo "📌 Stamping to revision: $CURRENT_HEAD"
               alembic stamp "$CURRENT_HEAD"
+              STAMPED=true
               echo "✅ Database stamped successfully"
             else
               echo "❌ Migration failed with unexpected error"
               cat /tmp/alembic_output.txt
               exit 1
             fi
+          fi
+
+          # If stamped, ensure critical columns exist (stamping skips SQL)
+          if [ "$STAMPED" = true ]; then
+            echo "🔧 Ensuring critical columns exist after stamp..."
+            pip install psycopg2-binary
+            python3 << 'EOF'
+import os
+import psycopg2
+
+db_url = os.environ.get('DATABASE_URL')
+conn = psycopg2.connect(db_url)
+cur = conn.cursor()
+
+# Ensure subscription_start_date exists
+cur.execute("""
+    DO $$ BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'organizations' AND column_name = 'subscription_start_date'
+        ) THEN
+            ALTER TABLE organizations ADD COLUMN subscription_start_date TIMESTAMP WITH TIME ZONE;
+            RAISE NOTICE 'Added subscription_start_date column';
+        END IF;
+    END $$;
+""")
+
+# Ensure subscription_end_date exists
+cur.execute("""
+    DO $$ BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'organizations' AND column_name = 'subscription_end_date'
+        ) THEN
+            ALTER TABLE organizations ADD COLUMN subscription_end_date TIMESTAMP WITH TIME ZONE;
+            RAISE NOTICE 'Added subscription_end_date column';
+        END IF;
+    END $$;
+""")
+
+conn.commit()
+cur.close()
+conn.close()
+print("✅ Critical columns verified/added")
+EOF
           fi
           echo "✅ Migrations complete"
 
