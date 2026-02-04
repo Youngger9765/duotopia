@@ -37,14 +37,23 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Building, Search, ChevronLeft, ChevronRight, Pencil, AlertTriangle } from "lucide-react";
+import {
+  Building,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  AlertTriangle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 const DEBOUNCE_DELAY = 300;
 
 export default function AdminOrganizations() {
   const navigate = useNavigate();
-  const [organizations, setOrganizations] = useState<OrganizationListItem[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationListItem[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,7 +68,9 @@ export default function AdminOrganizations() {
 
   // Edit dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedOrg, setSelectedOrg] = useState<OrganizationListItem | null>(null);
+  const [selectedOrg, setSelectedOrg] = useState<OrganizationListItem | null>(
+    null,
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   // Form state
@@ -106,7 +117,9 @@ export default function AdminOrganizations() {
       setTotal(data.total);
     } catch (err) {
       console.error("Failed to fetch organizations:", err);
-      setError(err instanceof Error ? err.message : "Failed to load organizations");
+      setError(
+        err instanceof Error ? err.message : "Failed to load organizations",
+      );
     } finally {
       setLoading(false);
     }
@@ -158,8 +171,12 @@ export default function AdminOrganizations() {
       contact_phone: org.contact_phone || "",
       address: org.address || "",
       total_points: org.total_points.toString(),
-      subscription_start_date: org.subscription_start_date ? org.subscription_start_date.split('T')[0] : "",
-      subscription_end_date: org.subscription_end_date ? org.subscription_end_date.split('T')[0] : "",
+      subscription_start_date: org.subscription_start_date
+        ? org.subscription_start_date.split("T")[0]
+        : "",
+      subscription_end_date: org.subscription_end_date
+        ? org.subscription_end_date.split("T")[0]
+        : "",
     });
     setFormErrors({});
     setIsEditDialogOpen(true);
@@ -170,7 +187,10 @@ export default function AdminOrganizations() {
     const errors: Record<string, string> = {};
 
     // Email validation
-    if (formData.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contact_email)) {
+    if (
+      formData.contact_email &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contact_email)
+    ) {
       errors.contact_email = "請輸入有效的 Email 格式";
     }
 
@@ -253,21 +273,25 @@ export default function AdminOrganizations() {
       if (formData.subscription_end_date) {
         updateData.subscription_end_date = formData.subscription_end_date;
       }
-      if (formData.total_points && Number(formData.total_points) !== selectedOrg.total_points) {
+      if (
+        formData.total_points &&
+        Number(formData.total_points) !== selectedOrg.total_points
+      ) {
         updateData.total_points = Number(formData.total_points);
       }
 
       const response = (await apiClient.updateOrganization(
         selectedOrg.id,
-        updateData
+        updateData,
       )) as AdminOrganizationUpdateResponse;
 
       // Show success message
       let successMessage = "組織更新成功";
       if (response.points_adjusted && response.points_change !== null) {
-        const changeText = response.points_change > 0
-          ? `+${response.points_change.toLocaleString()}`
-          : response.points_change.toLocaleString();
+        const changeText =
+          response.points_change > 0
+            ? `+${response.points_change.toLocaleString()}`
+            : response.points_change.toLocaleString();
         successMessage += ` (點數調整: ${changeText})`;
       }
       toast.success(successMessage);
@@ -330,7 +354,10 @@ export default function AdminOrganizations() {
 
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">每頁顯示：</span>
-              <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+              <Select
+                value={String(pageSize)}
+                onValueChange={handlePageSizeChange}
+              >
                 <SelectTrigger className="w-24">
                   <SelectValue />
                 </SelectTrigger>
@@ -354,7 +381,10 @@ export default function AdminOrganizations() {
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-16 bg-gray-100 animate-pulse rounded" />
+                <div
+                  key={i}
+                  className="h-16 bg-gray-100 animate-pulse rounded"
+                />
               ))}
             </div>
           ) : (
@@ -366,19 +396,36 @@ export default function AdminOrganizations() {
                     <TableRow className="bg-gray-50">
                       <TableHead className="font-semibold">組織名稱</TableHead>
                       <TableHead className="font-semibold">擁有人</TableHead>
-                      <TableHead className="font-semibold text-center">教師數</TableHead>
-                      <TableHead className="font-semibold text-center">點數</TableHead>
-                      <TableHead className="font-semibold text-center">狀態</TableHead>
-                      <TableHead className="font-semibold text-center">創建日期</TableHead>
-                      <TableHead className="font-semibold text-center">訂閱到期</TableHead>
-                      <TableHead className="font-semibold text-center">操作</TableHead>
+                      <TableHead className="font-semibold text-center">
+                        教師數
+                      </TableHead>
+                      <TableHead className="font-semibold text-center">
+                        點數
+                      </TableHead>
+                      <TableHead className="font-semibold text-center">
+                        狀態
+                      </TableHead>
+                      <TableHead className="font-semibold text-center">
+                        創建日期
+                      </TableHead>
+                      <TableHead className="font-semibold text-center">
+                        訂閱到期
+                      </TableHead>
+                      <TableHead className="font-semibold text-center">
+                        操作
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {organizations.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                          {searchQuery ? "找不到符合條件的組織" : "尚無組織資料"}
+                        <TableCell
+                          colSpan={7}
+                          className="text-center py-8 text-gray-500"
+                        >
+                          {searchQuery
+                            ? "找不到符合條件的組織"
+                            : "尚無組織資料"}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -413,11 +460,16 @@ export default function AdminOrganizations() {
                             <div className="flex flex-col items-center">
                               <span className="font-semibold">
                                 {org.teacher_count}
-                                {org.teacher_limit !== null && ` / ${org.teacher_limit}`}
+                                {org.teacher_limit !== null &&
+                                  ` / ${org.teacher_limit}`}
                               </span>
                               {org.teacher_limit !== null && (
                                 <div className="text-xs text-gray-500">
-                                  {Math.round((org.teacher_count / org.teacher_limit) * 100)}% 使用
+                                  {Math.round(
+                                    (org.teacher_count / org.teacher_limit) *
+                                      100,
+                                  )}
+                                  % 使用
                                 </div>
                               )}
                             </div>
@@ -443,7 +495,9 @@ export default function AdminOrganizations() {
 
                           {/* Status */}
                           <TableCell className="text-center">
-                            <Badge variant={org.is_active ? "success" : "secondary"}>
+                            <Badge
+                              variant={org.is_active ? "success" : "secondary"}
+                            >
                               {org.is_active ? "啟用" : "停用"}
                             </Badge>
                           </TableCell>
@@ -456,11 +510,14 @@ export default function AdminOrganizations() {
                           {/* Subscription End Date */}
                           <TableCell className="text-center text-sm">
                             {org.subscription_end_date ? (
-                              <span className={
-                                new Date(org.subscription_end_date) < new Date()
-                                  ? "text-red-600 font-semibold"
-                                  : "text-gray-600"
-                              }>
+                              <span
+                                className={
+                                  new Date(org.subscription_end_date) <
+                                  new Date()
+                                    ? "text-red-600 font-semibold"
+                                    : "text-gray-600"
+                                }
+                              >
                                 {formatDate(org.subscription_end_date)}
                               </span>
                             ) : (
@@ -540,16 +597,16 @@ export default function AdminOrganizations() {
             <DialogTitle className="text-xl font-bold">
               編輯組織 - {selectedOrg?.name}
             </DialogTitle>
-            <DialogDescription>
-              更新組織的基本資訊和點數配置
-            </DialogDescription>
+            <DialogDescription>更新組織的基本資訊和點數配置</DialogDescription>
           </DialogHeader>
 
           {selectedOrg && (
             <div className="space-y-6 py-4">
               {/* Basic Information Section */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">基本資訊</h3>
+                <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">
+                  基本資訊
+                </h3>
                 <div className="grid grid-cols-2 gap-4">
                   {/* Display Name */}
                   <div className="space-y-2">
@@ -557,7 +614,12 @@ export default function AdminOrganizations() {
                     <Input
                       id="display_name"
                       value={formData.display_name}
-                      onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          display_name: e.target.value,
+                        })
+                      }
                       placeholder="組織的公開顯示名稱"
                     />
                   </div>
@@ -568,7 +630,9 @@ export default function AdminOrganizations() {
                     <Input
                       id="tax_id"
                       value={formData.tax_id}
-                      onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, tax_id: e.target.value })
+                      }
                       placeholder="8 位數統一編號"
                       maxLength={8}
                     />
@@ -580,7 +644,12 @@ export default function AdminOrganizations() {
                     <Textarea
                       id="description"
                       value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          description: e.target.value,
+                        })
+                      }
                       placeholder="組織的詳細描述"
                       rows={3}
                     />
@@ -594,11 +663,18 @@ export default function AdminOrganizations() {
                       type="number"
                       min="0"
                       value={formData.teacher_limit}
-                      onChange={(e) => setFormData({ ...formData, teacher_limit: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          teacher_limit: e.target.value,
+                        })
+                      }
                       placeholder="不限制請留空"
                     />
                     {formErrors.teacher_limit && (
-                      <p className="text-sm text-red-600">{formErrors.teacher_limit}</p>
+                      <p className="text-sm text-red-600">
+                        {formErrors.teacher_limit}
+                      </p>
                     )}
                     {selectedOrg.teacher_limit !== null && (
                       <p className="text-xs text-gray-500">
@@ -611,7 +687,9 @@ export default function AdminOrganizations() {
 
               {/* Contact Information Section */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">聯絡資訊</h3>
+                <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">
+                  聯絡資訊
+                </h3>
                 <div className="grid grid-cols-2 gap-4">
                   {/* Contact Email */}
                   <div className="space-y-2">
@@ -620,11 +698,18 @@ export default function AdminOrganizations() {
                       id="contact_email"
                       type="email"
                       value={formData.contact_email}
-                      onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          contact_email: e.target.value,
+                        })
+                      }
                       placeholder="contact@example.com"
                     />
                     {formErrors.contact_email && (
-                      <p className="text-sm text-red-600">{formErrors.contact_email}</p>
+                      <p className="text-sm text-red-600">
+                        {formErrors.contact_email}
+                      </p>
                     )}
                   </div>
 
@@ -634,7 +719,12 @@ export default function AdminOrganizations() {
                     <Input
                       id="contact_phone"
                       value={formData.contact_phone}
-                      onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          contact_phone: e.target.value,
+                        })
+                      }
                       placeholder="02-1234-5678"
                     />
                   </div>
@@ -645,19 +735,28 @@ export default function AdminOrganizations() {
                     <Input
                       id="address"
                       value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, address: e.target.value })
+                      }
                       placeholder="組織地址"
                     />
                   </div>
 
                   {/* Subscription Start Date */}
                   <div className="space-y-2">
-                    <Label htmlFor="subscription_start_date">訂閱開始時間</Label>
+                    <Label htmlFor="subscription_start_date">
+                      訂閱開始時間
+                    </Label>
                     <Input
                       id="subscription_start_date"
                       type="date"
                       value={formData.subscription_start_date}
-                      onChange={(e) => setFormData({ ...formData, subscription_start_date: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          subscription_start_date: e.target.value,
+                        })
+                      }
                     />
                   </div>
 
@@ -668,7 +767,12 @@ export default function AdminOrganizations() {
                       id="subscription_end_date"
                       type="date"
                       value={formData.subscription_end_date}
-                      onChange={(e) => setFormData({ ...formData, subscription_end_date: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          subscription_end_date: e.target.value,
+                        })
+                      }
                     />
                   </div>
                 </div>
@@ -676,7 +780,9 @@ export default function AdminOrganizations() {
 
               {/* Points Management Section */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">點數管理</h3>
+                <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">
+                  點數管理
+                </h3>
 
                 {/* Current Points Display */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -710,56 +816,69 @@ export default function AdminOrganizations() {
                     type="number"
                     min="0"
                     value={formData.total_points}
-                    onChange={(e) => setFormData({ ...formData, total_points: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, total_points: e.target.value })
+                    }
                     placeholder="輸入新的總點數"
                   />
                   {formErrors.total_points && (
-                    <p className="text-sm text-red-600">{formErrors.total_points}</p>
+                    <p className="text-sm text-red-600">
+                      {formErrors.total_points}
+                    </p>
                   )}
                 </div>
 
                 {/* Points Change Display */}
-                {formData.total_points && Number(formData.total_points) !== selectedOrg.total_points && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between bg-gray-50 border rounded-lg p-3">
-                      <span className="text-sm text-gray-700">點數調整：</span>
-                      <span
-                        className={`text-lg font-bold ${
-                          calculatePointsChange() > 0
-                            ? "text-green-600"
-                            : calculatePointsChange() < 0
-                            ? "text-red-600"
-                            : "text-gray-600"
-                        }`}
-                      >
-                        {calculatePointsChange() > 0 ? "+" : ""}
-                        {calculatePointsChange().toLocaleString()}
-                      </span>
+                {formData.total_points &&
+                  Number(formData.total_points) !==
+                    selectedOrg.total_points && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between bg-gray-50 border rounded-lg p-3">
+                        <span className="text-sm text-gray-700">
+                          點數調整：
+                        </span>
+                        <span
+                          className={`text-lg font-bold ${
+                            calculatePointsChange() > 0
+                              ? "text-green-600"
+                              : calculatePointsChange() < 0
+                                ? "text-red-600"
+                                : "text-gray-600"
+                          }`}
+                        >
+                          {calculatePointsChange() > 0 ? "+" : ""}
+                          {calculatePointsChange().toLocaleString()}
+                        </span>
+                      </div>
+
+                      {/* Warning for invalid reduction */}
+                      {isPointsReductionInvalid() && (
+                        <Alert variant="destructive">
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription>
+                            總點數不能低於已使用點數 (
+                            {selectedOrg.used_points.toLocaleString()})
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {/* Warning for large adjustments */}
+                      {Math.abs(calculatePointsChange()) > 10000 &&
+                        !isPointsReductionInvalid() && (
+                          <Alert>
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertDescription>
+                              注意：您正在進行大幅度點數調整 (
+                              {calculatePointsChange() > 0 ? "增加" : "減少"}{" "}
+                              {Math.abs(
+                                calculatePointsChange(),
+                              ).toLocaleString()}{" "}
+                              點)
+                            </AlertDescription>
+                          </Alert>
+                        )}
                     </div>
-
-                    {/* Warning for invalid reduction */}
-                    {isPointsReductionInvalid() && (
-                      <Alert variant="destructive">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertDescription>
-                          總點數不能低於已使用點數 ({selectedOrg.used_points.toLocaleString()})
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    {/* Warning for large adjustments */}
-                    {Math.abs(calculatePointsChange()) > 10000 && !isPointsReductionInvalid() && (
-                      <Alert>
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertDescription>
-                          注意：您正在進行大幅度點數調整 (
-                          {calculatePointsChange() > 0 ? "增加" : "減少"}{" "}
-                          {Math.abs(calculatePointsChange()).toLocaleString()} 點)
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-                )}
+                  )}
               </div>
             </div>
           )}

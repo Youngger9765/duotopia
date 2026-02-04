@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { PointsHistory, PointsLogItem } from '../types/points';
-import { API_URL } from '../config/api';
-import { useTeacherAuthStore } from '../stores/teacherAuthStore';
+import React, { useEffect, useState } from "react";
+import { PointsHistory, PointsLogItem } from "../types/points";
+import { API_URL } from "../config/api";
+import { useTeacherAuthStore } from "../stores/teacherAuthStore";
 
 interface Props {
   organizationId: string;
 }
 
-export const OrganizationPointsHistory: React.FC<Props> = ({ organizationId }) => {
+export const OrganizationPointsHistory: React.FC<Props> = ({
+  organizationId,
+}) => {
   const token = useTeacherAuthStore((state) => state.token);
   const [history, setHistory] = useState<PointsHistory | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,19 +27,19 @@ export const OrganizationPointsHistory: React.FC<Props> = ({ organizationId }) =
           `${API_URL}/api/organizations/${organizationId}/points/history?limit=${limit}&offset=${offset}`,
           {
             headers: {
-              'Authorization': `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
             },
-          }
+          },
         );
 
         if (!response.ok) {
-          throw new Error('Failed to fetch points history');
+          throw new Error("Failed to fetch points history");
         }
 
         const data = await response.json();
         setHistory(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setLoading(false);
       }
@@ -67,12 +69,12 @@ export const OrganizationPointsHistory: React.FC<Props> = ({ organizationId }) =
 
   const getFeatureTypeBadge = (featureType: string | null) => {
     const badges: Record<string, string> = {
-      ai_generation: 'bg-purple-100 text-purple-800',
-      translation: 'bg-blue-100 text-blue-800',
-      default: 'bg-gray-100 text-gray-800',
+      ai_generation: "bg-purple-100 text-purple-800",
+      translation: "bg-blue-100 text-blue-800",
+      default: "bg-gray-100 text-gray-800",
     };
 
-    return badges[featureType || 'default'] || badges.default;
+    return badges[featureType || "default"] || badges.default;
   };
 
   return (
@@ -111,19 +113,19 @@ export const OrganizationPointsHistory: React.FC<Props> = ({ organizationId }) =
                   {new Date(item.created_at).toLocaleString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {item.teacher_name || 'Unknown'}
+                  {item.teacher_name || "Unknown"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
                     className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getFeatureTypeBadge(
-                      item.feature_type
+                      item.feature_type,
                     )}`}
                   >
-                    {item.feature_type || 'N/A'}
+                    {item.feature_type || "N/A"}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500">
-                  {item.description || '-'}
+                  {item.description || "-"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
                   -{item.points_used.toLocaleString()}
@@ -138,8 +140,9 @@ export const OrganizationPointsHistory: React.FC<Props> = ({ organizationId }) =
       {totalPages > 1 && (
         <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t">
           <div className="text-sm text-gray-700">
-            Showing {page * limit + 1} to {Math.min((page + 1) * limit, history.total)} of{' '}
-            {history.total} results
+            Showing {page * limit + 1} to{" "}
+            {Math.min((page + 1) * limit, history.total)} of {history.total}{" "}
+            results
           </div>
           <div className="flex gap-2">
             <button

@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { PointsBalance } from '../types/points';
-import { API_URL } from '../config/api';
-import { useTeacherAuthStore } from '../stores/teacherAuthStore';
+import React, { useEffect, useState } from "react";
+import { PointsBalance } from "../types/points";
+import { API_URL } from "../config/api";
+import { useTeacherAuthStore } from "../stores/teacherAuthStore";
 
 interface Props {
   organizationId: string;
 }
 
-export const OrganizationPointsBalance: React.FC<Props> = ({ organizationId }) => {
+export const OrganizationPointsBalance: React.FC<Props> = ({
+  organizationId,
+}) => {
   const token = useTeacherAuthStore((state) => state.token);
   const [balance, setBalance] = useState<PointsBalance | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,19 +22,19 @@ export const OrganizationPointsBalance: React.FC<Props> = ({ organizationId }) =
           `${API_URL}/api/organizations/${organizationId}/points`,
           {
             headers: {
-              'Authorization': `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
             },
-          }
+          },
         );
 
         if (!response.ok) {
-          throw new Error('Failed to fetch points balance');
+          throw new Error("Failed to fetch points balance");
         }
 
         const data = await response.json();
         setBalance(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setLoading(false);
       }
@@ -75,7 +77,7 @@ export const OrganizationPointsBalance: React.FC<Props> = ({ organizationId }) =
         <div className="w-full bg-gray-200 rounded-full h-2.5">
           <div
             className={`h-2.5 rounded-full ${
-              isLow ? 'bg-red-600' : 'bg-blue-600'
+              isLow ? "bg-red-600" : "bg-blue-600"
             }`}
             style={{ width: `${100 - percentageUsed}%` }}
           />
@@ -95,11 +97,15 @@ export const OrganizationPointsBalance: React.FC<Props> = ({ organizationId }) =
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div>
           <p className="text-gray-500">Used</p>
-          <p className="font-semibold">{balance.used_points.toLocaleString()}</p>
+          <p className="font-semibold">
+            {balance.used_points.toLocaleString()}
+          </p>
         </div>
         <div>
           <p className="text-gray-500">Available</p>
-          <p className="font-semibold">{balance.remaining_points.toLocaleString()}</p>
+          <p className="font-semibold">
+            {balance.remaining_points.toLocaleString()}
+          </p>
         </div>
       </div>
 
