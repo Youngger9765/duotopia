@@ -20,7 +20,7 @@ import { toast } from "sonner";
 export default function MaterialsPage() {
   const { orgId } = useParams<{ orgId: string }>();
   const token = useTeacherAuthStore((state) => state.token);
-  const user = useTeacherAuthStore((state) => state.user);
+  const userRoles = useTeacherAuthStore((state) => state.userRoles);
   const { selectedNode } = useOrganization();
 
   const [programs, setPrograms] = useState<OrganizationProgram[]>([]);
@@ -97,7 +97,7 @@ export default function MaterialsPage() {
 
   // Check if current user can manage materials
   const canManageMaterials =
-    user?.role === "org_owner" || user?.role === "org_admin";
+    userRoles.includes("org_owner") || userRoles.includes("org_admin");
 
   if (!effectiveOrgId) {
     return (
