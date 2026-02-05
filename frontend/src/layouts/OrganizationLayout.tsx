@@ -20,7 +20,7 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { token, logout: storeLogout, user } = useTeacherAuthStore();
+  const { token, logout: storeLogout, user, setUserRoles } = useTeacherAuthStore();
   const { setOrganizations, setIsFetchingOrgs } = useOrganization();
 
   // Fetch organizations on mount
@@ -58,6 +58,8 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
 
       // Priority: Use user.role if available (from login response)
       if (currentUser?.role) {
+        // Store role in userRoles for child components (MaterialsPage needs this)
+        setUserRoles([currentUser.role]);
         const hasOrgRole = ["org_owner", "org_admin", "school_admin"].includes(
           currentUser.role,
         );
@@ -78,6 +80,10 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
 
         if (response.ok) {
           const data = await response.json();
+          // Store roles in global state for use by child components
+          if (data.all_roles) {
+            setUserRoles(data.all_roles);
+          }
           const hasOrgRole = data.all_roles?.some((role: string) =>
             ["org_owner", "org_admin", "school_admin"].includes(role),
           );
@@ -95,7 +101,7 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
     if (token) {
       checkPermissions();
     }
-  }, [token, navigate]);
+  }, [token, navigate, setUserRoles]);
 
   const handleLogout = () => {
     apiClient.logout();
