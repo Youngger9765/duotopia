@@ -1,7 +1,7 @@
 """Split demo_word_selection_assignment_id into listening and writing modes
 
 Revision ID: 20260205_1800
-Revises: 20260203_1600
+Revises: 20260201_0307, 20260203_1600
 Create Date: 2026-02-05 18:00:00.000000
 
 This migration adds two new demo config keys:
@@ -15,7 +15,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "20260205_1800"
-down_revision = "20260203_1600"
+down_revision = ("20260201_0307", "20260203_1600")
 depends_on = None
 
 
