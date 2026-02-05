@@ -27,7 +27,17 @@
     "paste": "Paste",
     "cut": "Cut",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "retry": "Retry"
+  },
+  "demo": {
+    "banner": "Demo Mode - Progress will not be saved",
+    "mode": "Demo Mode",
+    "complete": "Demo complete! Register to get full features",
+    "backToHome": "Back to Home",
+    "configError": "Failed to load demo configuration",
+    "notAvailable": "This demo is currently unavailable",
+    "invalidConfig": "Invalid demo configuration"
   },
   "rearrangement": {
     "loading": "Loading questions...",
@@ -230,6 +240,26 @@
       "startFreeTrial": "Start Free Trial Now",
       "studentLogin": "Student Login",
       "benefits": "No Credit Card Required • Forever Free Plan • Get Started in 5 Minutes"
+    },
+    "demo": {
+      "title": "Try Four Learning Modes Now",
+      "subtitle": "No registration required - experience Duotopia's interactive learning instantly",
+      "reading": {
+        "title": "Sentence Reading",
+        "description": "AI instantly scores your pronunciation"
+      },
+      "rearrangement": {
+        "title": "Sentence Rearrangement",
+        "description": "Drag words to form correct sentences"
+      },
+      "vocabulary": {
+        "title": "Word Reading",
+        "description": "Learn correct word pronunciation"
+      },
+      "wordSelection": {
+        "title": "Word Selection",
+        "description": "Choose the correct answer from options"
+      }
     },
     "loginOptions": {
       "title": "Quick Login Portal",

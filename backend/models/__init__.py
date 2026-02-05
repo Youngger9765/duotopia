@@ -58,6 +58,9 @@ from .progress import (
     PracticeAnswer,
 )
 
+# Demo models
+from .demo_config import DemoConfig
+
 __all__ = [
     # Base
     "Base",
@@ -105,4 +108,6 @@ __all__ = [
     "StudentItemProgress",
     "PracticeSession",
     "PracticeAnswer",
+    # Demo
+    "DemoConfig",
 ]
