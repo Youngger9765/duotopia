@@ -37,6 +37,27 @@ from sqlalchemy.orm import joinedload
 # 設定 logger
 logger = logging.getLogger(__name__)
 
+
+def get_organization_id_from_classroom(classroom) -> Optional[str]:
+    """
+    從 classroom 透過 classroom_schools 關係取得 organization_id。
+    Classroom 模型沒有直接的 organization_id 欄位，
+    需要透過 classroom → classroom_schools → school → organization_id 路徑取得。
+
+    Returns:
+        organization_id (str) 或 None（如果 classroom 不屬於任何組織）
+    """
+    if not classroom or not classroom.classroom_schools:
+        return None
+
+    # 取得第一個有效的 classroom_school 連結
+    for cs in classroom.classroom_schools:
+        if cs.is_active and cs.school and cs.school.organization_id:
+            return str(cs.school.organization_id)
+
+    return None
+
+
 # 全局 Semaphore - 限制並發 Azure Speech API 呼叫
 # Azure S0 標準層限制：20 TPS（每秒事務數）
 # 保守設定：18 並發（保留 2 個緩衝，避免觸發 429 錯誤）
@@ -709,18 +730,19 @@ async def assess_pronunciation_endpoint(
 
             # 根據班級類型決定檢查對象
             classroom = assignment.classroom
-            if classroom and classroom.organization_id:
+            org_id = get_organization_id_from_classroom(classroom)
+            if org_id:
                 # 🏢 機構班級 → 檢查機構點數
-                org = db.query(Organization).filter(Organization.id == classroom.organization_id).first()
+                org = db.query(Organization).filter(Organization.id == org_id).first()
                 if not OrganizationPointsService.check_points(org, required_points):
                     points_info = OrganizationPointsService.get_points_info(org)
                     logger.warning(
-                        f"⚠️ Org {classroom.organization_id} points exceeded, but allowing student to continue. "
+                        f"⚠️ Org {org_id} points exceeded, but allowing student to continue. "
                         f"Required: {required_points}pts, Remaining: {points_info['remaining']}pts"
                     )
                 else:
                     logger.info(
-                        f"✅ Org points check passed: {required_points}pts for org {classroom.organization_id}"
+                        f"✅ Org points check passed: {required_points}pts for org {org_id}"
                     )
             else:
                 # 👤 個人老師班級 → 檢查老師配額
@@ -937,11 +959,12 @@ async def assess_pronunciation_endpoint(
 
             # 根據班級類型決定扣點對象
             classroom = assignment.classroom
-            if classroom and classroom.organization_id:
+            org_id = get_organization_id_from_classroom(classroom)
+            if org_id:
                 # 🏢 機構班級 → 扣機構點數
                 OrganizationPointsService.deduct_points(
                     db=db,
-                    organization_id=classroom.organization_id,
+                    organization_id=org_id,
                     teacher_id=teacher.id,
                     student_id=current_student.id,
                     assignment_id=assignment.id,
@@ -955,7 +978,7 @@ async def assess_pronunciation_endpoint(
                     },
                 )
                 logger.info(
-                    f"✅ Deducted {duration_seconds:.1f}s org points for org {classroom.organization_id} "
+                    f"✅ Deducted {duration_seconds:.1f}s org points for org {org_id} "
                     f"teacher {teacher.id} student {current_student.id} assignment {assignment.id}"
                 )
             else:
@@ -984,7 +1007,7 @@ async def assess_pronunciation_endpoint(
                 error_type = e.detail.get("error")
                 if error_type in ["QUOTA_HARD_LIMIT_EXCEEDED", "QUOTA_HARD_LIMIT_EXCEEDED"]:
                     # 硬限制超額，學生看到友善訊息
-                    is_org = classroom and classroom.organization_id
+                    is_org = org_id is not None
                     logger.error(
                         f"❌ {'Org points' if is_org else 'Quota'} hard limit exceeded, "
                         f"blocking student {current_student.id}"
