@@ -690,7 +690,7 @@ export function ProgramTreeView({
                 </svg>
               </button>
             </div>
-            <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-hidden flex flex-col min-h-0">
               <div className="flex-1 overflow-auto p-6 min-h-0">
                 <ReadingAssessmentPanel
                   lessonId={editorLessonId}
@@ -746,7 +746,7 @@ export function ProgramTreeView({
                 </button>
               </div>
               {/* Content */}
-              <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 <div className="flex-1 overflow-auto p-6 min-h-0">
                   <ReadingAssessmentPanel
                     content={readingPanelContent}
@@ -797,7 +797,7 @@ export function ProgramTreeView({
                   </svg>
                 </button>
               </div>
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
                 {/* TODO: Fix SentenceMakingPanel props interface mismatch */}
                 <SentenceMakingPanel
                   {...({
@@ -860,7 +860,7 @@ export function ProgramTreeView({
                 </button>
               </div>
               {/* Content */}
-              <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 <div className="flex-1 overflow-auto p-6 min-h-0">
                   {/* TODO: Fix SentenceMakingPanel props interface mismatch */}
                   <SentenceMakingPanel
@@ -890,19 +890,21 @@ export function ProgramTreeView({
         vocabularySetLessonId &&
         vocabularySetContentId === null && (
           <Dialog open={true} onOpenChange={() => closeVocabularySetEditor()}>
-            <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
+            <DialogContent className="max-w-7xl max-h-[90vh] flex flex-col">
+              <DialogHeader className="flex-shrink-0">
                 <DialogTitle>新增單字集</DialogTitle>
               </DialogHeader>
-              <VocabularySetPanel
-                lessonId={vocabularySetLessonId}
-                isCreating={true}
-                onSave={async () => {
-                  closeVocabularySetEditor();
-                  toast.success("內容已儲存");
-                  if (onRefresh) onRefresh();
-                }}
-              />
+              <div className="flex-1 overflow-y-auto min-h-0">
+                <VocabularySetPanel
+                  lessonId={vocabularySetLessonId}
+                  isCreating={true}
+                  onSave={async () => {
+                    closeVocabularySetEditor();
+                    toast.success("內容已儲存");
+                    if (onRefresh) onRefresh();
+                  }}
+                />
+              </div>
             </DialogContent>
           </Dialog>
         )}
@@ -942,7 +944,7 @@ export function ProgramTreeView({
                 </button>
               </div>
               {/* Content */}
-              <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 <div className="flex-1 overflow-auto p-6 min-h-0">
                   <VocabularySetPanel
                     lessonId={vocabularySetLessonId}
