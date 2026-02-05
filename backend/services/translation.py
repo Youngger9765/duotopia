@@ -608,24 +608,40 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
 
                 sentences = json.loads(content)
 
-            # 確保返回數量正確
+            # 確保返回數量正確並添加 word 欄位以防止陣列錯位
             if len(sentences) != len(words):
                 logger.warning(
                     "Expected %d sentences, got %d.", len(words), len(sentences)
                 )
                 # 補齊或截斷
                 while len(sentences) < len(words):
+                    word = words[len(sentences)]
                     sentences.append(
-                        {"sentence": f"Example with {words[len(sentences)]}"}
+                        {"sentence": f"Example with {word}", "word": word}
                     )
                 sentences = sentences[: len(words)]
+
+            # 為每個句子添加 word 欄位，確保 1:1 對應關係
+            for i, sentence in enumerate(sentences):
+                if "word" not in sentence:
+                    sentence["word"] = words[i]
 
             return sentences
 
         except Exception as e:
             logger.error("Generate sentences error: %s", e)
-            # Fallback: 返回簡單的預設例句
-            return [{"sentence": f"This is an example with {word}."} for word in words]
+            # Fallback: 返回簡單的預設例句，包含 word 欄位確保對應
+            fallback_sentences = []
+            for word in words:
+                sentence_obj = {
+                    "sentence": f"This is an example with {word}.",
+                    "word": word
+                }
+                # 如果需要翻譯，添加翻譯欄位
+                if translate_to:
+                    sentence_obj["translation"] = ""
+                fallback_sentences.append(sentence_obj)
+            return fallback_sentences
 
     async def generate_distractors(
         self,
