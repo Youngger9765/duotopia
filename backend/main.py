@@ -45,6 +45,7 @@ from routers import (
     schools,
     classroom_schools,
     student_schools,
+    demo,
 )
 from routers import organization_programs
 from routers import school_programs
@@ -236,6 +237,7 @@ async def api_health_check():
 
 # Include routers
 app.include_router(public.router)  # 公開路由優先，不需要認證
+app.include_router(demo.router)  # Demo 路由（無需認證，有 rate limiting）
 app.include_router(logs.router)  # 日誌路由（無需認證）
 app.include_router(auth.router)
 app.include_router(subscription.router)  # 訂閱路由

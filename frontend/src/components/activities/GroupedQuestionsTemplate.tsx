@@ -103,6 +103,7 @@ interface GroupedQuestionsTemplateProps {
   readOnly?: boolean; // 唯讀模式
   assignmentId?: string; // 作業 ID，用於上傳錄音
   isPreviewMode?: boolean; // 預覽模式（老師端預覽）
+  isDemoMode?: boolean; // Demo mode - uses public demo API endpoints
   authToken?: string; // 認證 token（預覽模式用 teacher token）
   itemAnalysisState?: ItemAnalysisState; // 🎯 當前項目的分析狀態
   onUploadSuccess?: (index: number, gcsUrl: string, progressId: number) => void; // 上傳成功回調
@@ -133,6 +134,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   readOnly = false, // 唯讀模式
   assignmentId,
   isPreviewMode = false, // 預覽模式
+  isDemoMode = false, // Demo mode
   authToken, // 認證 token
   itemAnalysisState, // 🎯 當前項目的分析狀態
   onUploadSuccess,
@@ -530,9 +532,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
       toast.success(t("groupedQuestionsTemplate.messages.assessmentComplete"));
 
-      // 🎯 背景上傳音檔和分析結果（不阻塞 UI，僅在非預覽模式）
+      // 🎯 背景上傳音檔和分析結果（不阻塞 UI，僅在非預覽模式且非 Demo 模式）
       if (
         !isPreviewMode &&
+        !isDemoMode &&
         typeof audioUrl === "string" &&
         audioUrl.startsWith("blob:")
       ) {
@@ -735,9 +738,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           setCurrentTime(0);
                           setDuration(0);
 
-                          // 🎯 Issue #75: 呼叫後端 DELETE API 清空 DB (僅在非預覽模式)
+                          // 🎯 Issue #75: 呼叫後端 DELETE API 清空 DB (僅在非預覽模式且非 Demo 模式)
                           if (
                             !isPreviewMode &&
+                            !isDemoMode &&
                             assignmentId &&
                             currentQuestionIndex !== undefined
                           ) {
@@ -1056,9 +1060,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                 >
                   <button
                     onClick={async () => {
-                      // 🎯 Issue #75: 呼叫後端 DELETE API 清空 DB (僅在非預覽模式)
+                      // 🎯 Issue #75: 呼叫後端 DELETE API 清空 DB (僅在非預覽模式且非 Demo 模式)
                       if (
                         !isPreviewMode &&
+                        !isDemoMode &&
                         assignmentId &&
                         currentQuestionIndex !== undefined
                       ) {

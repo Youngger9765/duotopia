@@ -59,12 +59,14 @@ interface ProficiencyStatus {
 interface WordSelectionActivityProps {
   assignmentId: number;
   isPreviewMode?: boolean;
+  isDemoMode?: boolean; // Demo mode - uses public demo API endpoints
   onComplete?: () => void;
 }
 
 export default function WordSelectionActivity({
   assignmentId,
   isPreviewMode = false,
+  isDemoMode = false,
   onComplete,
 }: WordSelectionActivityProps) {
   const { t } = useTranslation();
@@ -140,15 +142,17 @@ export default function WordSelectionActivity({
     ).length;
   }, [previewWordStrengths, proficiency.target_mastery]);
 
-  // Computed: 顯示用的熟練度（預覽模式用本地計算，學生模式用 API 回傳）
-  const displayProficiency = isPreviewMode
-    ? previewProficiency
-    : proficiency.current_mastery;
+  // Computed: 顯示用的熟練度（預覽模式和 demo 模式用本地計算，學生模式用 API 回傳）
+  const displayProficiency =
+    isPreviewMode || isDemoMode
+      ? previewProficiency
+      : proficiency.current_mastery;
 
-  // Computed: 顯示用的已熟練單字數（預覽模式用本地計算）
-  const displayWordsMastered = isPreviewMode
-    ? previewWordsMastered
-    : proficiency.words_mastered;
+  // Computed: 顯示用的已熟練單字數（預覽模式和 demo 模式用本地計算）
+  const displayWordsMastered =
+    isPreviewMode || isDemoMode
+      ? previewWordsMastered
+      : proficiency.words_mastered;
 
   // Timer
   const [timeLimit, setTimeLimit] = useState<number | null>(null);
@@ -163,10 +167,12 @@ export default function WordSelectionActivity({
     try {
       setLoading(true);
 
-      // 根據是否為預覽模式選擇不同的 API
-      const apiEndpoint = isPreviewMode
-        ? `/api/teachers/assignments/${assignmentId}/preview/word-selection-start`
-        : `/api/students/assignments/${assignmentId}/vocabulary/selection/start`;
+      // 根據模式選擇不同的 API
+      const apiEndpoint = isDemoMode
+        ? `/api/demo/assignments/${assignmentId}/preview/word-selection-start`
+        : isPreviewMode
+          ? `/api/teachers/assignments/${assignmentId}/preview/word-selection-start`
+          : `/api/students/assignments/${assignmentId}/vocabulary/selection/start`;
 
       const data = await apiClient.get<{
         session_id: number | null;
@@ -206,12 +212,12 @@ export default function WordSelectionActivity({
     } finally {
       setLoading(false);
     }
-  }, [assignmentId, isPreviewMode, t]);
+  }, [assignmentId, isPreviewMode, isDemoMode, t]);
 
   // Fetch current proficiency
   const fetchProficiency = useCallback(async () => {
-    // Skip in preview mode - no proficiency tracking
-    if (isPreviewMode) return;
+    // Skip in preview mode and demo mode - no proficiency tracking
+    if (isPreviewMode || isDemoMode) return;
 
     try {
       const data = await apiClient.get<ProficiencyStatus>(
@@ -224,7 +230,7 @@ export default function WordSelectionActivity({
     } catch (error) {
       console.error("Error fetching proficiency:", error);
     }
-  }, [assignmentId, isPreviewMode]);
+  }, [assignmentId, isPreviewMode, isDemoMode]);
 
   useEffect(() => {
     startPractice();
@@ -320,8 +326,8 @@ export default function WordSelectionActivity({
     setShowResult(true);
     setSubmitting(true);
 
-    // Skip API call in preview mode, but track local stats (SM-2 simulation)
-    if (isPreviewMode) {
+    // Skip API call in preview mode and demo mode, but track local stats (SM-2 simulation)
+    if (isPreviewMode || isDemoMode) {
       const wordId = currentWord.content_item_id;
       setPreviewWordStrengths((prev) => ({
         ...prev,
@@ -363,8 +369,8 @@ export default function WordSelectionActivity({
     setShowResult(true);
     setSubmitting(true);
 
-    // Skip API call in preview mode, but track local stats (SM-2 simulation)
-    if (isPreviewMode) {
+    // Skip API call in preview mode and demo mode, but track local stats (SM-2 simulation)
+    if (isPreviewMode || isDemoMode) {
       const wordId = currentWord.content_item_id;
       setPreviewWordStrengths((prev) => ({
         ...prev,
@@ -422,8 +428,8 @@ export default function WordSelectionActivity({
 
   // Complete assignment - 呼叫 API 完成作業並更新狀態
   const handleCompleteAssignment = async () => {
-    // 預覽模式不需要呼叫 API
-    if (isPreviewMode) {
+    // 預覽模式和 demo 模式不需要呼叫 API
+    if (isPreviewMode || isDemoMode) {
       toast.success(
         t("wordSelection.toast.completed") || "Assignment completed!",
       );
