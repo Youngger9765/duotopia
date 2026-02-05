@@ -11,8 +11,20 @@ import { ProgramTreeView } from "@/components/shared/ProgramTreeView";
 import { ProgramTreeProgram } from "@/hooks/useProgramTree";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OrganizationProgram } from "@/types/organizationPrograms";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
  * MaterialsPage - Manage organization-level educational programs/materials
@@ -29,6 +41,10 @@ export default function MaterialsPage() {
   const [organization, setOrganization] = useState<{ name: string } | null>(
     null,
   );
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newProgramName, setNewProgramName] = useState("");
+  const [newProgramDescription, setNewProgramDescription] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   const effectiveOrgId =
     orgId ||
@@ -99,6 +115,32 @@ export default function MaterialsPage() {
   const canManageMaterials =
     userRoles.includes("org_owner") || userRoles.includes("org_admin");
 
+  // Handle create program
+  const handleCreateProgram = async () => {
+    if (!newProgramName.trim()) {
+      toast.error("請輸入教材名稱");
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      await api.createProgram({
+        name: newProgramName.trim(),
+        description: newProgramDescription.trim() || undefined,
+      });
+      toast.success("教材建立成功");
+      setCreateDialogOpen(false);
+      setNewProgramName("");
+      setNewProgramDescription("");
+      fetchPrograms(); // Refresh the list
+    } catch (error) {
+      console.error("Failed to create program:", error);
+      toast.error("建立教材失敗");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   if (!effectiveOrgId) {
     return (
       <div className="p-8 text-center">
@@ -128,6 +170,12 @@ export default function MaterialsPage() {
           <h1 className="text-3xl font-bold text-gray-900">組織教材</h1>
           <p className="text-gray-600 mt-2">管理組織層級的教學教材與課程</p>
         </div>
+        {canManageMaterials && (
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            新增教材
+          </Button>
+        )}
       </div>
 
       {/* Statistics */}
@@ -208,6 +256,51 @@ export default function MaterialsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Create Program Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>新增教材</DialogTitle>
+            <DialogDescription>
+              建立新的組織教材，可包含多個課程和教學內容
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="program-name">教材名稱 *</Label>
+              <Input
+                id="program-name"
+                placeholder="輸入教材名稱"
+                value={newProgramName}
+                onChange={(e) => setNewProgramName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="program-description">教材描述</Label>
+              <Textarea
+                id="program-description"
+                placeholder="輸入教材描述（選填）"
+                value={newProgramDescription}
+                onChange={(e) => setNewProgramDescription(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCreateDialogOpen(false)}
+              disabled={isCreating}
+            >
+              取消
+            </Button>
+            <Button onClick={handleCreateProgram} disabled={isCreating}>
+              {isCreating ? "建立中..." : "建立教材"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
