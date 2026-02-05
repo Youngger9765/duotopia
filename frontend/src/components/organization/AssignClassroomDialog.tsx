@@ -38,7 +38,7 @@ interface AssignClassroomDialogProps {
   onOpenChange: (open: boolean) => void;
   student: Student | null;
   schoolId: string;
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
 }
 
 export function AssignClassroomDialog({
@@ -111,7 +111,8 @@ export function AssignClassroomDialog({
       );
 
       toast.success("學生已成功指派到班級");
-      onSuccess();
+      // 等待 onSuccess 完成（包含資料重新整理）後再關閉對話框
+      await onSuccess();
       handleClose();
     } catch (error) {
       logError("Failed to assign student to classroom", error, {

@@ -42,8 +42,8 @@ interface StudentDialogsProps {
   student: Student | null;
   dialogType: "view" | "create" | "edit" | "delete" | null;
   onClose: () => void;
-  onSave: (student: Student) => void;
-  onDelete: (studentId: number) => void;
+  onSave: (student: Student) => void | Promise<void>;
+  onDelete: (studentId: number) => void | Promise<void>;
   onSwitchToEdit?: () => void;
   classrooms?: Array<{ id: number; name: string }>;
 }
@@ -201,7 +201,8 @@ export function StudentDialogs({
           classroom_id: response.classroom_id as number | undefined,
           status: "active",
         };
-        onSave(newStudent);
+        // 等待 onSave 完成（包含資料重新整理）後再關閉對話框
+        await onSave(newStudent);
       } else if (dialogType === "edit" && student) {
         // Update existing student
         const response = (await apiClient.updateStudent(
@@ -211,7 +212,8 @@ export function StudentDialogs({
         toast.success(
           t("dialogs.studentDialogs.success.updated", { name: student.name }),
         );
-        onSave({ ...student, ...(response as Partial<Student>) });
+        // 等待 onSave 完成（包含資料重新整理）後再關閉對話框
+        await onSave({ ...student, ...(response as Partial<Student>) });
       }
       onClose();
     } catch (error) {
@@ -309,7 +311,8 @@ export function StudentDialogs({
       toast.success(
         t("dialogs.studentDialogs.success.deleted", { name: student.name }),
       );
-      onDelete(student.id);
+      // 等待 onDelete 完成（包含資料重新整理）後再關閉對話框
+      await onDelete(student.id);
       onClose();
     } catch (error) {
       console.error("Error deleting student:", error);

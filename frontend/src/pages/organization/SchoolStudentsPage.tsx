@@ -148,8 +148,8 @@ export default function SchoolStudentsPage() {
     }
   }, [searchTerm, schoolId]);
 
-  const handleCreateSuccess = () => {
-    fetchStudents();
+  const handleCreateSuccess = async () => {
+    await fetchStudents();
   };
 
   const handleEdit = (student: Student) => {
