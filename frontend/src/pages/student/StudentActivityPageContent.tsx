@@ -148,6 +148,7 @@ interface StudentActivityPageContentProps {
   assignmentTitle: string;
   assignmentId: number;
   isPreviewMode?: boolean;
+  isDemoMode?: boolean; // Demo mode - uses public demo API endpoints
   authToken?: string; // 認證 token（預覽模式用）
   onBack?: () => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -187,6 +188,7 @@ export default function StudentActivityPageContent({
   assignmentTitle,
   assignmentId,
   isPreviewMode = false,
+  isDemoMode = false,
   authToken,
   onBack,
   onSubmit,
@@ -1678,6 +1680,7 @@ export default function StudentActivityPageContent({
           readOnly={isReadOnly}
           assignmentId={assignmentId.toString()}
           isPreviewMode={isPreviewMode}
+          isDemoMode={isDemoMode}
           authToken={authToken}
           itemAnalysisState={itemAnalysisStates.get(
             getItemKey(activity.id, currentSubQuestionIndex),
@@ -1758,6 +1761,7 @@ export default function StudentActivityPageContent({
           <RearrangementActivity
             studentAssignmentId={assignmentId}
             isPreviewMode={isPreviewMode}
+            isDemoMode={isDemoMode}
             showAnswer={showAnswer}
             currentQuestionIndex={rearrangementQuestionIndex}
             onQuestionIndexChange={setRearrangementQuestionIndex}
@@ -1810,6 +1814,7 @@ export default function StudentActivityPageContent({
           <WordReadingActivity
             assignmentId={assignmentId}
             isPreviewMode={isPreviewMode}
+            isDemoMode={isDemoMode}
             authToken={authToken}
             onComplete={() => {
               toast.success(t("wordReading.toast.completed") || "作業已完成！");
@@ -1829,6 +1834,7 @@ export default function StudentActivityPageContent({
           <WordSelectionActivity
             assignmentId={assignmentId}
             isPreviewMode={isPreviewMode}
+            isDemoMode={isDemoMode}
             onComplete={() => {
               toast.success(
                 t("wordSelection.toast.completed") || "作業已完成！",

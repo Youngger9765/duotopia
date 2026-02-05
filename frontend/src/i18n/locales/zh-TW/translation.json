@@ -27,7 +27,17 @@
     "paste": "貼上",
     "cut": "剪下",
     "yes": "是",
-    "no": "否"
+    "no": "否",
+    "retry": "重試"
+  },
+  "demo": {
+    "banner": "體驗模式 - 進度不會被儲存",
+    "mode": "體驗模式",
+    "complete": "體驗完成！歡迎註冊獲得完整功能",
+    "backToHome": "返回首頁",
+    "configError": "無法載入 Demo 設定",
+    "notAvailable": "此 Demo 目前無法使用",
+    "invalidConfig": "Demo 設定錯誤"
   },
   "rearrangement": {
     "loading": "正在載入題目...",
@@ -230,6 +240,26 @@
       "startFreeTrial": "立即免費試用",
       "studentLogin": "學生登入",
       "benefits": "無需信用卡 • 永久免費方案 • 5 分鐘快速上手"
+    },
+    "demo": {
+      "title": "立即體驗四種學習模式",
+      "subtitle": "無需註冊，點擊即可體驗 Duotopia 的互動式學習",
+      "reading": {
+        "title": "例句朗讀",
+        "description": "AI 即時評分你的發音"
+      },
+      "rearrangement": {
+        "title": "例句重組",
+        "description": "拖曳單字組成正確句子"
+      },
+      "vocabulary": {
+        "title": "單字朗讀",
+        "description": "學習單字正確發音"
+      },
+      "wordSelection": {
+        "title": "單字選擇",
+        "description": "從選項中選出正確答案"
+      }
     },
     "loginOptions": {
       "title": "快速登入通道",
