@@ -268,10 +268,10 @@ export default function AdminOrganizations() {
         updateData.address = formData.address;
       }
       if (formData.subscription_start_date) {
-        updateData.subscription_start_date = formData.subscription_start_date;
+        updateData.subscription_start_date = `${formData.subscription_start_date}T00:00:00Z`;
       }
       if (formData.subscription_end_date) {
-        updateData.subscription_end_date = formData.subscription_end_date;
+        updateData.subscription_end_date = `${formData.subscription_end_date}T23:59:59Z`;
       }
       if (
         formData.total_points &&

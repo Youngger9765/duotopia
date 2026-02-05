@@ -198,9 +198,9 @@ export default function CreateOrganization() {
       if (formData.total_points)
         requestData.total_points = formData.total_points;
       if (formData.subscription_start_date)
-        requestData.subscription_start_date = formData.subscription_start_date;
+        requestData.subscription_start_date = `${formData.subscription_start_date}T00:00:00Z`;
       if (formData.subscription_end_date)
-        requestData.subscription_end_date = formData.subscription_end_date;
+        requestData.subscription_end_date = `${formData.subscription_end_date}T23:59:59Z`;
 
       // Add project staff if any
       if (
