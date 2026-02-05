@@ -301,7 +301,9 @@
       "copyright": "© 2025 Duotopia. All rights reserved."
     },
     "header": {
-      "logo": "Duotopia"
+      "logo": "Duotopia",
+      "teacherLogin": "Teacher Login",
+      "studentLogin": "Student Login"
     },
     "cta2": {
       "title": "Ready to Reclaim Your Teaching Time?",

@@ -301,7 +301,9 @@
       "copyright": "© 2025 Duotopia. All rights reserved."
     },
     "header": {
-      "logo": "Duotopia"
+      "logo": "Duotopia",
+      "teacherLogin": "教師登入",
+      "studentLogin": "學生登入"
     },
     "cta2": {
       "title": "準備好重獲老師的自由時光?",
