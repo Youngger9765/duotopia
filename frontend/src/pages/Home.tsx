@@ -247,7 +247,7 @@ export default function Home() {
 
       {/* Demo 體驗區 - 移到登入區下方 */}
       {demoConfig && (
-        <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+        <section className="py-16 bg-blue-50">
           <div className="container mx-auto px-4">
             <div className="max-w-6xl mx-auto">
               <div className="text-center mb-10">
