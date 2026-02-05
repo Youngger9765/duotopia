@@ -76,6 +76,7 @@ export function DemoModal({
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleComplete = async (_data: { answers: any[] }): Promise<void> => {
     toast.success(t("demo.complete"));
     onClose();

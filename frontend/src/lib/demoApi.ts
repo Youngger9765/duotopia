@@ -232,10 +232,7 @@ class DemoApiClient {
     );
 
     if (!response.ok) {
-      throw new DemoApiError(
-        response.status,
-        "Failed to start word selection",
-      );
+      throw new DemoApiError(response.status, "Failed to start word selection");
     }
 
     return response.json();

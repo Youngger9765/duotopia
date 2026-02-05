@@ -42,7 +42,9 @@ export default function Home() {
   // Demo section state
   const [demoModalOpen, setDemoModalOpen] = useState(false);
   const [selectedDemoType, setSelectedDemoType] = useState<DemoType>("reading");
-  const [selectedDemoAssignmentId, setSelectedDemoAssignmentId] = useState<number | null>(null);
+  const [selectedDemoAssignmentId, setSelectedDemoAssignmentId] = useState<
+    number | null
+  >(null);
   const [demoConfig, setDemoConfig] = useState<DemoConfig | null>(null);
 
   // Fetch demo config on mount

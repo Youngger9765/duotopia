@@ -99,6 +99,7 @@ interface GroupedQuestionsTemplateProps {
   readOnly?: boolean; // 唯讀模式
   assignmentId?: string; // 作業 ID，用於上傳錄音
   isPreviewMode?: boolean; // 預覽模式（老師端預覽）
+  isDemoMode?: boolean; // Demo mode - uses public demo API endpoints
   authToken?: string; // 認證 token（預覽模式用 teacher token）
   onUploadSuccess?: (index: number, gcsUrl: string, progressId: number) => void; // 上傳成功回調
   onAssessmentComplete?: (
@@ -126,6 +127,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   readOnly = false, // 唯讀模式
   assignmentId,
   isPreviewMode = false, // 預覽模式
+  isDemoMode = false, // Demo mode
   authToken, // 認證 token
   onUploadSuccess,
   onAssessmentComplete,
@@ -509,8 +511,42 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
       const apiUrl = import.meta.env.VITE_API_URL || "";
       let result;
 
-      // 預覽模式使用預覽 API，正常模式使用學生 API
-      if (isPreviewMode) {
+      // Demo mode, Preview mode, or Normal student mode
+      if (isDemoMode) {
+        // Demo mode: use demo API without authentication
+        result = await retryAIAnalysis(
+          async () => {
+            const assessResponse = await fetch(
+              `${apiUrl}/api/demo/assignments/preview/assess-speech`,
+              {
+                method: "POST",
+                // No Authorization header for demo mode
+                body: formData,
+              },
+            );
+
+            if (!assessResponse.ok) {
+              const error = new Error(
+                `AI Analysis failed: ${assessResponse.status} ${assessResponse.statusText}`,
+              );
+              if (
+                assessResponse.status >= 500 ||
+                assessResponse.status === 429
+              ) {
+                throw error;
+              }
+              throw Object.assign(error, { noRetry: true });
+            }
+
+            const data = await assessResponse.json();
+            // Demo API 返回格式：{ success: true, assessment: {...} }
+            return data.assessment;
+          },
+          (attempt) => {
+            toast.warning(`AI 分析失敗，正在重試... (第 ${attempt}/3 次)`);
+          },
+        );
+      } else if (isPreviewMode) {
         // 預覽模式：使用老師的預覽 API，不需要 progress_id
         result = await retryAIAnalysis(
           async () => {

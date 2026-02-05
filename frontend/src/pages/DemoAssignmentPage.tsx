@@ -106,9 +106,7 @@ export default function DemoAssignmentPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Info className="h-5 w-5 flex-shrink-0" />
-              <span className="text-sm font-medium">
-                {t("demo.banner")}
-              </span>
+              <span className="text-sm font-medium">{t("demo.banner")}</span>
             </div>
             <Button
               variant="ghost"

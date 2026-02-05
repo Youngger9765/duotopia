@@ -53,6 +53,7 @@ interface WordItem {
 interface WordReadingActivityProps {
   assignmentId: number;
   isPreviewMode?: boolean;
+  isDemoMode?: boolean; // Demo mode - uses public demo API endpoints
   authToken?: string; // 認證 token（預覽模式用老師 token）
   showTranslation?: boolean;
   showImage?: boolean;
@@ -62,6 +63,7 @@ interface WordReadingActivityProps {
 export default function WordReadingActivity({
   assignmentId,
   isPreviewMode = false,
+  isDemoMode = false,
   authToken,
   showTranslation: _showTranslationProp = true, // 保留 prop 但使用 API 返回的值
   showImage: _showImageProp = true, // 保留 prop 但使用 API 返回的值
@@ -89,10 +91,12 @@ export default function WordReadingActivity({
       setLoading(true);
       const apiUrl = import.meta.env.VITE_API_URL || "";
 
-      // 預覽模式使用老師端點，學生模式使用學生端點
-      const endpoint = isPreviewMode
-        ? `${apiUrl}/api/teachers/assignments/${assignmentId}/preview/vocabulary/activities`
-        : `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/activities`;
+      // 根據模式選擇不同的端點
+      const endpoint = isDemoMode
+        ? `${apiUrl}/api/demo/assignments/${assignmentId}/preview/vocabulary/activities`
+        : isPreviewMode
+          ? `${apiUrl}/api/teachers/assignments/${assignmentId}/preview/vocabulary/activities`
+          : `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/activities`;
 
       const response = await fetch(endpoint, {
         headers: {
@@ -126,7 +130,7 @@ export default function WordReadingActivity({
     } finally {
       setLoading(false);
     }
-  }, [assignmentId, token, isPreviewMode, t]);
+  }, [assignmentId, token, isPreviewMode, isDemoMode, t]);
 
   useEffect(() => {
     loadItems();
@@ -146,8 +150,8 @@ export default function WordReadingActivity({
       return updated;
     });
 
-    // Skip upload in preview mode
-    if (isPreviewMode) {
+    // Skip upload in preview mode or demo mode
+    if (isPreviewMode || isDemoMode) {
       toast.success(
         t("wordReading.toast.recordedPreview") ||
           "Recording saved (preview mode)",
@@ -230,8 +234,8 @@ export default function WordReadingActivity({
       return updated;
     });
 
-    // Save to server
-    if (!isPreviewMode && currentItem.progress_id) {
+    // Save to server (skip in preview and demo mode)
+    if (!isPreviewMode && !isDemoMode && currentItem.progress_id) {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || "";
 
@@ -281,7 +285,7 @@ export default function WordReadingActivity({
 
   // Submit assignment
   const handleSubmit = async () => {
-    if (isPreviewMode) {
+    if (isPreviewMode || isDemoMode) {
       toast.info(
         t("wordReading.toast.cannotSubmitPreview") ||
           "Cannot submit in preview mode",

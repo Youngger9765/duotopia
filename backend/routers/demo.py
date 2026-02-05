@@ -7,6 +7,7 @@ No authentication required, but rate-limited to prevent abuse.
 
 import logging
 import os
+import random
 from fastapi import (
     APIRouter,
     Depends,
@@ -338,31 +339,37 @@ async def demo_vocabulary_activities(
     if not content_items:
         raise HTTPException(status_code=404, detail="No vocabulary items found")
 
-    # Build activities list
-    activities = []
-    for idx, item in enumerate(content_items):
-        activity = {
-            "id": idx + 1,
-            "word": item.text,
-            "translation": item.translation if assignment.show_translation else None,
-            "image_url": item.image_url if assignment.show_image else None,
+    # Build items list (matching teacher API format)
+    items = []
+    for item in content_items:
+        item_data = {
+            "id": item.id,
+            "text": item.text,
+            "translation": item.translation,
             "audio_url": item.audio_url,
-            "order": idx + 1,
-            "status": "NOT_STARTED",
-            "score": None,
+            "image_url": item.image_url,
+            "part_of_speech": item.part_of_speech,
+            "order_index": item.order_index,
+            "recording_url": None,  # Preview mode has no student recordings
         }
-        activities.append(activity)
+        items.append(item_data)
 
     return {
         "assignment_id": assignment.id,
         "title": assignment.title,
+        "status": "preview",
         "practice_mode": "word_reading",
-        "show_translation": assignment.show_translation,
-        "show_image": assignment.show_image,
-        "total_activities": len(activities),
-        "activities": activities,
-        "preview_mode": True,
-        "demo_mode": True,
+        "show_translation": (
+            assignment.show_translation
+            if assignment.show_translation is not None
+            else True
+        ),
+        "show_image": (
+            assignment.show_image if assignment.show_image is not None else True
+        ),
+        "time_limit_per_question": assignment.time_limit_per_question or 0,
+        "total_items": len(items),
+        "items": items,
     }
 
 
@@ -386,6 +393,8 @@ async def demo_word_selection_start(
     Returns:
         Same format as teacher preview API for word selection practice.
     """
+    from services.translation import translation_service
+
     # Validate assignment belongs to demo account
     assignment = get_demo_assignment(assignment_id, db)
 
@@ -406,30 +415,124 @@ async def demo_word_selection_start(
     )
 
     if not content_items:
-        raise HTTPException(status_code=404, detail="No word items found")
+        raise HTTPException(
+            status_code=404, detail="No vocabulary items found for this assignment"
+        )
 
-    # Build question pool (same format as teacher preview)
-    question_pool = []
+    # Record total words before limiting
+    total_words_in_assignment = len(content_items)
+
+    # Shuffle if needed
+    if assignment.shuffle_questions:
+        random.shuffle(content_items)
+
+    # Limit to 10 words (consistent with student API)
+    content_items = content_items[:10]
+
+    # Collect items needing distractor generation
+    items_needing_generation = [item for item in content_items if not item.distractors]
+
+    # Batch generate distractors if needed
+    if items_needing_generation:
+        words_for_distractors = [
+            {"word": item.text, "translation": item.translation or ""}
+            for item in items_needing_generation
+        ]
+        try:
+            # Generate 2 AI distractors, 1 from other words in assignment
+            generated = await translation_service.batch_generate_distractors(
+                words_for_distractors, count=2
+            )
+            for i, item in enumerate(items_needing_generation):
+                if i < len(generated):
+                    item._generated_distractors = generated[i]
+        except Exception as e:
+            logger.error(f"Failed to generate distractors for demo preview: {e}")
+            for item in items_needing_generation:
+                item._generated_distractors = ["選項A", "選項B", "選項C"]
+
+    # Build response data
+    words_with_options = []
+
+    # Collect all translations for cross-contamination (from other words in assignment)
+    all_translations = {
+        item.translation.lower().strip(): item.translation
+        for item in content_items
+        if item.translation
+    }
+
     for item in content_items:
-        question = {
-            "item_id": item.id,
-            "word": item.text if assignment.show_word else None,
-            "audio_url": item.audio_url,
-            "image_url": item.image_url if assignment.show_image else None,
-            "correct_translation": item.translation,
-        }
-        question_pool.append(question)
+        correct_answer = item.translation or ""
+
+        # Use pre-generated or just-generated distractors
+        if item.distractors:
+            ai_distractors = item.distractors
+        elif hasattr(item, "_generated_distractors"):
+            ai_distractors = item._generated_distractors
+        else:
+            ai_distractors = []
+
+        # Set for deduplication
+        seen = {correct_answer.lower().strip()}
+        final_distractors = []
+
+        # Step 1: Pick 1 translation from other words in assignment as distractor
+        other_translations = [
+            t
+            for key, t in all_translations.items()
+            if key != correct_answer.lower().strip()
+        ]
+        if other_translations:
+            sibling_distractor = random.choice(other_translations)
+            if sibling_distractor.lower().strip() not in seen:
+                final_distractors.append(sibling_distractor)
+                seen.add(sibling_distractor.lower().strip())
+
+        # Step 2: Add AI-generated distractors (max 2)
+        for d in ai_distractors:
+            d_normalized = d.lower().strip()
+            if d_normalized not in seen and d.strip():
+                seen.add(d_normalized)
+                final_distractors.append(d)
+            if len(final_distractors) >= 3:
+                break
+
+        # Step 3: Fallback to ensure 3 distractors
+        fallback_options = ["選項A", "選項B", "選項C", "選項D", "選項E"]
+        fallback_idx = 0
+        while len(final_distractors) < 3:
+            fallback = fallback_options[fallback_idx]
+            if fallback.lower() not in seen:
+                final_distractors.append(fallback)
+                seen.add(fallback.lower())
+            fallback_idx += 1
+
+        # Build options array and shuffle
+        options = [correct_answer] + final_distractors[:3]
+        random.shuffle(options)
+
+        words_with_options.append(
+            {
+                "content_item_id": item.id,
+                "text": item.text,
+                "translation": correct_answer,
+                "audio_url": item.audio_url,
+                "image_url": item.image_url,
+                "memory_strength": 0,
+                "options": options,
+            }
+        )
 
     return {
-        "assignment_id": assignment.id,
-        "title": assignment.title,
-        "practice_mode": "word_selection",
+        "session_id": None,  # Preview mode doesn't create session
+        "words": words_with_options,
+        "total_words": total_words_in_assignment,  # Total words in assignment, not current practice
+        "current_proficiency": 0,
         "target_proficiency": assignment.target_proficiency or 80,
-        "show_word": assignment.show_word,
-        "show_image": assignment.show_image,
-        "question_pool": question_pool,
-        "preview_mode": True,
-        "demo_mode": True,
+        "show_word": assignment.show_word if assignment.show_word is not None else True,
+        "show_image": (
+            assignment.show_image if assignment.show_image is not None else True
+        ),
     }
 
 
@@ -506,8 +609,6 @@ async def demo_rearrangement_questions(
     Returns:
         Same format as teacher preview API for rearrangement practice.
     """
-    import random
-
     # Validate assignment belongs to demo account
     assignment = get_demo_assignment(assignment_id, db)
 
@@ -530,45 +631,41 @@ async def demo_rearrangement_questions(
     if not content_items:
         raise HTTPException(status_code=404, detail="No questions found")
 
+    # Shuffle items if configured (before building questions)
+    if assignment.shuffle_questions:
+        random.shuffle(content_items)
+
     # Build questions list
     questions = []
-    for idx, item in enumerate(content_items):
+    for item in content_items:
         # Split sentence into words and shuffle
         words = item.text.strip().split()
         shuffled_words = words.copy()
         random.shuffle(shuffled_words)
 
         question = {
-            "id": idx + 1,
-            "item_id": item.id,
+            "content_item_id": item.id,
             "shuffled_words": shuffled_words,
-            "correct_sentence": item.text,
+            "word_count": item.word_count or len(words),
+            "max_errors": item.max_errors or (3 if len(words) <= 10 else 5),
+            "time_limit": (
+                assignment.time_limit_per_question
+                if assignment.time_limit_per_question is not None
+                else 30
+            ),
+            "play_audio": assignment.play_audio or False,
+            "audio_url": item.audio_url,
             "translation": item.translation,
-            "audio_url": item.audio_url if assignment.play_audio else None,
-            "time_limit": assignment.time_limit_per_question or 30,
-            "order": idx + 1,
+            "original_text": item.text.strip(),
         }
         questions.append(question)
 
-    # Shuffle questions if configured
-    if assignment.shuffle_questions:
-        random.shuffle(questions)
-        # Re-order the questions
-        for idx, q in enumerate(questions):
-            q["order"] = idx + 1
-
     return {
-        "assignment_id": assignment.id,
-        "title": assignment.title,
+        "student_assignment_id": assignment.id,
         "practice_mode": "rearrangement",
-        "play_audio": assignment.play_audio or False,
-        "show_answer": assignment.show_answer or False,
-        "time_limit_per_question": assignment.time_limit_per_question or 30,
-        "shuffle_questions": assignment.shuffle_questions or False,
-        "total_questions": len(questions),
+        "score_category": assignment.score_category,
         "questions": questions,
-        "preview_mode": True,
-        "demo_mode": True,
+        "total_questions": len(questions),
     }
 
 

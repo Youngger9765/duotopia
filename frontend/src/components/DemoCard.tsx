@@ -31,7 +31,8 @@ export function DemoCard({
         "group relative overflow-hidden rounded-2xl p-6 text-left transition-all duration-300",
         "border border-gray-200 bg-white shadow-lg",
         "hover:shadow-2xl hover:-translate-y-1",
-        disabled && "opacity-50 cursor-not-allowed hover:shadow-lg hover:translate-y-0"
+        disabled &&
+          "opacity-50 cursor-not-allowed hover:shadow-lg hover:translate-y-0",
       )}
     >
       {/* Gradient background on hover */}
@@ -39,7 +40,7 @@ export function DemoCard({
         className={cn(
           "absolute inset-0 bg-gradient-to-br opacity-0 transition-opacity duration-300",
           "group-hover:opacity-10",
-          gradient
+          gradient,
         )}
       />
 
@@ -49,7 +50,7 @@ export function DemoCard({
           "relative w-14 h-14 rounded-xl flex items-center justify-center mb-4",
           "bg-gradient-to-br text-white",
           "group-hover:scale-110 transition-transform duration-300",
-          gradient
+          gradient,
         )}
       >
         {icon}
