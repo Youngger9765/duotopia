@@ -19,19 +19,25 @@ import {
   Puzzle,
   BookOpen,
   CheckSquare,
+  Headphones,
 } from "lucide-react";
 import { DemoCard } from "@/components/DemoCard";
-import { DemoModal } from "@/components/DemoModal";
 import { demoApi } from "@/lib/demoApi";
 import { toast } from "sonner";
 
-type DemoType = "reading" | "rearrangement" | "vocabulary" | "wordSelection";
+type DemoType =
+  | "reading"
+  | "rearrangement"
+  | "vocabulary"
+  | "wordSelectionListening"
+  | "wordSelectionWriting";
 
 interface DemoConfig {
   demo_reading_assignment_id?: string;
   demo_rearrangement_assignment_id?: string;
   demo_vocabulary_assignment_id?: string;
-  demo_word_selection_assignment_id?: string;
+  demo_word_selection_listening_assignment_id?: string;
+  demo_word_selection_writing_assignment_id?: string;
 }
 
 export default function Home() {
@@ -40,11 +46,6 @@ export default function Home() {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   // Demo section state
-  const [demoModalOpen, setDemoModalOpen] = useState(false);
-  const [selectedDemoType, setSelectedDemoType] = useState<DemoType>("reading");
-  const [selectedDemoAssignmentId, setSelectedDemoAssignmentId] = useState<
-    number | null
-  >(null);
   const [demoConfig, setDemoConfig] = useState<DemoConfig | null>(null);
 
   // Fetch demo config on mount
@@ -62,8 +63,8 @@ export default function Home() {
     fetchDemoConfig();
   }, []);
 
-  // Open demo modal with selected type
-  const openDemoModal = (type: DemoType) => {
+  // Open demo in new tab
+  const openDemoInNewTab = (type: DemoType) => {
     if (!demoConfig) {
       toast.error(t("demo.configError"));
       return;
@@ -73,24 +74,18 @@ export default function Home() {
       reading: demoConfig.demo_reading_assignment_id,
       rearrangement: demoConfig.demo_rearrangement_assignment_id,
       vocabulary: demoConfig.demo_vocabulary_assignment_id,
-      wordSelection: demoConfig.demo_word_selection_assignment_id,
+      wordSelectionListening:
+        demoConfig.demo_word_selection_listening_assignment_id,
+      wordSelectionWriting: demoConfig.demo_word_selection_writing_assignment_id,
     };
 
-    const assignmentIdStr = assignmentIdMap[type];
-    if (!assignmentIdStr) {
+    const assignmentId = assignmentIdMap[type];
+    if (!assignmentId) {
       toast.error(t("demo.notAvailable"));
       return;
     }
 
-    const assignmentId = parseInt(assignmentIdStr, 10);
-    if (isNaN(assignmentId)) {
-      toast.error(t("demo.invalidConfig"));
-      return;
-    }
-
-    setSelectedDemoType(type);
-    setSelectedDemoAssignmentId(assignmentId);
-    setDemoModalOpen(true);
+    window.open(`/demo/${assignmentId}`, "_blank");
   };
 
   return (
@@ -307,6 +302,80 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Demo 體驗區 - 移到登入區下方 */}
+      {demoConfig && (
+        <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+          <div className="container mx-auto px-4">
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center mb-10">
+                <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+                  {t("home.demo.title")}
+                </h2>
+                <p className="text-xl text-gray-600">
+                  {t("home.demo.subtitle")}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                {/* 例句朗讀 */}
+                <DemoCard
+                  icon={<Mic className="h-7 w-7" />}
+                  title={t("home.demo.reading.title")}
+                  description={t("home.demo.reading.description")}
+                  onClick={() => openDemoInNewTab("reading")}
+                  gradient="from-blue-500 to-indigo-600"
+                  disabled={!demoConfig.demo_reading_assignment_id}
+                />
+
+                {/* 例句重組 */}
+                <DemoCard
+                  icon={<Puzzle className="h-7 w-7" />}
+                  title={t("home.demo.rearrangement.title")}
+                  description={t("home.demo.rearrangement.description")}
+                  onClick={() => openDemoInNewTab("rearrangement")}
+                  gradient="from-green-500 to-emerald-600"
+                  disabled={!demoConfig.demo_rearrangement_assignment_id}
+                />
+
+                {/* 單字朗讀 */}
+                <DemoCard
+                  icon={<BookOpen className="h-7 w-7" />}
+                  title={t("home.demo.vocabulary.title")}
+                  description={t("home.demo.vocabulary.description")}
+                  onClick={() => openDemoInNewTab("vocabulary")}
+                  gradient="from-purple-500 to-pink-600"
+                  disabled={!demoConfig.demo_vocabulary_assignment_id}
+                />
+
+                {/* 單字聽力選擇 */}
+                <DemoCard
+                  icon={<Headphones className="h-7 w-7" />}
+                  title={t("home.demo.wordSelectionListening.title")}
+                  description={t("home.demo.wordSelectionListening.description")}
+                  onClick={() => openDemoInNewTab("wordSelectionListening")}
+                  gradient="from-orange-500 to-red-600"
+                  disabled={
+                    !demoConfig.demo_word_selection_listening_assignment_id
+                  }
+                />
+
+                {/* 單字選擇 */}
+                <DemoCard
+                  icon={<CheckSquare className="h-7 w-7" />}
+                  title={t("home.demo.wordSelectionWriting.title")}
+                  description={t("home.demo.wordSelectionWriting.description")}
+                  onClick={() => openDemoInNewTab("wordSelectionWriting")}
+                  gradient="from-teal-500 to-cyan-600"
+                  disabled={
+                    !demoConfig.demo_word_selection_writing_assignment_id
+                  }
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* 第四區段: 為什麼選擇 Duotopia (保留原樣) */}
       <section className="py-20 lg:py-28">
         <div className="container mx-auto px-4">
@@ -444,74 +513,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* 第 4.5 區段: Demo 體驗區 */}
-      {demoConfig && (
-        <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
-          <div className="container mx-auto px-4">
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-12">
-                <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-                  {t("home.demo.title")}
-                </h2>
-                <p className="text-xl text-gray-600">
-                  {t("home.demo.subtitle")}
-                </p>
-              </div>
-
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* 例句朗讀 */}
-                <DemoCard
-                  icon={<Mic className="h-8 w-8" />}
-                  title={t("home.demo.reading.title")}
-                  description={t("home.demo.reading.description")}
-                  onClick={() => openDemoModal("reading")}
-                  gradient="from-blue-500 to-indigo-600"
-                  disabled={!demoConfig.demo_reading_assignment_id}
-                />
-
-                {/* 例句重組 */}
-                <DemoCard
-                  icon={<Puzzle className="h-8 w-8" />}
-                  title={t("home.demo.rearrangement.title")}
-                  description={t("home.demo.rearrangement.description")}
-                  onClick={() => openDemoModal("rearrangement")}
-                  gradient="from-green-500 to-emerald-600"
-                  disabled={!demoConfig.demo_rearrangement_assignment_id}
-                />
-
-                {/* 單字朗讀 */}
-                <DemoCard
-                  icon={<BookOpen className="h-8 w-8" />}
-                  title={t("home.demo.vocabulary.title")}
-                  description={t("home.demo.vocabulary.description")}
-                  onClick={() => openDemoModal("vocabulary")}
-                  gradient="from-purple-500 to-pink-600"
-                  disabled={!demoConfig.demo_vocabulary_assignment_id}
-                />
-
-                {/* 單字選擇 */}
-                <DemoCard
-                  icon={<CheckSquare className="h-8 w-8" />}
-                  title={t("home.demo.wordSelection.title")}
-                  description={t("home.demo.wordSelection.description")}
-                  onClick={() => openDemoModal("wordSelection")}
-                  gradient="from-orange-500 to-red-600"
-                  disabled={!demoConfig.demo_word_selection_assignment_id}
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Demo Modal */}
-      <DemoModal
-        isOpen={demoModalOpen}
-        onClose={() => setDemoModalOpen(false)}
-        assignmentId={selectedDemoAssignmentId}
-        demoType={selectedDemoType}
-      />
 
       {/* 第五區段: CTA - 漸層背景 */}
       <section className="bg-gradient-to-b from-[#204dc0] to-[#101f6b] text-white py-20">
