@@ -2527,23 +2527,50 @@ export default function VocabularySetPanel({
       const results =
         (
           response as {
-            sentences: Array<{ sentence: string; translation?: string }>;
+            sentences: Array<{
+              sentence: string;
+              translation?: string;
+              word: string;
+            }>;
           }
         ).sentences || [];
 
-      targetIndices.forEach((idx, i) => {
+      // 驗證陣列長度是否匹配，防止錯位
+      if (results.length !== targetIndices.length) {
+        console.error(
+          `Array mismatch: expected ${targetIndices.length} sentences, got ${results.length}`,
+        );
+        toast.error(
+          t("vocabularySet.messages.exampleGenerationPartialFailure") ||
+            "部分單字造句失敗，請重試",
+        );
+        // 即使有錯位，仍繼續處理，但會有警告
+      }
+
+      // 使用 word 欄位進行匹配，而非依賴索引，以防止錯位
+      targetIndices.forEach((idx) => {
+        const targetWord = newRows[idx].text;
+
         // 先清空現有的例句和翻譯
         newRows[idx].example_sentence = "";
         newRows[idx].example_sentence_translation = "";
 
-        // 填入新生成的例句
-        if (results[i]) {
-          newRows[idx].example_sentence = results[i].sentence;
+        // 使用 word 欄位查找對應的句子
+        const matchedResult = results.find(
+          (result) => result.word === targetWord,
+        );
+
+        if (matchedResult) {
+          newRows[idx].example_sentence = matchedResult.sentence;
           // 只有勾選翻譯且 API 有返回翻譯時才填入
-          if (aiGenerateTranslate && results[i].translation) {
-            newRows[idx].example_sentence_translation = results[i].translation;
+          if (aiGenerateTranslate && matchedResult.translation) {
+            newRows[idx].example_sentence_translation =
+              matchedResult.translation;
           }
-          // 如果未勾選翻譯，翻譯欄位保持空（已在上面清空）
+        } else {
+          console.warn(
+            `No sentence found for word: ${targetWord} at index ${idx}`,
+          );
         }
       });
 
