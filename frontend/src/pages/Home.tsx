@@ -22,7 +22,6 @@ import {
   Headphones,
 } from "lucide-react";
 import { DemoCard } from "@/components/DemoCard";
-import { DemoModal } from "@/components/DemoModal";
 import { demoApi } from "@/lib/demoApi";
 import { toast } from "sonner";
 
@@ -47,11 +46,6 @@ export default function Home() {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   // Demo section state
-  const [demoModalOpen, setDemoModalOpen] = useState(false);
-  const [selectedDemoType, setSelectedDemoType] = useState<DemoType>("reading");
-  const [selectedDemoAssignmentId, setSelectedDemoAssignmentId] = useState<
-    number | null
-  >(null);
   const [demoConfig, setDemoConfig] = useState<DemoConfig | null>(null);
 
   // Fetch demo config on mount
@@ -69,8 +63,8 @@ export default function Home() {
     fetchDemoConfig();
   }, []);
 
-  // Open demo modal with selected type
-  const openDemoModal = (type: DemoType) => {
+  // Open demo in new tab
+  const openDemoInNewTab = (type: DemoType) => {
     if (!demoConfig) {
       toast.error(t("demo.configError"));
       return;
@@ -85,21 +79,13 @@ export default function Home() {
       wordSelectionWriting: demoConfig.demo_word_selection_writing_assignment_id,
     };
 
-    const assignmentIdStr = assignmentIdMap[type];
-    if (!assignmentIdStr) {
+    const assignmentId = assignmentIdMap[type];
+    if (!assignmentId) {
       toast.error(t("demo.notAvailable"));
       return;
     }
 
-    const assignmentId = parseInt(assignmentIdStr, 10);
-    if (isNaN(assignmentId)) {
-      toast.error(t("demo.invalidConfig"));
-      return;
-    }
-
-    setSelectedDemoType(type);
-    setSelectedDemoAssignmentId(assignmentId);
-    setDemoModalOpen(true);
+    window.open(`/demo/${assignmentId}`, "_blank");
   };
 
   return (
@@ -336,7 +322,7 @@ export default function Home() {
                   icon={<Mic className="h-7 w-7" />}
                   title={t("home.demo.reading.title")}
                   description={t("home.demo.reading.description")}
-                  onClick={() => openDemoModal("reading")}
+                  onClick={() => openDemoInNewTab("reading")}
                   gradient="from-blue-500 to-indigo-600"
                   disabled={!demoConfig.demo_reading_assignment_id}
                 />
@@ -346,7 +332,7 @@ export default function Home() {
                   icon={<Puzzle className="h-7 w-7" />}
                   title={t("home.demo.rearrangement.title")}
                   description={t("home.demo.rearrangement.description")}
-                  onClick={() => openDemoModal("rearrangement")}
+                  onClick={() => openDemoInNewTab("rearrangement")}
                   gradient="from-green-500 to-emerald-600"
                   disabled={!demoConfig.demo_rearrangement_assignment_id}
                 />
@@ -356,7 +342,7 @@ export default function Home() {
                   icon={<BookOpen className="h-7 w-7" />}
                   title={t("home.demo.vocabulary.title")}
                   description={t("home.demo.vocabulary.description")}
-                  onClick={() => openDemoModal("vocabulary")}
+                  onClick={() => openDemoInNewTab("vocabulary")}
                   gradient="from-purple-500 to-pink-600"
                   disabled={!demoConfig.demo_vocabulary_assignment_id}
                 />
@@ -366,7 +352,7 @@ export default function Home() {
                   icon={<Headphones className="h-7 w-7" />}
                   title={t("home.demo.wordSelectionListening.title")}
                   description={t("home.demo.wordSelectionListening.description")}
-                  onClick={() => openDemoModal("wordSelectionListening")}
+                  onClick={() => openDemoInNewTab("wordSelectionListening")}
                   gradient="from-orange-500 to-red-600"
                   disabled={
                     !demoConfig.demo_word_selection_listening_assignment_id
@@ -378,7 +364,7 @@ export default function Home() {
                   icon={<CheckSquare className="h-7 w-7" />}
                   title={t("home.demo.wordSelectionWriting.title")}
                   description={t("home.demo.wordSelectionWriting.description")}
-                  onClick={() => openDemoModal("wordSelectionWriting")}
+                  onClick={() => openDemoInNewTab("wordSelectionWriting")}
                   gradient="from-teal-500 to-cyan-600"
                   disabled={
                     !demoConfig.demo_word_selection_writing_assignment_id
@@ -527,14 +513,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Demo Modal */}
-      <DemoModal
-        isOpen={demoModalOpen}
-        onClose={() => setDemoModalOpen(false)}
-        assignmentId={selectedDemoAssignmentId}
-        demoType={selectedDemoType}
-      />
 
       {/* 第五區段: CTA - 漸層背景 */}
       <section className="bg-gradient-to-b from-[#204dc0] to-[#101f6b] text-white py-20">
