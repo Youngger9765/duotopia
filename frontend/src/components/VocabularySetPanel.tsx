@@ -2540,12 +2540,15 @@ export default function VocabularySetPanel({
         console.error(
           `Array mismatch: expected ${targetIndices.length} sentences, got ${results.length}`,
         );
-        toast.error(
+        toast.warning(
           t("vocabularySet.messages.exampleGenerationPartialFailure") ||
-            "部分單字造句失敗，請重試",
+            "部分單字造句可能失敗，請檢查結果",
         );
-        // 即使有錯位，仍繼續處理，但會有警告
+        // 繼續處理，但已警告用戶部分可能失敗
       }
+
+      // 使用 Map 優化查找效率，防止 O(n²) 複雜度
+      const resultMap = new Map(results.map((r) => [r.word, r]));
 
       // 使用 word 欄位進行匹配，而非依賴索引，以防止錯位
       targetIndices.forEach((idx) => {
@@ -2555,10 +2558,8 @@ export default function VocabularySetPanel({
         newRows[idx].example_sentence = "";
         newRows[idx].example_sentence_translation = "";
 
-        // 使用 word 欄位查找對應的句子
-        const matchedResult = results.find(
-          (result) => result.word === targetWord,
-        );
+        // 使用 Map 查找對應的句子（O(1) 複雜度）
+        const matchedResult = resultMap.get(targetWord);
 
         if (matchedResult) {
           newRows[idx].example_sentence = matchedResult.sentence;

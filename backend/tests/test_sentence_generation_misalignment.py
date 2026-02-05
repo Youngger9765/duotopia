@@ -197,3 +197,32 @@ class TestSentenceGenerationMisalignment:
         for i, result in enumerate(results):
             assert result["word"] == words[i]
             assert "translation" in result
+
+    @pytest.mark.asyncio
+    async def test_generate_sentences_ai_missing_word_field(self, service):
+        """Test backend adds word field when AI response doesn't include it"""
+        words = ["apple", "banana"]
+        
+        # Mock AI returning sentences WITHOUT word field
+        mock_response = Mock()
+        mock_response.choices = [Mock()]
+        mock_response.choices[0].message.content = """[
+            {"sentence": "I like apples."},
+            {"sentence": "Bananas are yellow."}
+        ]"""
+        
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+            with patch("services.translation.OpenAI") as mock_openai:
+                mock_client = Mock()
+                mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+                mock_openai.return_value = mock_client
+                
+                service._ensure_client()
+                results = await service.generate_sentences(words=words)
+        
+        # Backend should add word field even if AI didn't include it
+        assert len(results) == len(words)
+        for i, result in enumerate(results):
+            assert "word" in result, f"Result {i} missing 'word' field"
+            assert result["word"] == words[i], f"Expected word '{words[i]}', got '{result['word']}'"
+
