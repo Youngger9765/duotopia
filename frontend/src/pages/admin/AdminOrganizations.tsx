@@ -268,10 +268,10 @@ export default function AdminOrganizations() {
         updateData.address = formData.address;
       }
       if (formData.subscription_start_date) {
-        updateData.subscription_start_date = formData.subscription_start_date;
+        updateData.subscription_start_date = `${formData.subscription_start_date}T00:00:00Z`;
       }
       if (formData.subscription_end_date) {
-        updateData.subscription_end_date = formData.subscription_end_date;
+        updateData.subscription_end_date = `${formData.subscription_end_date}T23:59:59Z`;
       }
       if (
         formData.total_points &&
@@ -406,10 +406,13 @@ export default function AdminOrganizations() {
                         狀態
                       </TableHead>
                       <TableHead className="font-semibold text-center">
-                        創建日期
+                        起始日期
                       </TableHead>
                       <TableHead className="font-semibold text-center">
                         訂閱到期
+                      </TableHead>
+                      <TableHead className="font-semibold text-center">
+                        訂閱狀態
                       </TableHead>
                       <TableHead className="font-semibold text-center">
                         操作
@@ -420,7 +423,7 @@ export default function AdminOrganizations() {
                     {organizations.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={7}
+                          colSpan={8}
                           className="text-center py-8 text-gray-500"
                         >
                           {searchQuery
@@ -502,9 +505,9 @@ export default function AdminOrganizations() {
                             </Badge>
                           </TableCell>
 
-                          {/* Created Date */}
+                          {/* Subscription Start Date */}
                           <TableCell className="text-center text-sm text-gray-600">
-                            {formatDate(org.created_at)}
+                            {formatDate(org.subscription_start_date)}
                           </TableCell>
 
                           {/* Subscription End Date */}
@@ -522,6 +525,23 @@ export default function AdminOrganizations() {
                               </span>
                             ) : (
                               <span className="text-gray-400">未設定</span>
+                            )}
+                          </TableCell>
+
+                          {/* Expired Status */}
+                          <TableCell className="text-center">
+                            {org.subscription_end_date ? (
+                              new Date(org.subscription_end_date) < new Date() ? (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                  已到期
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  有效
+                                </span>
+                              )
+                            ) : (
+                              <span className="text-gray-400">-</span>
                             )}
                           </TableCell>
 
