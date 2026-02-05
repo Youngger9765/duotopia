@@ -533,6 +533,8 @@ async def demo_word_selection_start(
         "show_image": (
             assignment.show_image if assignment.show_image is not None else True
         ),
+        "play_audio": assignment.play_audio or False,
+        "time_limit_per_question": assignment.time_limit_per_question,
     }
 
 
