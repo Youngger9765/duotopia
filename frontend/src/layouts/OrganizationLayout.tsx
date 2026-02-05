@@ -58,6 +58,8 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
 
       // Priority: Use user.role if available (from login response)
       if (currentUser?.role) {
+        // Store role in userRoles for child components (MaterialsPage needs this)
+        setUserRoles([currentUser.role]);
         const hasOrgRole = ["org_owner", "org_admin", "school_admin"].includes(
           currentUser.role,
         );
