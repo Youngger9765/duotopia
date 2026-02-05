@@ -843,6 +843,11 @@ export function AssignmentDialog({
         shuffle_questions: formData.shuffle_questions,
         show_answer: formData.show_answer,
         play_audio: formData.play_audio,
+        // ===== 單字集作答模式設定 =====
+        target_proficiency: formData.target_proficiency,
+        show_translation: formData.show_translation,
+        show_word: formData.show_word,
+        show_image: formData.show_image,
       };
 
       const result = await apiClient.post<{ student_count: number }>(
