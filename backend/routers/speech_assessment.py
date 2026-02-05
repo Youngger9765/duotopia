@@ -28,6 +28,8 @@ from models import (
     ContentItem,
     Assignment,
 )
+from models.classroom import Classroom
+from models.organization import ClassroomSchool
 from models.organization import Organization
 from services.quota_service import QuotaService
 from services.organization_points_service import OrganizationPointsService
@@ -680,11 +682,16 @@ async def assess_pronunciation_endpoint(
 
     if assignment_id:
         print("✅ assignment_id exists, querying StudentAssignment by ID...")
-        # 🔥 優化：使用 joinedload 減少資料庫查詢次數（3次 → 1次）
+        # 🔥 優化：使用 joinedload 減少資料庫查詢次數
+        # 載入完整鏈：assignment → teacher, classroom → classroom_schools → school
         student_assignment = (
             db.query(StudentAssignment)
             .options(
-                joinedload(StudentAssignment.assignment).joinedload(Assignment.teacher)
+                joinedload(StudentAssignment.assignment).joinedload(Assignment.teacher),
+                joinedload(StudentAssignment.assignment)
+                .joinedload(Assignment.classroom)
+                .joinedload(Classroom.classroom_schools)
+                .joinedload(ClassroomSchool.school),
             )
             .filter(
                 StudentAssignment.id == assignment_id,
@@ -730,7 +737,11 @@ async def assess_pronunciation_endpoint(
 
             # 根據班級類型決定檢查對象
             classroom = assignment.classroom
+            logger.info(f"🔍 DEBUG: classroom={classroom}, classroom_id={assignment.classroom_id}")
+            if classroom:
+                logger.info(f"🔍 DEBUG: classroom_schools={classroom.classroom_schools}")
             org_id = get_organization_id_from_classroom(classroom)
+            logger.info(f"🔍 DEBUG: org_id={org_id}")
             if org_id:
                 # 🏢 機構班級 → 檢查機構點數
                 org = db.query(Organization).filter(Organization.id == org_id).first()
@@ -959,7 +970,11 @@ async def assess_pronunciation_endpoint(
 
             # 根據班級類型決定扣點對象
             classroom = assignment.classroom
+            logger.info(f"🔍 DEDUCT DEBUG: classroom={classroom}, classroom_id={assignment.classroom_id}")
+            if classroom:
+                logger.info(f"🔍 DEDUCT DEBUG: classroom_schools={classroom.classroom_schools}")
             org_id = get_organization_id_from_classroom(classroom)
+            logger.info(f"🔍 DEDUCT DEBUG: org_id={org_id}")
             if org_id:
                 # 🏢 機構班級 → 扣機構點數
                 OrganizationPointsService.deduct_points(
