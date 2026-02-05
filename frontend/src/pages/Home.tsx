@@ -76,7 +76,8 @@ export default function Home() {
       vocabulary: demoConfig.demo_vocabulary_assignment_id,
       wordSelectionListening:
         demoConfig.demo_word_selection_listening_assignment_id,
-      wordSelectionWriting: demoConfig.demo_word_selection_writing_assignment_id,
+      wordSelectionWriting:
+        demoConfig.demo_word_selection_writing_assignment_id,
     };
 
     const assignmentId = assignmentIdMap[type];
@@ -351,7 +352,9 @@ export default function Home() {
                 <DemoCard
                   icon={<Headphones className="h-7 w-7" />}
                   title={t("home.demo.wordSelectionListening.title")}
-                  description={t("home.demo.wordSelectionListening.description")}
+                  description={t(
+                    "home.demo.wordSelectionListening.description",
+                  )}
                   onClick={() => openDemoInNewTab("wordSelectionListening")}
                   gradient="from-orange-500 to-red-600"
                   disabled={
