@@ -2434,7 +2434,7 @@ export default function ClassroomDetail({
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden min-h-0">
               <ReadingAssessmentPanel
                 content={undefined}
                 editingContent={{ id: editorContentId || undefined }}
@@ -2481,7 +2481,7 @@ export default function ClassroomDetail({
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden min-h-0">
               <VocabularySetPanel
                 content={undefined}
                 editingContent={{ id: vocabularySetContentId ?? undefined }}

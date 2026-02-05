@@ -589,7 +589,7 @@ export default function SchoolMaterialsPage() {
                   </svg>
                 </button>
               </div>
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden min-h-0">
                 <ReadingAssessmentPanel
                   lessonId={editorLessonId}
                   isCreating={true}
