@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
-  GraduationCap,
-  Users,
   Mic,
   Brain,
   Trophy,
@@ -24,6 +22,7 @@ import {
 import { DemoCard } from "@/components/DemoCard";
 import { demoApi } from "@/lib/demoApi";
 import { toast } from "sonner";
+import TeacherLoginSheet from "@/components/TeacherLoginSheet";
 
 type DemoType =
   | "reading"
@@ -42,8 +41,8 @@ interface DemoConfig {
 
 export default function Home() {
   const { t } = useTranslation();
-  const isProduction = import.meta.env.PROD;
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [isTeacherLoginOpen, setIsTeacherLoginOpen] = useState(false);
 
   // Demo section state
   const [demoConfig, setDemoConfig] = useState<DemoConfig | null>(null);
@@ -92,13 +91,33 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* 第一區段: Header - 白色背景 */}
-      <header className="bg-white py-4 px-6 flex items-center justify-between shadow-sm">
+      <header className="bg-white py-3 px-3 sm:py-4 sm:px-6 flex items-center justify-between shadow-sm">
         <img
           src="https://storage.googleapis.com/duotopia-social-media-videos/website/logo/logo_row_nobg.png"
           alt={t("home.header.logo")}
-          className="h-10"
+          className="h-8 sm:h-10"
         />
-        <LanguageSwitcher />
+        <div className="flex items-center gap-1.5 sm:gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsTeacherLoginOpen(true)}
+            className="text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
+          >
+            {t("home.header.teacherLogin")}
+          </Button>
+          <Link to="/student/login">
+            <Button
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
+            >
+              {t("home.header.studentLogin")}
+            </Button>
+          </Link>
+          <div className="hidden sm:block">
+            <LanguageSwitcher />
+          </div>
+        </div>
       </header>
 
       {/* 第二區段: Hero - 漸層背景 */}
@@ -226,86 +245,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 第三區段: 快速登入 - #fafcfc 背景 */}
-      <section className="py-16 bg-[#fafcfc]">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Teacher Login */}
-              <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-center mb-4">
-                  <GraduationCap className="w-10 h-10 text-blue-600 mr-3" />
-                  <h4 className="text-xl font-semibold">
-                    {t("home.loginOptions.teacher.title")}
-                  </h4>
-                </div>
-                <p className="text-gray-600 mb-4">
-                  {t("home.loginOptions.teacher.description")}
-                </p>
-                <div className="space-y-2">
-                  <Link to="/teacher/login" className="block">
-                    <Button className="w-full">
-                      {t("home.loginOptions.teacher.login")}
-                    </Button>
-                  </Link>
-                  <Link to="/teacher/register" className="block">
-                    <Button variant="outline" className="w-full">
-                      {t("home.loginOptions.teacher.register")}
-                    </Button>
-                  </Link>
-                </div>
-                {/* Demo credentials - hidden in production */}
-                {!isProduction && (
-                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                    <p className="text-xs text-blue-700 font-medium">
-                      {t("home.loginOptions.teacher.demoLabel")}
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      {t("home.loginOptions.teacher.demoCredentials")}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Student Login */}
-              <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-center mb-4">
-                  <Users className="w-10 h-10 text-green-600 mr-3" />
-                  <h4 className="text-xl font-semibold">
-                    {t("home.loginOptions.student.title")}
-                  </h4>
-                </div>
-                <p className="text-gray-600 mb-4">
-                  {t("home.loginOptions.student.description")}
-                </p>
-                <Link to="/student/login" className="block">
-                  <Button className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">
-                    {t("home.loginOptions.student.login")}
-                  </Button>
-                </Link>
-                <p className="text-sm text-gray-500 mt-3 text-center">
-                  {t("home.loginOptions.student.note")}
-                </p>
-                {/* Demo credentials - hidden in production */}
-                {!isProduction && (
-                  <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                    <p className="text-xs text-green-700 font-medium">
-                      {t("home.loginOptions.student.demoLabel")}
-                    </p>
-                    <p className="text-xs text-green-600 mt-1">
-                      {t("home.loginOptions.student.demoPassword")}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Demo 體驗區 - 移到登入區下方 */}
       {demoConfig && (
-        <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+        <section className="py-16 bg-blue-50">
           <div className="container mx-auto px-4">
             <div className="max-w-6xl mx-auto">
               <div className="text-center mb-10">
@@ -758,6 +700,12 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* 教師登入 Sheet */}
+      <TeacherLoginSheet
+        isOpen={isTeacherLoginOpen}
+        onClose={() => setIsTeacherLoginOpen(false)}
+      />
     </div>
   );
 }
