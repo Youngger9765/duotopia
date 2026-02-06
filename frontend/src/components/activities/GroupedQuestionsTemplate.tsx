@@ -20,6 +20,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useAzurePronunciation } from "@/hooks/useAzurePronunciation";
+import { useDemoAzurePronunciation } from "@/hooks/useDemoAzurePronunciation";
 
 interface Question {
   text?: string;
@@ -146,7 +147,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   const currentQuestion = items[currentQuestionIndex];
 
   // 🚀 Azure Speech Service hook for direct API calls
-  const { analyzePronunciation } = useAzurePronunciation();
+  // Use demo hook when in demo mode (no authentication required)
+  const regularHook = useAzurePronunciation();
+  const demoHook = useDemoAzurePronunciation();
+  const { analyzePronunciation } = isDemoMode ? demoHook : regularHook;
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);

@@ -3,6 +3,11 @@ Demo router - Public demo assignment preview endpoints with rate limiting.
 
 This module provides public access to demo assignments created by the demo teacher account.
 No authentication required, but rate-limited to prevent abuse.
+
+Includes:
+- Demo Azure Speech Token endpoint (with daily quota)
+- Demo assignment preview endpoints
+- Demo speech assessment endpoints
 """
 
 import logging
@@ -20,6 +25,12 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session, selectinload
 from core.limiter import limiter
+from core.demo_quota import (
+    get_demo_quota_manager,
+    validate_referer,
+    reset_demo_quota,
+    DEMO_TOKEN_DAILY_LIMIT,
+)
 from database import get_db
 from models import (
     DemoConfig,
@@ -78,6 +89,151 @@ def get_demo_assignment(assignment_id: int, db: Session) -> Assignment:
         )
 
     return assignment
+
+
+# ============================================================================
+# Demo Azure Speech Token
+# ============================================================================
+
+
+def get_client_ip(request: Request) -> str:
+    """Get real client IP (considering proxy headers)"""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return "unknown"
+
+
+@router.post("/azure-speech/token")
+@limiter.limit("5/minute")
+async def get_demo_speech_token(request: Request):
+    """
+    Demo-only Azure Speech Token endpoint.
+
+    This endpoint provides Azure Speech tokens for demo users without authentication.
+    Protected by multiple layers:
+    1. Rate Limit: 5 requests per minute per IP (slowapi)
+    2. Daily Quota: 60 requests per day per IP
+    3. Referer Validation: Only accepts requests from allowed origins
+    4. Short Token TTL: 5 minutes (vs normal 10 minutes)
+
+    Rate limit: 5 requests per minute per IP.
+    Daily limit: 60 requests per day per IP.
+
+    Returns:
+        {
+            "token": "<azure-speech-token>",
+            "region": "eastasia",
+            "expires_in": 300,
+            "demo_mode": true,
+            "remaining_today": <remaining quota>
+        }
+
+    Errors:
+        403: Invalid referer
+        429: Rate limit or daily quota exceeded
+        500: Azure token service error
+    """
+    client_ip = get_client_ip(request)
+    referer = request.headers.get("referer", "")
+
+    # Layer 1: Referer validation
+    if not validate_referer(referer):
+        logger.warning(
+            f"Demo token rejected - invalid referer: {referer}, IP: {client_ip}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid request origin",
+        )
+
+    # Layer 2: Daily quota check
+    quota_manager = get_demo_quota_manager()
+    allowed, quota_info = quota_manager.check_and_increment(client_ip)
+
+    if not allowed:
+        logger.info(
+            f"Demo token daily limit reached: IP={client_ip}, limit={DEMO_TOKEN_DAILY_LIMIT}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "error": "daily_limit_exceeded",
+                "message": "今日免費試用次數已達上限",
+                "suggestion": "註冊帳號即可無限使用",
+                "limit": DEMO_TOKEN_DAILY_LIMIT,
+                "reset_at": quota_info["reset_at"],
+            },
+        )
+
+    # Layer 3: Get token from Azure
+    try:
+        from services.azure_speech_token import get_azure_speech_token_service
+
+        token_service = get_azure_speech_token_service()
+        token_data = await token_service.get_token()
+
+        logger.info(
+            f"Demo token issued: IP={client_ip}, "
+            f"remaining={quota_info['remaining']}/{DEMO_TOKEN_DAILY_LIMIT}, "
+            f"referer={referer[:50] if referer else 'none'}"
+        )
+
+        return {
+            "token": token_data["token"],
+            "region": token_data["region"],
+            "expires_in": 300,  # 5 minutes (shorter than normal 10 min)
+            "demo_mode": True,
+            "remaining_today": quota_info["remaining"],
+        }
+
+    except Exception as e:
+        logger.error(f"Demo token error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get speech token",
+        )
+
+
+@router.post("/azure-speech/reset-quota")
+async def reset_demo_quota_endpoint(
+    request: Request,
+    ip: str = None,
+):
+    """
+    Reset demo token quota (development/staging only).
+
+    This endpoint is only available in non-production environments
+    for testing purposes.
+
+    Args:
+        ip: Optional specific IP to reset. If not provided, resets caller's IP.
+
+    Returns:
+        Number of entries reset
+    """
+    environment = os.getenv("ENVIRONMENT", "development")
+
+    # Only allow in non-production environments
+    if environment == "production":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is not available in production",
+        )
+
+    # If no IP specified, reset the caller's IP
+    target_ip = ip or get_client_ip(request)
+
+    count = reset_demo_quota(target_ip)
+    logger.info(f"Demo quota reset: IP={target_ip}, count={count}")
+
+    return {
+        "success": True,
+        "message": f"Reset quota for {target_ip}",
+        "entries_reset": count,
+    }
 
 
 # ============================================================================
