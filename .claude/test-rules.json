@@ -1,0 +1,27 @@
+{
+  "production_dirs": ["routers", "services", "models", "auth", "database"],
+  "phantom_fields": [
+    {
+      "pattern": "classroom[._]organization_id",
+      "message": "Classroom has no organization_id! Real path: classroom.classroom_schools -> school.organization_id"
+    },
+    {
+      "pattern": "classroom[._]org_id",
+      "message": "Classroom has no org_id! Real path: classroom.classroom_schools -> school.organization_id"
+    },
+    {
+      "pattern": "classroom[._]school_id",
+      "message": "Classroom has no school_id! Real path: classroom.classroom_schools -> ClassroomSchool.school"
+    }
+  ],
+  "anti_patterns": [
+    {
+      "pattern": "if\\s+(?:classroom|assignment\\.classroom)\\.organization_id",
+      "message": "PHANTOM ROUTING: Don't re-implement routing in tests. Import get_organization_id_from_classroom() from routers.speech_assessment"
+    },
+    {
+      "pattern": "def\\s+get_deduction_(?:target|type)",
+      "message": "RE-IMPLEMENTED LOGIC: Don't write routing functions in tests. Import the real one."
+    }
+  ]
+}
