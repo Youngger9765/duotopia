@@ -242,8 +242,9 @@
       "benefits": "No Credit Card Required • Forever Free Plan • Get Started in 5 Minutes"
     },
     "demo": {
-      "title": "Try Four Learning Modes Now",
+      "title": "Try Five Learning Modes Now",
       "subtitle": "No registration required - experience Duotopia's interactive learning instantly",
+      "tryNow": "Try Now",
       "reading": {
         "title": "Sentence Reading",
         "description": "AI instantly scores your pronunciation"
@@ -256,7 +257,11 @@
         "title": "Word Reading",
         "description": "Learn correct word pronunciation"
       },
-      "wordSelection": {
+      "wordSelectionListening": {
+        "title": "Word Listening Quiz",
+        "description": "Listen and select the correct word"
+      },
+      "wordSelectionWriting": {
         "title": "Word Selection",
         "description": "Choose the correct answer from options"
       }
@@ -296,7 +301,9 @@
       "copyright": "© 2025 Duotopia. All rights reserved."
     },
     "header": {
-      "logo": "Duotopia"
+      "logo": "Duotopia",
+      "teacherLogin": "Teacher Login",
+      "studentLogin": "Student Login"
     },
     "cta2": {
       "title": "Ready to Reclaim Your Teaching Time?",

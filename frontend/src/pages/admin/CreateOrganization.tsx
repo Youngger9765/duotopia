@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Building, Mail, Phone, Hash } from "lucide-react";
+import { Loader2, Building, Mail, Phone, Hash, Calendar } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import {
@@ -45,6 +45,9 @@ export default function CreateOrganization() {
     address: "",
     owner_email: "",
     project_staff_emails: [],
+    total_points: 0,
+    subscription_start_date: "",
+    subscription_end_date: "",
   });
 
   // Cleanup timeouts on unmount
@@ -192,6 +195,12 @@ export default function CreateOrganization() {
       if (formData.contact_phone)
         requestData.contact_phone = formData.contact_phone;
       if (formData.address) requestData.address = formData.address;
+      if (formData.total_points)
+        requestData.total_points = formData.total_points;
+      if (formData.subscription_start_date)
+        requestData.subscription_start_date = `${formData.subscription_start_date}T00:00:00Z`;
+      if (formData.subscription_end_date)
+        requestData.subscription_end_date = `${formData.subscription_end_date}T23:59:59Z`;
 
       // Add project staff if any
       if (
@@ -428,6 +437,75 @@ export default function CreateOrganization() {
                   }
                   disabled={isLoading}
                 />
+              </div>
+            </div>
+
+            {/* Subscription & Points Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">訂閱與點數</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="total_points">初始點數</Label>
+                  <Input
+                    id="total_points"
+                    type="number"
+                    placeholder="10000"
+                    value={formData.total_points || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        total_points: e.target.value
+                          ? parseInt(e.target.value)
+                          : undefined,
+                      })
+                    }
+                    disabled={isLoading}
+                    min={0}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="subscription_start_date">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      啟用時間
+                    </div>
+                  </Label>
+                  <Input
+                    id="subscription_start_date"
+                    type="date"
+                    value={formData.subscription_start_date || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        subscription_start_date: e.target.value,
+                      })
+                    }
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="subscription_end_date">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      停用時間
+                    </div>
+                  </Label>
+                  <Input
+                    id="subscription_end_date"
+                    type="date"
+                    value={formData.subscription_end_date || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        subscription_end_date: e.target.value,
+                      })
+                    }
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
             </div>
 

@@ -2003,7 +2003,7 @@ export default function ReadingAssessmentPanel({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-h-[calc(100vh-200px)]">
       {/* Fixed Header Section */}
       <div className="flex-shrink-0 space-y-4 pb-4">
         {/* Assignment Copy Warning Banner */}

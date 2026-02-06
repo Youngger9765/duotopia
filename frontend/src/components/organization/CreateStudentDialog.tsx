@@ -18,7 +18,7 @@ interface CreateStudentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   schoolId: string;
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
 }
 
 export function CreateStudentDialog({
@@ -104,7 +104,8 @@ export function CreateStudentDialog({
           ? `預設密碼：${result.default_password}`
           : undefined,
       });
-      onSuccess();
+      // 等待 onSuccess 完成（包含資料重新整理）後再關閉對話框
+      await onSuccess();
       handleClose();
     } catch (error) {
       logError("Failed to create student", error, { schoolId, formData });

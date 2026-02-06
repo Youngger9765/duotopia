@@ -740,3 +740,147 @@ def test_update_organization_not_found(auth_headers_admin, test_client):
         json={"display_name": "Test"},
     )
     assert response.status_code == 404
+
+
+# ============ Subscription Dates Tests (Issue #209) ============
+def test_create_organization_with_subscription_dates(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Test creating organization with subscription_start_date and subscription_end_date"""
+    org_data = {
+        "name": "Test Org With Subscription",
+        "owner_email": regular_teacher.email,
+        "total_points": 10000,
+        "subscription_start_date": "2026-02-01T00:00:00Z",
+        "subscription_end_date": "2026-12-31T23:59:59Z",
+    }
+
+    response = test_client.post(
+        "/api/admin/organizations", json=org_data, headers=auth_headers_admin
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    org_id = data["organization_id"]
+
+    # Verify dates in database
+    from models import Organization
+
+    org = (
+        shared_test_session.query(Organization)
+        .filter(Organization.id == org_id)
+        .first()
+    )
+    assert org is not None
+    assert org.subscription_start_date is not None
+    assert org.subscription_end_date is not None
+    assert org.subscription_start_date.year == 2026
+    assert org.subscription_start_date.month == 2
+    assert org.subscription_end_date.month == 12
+
+
+def test_create_organization_without_subscription_dates(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Test creating organization without subscription dates (optional fields)"""
+    org_data = {
+        "name": "Test Org No Subscription",
+        "owner_email": regular_teacher.email,
+        "total_points": 5000,
+        # No subscription dates
+    }
+
+    response = test_client.post(
+        "/api/admin/organizations", json=org_data, headers=auth_headers_admin
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    org_id = data["organization_id"]
+
+    # Verify dates are None in database
+    from models import Organization
+
+    org = (
+        shared_test_session.query(Organization)
+        .filter(Organization.id == org_id)
+        .first()
+    )
+    assert org is not None
+    assert org.subscription_start_date is None
+    assert org.subscription_end_date is None
+
+
+def test_update_organization_subscription_dates(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Test updating organization subscription dates"""
+    # Create org without dates
+    create_response = test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={
+            "name": "Test Update Subscription",
+            "owner_email": regular_teacher.email,
+        },
+    )
+    assert create_response.status_code == 201
+    org_id = create_response.json()["organization_id"]
+
+    # Update with subscription dates
+    response = test_client.put(
+        f"/api/admin/organizations/{org_id}",
+        headers=auth_headers_admin,
+        json={
+            "subscription_start_date": "2026-03-01T00:00:00Z",
+            "subscription_end_date": "2027-02-28T23:59:59Z",
+        },
+    )
+    assert response.status_code == 200
+
+    # Verify dates in database
+    from models import Organization
+
+    org = (
+        shared_test_session.query(Organization)
+        .filter(Organization.id == org_id)
+        .first()
+    )
+    shared_test_session.refresh(org)
+    assert org.subscription_start_date is not None
+    assert org.subscription_end_date is not None
+    assert org.subscription_start_date.month == 3
+    assert org.subscription_end_date.year == 2027
+
+
+def test_list_organizations_includes_subscription_dates(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Test that organization list includes subscription dates"""
+    # Create org with dates
+    test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={
+            "name": "Test Org List Dates",
+            "owner_email": regular_teacher.email,
+            "subscription_start_date": "2026-01-01T00:00:00Z",
+            "subscription_end_date": "2026-06-30T23:59:59Z",
+        },
+    )
+
+    # Get list
+    response = test_client.get(
+        "/api/admin/organizations?search=Test Org List Dates",
+        headers=auth_headers_admin,
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Find our org
+    org = next((o for o in data["items"] if o["name"] == "Test Org List Dates"), None)
+    assert org is not None
+    assert "subscription_start_date" in org
+    assert "subscription_end_date" in org
+    assert org["subscription_start_date"] is not None
+    assert org["subscription_end_date"] is not None
