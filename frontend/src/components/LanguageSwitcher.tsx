@@ -24,20 +24,21 @@ export function LanguageSwitcher() {
   const normalizedLanguage = i18n.language.startsWith("zh") ? "zh-TW" : "en";
 
   return (
-    <div className="flex items-center gap-2">
-      <Globe className="h-4 w-4 text-gray-500" />
-      <Select value={normalizedLanguage} onValueChange={handleLanguageChange}>
-        <SelectTrigger className="w-[140px]">
+    <Select value={normalizedLanguage} onValueChange={handleLanguageChange}>
+      <SelectTrigger className="w-9 sm:w-[140px] px-2 sm:px-3">
+        <Globe className="h-4 w-4 text-gray-500 sm:hidden" />
+        <div className="hidden sm:flex sm:items-center sm:gap-2">
+          <Globe className="h-4 w-4 text-gray-500" />
           <SelectValue placeholder={t("common.selectLanguage")} />
-        </SelectTrigger>
-        <SelectContent>
-          {languages.map((lang) => (
-            <SelectItem key={lang.code} value={lang.code}>
-              {lang.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+        </div>
+      </SelectTrigger>
+      <SelectContent>
+        {languages.map((lang) => (
+          <SelectItem key={lang.code} value={lang.code}>
+            {lang.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
