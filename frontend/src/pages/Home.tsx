@@ -114,9 +114,7 @@ export default function Home() {
               {t("home.header.studentLogin")}
             </Button>
           </Link>
-          <div className="hidden sm:block">
-            <LanguageSwitcher />
-          </div>
+          <LanguageSwitcher />
         </div>
       </header>
 
