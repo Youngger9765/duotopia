@@ -25,7 +25,7 @@ export function LanguageSwitcher() {
 
   return (
     <Select value={normalizedLanguage} onValueChange={handleLanguageChange}>
-      <SelectTrigger className="w-9 sm:w-[140px] px-2 sm:px-3">
+      <SelectTrigger className="w-9 sm:w-[140px] px-2 sm:px-3 border-0 sm:border bg-transparent sm:bg-background shadow-none sm:shadow-sm">
         <Globe className="h-4 w-4 text-gray-500 sm:hidden" />
         <div className="hidden sm:flex sm:items-center sm:gap-2">
           <Globe className="h-4 w-4 text-gray-500" />
