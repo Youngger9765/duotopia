@@ -62,7 +62,7 @@ export default function OrgResourceMaterialsPage() {
 
   useEffect(() => {
     fetchMaterials();
-  }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [orgId, fetchMaterials]);
 
   const handleViewDetail = async (material: ResourceMaterial) => {
     const detail = await getMaterialDetail(material.id);

@@ -67,7 +67,7 @@ function ResourceMaterialsInner() {
 
   useEffect(() => {
     fetchMaterials();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchMaterials]);
 
   const handleViewDetail = async (material: ResourceMaterial) => {
     const detail = await getMaterialDetail(material.id);
