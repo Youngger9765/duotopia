@@ -117,6 +117,7 @@ export interface Program {
   is_duplicate?: boolean;
   tags?: string[];
   is_template?: boolean;
+  visibility?: "private" | "public" | "organization_only" | "individual_only";
 }
 
 // ============ Assignment Status Types ============

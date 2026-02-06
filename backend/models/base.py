@@ -146,3 +146,12 @@ class ScoreCategory(str, enum.Enum):
     LISTENING = "listening"  # 聽力
     WRITING = "writing"  # 寫作
     VOCABULARY = "vocabulary"  # 單字（Phase 2 新增）
+
+
+class ProgramVisibility(str, enum.Enum):
+    """課程公開權限"""
+
+    PRIVATE = "private"  # 不公開（預設）
+    PUBLIC = "public"  # 全公開
+    ORGANIZATION_ONLY = "organization_only"  # 只對組織公開
+    INDIVIDUAL_ONLY = "individual_only"  # 只對個人使用者公開

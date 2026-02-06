@@ -1,18 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import TeacherLayout from "@/components/TeacherLayout";
-import { RecursiveTreeAccordion } from "@/components/shared/RecursiveTreeAccordion";
+import {
+  RecursiveTreeAccordion,
+  TreeNodeConfig,
+} from "@/components/shared/RecursiveTreeAccordion";
 import { programTreeConfig } from "@/components/shared/programTreeConfig";
 import { ProgramDialog } from "@/components/ProgramDialog";
 import { LessonDialog } from "@/components/LessonDialog";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
 import VocabularySetPanel from "@/components/VocabularySetPanel";
+import { ProgramVisibilitySelector } from "@/components/ProgramVisibilitySelector";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { apiClient } from "@/lib/api";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { useResourceMaterialsAPI } from "@/hooks/useResourceMaterialsAPI";
 import { toast } from "sonner";
 import { Program, Lesson, Content } from "@/types";
+
+const RESOURCE_ACCOUNT_EMAIL =
+  import.meta.env.VITE_RESOURCE_ACCOUNT_EMAIL || "contact@duotopia.co";
 
 // Wrapper component that provides TeacherLayout (which contains WorkspaceProvider)
 export default function TeacherTemplatePrograms() {
@@ -26,9 +35,54 @@ export default function TeacherTemplatePrograms() {
 // Inner component - 「我的教材」不需要 workspace context
 function TeacherTemplateProgramsInner() {
   const { t } = useTranslation();
+  const user = useTeacherAuthStore((s) => s.user);
+  const isResourceAccount = user?.email === RESOURCE_ACCOUNT_EMAIL;
+  const { updateVisibility } = useResourceMaterialsAPI();
+
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReordering, setIsReordering] = useState(false);
+
+  const handleVisibilityChange = useCallback(
+    async (programId: number, visibility: string) => {
+      await updateVisibility(programId, visibility);
+      setPrograms((prev) =>
+        prev.map((p) =>
+          p.id === programId
+            ? {
+                ...p,
+                visibility: visibility as Program["visibility"],
+              }
+            : p,
+        ),
+      );
+      toast.success("已更新公開設定");
+    },
+    [updateVisibility],
+  );
+
+  // Resource account gets a config with visibility selector
+  const treeConfig: TreeNodeConfig = useMemo(() => {
+    if (!isResourceAccount) return programTreeConfig;
+    return {
+      ...programTreeConfig,
+      displayFields: [
+        ...(programTreeConfig.displayFields || []),
+        {
+          key: "visibility",
+          render: (visibility: string, item: Program) => (
+            <ProgramVisibilitySelector
+              programId={item.id}
+              currentVisibility={
+                (visibility as Program["visibility"]) ?? "private"
+              }
+              onVisibilityChange={handleVisibilityChange}
+            />
+          ),
+        },
+      ],
+    };
+  }, [isResourceAccount, handleVisibilityChange]);
 
   // Program dialog states
   const [programDialogType, setProgramDialogType] = useState<
@@ -474,7 +528,7 @@ function TeacherTemplateProgramsInner() {
       >
         <RecursiveTreeAccordion
           data={programs}
-          config={programTreeConfig}
+          config={treeConfig}
           title={t("teacherTemplatePrograms.title")}
           showCreateButton
           createButtonText={t("teacherTemplatePrograms.buttons.addProgram")}

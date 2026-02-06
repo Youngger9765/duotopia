@@ -19,7 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
-from .base import ProgramLevel, ContentType, UUID
+from .base import ProgramLevel, ContentType, ProgramVisibility, UUID
 
 
 # ============ 課程系統（三層架構）============
@@ -68,6 +68,9 @@ class Program(Base):
 
     # 課程屬性
     is_public = Column(Boolean, nullable=True)  # 是否公開（與 DB 一致，但不使用）
+    visibility = Column(
+        String(20), default="private", nullable=False, server_default="private"
+    )  # 資源教材包公開權限: private, public, organization_only, individual_only
     estimated_hours = Column(Integer)  # 預計時數
     order_index = Column(Integer, default=1)  # 排序順序
     tags = Column(JSON, nullable=True)  # 標籤
@@ -251,4 +254,38 @@ class ContentItem(Base):
         return (
             f"<ContentItem(id={self.id}, content_id={self.content_id}, "
             f"order={self.order_index}, text='{self.text[:30]}...')>"
+        )
+
+
+# ============ 資源教材包複製記錄 ============
+class ProgramCopyLog(Base):
+    """記錄資源教材包的複製歷史，用於每日複製次數限制"""
+
+    __tablename__ = "program_copy_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_program_id = Column(
+        Integer, ForeignKey("programs.id"), nullable=False, index=True
+    )
+    copied_by_type = Column(
+        String(20), nullable=False
+    )  # 'individual' or 'organization'
+    copied_by_id = Column(
+        String(100), nullable=False, index=True
+    )  # teacher_id (as str) or organization_id (uuid str)
+    copied_program_id = Column(
+        Integer, ForeignKey("programs.id"), nullable=True
+    )  # 複製後產生的新課程 ID
+    copied_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    source_program = relationship(
+        "Program", foreign_keys=[source_program_id], backref="copy_logs"
+    )
+    copied_program = relationship("Program", foreign_keys=[copied_program_id])
+
+    def __repr__(self):
+        return (
+            f"<ProgramCopyLog(source={self.source_program_id}, "
+            f"by={self.copied_by_type}:{self.copied_by_id})>"
         )

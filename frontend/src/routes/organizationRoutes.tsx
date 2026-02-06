@@ -12,6 +12,7 @@ import SchoolClassroomsPage from "@/pages/organization/SchoolClassroomsPage";
 import SchoolTeachersPage from "@/pages/organization/SchoolTeachersPage";
 import SchoolStudentsPage from "@/pages/organization/SchoolStudentsPage";
 import OrganizationsListPage from "@/pages/organization/OrganizationsListPage";
+import OrgResourceMaterialsPage from "@/pages/organization/OrgResourceMaterialsPage";
 
 /**
  * Organization Routes - Accessible only to users with organization roles
@@ -52,6 +53,12 @@ export const organizationRoutes = (
 
     {/* Materials management under specific organization */}
     <Route path=":orgId/materials" element={<MaterialsPage />} />
+
+    {/* Resource materials pack under specific organization */}
+    <Route
+      path=":orgId/resource-materials"
+      element={<OrgResourceMaterialsPage />}
+    />
 
     {/* School detail page */}
     <Route path="schools/:schoolId" element={<SchoolDetailPage />} />
