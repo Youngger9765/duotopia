@@ -154,9 +154,9 @@ class TestDemoQuotaManagerRedis:
         self.manager = DemoQuotaManager(redis_client=self.redis_mock)
 
     def test_first_request_via_redis(self):
-        """First Redis request should be allowed"""
-        self.redis_mock.get.return_value = None
+        """First Redis request should be allowed (atomic INCR)"""
         pipe_mock = MagicMock()
+        pipe_mock.execute.return_value = [1, True]  # INCR returns 1, EXPIRE returns True
         self.redis_mock.pipeline.return_value = pipe_mock
 
         allowed, info = self.manager.check_and_increment("1.2.3.4")
@@ -166,16 +166,29 @@ class TestDemoQuotaManagerRedis:
         pipe_mock.expire.assert_called_once()
 
     def test_redis_quota_exceeded(self):
-        """Should reject when Redis reports limit reached"""
-        self.redis_mock.get.return_value = str(DEMO_TOKEN_DAILY_LIMIT)
+        """Should reject when atomic INCR exceeds limit"""
+        pipe_mock = MagicMock()
+        # INCR returns limit+1 (just exceeded)
+        pipe_mock.execute.return_value = [DEMO_TOKEN_DAILY_LIMIT + 1, True]
+        self.redis_mock.pipeline.return_value = pipe_mock
 
         allowed, info = self.manager.check_and_increment("1.2.3.4")
         assert allowed is False
         assert info["remaining"] == 0
 
+    def test_redis_at_exact_limit_still_allowed(self):
+        """Request at exactly the limit should still be allowed"""
+        pipe_mock = MagicMock()
+        pipe_mock.execute.return_value = [DEMO_TOKEN_DAILY_LIMIT, True]
+        self.redis_mock.pipeline.return_value = pipe_mock
+
+        allowed, info = self.manager.check_and_increment("1.2.3.4")
+        assert allowed is True
+        assert info["remaining"] == 0
+
     def test_redis_fallback_on_error(self):
         """Should fall back to memory on Redis error"""
-        self.redis_mock.get.side_effect = Exception("Redis down")
+        self.redis_mock.pipeline.side_effect = Exception("Redis down")
 
         allowed, info = self.manager.check_and_increment("1.2.3.4")
         # Should still succeed via memory fallback
@@ -183,14 +196,27 @@ class TestDemoQuotaManagerRedis:
 
     def test_redis_ttl_uses_constant(self):
         """Redis key TTL should use REDIS_KEY_TTL_DAYS constant"""
-        self.redis_mock.get.return_value = None
         pipe_mock = MagicMock()
+        pipe_mock.execute.return_value = [1, True]
         self.redis_mock.pipeline.return_value = pipe_mock
 
         self.manager.check_and_increment("1.2.3.4")
         pipe_mock.expire.assert_called_once()
         ttl_arg = pipe_mock.expire.call_args[0][1]
         assert ttl_arg == 86400 * REDIS_KEY_TTL_DAYS
+
+    def test_redis_key_safe_with_ipv6(self):
+        """Redis key should not collide with IPv6 colons"""
+        pipe_mock = MagicMock()
+        pipe_mock.execute.return_value = [1, True]
+        self.redis_mock.pipeline.return_value = pipe_mock
+
+        self.manager.check_and_increment("2001:db8::1")
+        # Verify the key uses | delimiter, not : which would clash with IPv6
+        incr_key = pipe_mock.incr.call_args[0][0]
+        assert "2001:db8::1" in incr_key
+        # Key format: prefix|ip|date — prefix ends with |, not :
+        assert incr_key.startswith("demo:token:daily|")
 
     def test_redis_unavailable_at_init(self):
         """Should gracefully fall back if Redis unreachable at init"""

@@ -47,7 +47,7 @@ class DemoQuotaManager:
     In-memory storage is cleaned up periodically to prevent memory leaks.
     """
 
-    REDIS_KEY_PREFIX = "demo:token:daily:"
+    REDIS_KEY_PREFIX = "demo:token:daily|"
 
     def __init__(self, redis_client=None):
         self.redis_client = redis_client
@@ -100,29 +100,26 @@ class DemoQuotaManager:
             return self._check_memory(ip, today, reset_at)
 
     def _check_redis(self, ip: str, today: str, reset_at: str) -> Tuple[bool, Dict]:
-        """Check quota using Redis"""
-        key = f"{self.REDIS_KEY_PREFIX}{ip}:{today}"
+        """Check quota using Redis (atomic increment)"""
+        key = f"{self.REDIS_KEY_PREFIX}{ip}|{today}"
 
         try:
-            # Get current count
-            current = self.redis_client.get(key)
-            current_count = int(current) if current else 0
+            # Atomic: INCR first, then check the returned count
+            # INCR is atomic in Redis — no race between GET and INCR
+            pipe = self.redis_client.pipeline()
+            pipe.incr(key)
+            pipe.expire(key, 86400 * REDIS_KEY_TTL_DAYS)
+            results = pipe.execute()
+            new_count = results[0]  # INCR returns the new value
 
-            if current_count >= DEMO_TOKEN_DAILY_LIMIT:
-                logger.info(f"Demo quota exceeded: IP={ip}, count={current_count}")
+            if new_count > DEMO_TOKEN_DAILY_LIMIT:
+                logger.info(f"Demo quota exceeded: IP={ip}, count={new_count}")
                 return False, {
                     "remaining": 0,
                     "limit": DEMO_TOKEN_DAILY_LIMIT,
                     "reset_at": reset_at,
                 }
 
-            # Increment and set expiry
-            pipe = self.redis_client.pipeline()
-            pipe.incr(key)
-            pipe.expire(key, 86400 * REDIS_KEY_TTL_DAYS)
-            pipe.execute()
-
-            new_count = current_count + 1
             remaining = DEMO_TOKEN_DAILY_LIMIT - new_count
 
             logger.info(f"Demo token used: IP={ip}, count={new_count}/{DEMO_TOKEN_DAILY_LIMIT}")
@@ -192,7 +189,7 @@ class DemoQuotaManager:
 
         if self.redis_client:
             try:
-                key = f"{self.REDIS_KEY_PREFIX}{ip}:{today}"
+                key = f"{self.REDIS_KEY_PREFIX}{ip}|{today}"
                 current = self.redis_client.get(key)
                 current_count = int(current) if current else 0
                 return max(0, DEMO_TOKEN_DAILY_LIMIT - current_count)
@@ -247,7 +244,7 @@ def reset_demo_quota(ip: Optional[str] = None) -> int:
         try:
             if ip:
                 today = manager._get_today_key()
-                key = f"{manager.REDIS_KEY_PREFIX}{ip}:{today}"
+                key = f"{manager.REDIS_KEY_PREFIX}{ip}|{today}"
                 deleted = manager.redis_client.delete(key)
                 logger.info(f"Reset demo quota for IP {ip}: {deleted} keys deleted")
                 return deleted
