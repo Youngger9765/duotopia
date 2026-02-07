@@ -8,7 +8,7 @@ Manages browsing and copying programs from the resource account (contact@duotopi
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_, cast, Date
 from typing import List, Optional, Dict, Any
-from datetime import date
+from datetime import date, datetime, timezone
 import uuid
 import logging
 
@@ -24,6 +24,8 @@ from core.config import settings
 from services.program_service import copy_program_tree_to_template
 
 logger = logging.getLogger(__name__)
+
+DAILY_COPY_LIMIT = 10
 
 
 def get_resource_account(db: Session) -> Optional[Teacher]:
@@ -85,8 +87,8 @@ def list_resource_materials(
         .all()
     )
 
-    # Get today's copy status
-    today = date.today()
+    # Get today's copy status (use UTC to match TIMESTAMPTZ)
+    today = datetime.now(timezone.utc).date()
     if scope == "individual" and viewer_teacher_id:
         copied_by_id = str(viewer_teacher_id)
         copied_by_type = "individual"
@@ -100,12 +102,10 @@ def list_resource_materials(
     # Count copies per program today (not just boolean)
     copy_counts_today: dict = {}
     if copied_by_id and copied_by_type:
-        from sqlalchemy import func as sa_func
-
         logs = (
             db.query(
                 ProgramCopyLog.source_program_id,
-                sa_func.count().label("cnt"),
+                func.count().label("cnt"),
             )
             .filter(
                 ProgramCopyLog.copied_by_type == copied_by_type,
@@ -236,9 +236,6 @@ def get_resource_material_detail(
     }
 
 
-DAILY_COPY_LIMIT = 10
-
-
 def check_copy_limit(
     db: Session,
     source_program_id: int,
@@ -250,7 +247,7 @@ def check_copy_limit(
 
     Returns True if copying is allowed, False if limit reached.
     """
-    today = date.today()
+    today = datetime.now(timezone.utc).date()
     count = (
         db.query(ProgramCopyLog)
         .filter(

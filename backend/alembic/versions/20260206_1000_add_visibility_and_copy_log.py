@@ -1,7 +1,7 @@
 """Add visibility to programs and program_copy_logs table
 
 Revision ID: 20260206_1000
-Revises: 20260205_1800_split_word_selection_demo_modes
+Revises: 20260205_1800
 Create Date: 2026-02-06 10:00:00.000000
 
 """

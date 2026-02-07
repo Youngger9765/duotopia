@@ -121,9 +121,9 @@ async def get_copy_status(
     """Get today's copy status for all resource materials."""
     from sqlalchemy import cast, Date
     from models import ProgramCopyLog
-    from datetime import date
+    from datetime import datetime, timezone
 
-    today = date.today()
+    today = datetime.now(timezone.utc).date()
 
     if scope == "individual":
         copied_by_type = "individual"
@@ -175,7 +175,7 @@ async def get_material_detail(
     resource_account = get_resource_account(db)
     if resource_account and teacher.id != resource_account.id:
         visibility = detail.get("visibility", "private")
-        if visibility == "private":
+        if visibility not in ("public", "individual_only", "organization_only"):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Resource material not found",
