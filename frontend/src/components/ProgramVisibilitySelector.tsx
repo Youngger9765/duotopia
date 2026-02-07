@@ -100,13 +100,11 @@ export function ProgramVisibilitySelector({
             <DropdownMenuItem
               key={option.value}
               onClick={() => handleSelect(option.value)}
-              className={
-                isSelected
-                  ? "font-semibold bg-gray-100"
-                  : ""
-              }
+              className={isSelected ? "font-semibold bg-gray-100" : ""}
             >
-              <OptionIcon className={`w-4 h-4 mr-2 ${isSelected ? "text-primary" : ""}`} />
+              <OptionIcon
+                className={`w-4 h-4 mr-2 ${isSelected ? "text-primary" : ""}`}
+              />
               {option.label}
               {isSelected && (
                 <span className="ml-auto text-primary text-xs">&#10003;</span>

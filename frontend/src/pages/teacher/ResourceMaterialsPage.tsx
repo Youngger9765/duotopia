@@ -324,19 +324,18 @@ function ResourceMaterialsInner() {
               </div>
             </div>
             {/* Tags */}
-            {selectedDetail.tags &&
-              selectedDetail.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2 pl-12">
-                  {selectedDetail.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+            {selectedDetail.tags && selectedDetail.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2 pl-12">
+                {selectedDetail.tags.map((tag, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Lessons inside program */}
@@ -396,9 +395,7 @@ function ResourceMaterialsInner() {
               ))}
             </Accordion>
             {selectedDetail.lessons.length === 0 && (
-              <p className="text-sm text-gray-500 py-4 text-center">
-                暫無單元
-              </p>
+              <p className="text-sm text-gray-500 py-4 text-center">暫無單元</p>
             )}
           </div>
         </div>
@@ -454,9 +451,7 @@ function ResourceMaterialsInner() {
           <h3 className="text-lg font-medium text-muted-foreground">
             目前沒有可用的資源教材
           </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            稍後再來看看吧
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">稍後再來看看吧</p>
         </div>
       )}
 

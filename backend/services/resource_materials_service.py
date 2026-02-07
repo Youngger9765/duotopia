@@ -55,9 +55,7 @@ def list_resource_materials(
     """
     resource_account = get_resource_account(db)
     if not resource_account:
-        logger.warning(
-            f"Resource account not found: {settings.RESOURCE_ACCOUNT_EMAIL}"
-        )
+        logger.warning(f"Resource account not found: {settings.RESOURCE_ACCOUNT_EMAIL}")
         return []
 
     # Base query: active templates owned by resource account (personal, not org/school)
@@ -75,20 +73,14 @@ def list_resource_materials(
         if viewer_teacher_id == resource_account.id:
             pass  # No visibility filter
         else:
-            query = query.filter(
-                Program.visibility.in_(["public", "individual_only"])
-            )
+            query = query.filter(Program.visibility.in_(["public", "individual_only"]))
     elif scope == "organization":
-        query = query.filter(
-            Program.visibility.in_(["public", "organization_only"])
-        )
+        query = query.filter(Program.visibility.in_(["public", "organization_only"]))
     else:
         raise ValueError(f"Invalid scope: {scope}")
 
     programs = (
-        query.options(
-            joinedload(Program.lessons).joinedload(Lesson.contents)
-        )
+        query.options(joinedload(Program.lessons).joinedload(Lesson.contents))
         .order_by(Program.order_index)
         .all()
     )
@@ -198,9 +190,7 @@ def get_resource_material_detail(
                 continue
 
             items_data = []
-            for item in sorted(
-                content.content_items, key=lambda i: i.order_index
-            ):
+            for item in sorted(content.content_items, key=lambda i: i.order_index):
                 items_data.append(
                     {
                         "id": item.id,
@@ -242,9 +232,7 @@ def get_resource_material_detail(
         "tags": program.tags,
         "lesson_count": len(lessons_data),
         "lessons": lessons_data,
-        "created_at": (
-            program.created_at.isoformat() if program.created_at else None
-        ),
+        "created_at": (program.created_at.isoformat() if program.created_at else None),
     }
 
 

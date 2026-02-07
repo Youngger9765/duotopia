@@ -17,17 +17,20 @@ depends_on = None
 
 def upgrade() -> None:
     # 1. Add visibility column to programs (idempotent)
-    op.execute("""
+    op.execute(
+        """
         DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns
                           WHERE table_name = 'programs' AND column_name = 'visibility') THEN
                 ALTER TABLE programs ADD COLUMN visibility VARCHAR(20) NOT NULL DEFAULT 'private';
             END IF;
         END $$;
-    """)
+    """
+    )
 
     # 2. Create program_copy_logs table (idempotent)
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS program_copy_logs (
             id SERIAL PRIMARY KEY,
             source_program_id INTEGER NOT NULL REFERENCES programs(id),
@@ -36,7 +39,8 @@ def upgrade() -> None:
             copied_program_id INTEGER REFERENCES programs(id),
             copied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
-    """)
+    """
+    )
 
     # 3. Create indexes (idempotent)
     op.execute(
@@ -52,8 +56,7 @@ def upgrade() -> None:
         "ON program_copy_logs (copied_at)"
     )
     op.execute(
-        "CREATE INDEX IF NOT EXISTS idx_programs_visibility "
-        "ON programs (visibility)"
+        "CREATE INDEX IF NOT EXISTS idx_programs_visibility " "ON programs (visibility)"
     )
 
 

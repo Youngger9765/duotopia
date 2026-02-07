@@ -74,10 +74,9 @@ export function useResourceMaterialsAPI() {
         const params = new URLSearchParams({ scope });
         if (organizationId) params.set("organization_id", organizationId);
 
-        const res = await fetch(
-          `${API_URL}/api/resource-materials?${params}`,
-          { headers: authHeaders() },
-        );
+        const res = await fetch(`${API_URL}/api/resource-materials?${params}`, {
+          headers: authHeaders(),
+        });
         if (!res.ok) throw new Error("Failed to fetch materials");
         return res.json();
       } catch (e) {
