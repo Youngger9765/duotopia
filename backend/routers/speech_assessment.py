@@ -1020,7 +1020,7 @@ async def assess_pronunciation_endpoint(
             # 配額/點數扣除失敗（可能是硬限制超額），向學生顯示友善訊息
             if e.status_code == 402 and isinstance(e.detail, dict):
                 error_type = e.detail.get("error")
-                if error_type in ["QUOTA_HARD_LIMIT_EXCEEDED", "QUOTA_HARD_LIMIT_EXCEEDED"]:
+                if error_type == "QUOTA_HARD_LIMIT_EXCEEDED":
                     # 硬限制超額，學生看到友善訊息
                     is_org = org_id is not None
                     logger.error(
