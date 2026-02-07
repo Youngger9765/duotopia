@@ -37,7 +37,16 @@
     "backToHome": "Back to Home",
     "configError": "Failed to load demo configuration",
     "notAvailable": "This demo is currently unavailable",
-    "invalidConfig": "Invalid demo configuration"
+    "invalidConfig": "Invalid demo configuration",
+    "limitReached": {
+      "title": "Daily free trial limit reached",
+      "description": "You have used all {{limit}} free speech practice sessions today.",
+      "ctaTitle": "Register for unlimited access!",
+      "ctaDescription": "Completely free — unlock all features now",
+      "resetInfo": "Or wait until {{resetTime}} for your free quota to reset",
+      "login": "Log In",
+      "register": "Sign Up Free"
+    }
   },
   "rearrangement": {
     "loading": "Loading questions...",

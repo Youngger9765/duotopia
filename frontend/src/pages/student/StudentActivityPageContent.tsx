@@ -50,8 +50,10 @@ import { retryAudioUpload } from "@/utils/retryHelper";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { useTranslation } from "react-i18next";
 import { useAzurePronunciation } from "@/hooks/useAzurePronunciation";
+import { useDemoAzurePronunciation } from "@/hooks/useDemoAzurePronunciation";
 import { azureSpeechService } from "@/services/azureSpeechService";
 import { useAutoAnalysis } from "@/hooks/useAutoAnalysis"; // Issue #141: 例句朗讀自動分析
+import { DemoLimitModal } from "@/components/demo/DemoLimitModal";
 
 // Activity type from API
 export interface Activity {
@@ -199,7 +201,19 @@ export default function StudentActivityPageContent({
   const { t } = useTranslation();
 
   // 🚀 Azure Speech Service hook for direct API calls (background analysis)
-  const { analyzePronunciation } = useAzurePronunciation();
+  // Use demo hook when in demo mode (no authentication required)
+  const regularHook = useAzurePronunciation();
+  const demoHook = useDemoAzurePronunciation();
+
+  // Select the appropriate hook based on mode
+  const { analyzePronunciation } = isDemoMode ? demoHook : regularHook;
+
+  // Demo limit exceeded state (only used in demo mode)
+  const {
+    limitExceeded: demoLimitExceeded,
+    limitError: demoLimitError,
+    clearLimitError: clearDemoLimitError,
+  } = demoHook;
 
   // 🎯 Issue #141: 例句朗讀自動分析 hook
   const {
@@ -1794,6 +1808,7 @@ export default function StudentActivityPageContent({
             exampleAudioUrl={activity.example_audio_url}
             progressId={activity.id}
             readOnly={isReadOnly}
+            isDemoMode={isDemoMode}
             timeLimit={activity.duration || 60}
             onSkip={
               currentActivityIndex < activities.length - 1
@@ -1912,6 +1927,7 @@ export default function StudentActivityPageContent({
             onRecordingComplete={handleRecordingComplete}
             progressId={activity.id}
             readOnly={isReadOnly}
+            isDemoMode={isDemoMode}
             timeLimit={activity.duration || 60}
             onSkip={
               currentActivityIndex < activities.length - 1
@@ -2660,6 +2676,16 @@ export default function StudentActivityPageContent({
             </p>
           </div>
         </div>
+      )}
+
+      {/* Demo 模式：每日配額用盡提示 */}
+      {isDemoMode && demoLimitExceeded && demoLimitError && (
+        <DemoLimitModal
+          open={demoLimitExceeded}
+          onClose={clearDemoLimitError}
+          resetAt={demoLimitError.resetAt}
+          limit={demoLimitError.limit}
+        />
       )}
     </div>
   );

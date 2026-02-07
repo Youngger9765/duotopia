@@ -437,6 +437,7 @@ export default function WordReadingActivity({
         onRecordingComplete={handleRecordingComplete}
         progressId={currentItem.progress_id}
         readOnly={false}
+        isDemoMode={isDemoMode}
         timeLimit={timeLimitPerQuestion}
         onSkip={handleSkip}
         onAssessmentComplete={handleAssessmentComplete}
