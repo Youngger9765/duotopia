@@ -148,7 +148,8 @@ export default function AdminOrganizations() {
   };
 
   // Format date
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("zh-TW", {
       year: "numeric",
       month: "2-digit",
