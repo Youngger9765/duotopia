@@ -119,9 +119,9 @@ def list_resource_materials(
 
     results = []
     for program in programs:
-        active_lessons = [l for l in program.lessons if l.is_active]
+        active_lessons = [ls for ls in program.lessons if ls.is_active]
         total_contents = sum(
-            len([c for c in l.contents if c.is_active]) for l in active_lessons
+            len([c for c in ls.contents if c.is_active]) for ls in active_lessons
         )
         count = copy_counts_today.get(program.id, 0)
 
@@ -178,7 +178,7 @@ def get_resource_material_detail(
         return None
 
     lessons_data = []
-    for lesson in sorted(program.lessons, key=lambda l: l.order_index):
+    for lesson in sorted(program.lessons, key=lambda ls: ls.order_index):
         if not lesson.is_active:
             continue
 
