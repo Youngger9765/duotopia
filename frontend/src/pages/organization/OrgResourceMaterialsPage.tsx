@@ -228,9 +228,7 @@ export default function OrgResourceMaterialsPage() {
           <h3 className="text-lg font-medium text-muted-foreground">
             目前沒有可用的資源教材
           </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            稍後再來看看吧
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">稍後再來看看吧</p>
         </div>
       )}
 

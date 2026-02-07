@@ -224,9 +224,7 @@ export function QuickActionsCards({
       <Card className="hover:shadow-md transition-shadow cursor-pointer">
         <CardContent
           className="p-6"
-          onClick={() =>
-            navigate(`/organization/${orgId}/resource-materials`)
-          }
+          onClick={() => navigate(`/organization/${orgId}/resource-materials`)}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
