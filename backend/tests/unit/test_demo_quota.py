@@ -266,8 +266,13 @@ class TestValidateReferer:
         assert validate_referer("https://evil-site.com/steal") is False
         assert validate_referer("https://notduotopia.co/page") is False
 
+    def test_subdomain_bypass_blocked(self):
+        """Subdomain spoofing like localhost.evil.com should be rejected"""
+        assert validate_referer("http://localhost:3000.evil.com/page") is False
+        assert validate_referer("http://localhost:5173.attacker.io") is False
+
     def test_valid_referer_with_path(self):
-        """Referer with path should still match origin prefix"""
+        """Referer with path should still match origin"""
         assert validate_referer("http://localhost:5173/demo/76") is True
 
 

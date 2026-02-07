@@ -106,8 +106,8 @@ def get_client_ip(request: Request) -> str:
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
         ips = [ip.strip() for ip in forwarded.split(",")]
-        # Rightmost = appended by our trusted proxy; leftmost = client-provided
-        return ips[-1] if len(ips) > 1 else ips[0]
+        # Always use rightmost — appended by our trusted proxy
+        return ips[-1]
     if request.client:
         return request.client.host
     return "unknown"
@@ -208,15 +208,17 @@ async def get_demo_speech_token(request: Request):
 async def reset_demo_quota_endpoint(
     request: Request,
     ip: str = None,
+    admin_secret: str = None,
 ):
     """
     Reset demo token quota (development/staging only).
 
     This endpoint is only available in non-production environments
-    for testing purposes.
+    for testing purposes. In staging, requires DEMO_RESET_SECRET.
 
     Args:
         ip: Optional specific IP to reset. If not provided, resets caller's IP.
+        admin_secret: Required in staging for authorization.
 
     Returns:
         Number of entries reset
@@ -229,6 +231,15 @@ async def reset_demo_quota_endpoint(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This endpoint is not available in production",
         )
+
+    # Require secret in staging
+    if environment == "staging":
+        expected_secret = os.getenv("DEMO_RESET_SECRET")
+        if not expected_secret or admin_secret != expected_secret:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Unauthorized",
+            )
 
     # If no IP specified, reset the caller's IP
     target_ip = ip or get_client_ip(request)

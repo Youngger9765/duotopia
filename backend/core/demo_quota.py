@@ -14,6 +14,7 @@ import os
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
+from urllib.parse import urlparse
 import threading
 
 logger = logging.getLogger(__name__)
@@ -295,9 +296,10 @@ def validate_referer(referer: Optional[str]) -> bool:
         logger.debug("Demo token request without referer (non-production)")
         return True
 
-    for origin in DEMO_ALLOWED_ORIGINS:
-        if referer.startswith(origin):
-            return True
+    parsed = urlparse(referer)
+    referer_origin = f"{parsed.scheme}://{parsed.netloc}"
+    if referer_origin in DEMO_ALLOWED_ORIGINS:
+        return True
 
     logger.warning(f"Demo token rejected - invalid referer: {referer}")
     return False
