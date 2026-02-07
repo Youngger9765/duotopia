@@ -57,7 +57,7 @@ interface AzurePronunciationResultShape {
 }
 
 function isAzurePronunciationResult(
-  obj: unknown
+  obj: unknown,
 ): obj is AzurePronunciationResultShape {
   return (
     typeof obj === "object" &&
@@ -96,7 +96,7 @@ interface UseDemoAzurePronunciationResult {
   remainingToday: number;
   analyzePronunciation: (
     audioBlob: Blob,
-    referenceText: string
+    referenceText: string,
   ) => Promise<PronunciationResult | null>;
   reset: () => void;
   clearLimitError: () => void;
@@ -109,7 +109,7 @@ export function useDemoAzurePronunciation(): UseDemoAzurePronunciationResult {
   const [error, setError] = useState<string | null>(null);
   const [limitExceeded, setLimitExceeded] = useState(false);
   const [limitError, setLimitError] = useState<DemoLimitExceededError | null>(
-    null
+    null,
   );
   const [remainingToday, setRemainingToday] = useState(-1);
 
@@ -122,7 +122,7 @@ export function useDemoAzurePronunciation(): UseDemoAzurePronunciationResult {
    */
   const analyzePronunciation = async (
     audioBlob: Blob,
-    referenceText: string
+    referenceText: string,
   ): Promise<PronunciationResult | null> => {
     setIsAnalyzing(true);
     setError(null);

@@ -78,7 +78,7 @@ class DemoSpeechService {
         token: this.tokenCache.token,
         region: this.tokenCache.region,
         expires_in: Math.floor(
-          (this.tokenCache.expiresAt.getTime() - Date.now()) / 1000
+          (this.tokenCache.expiresAt.getTime() - Date.now()) / 1000,
         ),
         demo_mode: true,
         remaining_today: this.tokenCache.remainingToday,
@@ -86,12 +86,15 @@ class DemoSpeechService {
     }
 
     // Request new token
-    const response = await fetch(`${this.baseUrl}/api/demo/azure-speech/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `${this.baseUrl}/api/demo/azure-speech/token`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       // Handle 429 (rate limit / daily quota exceeded)
@@ -151,7 +154,7 @@ class DemoSpeechService {
   async analyzePronunciation(
     audioBlob: Blob,
     referenceText: string,
-    retryCount = 0
+    retryCount = 0,
   ): Promise<{
     result: sdk.PronunciationAssessmentResult;
     latencyMs: number;
@@ -163,7 +166,10 @@ class DemoSpeechService {
       const { token, region } = await this.getToken(retryCount > 0);
 
       // 2. Configure Speech SDK
-      const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(token, region);
+      const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(
+        token,
+        region,
+      );
       speechConfig.speechRecognitionLanguage = "en-US";
 
       // 3. Configure pronunciation assessment
@@ -171,7 +177,7 @@ class DemoSpeechService {
         referenceText,
         sdk.PronunciationAssessmentGradingSystem.HundredMark,
         sdk.PronunciationAssessmentGranularity.Word,
-        true // enableMiscue
+        true, // enableMiscue
       );
 
       // 4. Convert audio to PCM format
@@ -185,7 +191,7 @@ class DemoSpeechService {
       for (let i = 0; i < pcmData.length; i++) {
         pcm16[i] = Math.max(
           -32768,
-          Math.min(32767, Math.floor(pcmData[i] * 32768))
+          Math.min(32767, Math.floor(pcmData[i] * 32768)),
         );
       }
 
@@ -243,7 +249,7 @@ class DemoSpeechService {
             } else {
               reject(new Error(`分析失敗: ${error}`));
             }
-          }
+          },
         );
       });
     } catch (error) {

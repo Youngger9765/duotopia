@@ -128,7 +128,9 @@ class TestDemoQuotaManagerMemory:
         assert len(results) == 10
         assert all(allowed for allowed, _ in results)
         remainders = sorted([r for _, r in results], reverse=True)
-        expected = list(range(DEMO_TOKEN_DAILY_LIMIT - 1, DEMO_TOKEN_DAILY_LIMIT - 11, -1))
+        expected = list(
+            range(DEMO_TOKEN_DAILY_LIMIT - 1, DEMO_TOKEN_DAILY_LIMIT - 11, -1)
+        )
         assert remainders == expected
 
     def test_no_defaultdict_auto_create(self):
@@ -156,7 +158,10 @@ class TestDemoQuotaManagerRedis:
     def test_first_request_via_redis(self):
         """First Redis request should be allowed (atomic INCR)"""
         pipe_mock = MagicMock()
-        pipe_mock.execute.return_value = [1, True]  # INCR returns 1, EXPIRE returns True
+        pipe_mock.execute.return_value = [
+            1,
+            True,
+        ]  # INCR returns 1, EXPIRE returns True
         self.redis_mock.pipeline.return_value = pipe_mock
 
         allowed, info = self.manager.check_and_increment("1.2.3.4")
@@ -251,9 +256,10 @@ class TestValidateReferer:
         """Missing referer should be rejected in production"""
         assert validate_referer(None) is False
 
-    @patch.dict(os.environ, {
-        "DEMO_ALLOWED_ORIGINS": "https://duotopia.co,https://staging.duotopia.co"
-    })
+    @patch.dict(
+        os.environ,
+        {"DEMO_ALLOWED_ORIGINS": "https://duotopia.co,https://staging.duotopia.co"},
+    )
     def test_valid_referer(self):
         """Known origins should be accepted"""
         # Need to reload the module to pick up the env var, but since

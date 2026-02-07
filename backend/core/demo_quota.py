@@ -61,7 +61,9 @@ class DemoQuotaManager:
                 redis_client.ping()
                 logger.info("✅ Redis connected for demo quota tracking")
             except Exception as e:
-                logger.warning(f"⚠️ Redis unavailable for demo quota, using memory: {e}")
+                logger.warning(
+                    f"⚠️ Redis unavailable for demo quota, using memory: {e}"
+                )
                 self.redis_client = None
 
     def _get_today_key(self) -> str:
@@ -123,7 +125,9 @@ class DemoQuotaManager:
 
             remaining = DEMO_TOKEN_DAILY_LIMIT - new_count
 
-            logger.info(f"Demo token used: IP={ip}, count={new_count}/{DEMO_TOKEN_DAILY_LIMIT}")
+            logger.info(
+                f"Demo token used: IP={ip}, count={new_count}/{DEMO_TOKEN_DAILY_LIMIT}"
+            )
 
             return True, {
                 "remaining": remaining,
@@ -155,7 +159,9 @@ class DemoQuotaManager:
                 entry["date"] = today
 
             if entry["count"] >= DEMO_TOKEN_DAILY_LIMIT:
-                logger.info(f"Demo quota exceeded (memory): IP={ip}, count={entry['count']}")
+                logger.info(
+                    f"Demo quota exceeded (memory): IP={ip}, count={entry['count']}"
+                )
                 return False, {
                     "remaining": 0,
                     "limit": DEMO_TOKEN_DAILY_LIMIT,
@@ -219,6 +225,7 @@ def get_demo_quota_manager() -> DemoQuotaManager:
         if redis_url:
             try:
                 import redis
+
                 redis_client = redis.from_url(redis_url)
             except Exception as e:
                 logger.warning(f"Failed to connect to Redis: {e}")

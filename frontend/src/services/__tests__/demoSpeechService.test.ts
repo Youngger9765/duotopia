@@ -69,8 +69,8 @@ describe("DemoSpeechService", () => {
     // Re-import to get fresh instance
     vi.resetModules();
     const mod = await import("../demoSpeechService");
-    DemoSpeechServiceClass =
-      mod.demoSpeechService.constructor as typeof DemoSpeechServiceClass;
+    DemoSpeechServiceClass = mod.demoSpeechService
+      .constructor as typeof DemoSpeechServiceClass;
   });
 
   afterEach(() => {

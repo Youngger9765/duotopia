@@ -103,8 +103,10 @@ describe("useDemoAzurePronunciation", () => {
 
       let analysisResult: unknown;
       await act(async () => {
-        analysisResult =
-          await result.current.analyzePronunciation(audioBlob, "hello world");
+        analysisResult = await result.current.analyzePronunciation(
+          audioBlob,
+          "hello world",
+        );
       });
 
       expect(analysisResult).not.toBeNull();
@@ -133,8 +135,10 @@ describe("useDemoAzurePronunciation", () => {
 
       let analysisResult: unknown;
       await act(async () => {
-        analysisResult =
-          await result.current.analyzePronunciation(audioBlob, "hello");
+        analysisResult = await result.current.analyzePronunciation(
+          audioBlob,
+          "hello",
+        );
       });
 
       expect(analysisResult).toBeNull();

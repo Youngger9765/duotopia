@@ -92,7 +92,11 @@ export function DemoLimitModal({
         </div>
 
         <DialogFooter className="flex-col gap-2 sm:flex-row">
-          <Button variant="outline" onClick={handleLogin} className="w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={handleLogin}
+            className="w-full sm:w-auto"
+          >
             {t("demo.limitReached.login")}
           </Button>
           <Button onClick={handleRegister} className="w-full sm:w-auto">
