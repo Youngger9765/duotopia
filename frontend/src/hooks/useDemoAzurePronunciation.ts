@@ -44,6 +44,31 @@ interface DetailedWord {
   error_type?: string;
 }
 
+interface AzurePronunciationResultShape {
+  pronunciationScore: number;
+  accuracyScore: number;
+  fluencyScore: number;
+  completenessScore: number;
+  words?: Array<{
+    word: string;
+    accuracyScore: number;
+    errorType: string;
+  }>;
+}
+
+function isAzurePronunciationResult(
+  obj: unknown
+): obj is AzurePronunciationResultShape {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    "pronunciationScore" in obj &&
+    "accuracyScore" in obj &&
+    "fluencyScore" in obj &&
+    "completenessScore" in obj
+  );
+}
+
 interface PronunciationResult {
   pronunciationScore: number;
   accuracyScore: number;
@@ -115,18 +140,12 @@ export function useDemoAzurePronunciation(): UseDemoAzurePronunciationResult {
         setRemainingToday(remaining);
       }
 
-      // Convert Azure result to our format
-      const azureResult = analysisResult as unknown as {
-        pronunciationScore: number;
-        accuracyScore: number;
-        fluencyScore: number;
-        completenessScore: number;
-        words?: Array<{
-          word: string;
-          accuracyScore: number;
-          errorType: string;
-        }>;
-      };
+      // Convert Azure result to our format (with type guard validation)
+      const rawResult: unknown = analysisResult;
+      if (!isAzurePronunciationResult(rawResult)) {
+        throw new Error("Invalid analysis result format");
+      }
+      const azureResult = rawResult;
 
       // Parse detailed word data
       const detailed_words: DetailedWord[] = [];

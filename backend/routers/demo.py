@@ -97,10 +97,17 @@ def get_demo_assignment(assignment_id: int, db: Session) -> Assignment:
 
 
 def get_client_ip(request: Request) -> str:
-    """Get real client IP (considering proxy headers)"""
+    """Get real client IP from trusted proxy (Cloud Run / GCP Load Balancer).
+
+    Uses the rightmost IP in X-Forwarded-For, which is the one appended by
+    the last trusted proxy (e.g., Cloud Run ingress). The leftmost IP can be
+    spoofed by the client, so we avoid using it for quota enforcement.
+    """
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        ips = [ip.strip() for ip in forwarded.split(",")]
+        # Rightmost = appended by our trusted proxy; leftmost = client-provided
+        return ips[-1] if len(ips) > 1 else ips[0]
     if request.client:
         return request.client.host
     return "unknown"

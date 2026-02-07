@@ -37,7 +37,16 @@
     "backToHome": "返回首頁",
     "configError": "無法載入 Demo 設定",
     "notAvailable": "此 Demo 目前無法使用",
-    "invalidConfig": "Demo 設定錯誤"
+    "invalidConfig": "Demo 設定錯誤",
+    "limitReached": {
+      "title": "今日免費試用次數已達上限",
+      "description": "您今日已使用完 {{limit}} 次免費語音練習機會。",
+      "ctaTitle": "註冊帳號即可無限使用！",
+      "ctaDescription": "完全免費，立即解鎖所有功能",
+      "resetInfo": "或等待 {{resetTime}} 後重置免費額度",
+      "login": "登入",
+      "register": "免費註冊"
+    }
   },
   "rearrangement": {
     "loading": "正在載入題目...",

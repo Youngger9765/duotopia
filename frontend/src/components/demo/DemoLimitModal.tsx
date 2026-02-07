@@ -65,13 +65,10 @@ export function DemoLimitModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-xl">
-            {t("demo.limitReached.title", "今日免費試用次數已達上限")}
+            {t("demo.limitReached.title")}
           </DialogTitle>
           <DialogDescription className="pt-2">
-            {t(
-              "demo.limitReached.description",
-              `您今日已使用完 ${limit} 次免費語音練習機會。`
-            )}
+            {t("demo.limitReached.description", { limit })}
           </DialogDescription>
         </DialogHeader>
 
@@ -79,31 +76,27 @@ export function DemoLimitModal({
           {/* Registration CTA */}
           <div className="rounded-lg bg-blue-50 p-4 border border-blue-100">
             <p className="font-medium text-blue-900">
-              {t("demo.limitReached.ctaTitle", "註冊帳號即可無限使用！")}
+              {t("demo.limitReached.ctaTitle")}
             </p>
             <p className="mt-1 text-sm text-blue-700">
-              {t(
-                "demo.limitReached.ctaDescription",
-                "完全免費，立即解鎖所有功能"
-              )}
+              {t("demo.limitReached.ctaDescription")}
             </p>
           </div>
 
           {/* Reset time info */}
           <p className="text-sm text-muted-foreground text-center">
-            {t(
-              "demo.limitReached.resetInfo",
-              `或等待 ${resetTimeDisplay} 後重置免費額度`
-            )}
+            {t("demo.limitReached.resetInfo", {
+              resetTime: resetTimeDisplay,
+            })}
           </p>
         </div>
 
         <DialogFooter className="flex-col gap-2 sm:flex-row">
           <Button variant="outline" onClick={handleLogin} className="w-full sm:w-auto">
-            {t("demo.limitReached.login", "登入")}
+            {t("demo.limitReached.login")}
           </Button>
           <Button onClick={handleRegister} className="w-full sm:w-auto">
-            {t("demo.limitReached.register", "免費註冊")}
+            {t("demo.limitReached.register")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -64,11 +64,16 @@ class DemoSpeechService {
 
   /**
    * Get Azure Speech token for demo mode
+   * @param forceRefresh - Skip cache and fetch a new token (e.g. after 401)
    * @throws DemoLimitExceededError if daily limit is reached
    */
-  async getToken(): Promise<DemoTokenResponse> {
+  async getToken(forceRefresh = false): Promise<DemoTokenResponse> {
     // Check cache (4 minutes validity = 5 min server - 1 min buffer)
-    if (this.tokenCache && new Date() < this.tokenCache.expiresAt) {
+    if (
+      !forceRefresh &&
+      this.tokenCache &&
+      new Date() < this.tokenCache.expiresAt
+    ) {
       return {
         token: this.tokenCache.token,
         region: this.tokenCache.region,
@@ -154,8 +159,8 @@ class DemoSpeechService {
     const startTime = Date.now();
 
     try {
-      // 1. Get demo token
-      const { token, region } = await this.getToken();
+      // 1. Get demo token (force refresh on retry to bypass stale cache)
+      const { token, region } = await this.getToken(retryCount > 0);
 
       // 2. Configure Speech SDK
       const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(token, region);

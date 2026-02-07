@@ -14,31 +14,29 @@ import os
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
-from collections import defaultdict
 import threading
 
 logger = logging.getLogger(__name__)
 
 # Configuration
 DEMO_TOKEN_DAILY_LIMIT = int(os.getenv("DEMO_TOKEN_DAILY_LIMIT", "60"))
-DEMO_ALLOWED_ORIGINS = [
-    "https://duotopia.co",
-    "https://www.duotopia.co",
-    "https://duotopia.net",
-    "https://www.duotopia.net",
-    "https://staging.duotopia.co",
-    "https://develop.duotopia.co",
-    # Cloud Run URLs
-    "https://duotopia-production-frontend-b2ovkkgl6a-de.a.run.app",
-    "https://duotopia-production-frontend-316409492201.asia-east1.run.app",
-    "https://duotopia-staging-frontend-316409492201.asia-east1.run.app",
-    "https://duotopia-develop-frontend-316409492201.asia-east1.run.app",
-    # Local development
+REDIS_KEY_TTL_DAYS = 2  # Safety buffer beyond daily reset
+
+# Default allowed origins (local dev fallback)
+_DEFAULT_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
 ]
+
+# Load from env var or use defaults
+_env_origins = os.getenv("DEMO_ALLOWED_ORIGINS", "")
+DEMO_ALLOWED_ORIGINS = (
+    [origin.strip() for origin in _env_origins.split(",") if origin.strip()]
+    if _env_origins
+    else _DEFAULT_ORIGINS
+)
 
 
 class DemoQuotaManager:
@@ -54,7 +52,7 @@ class DemoQuotaManager:
     def __init__(self, redis_client=None):
         self.redis_client = redis_client
         # In-memory storage: {ip: {"count": int, "date": str}}
-        self._memory_store: Dict[str, Dict] = defaultdict(lambda: {"count": 0, "date": ""})
+        self._memory_store: Dict[str, Dict] = {}
         self._lock = threading.Lock()
 
         if redis_client:
@@ -121,7 +119,7 @@ class DemoQuotaManager:
             # Increment and set expiry
             pipe = self.redis_client.pipeline()
             pipe.incr(key)
-            pipe.expire(key, 86400 * 2)  # 2 days TTL for safety
+            pipe.expire(key, 86400 * REDIS_KEY_TTL_DAYS)
             pipe.execute()
 
             new_count = current_count + 1
@@ -146,6 +144,10 @@ class DemoQuotaManager:
             # Clean old entries periodically (every 100 checks)
             if len(self._memory_store) > 100:
                 self._cleanup_old_entries(today)
+
+            # Explicitly create entry if not exists (avoid defaultdict race condition)
+            if ip not in self._memory_store:
+                self._memory_store[ip] = {"count": 0, "date": ""}
 
             entry = self._memory_store[ip]
 
@@ -288,9 +290,12 @@ def validate_referer(referer: Optional[str]) -> bool:
         True if referer is valid, False otherwise
     """
     if not referer:
-        # Allow requests without referer (some browsers/privacy settings)
-        # But log for monitoring
-        logger.debug("Demo token request without referer")
+        environment = os.getenv("ENVIRONMENT", "development")
+        if environment == "production":
+            logger.warning("Demo token rejected - missing referer in production")
+            return False
+        # Allow in dev/staging for testing convenience
+        logger.debug("Demo token request without referer (non-production)")
         return True
 
     for origin in DEMO_ALLOWED_ORIGINS:
