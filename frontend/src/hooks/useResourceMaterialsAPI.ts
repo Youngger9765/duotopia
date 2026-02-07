@@ -14,6 +14,7 @@ export interface ResourceMaterial {
   lesson_count: number;
   content_count: number;
   copied_today: boolean;
+  copy_count_today: number;
   created_at: string | null;
 }
 

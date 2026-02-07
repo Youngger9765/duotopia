@@ -105,18 +105,25 @@ def list_resource_materials(
         copied_by_id = None
         copied_by_type = None
 
-    copied_today = set()
+    # Count copies per program today (not just boolean)
+    copy_counts_today: dict = {}
     if copied_by_id and copied_by_type:
+        from sqlalchemy import func as sa_func
+
         logs = (
-            db.query(ProgramCopyLog.source_program_id)
+            db.query(
+                ProgramCopyLog.source_program_id,
+                sa_func.count().label("cnt"),
+            )
             .filter(
                 ProgramCopyLog.copied_by_type == copied_by_type,
                 ProgramCopyLog.copied_by_id == copied_by_id,
                 cast(ProgramCopyLog.copied_at, Date) == today,
             )
+            .group_by(ProgramCopyLog.source_program_id)
             .all()
         )
-        copied_today = {log.source_program_id for log in logs}
+        copy_counts_today = {row.source_program_id: row.cnt for row in logs}
 
     results = []
     for program in programs:
@@ -124,6 +131,7 @@ def list_resource_materials(
         total_contents = sum(
             len([c for c in l.contents if c.is_active]) for l in active_lessons
         )
+        count = copy_counts_today.get(program.id, 0)
 
         results.append(
             {
@@ -137,7 +145,8 @@ def list_resource_materials(
                 "order_index": program.order_index,
                 "lesson_count": len(active_lessons),
                 "content_count": total_contents,
-                "copied_today": program.id in copied_today,
+                "copied_today": count >= DAILY_COPY_LIMIT,
+                "copy_count_today": count,
                 "created_at": (
                     program.created_at.isoformat() if program.created_at else None
                 ),
@@ -239,6 +248,9 @@ def get_resource_material_detail(
     }
 
 
+DAILY_COPY_LIMIT = 10
+
+
 def check_copy_limit(
     db: Session,
     source_program_id: int,
@@ -246,12 +258,12 @@ def check_copy_limit(
     copied_by_id: str,
 ) -> bool:
     """
-    Check if the copy limit (1 per day) has been reached.
+    Check if the copy limit (10 per day per course) has been reached.
 
     Returns True if copying is allowed, False if limit reached.
     """
     today = date.today()
-    existing = (
+    count = (
         db.query(ProgramCopyLog)
         .filter(
             ProgramCopyLog.source_program_id == source_program_id,
@@ -259,9 +271,9 @@ def check_copy_limit(
             ProgramCopyLog.copied_by_id == copied_by_id,
             cast(ProgramCopyLog.copied_at, Date) == today,
         )
-        .first()
+        .count()
     )
-    return existing is None
+    return count < DAILY_COPY_LIMIT
 
 
 def copy_resource_material(

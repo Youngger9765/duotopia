@@ -90,20 +90,27 @@ export function ProgramVisibilitySelector({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
+        className="bg-white"
         onClick={(e) => e.stopPropagation()}
       >
         {VISIBILITY_OPTIONS.map((option) => {
           const OptionIcon = option.icon;
+          const isSelected = option.value === currentVisibility;
           return (
             <DropdownMenuItem
               key={option.value}
               onClick={() => handleSelect(option.value)}
               className={
-                option.value === currentVisibility ? "font-semibold" : ""
+                isSelected
+                  ? "font-semibold bg-gray-100"
+                  : ""
               }
             >
-              <OptionIcon className="w-4 h-4 mr-2" />
+              <OptionIcon className={`w-4 h-4 mr-2 ${isSelected ? "text-primary" : ""}`} />
               {option.label}
+              {isSelected && (
+                <span className="ml-auto text-primary text-xs">&#10003;</span>
+              )}
             </DropdownMenuItem>
           );
         })}

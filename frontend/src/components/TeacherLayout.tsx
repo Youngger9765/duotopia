@@ -106,11 +106,20 @@ function TeacherLayoutInner({
   // ✅ 根據 workspace mode 過濾 sidebar 內容
   // 個人模式：過濾掉組織相關功能（組織架構、學校教材）
   // 機構模式：顯示所有功能
+  // 資源帳號：隱藏「資源教材包」（不需要複製自己的教材）
+  const RESOURCE_ACCOUNT_EMAIL =
+    import.meta.env.VITE_RESOURCE_ACCOUNT_EMAIL || "contact@duotopia.co";
+  const isResourceAccount = user?.email === RESOURCE_ACCOUNT_EMAIL;
+
   const filteredGroups = useMemo(() => {
     return visibleGroups
       .filter((group) => {
         // 個人模式下過濾掉組織管理 group
         if (mode === "personal" && group.id === "organization-hub") {
+          return false;
+        }
+        // 資源帳號隱藏「資源教材包」
+        if (isResourceAccount && group.id === "shared-resources") {
           return false;
         }
         return true;
@@ -125,7 +134,7 @@ function TeacherLayoutInner({
         }
         return group;
       });
-  }, [visibleGroups, mode]);
+  }, [visibleGroups, mode, isResourceAccount]);
 
   const handleLogout = useCallback(() => {
     apiClient.logout();

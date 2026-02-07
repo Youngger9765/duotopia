@@ -10,7 +10,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "20260206_1000"
-down_revision = "20260205_1800_split_word_selection_demo_modes"
+down_revision = "20260205_1800"
 branch_labels = None
 depends_on = None
 

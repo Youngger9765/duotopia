@@ -190,6 +190,7 @@ async def get_teacher_programs(
                     program.order_index if hasattr(program, "order_index") else 1
                 ),
                 "tags": program.tags or [],
+                "visibility": program.visibility,
                 "lessons": lessons_data,
             }
         )
