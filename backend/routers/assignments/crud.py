@@ -48,12 +48,14 @@ async def create_assignment(
     - 關聯多個 Content
     - 指派給指定學生或全班
     """
-    # 驗證教師訂閱狀態
-    if not current_teacher.can_assign_homework:
-        raise HTTPException(
-            status_code=403,
-            detail="Your subscription has expired. Please recharge to create assignments.",
-        )
+    # 暫時停用訂閱檢查（保留邏輯以便日後恢復）
+    if False:  # pragma: no cover
+        # 驗證教師訂閱狀態
+        if not current_teacher.can_assign_homework:
+            raise HTTPException(
+                status_code=403,
+                detail="Your subscription has expired. Please recharge to create assignments.",
+            )
 
     # 驗證班級存在且屬於當前教師
     classroom = (
