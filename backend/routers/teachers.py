@@ -481,6 +481,12 @@ async def get_teacher_dashboard(
     ]
     is_test_account = current_teacher.email in TEST_SUBSCRIPTION_WHITELIST
 
+    # 暫時停用 can_assign_homework 計算（保留邏輯以便日後恢復）
+    if False:  # pragma: no cover
+        can_assign_homework = current_teacher.can_assign_homework
+    else:
+        can_assign_homework = True
+
     return TeacherDashboard(
         teacher=TeacherProfile.from_orm(current_teacher),
         classroom_count=len(classrooms),
@@ -494,7 +500,7 @@ async def get_teacher_dashboard(
         if current_teacher.subscription_end_date
         else None,
         days_remaining=current_teacher.days_remaining,
-        can_assign_homework=current_teacher.can_assign_homework,
+        can_assign_homework=can_assign_homework,
         is_test_account=is_test_account,
         # Organization and roles information
         organization=organization_info,
