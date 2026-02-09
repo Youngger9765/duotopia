@@ -947,8 +947,11 @@ export function ProgramTreeView({
               <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 <div className="flex-1 overflow-auto p-6 min-h-0">
                   <VocabularySetPanel
+                    content={{ id: vocabularySetContentId ?? undefined }}
+                    editingContent={{
+                      id: vocabularySetContentId ?? undefined,
+                    }}
                     lessonId={vocabularySetLessonId}
-                    contentId={vocabularySetContentId}
                     isCreating={false}
                     onSave={async () => {
                       closeVocabularySetEditor();
