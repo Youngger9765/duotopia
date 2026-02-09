@@ -40,6 +40,8 @@ export const useTeacherAuthStore = create<TeacherAuthState>()(
           token,
           user,
           isAuthenticated: true,
+          userRoles: [],
+          rolesLoading: false,
         });
       },
 
