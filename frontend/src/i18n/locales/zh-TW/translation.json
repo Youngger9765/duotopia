@@ -1953,7 +1953,9 @@
       "publicPrograms": "我的教材",
       "subscription": "訂閱管理",
       "systemAdmin": "系統管理",
-      "profile": "個人資料"
+      "profile": "個人資料",
+      "orgManagement": "組織管理",
+      "language": "語言"
     }
   },
   "teacherProfile": {

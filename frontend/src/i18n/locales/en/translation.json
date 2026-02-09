@@ -1954,7 +1954,9 @@
       "publicPrograms": "My Teaching Materials",
       "subscription": "Subscription",
       "systemAdmin": "System Admin",
-      "profile": "Profile"
+      "profile": "Profile",
+      "orgManagement": "Organization",
+      "language": "Language"
     }
   },
   "teacherProfile": {
