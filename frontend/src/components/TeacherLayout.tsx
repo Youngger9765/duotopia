@@ -89,16 +89,8 @@ function TeacherLayoutInner({
     ];
 
     // Check if user has any management role in their roles array
-    const hasRole = userRoles.some((role) => managementRoles.includes(role));
-
-    // Debug logging
-    console.log("🔍 TeacherLayout Debug:");
-    console.log("  userRoles:", userRoles);
-    console.log("  hasOrgRole:", hasRole);
-    console.log("  user.role (single):", user?.role);
-
-    return hasRole;
-  }, [userRoles, user?.role]);
+    return userRoles.some((role) => managementRoles.includes(role));
+  }, [userRoles]);
 
   // Determine which sidebar items are read-only
   const readOnlyItemIds = useMemo(() => {
@@ -331,7 +323,7 @@ function TeacherLayoutInner({
                     <Globe className="mr-2 h-4 w-4" />
                     {t("teacherLayout.nav.language")}
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
+                  <DropdownMenuSubContent className="bg-white dark:bg-gray-800">
                     <DropdownMenuItem
                       className="cursor-pointer"
                       onClick={() => i18n.changeLanguage("zh-TW")}
