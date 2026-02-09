@@ -121,7 +121,15 @@ def list_resource_materials(
     for program in programs:
         active_lessons = [ls for ls in program.lessons if ls.is_active]
         total_contents = sum(
-            len([c for c in ls.contents if c.is_active]) for ls in active_lessons
+            len(
+                [
+                    c
+                    for c in ls.contents
+                    if c.is_active
+                    and not (hasattr(c, "is_assignment_copy") and c.is_assignment_copy)
+                ]
+            )
+            for ls in active_lessons
         )
         count = copy_counts_today.get(program.id, 0)
 
