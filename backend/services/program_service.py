@@ -74,6 +74,33 @@ def _copy_content_with_items(
             audio_url=original_item.audio_url
             if hasattr(original_item, "audio_url")
             else None,
+            # Example sentence fields
+            example_sentence=original_item.example_sentence
+            if hasattr(original_item, "example_sentence")
+            else None,
+            example_sentence_translation=original_item.example_sentence_translation
+            if hasattr(original_item, "example_sentence_translation")
+            else None,
+            example_sentence_definition=original_item.example_sentence_definition
+            if hasattr(original_item, "example_sentence_definition")
+            else None,
+            # Sentence assembly fields
+            word_count=original_item.word_count
+            if hasattr(original_item, "word_count")
+            else None,
+            max_errors=original_item.max_errors
+            if hasattr(original_item, "max_errors")
+            else None,
+            # Vocabulary set fields
+            image_url=original_item.image_url
+            if hasattr(original_item, "image_url")
+            else None,
+            part_of_speech=original_item.part_of_speech
+            if hasattr(original_item, "part_of_speech")
+            else None,
+            distractors=deepcopy(original_item.distractors)
+            if hasattr(original_item, "distractors") and original_item.distractors
+            else None,
             item_metadata=deepcopy(original_item.item_metadata)
             if hasattr(original_item, "item_metadata") and original_item.item_metadata
             else {},
