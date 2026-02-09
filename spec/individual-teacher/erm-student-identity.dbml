@@ -1,0 +1,263 @@
+// ⚠️ 重要定位：本檔案為「業務層面的參考建議」，非強制的技術實作規範
+// 工程師可依技術需求調整所有技術細節（資料型別、索引策略、表結構等）
+
+// =============================================================================
+// 學生身分整合系統 - 業務實體參考模型
+// =============================================================================
+// 目的：解決同一學生在不同機構/教師下被創建多個帳號的問題
+//
+// 業務需求：
+// 1. 能辨識多個帳號是同一位學生（透過 Email 認證）
+// 2. AI 點數扣除仍針對各自的機構/教師
+// 3. 學習報告以機構/教師為單位分開保留
+//
+// 整合策略：主帳號 + 連結帳號模式
+// =============================================================================
+
+Table StudentIdentity {
+  id int [pk, not null]
+  
+  // 主帳號（學生登入時使用的帳號）
+  primary_student_id int [
+    note: '''
+    主帳號 ID（業務上：學生登入時預設使用的帳號）
+    關聯到 Student 表
+    可為 null（容錯：若主帳號被刪除）
+    '''
+  ]
+  
+  // 已驗證的統一 Email
+  verified_email string [
+    unique,
+    not null,
+    note: '''
+    已驗證的 Email（業務上：用於識別同一位學生的主要登入 Email）
+    業務規則：
+    - 1Campus 登入時：填入 studentAcc（如 taipei.s123@1campus.net）
+    - 個人 Email 登入時：填入個人 Email（如 john@gmail.com）
+    - 帳號合併時：保留其中一個 Email 作為主要 Email
+    - 在整個系統中唯一（一個 Email 只能對應一個 StudentIdentity）
+    - Email 驗證或 OAuth 授權後才會創建 StudentIdentity
+    '''
+  ]
+  
+  // 身分識別資訊（用於跨帳號識別同一學生）
+  national_id_hash string [
+    unique,
+    note: '''
+    身分證字號的 SHA-256 hash（業務上：用於識別跨 Email 的同一學生）
+    業務規則：
+    - 選填（nullable），學生可選擇不提供
+    - 若填寫，系統可比對此欄位識別不同 Email 帳號是否為同一人
+    - 用於處理跨縣市轉學（1Campus 帳號改變）的情境
+    - 使用 SHA-256 不可逆加密，不儲存明文
+    - 支援台灣身分證（1碼英文+9碼數字）與外籍居留證（2碼英文+8碼數字）
+    '''
+  ]
+  
+  one_campus_student_id string [
+    note: '''
+    1Campus 系統的 studentID（業務上：來自教育部 SSO 登入的學生識別碼）
+    業務規則：
+    - 選填（nullable），僅當學生使用 1Campus SSO 登入時填入
+    - 來自 1Campus OAuth 回傳的 `studentID` 欄位
+    - 可能是身分證字號或教育部學號（待確認）
+    - 用於識別跨縣市轉學的同一學生
+    '''
+  ]
+  
+  // 密碼統一管理
+  password_hash string [
+    not null,
+    note: '''
+    密碼雜湊值（業務上：整合後學生使用統一密碼登入）
+    業務規則：
+    - 整合時智能選擇密碼（詳見功能規格）
+    - 所有連結帳號共用此密碼
+    '''
+  ]
+  
+  password_changed bool [
+    note: '''
+    密碼是否已被學生修改過（業務上：區分預設密碼與自定義密碼）
+    - false: 使用預設密碼（birthdate）
+    - true: 學生已修改過密碼
+    '''
+  ]
+  
+  last_password_change datetime [
+    note: '最後一次修改密碼的時間（業務上：用於智能密碼選擇邏輯）'
+  ]
+  
+  // 整合資訊
+  merged_at datetime [
+    not null,
+    note: '身分整合的時間（業務上：記錄何時建立此統一身分）'
+  ]
+  
+  merge_source string [
+    note: '''
+    整合來源（業務上：記錄如何觸發整合）
+    可能值（建議）：
+    - 'email_verification': Email 認證時自動整合
+    - 'one_campus_sso': 1Campus SSO 登入時識別並整合
+    - 'manual_merge': 管理員手動合併
+    - 'student_request': 學生自行申請合併
+    '''
+  ]
+  
+  // 狀態
+  is_active bool [
+    not null,
+    note: '''
+    此身分是否啟用（業務上：用於軟刪除或停用帳號）
+    業務規則：停用後學生無法登入
+    '''
+  ]
+  
+  // 時間戳記
+  created_at datetime [not null, note: '建立時間']
+  updated_at datetime [note: '更新時間']
+  
+  Note: '''
+  學生統一身分表
+  
+  業務定義：
+  整合同一位學生在不同機構/教師下創建的多個 Student 帳號，
+  透過 Email 驗證識別為同一人。
+  
+  業務規則：
+  1. 一個 Email 只能對應一個 StudentIdentity
+  2. 一個 StudentIdentity 可以關聯多個 Student 帳號
+  3. 學生使用 Email 登入時，登入到 primary_student（主帳號）
+  4. 密碼整合策略：
+     - 若任一連結帳號有自定義密碼，優先採用
+     - 若都是預設密碼，使用預設密碼（birthdate）
+     - 若多個自定義密碼，採用最近修改的
+  5. 身分識別機制：
+     - 優先比對 one_campus_student_id（若非空）
+     - 次要比對 national_id_hash（若非空）
+     - 輔助比對 verified_email
+     - 系統偵測疑似重複帳號時，提示學生確認是否合併
+  
+  業務關係：
+  - StudentIdentity 1:N Student（一個身分對應多個帳號）
+  - StudentIdentity 1:1 Student（primary_student，主帳號）
+  '''
+}
+
+Table Student {
+  // ... 現有欄位保持不變 ...
+  
+  // 新增：關聯到統一身分
+  identity_id int [
+    note: '''
+    關聯的統一身分 ID（業務上：標示此帳號屬於哪個學生身分）
+    關聯到 StudentIdentity 表
+    
+    業務規則：
+    - null: 表示尚未完成 Email 驗證，或未整合
+    - 有值: 表示已整合到某個 StudentIdentity
+    '''
+  ]
+  
+  // 新增：標記是否為主帳號
+  is_primary_account bool [
+    note: '''
+    此帳號是否為主帳號（業務上：學生登入時預設使用的帳號）
+    
+    業務規則：
+    - true: 此帳號為 StudentIdentity 的 primary_student
+    - false: 此帳號為連結帳號
+    - 一個 StudentIdentity 只能有一個主帳號
+    '''
+  ]
+  
+  // 新增：密碼是否已遷移到 Identity
+  password_migrated_to_identity bool [
+    note: '''
+    密碼是否已遷移到 StudentIdentity（業務上：標記密碼管理方式）
+    
+    業務規則：
+    - false: 使用此 Student 自己的 password_hash
+    - true: 使用 StudentIdentity 的 password_hash
+    - Email 驗證並整合後設為 true
+    '''
+  ]
+  
+  Note: '''
+  學生模型（現有實體，新增欄位用於身分整合）
+  
+  新增業務規則（身分整合相關）：
+  1. 學生完成 Email 驗證後，自動整合到 StudentIdentity
+  2. 整合後，此 Student 變成「連結帳號」，密碼管理移交給 StudentIdentity
+  3. 學習資料、機構關係、點數使用記錄仍保留在此 Student 記錄
+  4. 學生可透過 StudentIdentity 登入，系統載入對應的 Student 資料
+  '''
+}
+
+// =============================================================================
+// 業務關係（Relationships）
+// =============================================================================
+
+// StudentIdentity 與 Student 的主帳號關係（1:1）
+ref: StudentIdentity.primary_student_id > Student.id
+
+// StudentIdentity 與 Student 的整合關係（1:N）
+ref: Student.identity_id > StudentIdentity.id
+
+// =============================================================================
+// 業務規則與約束（跨實體）
+// =============================================================================
+
+/*
+業務不變條件：
+
+1. Email 唯一性
+   - StudentIdentity.verified_email 在整個系統中唯一
+   - 同一個 Email 不可對應多個 StudentIdentity
+
+2. 主帳號唯一性
+   - 一個 StudentIdentity 只能有一個 is_primary_account = true 的 Student
+   - StudentIdentity.primary_student_id 必須指向 is_primary_account = true 的 Student
+
+3. 密碼一致性
+   - 當 Student.password_migrated_to_identity = true 時
+   - 學生登入應使用 StudentIdentity.password_hash
+   - Student.password_hash 可保留（用於回溯或容錯）
+
+4. 資料保留原則
+   - 整合後，各 Student 的學習資料（StudentItemProgress, PracticeSession）仍保留
+   - 各 Student 的機構關係（StudentSchool, ClassroomStudent）仍保留
+   - 點數使用記錄（PointUsageLog.student_id）仍指向各自的 Student
+
+5. 整合觸發條件
+   - 學生完成 Email 驗證（Student.email_verified = true）時
+   - 系統自動檢查是否有相同 Email 的 StudentIdentity
+   - 若有，將此 Student 加入既有 Identity
+   - 若無，創建新 StudentIdentity
+
+6. 1Campus SSO 整合規則（新增）
+   - 學生使用 1Campus OAuth 登入時，系統接收 studentID
+   - 將 studentID 存入 StudentIdentity.one_campus_student_id
+   - 系統檢查是否有其他 StudentIdentity 的 one_campus_student_id 相同
+   - 若有，提示學生確認是否合併帳號（在學生端顯示，非教師操作）
+   - 合併後，學生可用任一 1Campus 帳號（或個人 Email）登入
+
+7. 跨帳號識別規則（新增）
+   - 系統自動偵測疑似重複帳號的條件（任一符合即觸發）：
+     a. one_campus_student_id 相同且非空
+     b. national_id_hash 相同且非空
+     c. verified_email 相同
+   - 偵測到疑似重複時，在學生登入後顯示提示視窗
+   - 由學生本人確認是否執行合併（非教師或管理員操作）
+   - 合併操作不可逆（需謹慎設計 UI 提示）
+
+技術實作建議（供工程師參考）：
+- 可考慮在 StudentIdentity.verified_email 建立唯一索引
+- 可考慮在 StudentIdentity.national_id_hash 建立唯一索引（允許 null）
+- 可考慮在 Student.identity_id 建立索引（查詢效能）
+- 密碼合併邏輯建議在 Service 層處理，不在資料庫層
+- 主帳號唯一性可用應用層檢查或資料庫唯一索引
+- 1Campus OAuth 整合邏輯建議在 Authentication Service 處理
+*/
