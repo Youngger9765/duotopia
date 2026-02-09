@@ -13,6 +13,31 @@ const mockUpdateLesson = vi.fn();
 const mockDeleteLesson = vi.fn();
 const mockDeleteContent = vi.fn();
 
+// Mutable mock return value for useContentEditor (configurable per test)
+let mockContentEditorReturn: Record<string, unknown> = {};
+const defaultContentEditorReturn = {
+  showReadingEditor: false,
+  editorLessonId: null,
+  editorContentId: null,
+  selectedContent: null,
+  showSentenceMakingEditor: false,
+  sentenceMakingLessonId: null,
+  sentenceMakingContentId: null,
+  showVocabularySetEditor: false,
+  vocabularySetLessonId: null,
+  vocabularySetContentId: null,
+  openContentEditor: vi.fn(),
+  openReadingCreateEditor: vi.fn(),
+  openSentenceMakingCreateEditor: vi.fn(),
+  openVocabularySetCreateEditor: vi.fn(),
+  closeReadingEditor: vi.fn(),
+  closeSentenceMakingEditor: vi.fn(),
+  closeVocabularySetEditor: vi.fn(),
+};
+
+// Capture props passed to VocabularySetPanel
+let capturedVocabPanelProps: Record<string, unknown> = {};
+
 // Mock dependencies
 vi.mock("@/config/api", () => ({
   API_URL: "http://localhost:8000",
@@ -31,18 +56,14 @@ vi.mock("@/hooks/useProgramAPI", () => ({
 }));
 
 vi.mock("@/hooks/useContentEditor", () => ({
-  useContentEditor: () => ({
-    showReadingEditor: false,
-    showListeningEditor: false,
-    showVocabularyEditor: false,
-    showVideoLinkEditor: false,
-    editorLessonId: null,
-    editorContentId: null,
-    editorMode: null,
-    handleCreateContent: vi.fn(),
-    handleEditContent: vi.fn(),
-    handleCloseEditor: vi.fn(),
-  }),
+  useContentEditor: () => mockContentEditorReturn,
+}));
+
+vi.mock("@/components/VocabularySetPanel", () => ({
+  default: (props: Record<string, unknown>) => {
+    capturedVocabPanelProps = props;
+    return <div data-testid="vocabulary-set-panel" />;
+  },
 }));
 vi.mock("sonner", () => ({
   toast: {
@@ -76,6 +97,8 @@ describe("ProgramTreeView", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockContentEditorReturn = { ...defaultContentEditorReturn };
+    capturedVocabPanelProps = {};
   });
 
   it("renders programs correctly", () => {
@@ -221,6 +244,105 @@ describe("ProgramTreeView", () => {
       // For now, verify this expectation exists
       expect(mockDeleteContent).toBeDefined();
       expect(typeof mockDeleteContent).toBe("function");
+    });
+  });
+
+  describe("Vocabulary Set Editor integration", () => {
+    it("should pass content prop with id to VocabularySetPanel in edit mode", () => {
+      mockContentEditorReturn = {
+        ...defaultContentEditorReturn,
+        showVocabularySetEditor: true,
+        vocabularySetLessonId: 101,
+        vocabularySetContentId: 1001,
+      };
+
+      render(
+        <ProgramTreeView
+          programs={mockPrograms}
+          scope="teacher"
+          onRefresh={vi.fn()}
+        />,
+      );
+
+      // VocabularySetPanel should receive content prop with { id: 1001 }
+      expect(capturedVocabPanelProps.content).toEqual({ id: 1001 });
+    });
+
+    it("should pass editingContent prop with id to VocabularySetPanel in edit mode", () => {
+      mockContentEditorReturn = {
+        ...defaultContentEditorReturn,
+        showVocabularySetEditor: true,
+        vocabularySetLessonId: 101,
+        vocabularySetContentId: 1001,
+      };
+
+      render(
+        <ProgramTreeView
+          programs={mockPrograms}
+          scope="teacher"
+          onRefresh={vi.fn()}
+        />,
+      );
+
+      // editingContent should also have the content id
+      expect(capturedVocabPanelProps.editingContent).toEqual({ id: 1001 });
+    });
+
+    it("should pass undefined content when vocabularySetContentId is null (create mode)", () => {
+      mockContentEditorReturn = {
+        ...defaultContentEditorReturn,
+        showVocabularySetEditor: true,
+        vocabularySetLessonId: 101,
+        vocabularySetContentId: null,
+      };
+
+      render(
+        <ProgramTreeView
+          programs={mockPrograms}
+          scope="teacher"
+          onRefresh={vi.fn()}
+        />,
+      );
+
+      // In create mode, VocabularySetPanel should render with isCreating=true
+      // The create-mode panel is a different conditional branch
+      expect(capturedVocabPanelProps.isCreating).toBe(true);
+    });
+
+    it("should render VocabularySetPanel when vocabulary editor is shown", () => {
+      mockContentEditorReturn = {
+        ...defaultContentEditorReturn,
+        showVocabularySetEditor: true,
+        vocabularySetLessonId: 101,
+        vocabularySetContentId: 1001,
+      };
+
+      render(
+        <ProgramTreeView
+          programs={mockPrograms}
+          scope="teacher"
+          onRefresh={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByTestId("vocabulary-set-panel")).toBeTruthy();
+    });
+
+    it("should NOT render VocabularySetPanel when vocabulary editor is hidden", () => {
+      mockContentEditorReturn = {
+        ...defaultContentEditorReturn,
+        showVocabularySetEditor: false,
+      };
+
+      render(
+        <ProgramTreeView
+          programs={mockPrograms}
+          scope="teacher"
+          onRefresh={vi.fn()}
+        />,
+      );
+
+      expect(screen.queryByTestId("vocabulary-set-panel")).toBeNull();
     });
   });
 });
