@@ -179,7 +179,7 @@ class ContentCreate(BaseModel):
     target_wpm: Optional[int] = 60
     target_accuracy: Optional[float] = 0.8
     order_index: Optional[int] = None  # None = 自動計算為最後一個位置
-    level: Optional[str] = "A1"
+    level: Optional[str] = None  # None = 繼承 Program 的 level
     tags: Optional[List[str]] = []
     is_public: Optional[bool] = False
 
