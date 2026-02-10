@@ -2335,14 +2335,36 @@ export default function ReadingAssessmentPanel({
               </label>
               <textarea
                 value={batchPasteText}
-                onChange={(e) => setBatchPasteText(e.target.value)}
+                onChange={(e) => {
+                  // 過濾出非空行（只計算有內容的項目）
+                  const nonEmptyLines = e.target.value
+                    .split("\n")
+                    .map((line) => line.trim())
+                    .filter((line) => line.length > 0);
+
+                  // 限制最多 25 個項目（空行不計入）
+                  if (nonEmptyLines.length > 25) {
+                    const limitedText = nonEmptyLines.slice(0, 25).join("\n");
+                    setBatchPasteText(limitedText);
+                  } else {
+                    setBatchPasteText(e.target.value);
+                  }
+                }}
                 placeholder="put&#10;Put it away.&#10;It's time to put everything away. Right now."
                 className="w-full min-h-80 max-h-[60vh] px-4 py-3 border-2 border-gray-300 rounded-lg font-mono text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-y overflow-y-auto"
               />
-              <div className="text-xs text-gray-500 mt-2">
+              <div className="text-xs mt-2 flex items-center justify-between">
+                <span className="text-gray-500">
+                  {batchPasteText.split("\n").filter((line) => line.trim())
+                    .length || 0}{" "}
+                  {t("contentEditor.messages.items")}
+                </span>
                 {batchPasteText.split("\n").filter((line) => line.trim())
-                  .length || 0}{" "}
-                {t("contentEditor.messages.items")}
+                  .length >= 25 && (
+                  <span className="text-amber-600 font-medium">
+                    最多支援 25 個項目
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex gap-6 p-4 bg-gray-50 rounded-lg">
