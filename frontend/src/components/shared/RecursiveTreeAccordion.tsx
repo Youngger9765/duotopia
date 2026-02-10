@@ -221,7 +221,7 @@ function RecursiveTreeNode({
                 {/* Row 1: Icon + Name + (Desktop: fields + menu) / (Mobile: menu only) */}
                 <div className="flex items-center justify-between w-full gap-2">
                   {/* Left side: drag handle + icon + name/description */}
-                  <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+                  <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0 max-w-[calc(100%-100px)] sm:max-w-[calc(100%-120px)]">
                     {/* Drag handle - desktop only */}
                     {config.canDrag && (
                       <div
@@ -244,7 +244,7 @@ function RecursiveTreeNode({
                     </div>
 
                     {/* Name and description */}
-                    <div className="text-left flex-1 min-w-0">
+                    <div className="text-left flex-1 min-w-0 overflow-hidden">
                       <h4 className="font-semibold text-sm sm:text-base dark:text-gray-100 truncate">
                         {itemName}
                       </h4>
@@ -476,7 +476,7 @@ function RecursiveTreeNode({
         >
           <div className="flex items-center justify-between gap-2">
             {/* Left side: drag handle + icon + name */}
-            <div className="flex items-center space-x-2 flex-1 min-w-0">
+            <div className="flex items-center space-x-2 flex-1 min-w-0 max-w-[calc(100%-80px)] sm:max-w-[calc(100%-100px)]">
               {config.canDrag && (
                 <div
                   {...attributes}
@@ -493,7 +493,7 @@ function RecursiveTreeNode({
                   className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${config.colorScheme.iconText}`}
                 />
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 overflow-hidden">
                 <p
                   className={`font-medium text-sm ${config.colorScheme.text} truncate`}
                 >
