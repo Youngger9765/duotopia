@@ -208,6 +208,8 @@ class BatchTranslateRequest(BaseModel):
 
 class GenerateSentencesRequest(BaseModel):
     words: List[str]
+    definitions: Optional[List[str]] = None  # 單字的中文翻譯（用於消歧義）
+    lesson_id: Optional[int] = None  # 單元 ID（用於取得單元描述）
     level: Optional[str] = "A1"
     prompt: Optional[str] = None
     translate_to: Optional[str] = None  # zh-TW, ja, ko

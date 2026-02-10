@@ -1495,6 +1495,11 @@ export default function VocabularySetPanel({
       };
       setTitle(data.title || "");
 
+      // 預設使用課程難度
+      if (data.level) {
+        setAiGenerateLevel(data.level);
+      }
+
       // Convert items to rows format
       if (data.items && Array.isArray(data.items)) {
         const convertedRows = data.items.map(
@@ -2485,9 +2490,10 @@ export default function VocabularySetPanel({
         return;
       }
 
-      // 收集需要生成的單字和詞性
+      // 收集需要生成的單字、翻譯和詞性
       const wordsToGenerate = targetIndices.map((idx) => ({
         word: rows[idx].text,
+        definition: rows[idx].definition || "",
         partsOfSpeech: rows[idx].partsOfSpeech || [],
       }));
 
@@ -2516,6 +2522,8 @@ export default function VocabularySetPanel({
       // 呼叫 API 生成例句
       const response = await apiClient.generateSentences({
         words: wordsToGenerate.map((w) => w.word),
+        definitions: wordsToGenerate.map((w) => w.definition),
+        lesson_id: lessonId,
         level: aiGenerateLevel,
         prompt: aiGeneratePrompt || undefined,
         translate_to: targetLanguage || undefined,

@@ -1027,12 +1027,14 @@ class ApiClient {
   // AI 生成例句
   async generateSentences(params: {
     words: string[];
+    definitions?: string[];
+    lesson_id?: number;
     level?: string;
     prompt?: string;
     translate_to?: string;
     parts_of_speech?: string[][];
   }): Promise<{
-    sentences: Array<{ sentence: string; translation?: string }>;
+    sentences: Array<{ sentence: string; translation?: string; word: string }>;
   }> {
     return this.request("/api/teachers/generate-sentences", {
       method: "POST",
