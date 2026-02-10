@@ -245,11 +245,11 @@ function RecursiveTreeNode({
 
                     {/* Name and description */}
                     <div className="text-left flex-1 min-w-0 overflow-hidden">
-                      <h4 className="font-semibold text-sm sm:text-base dark:text-gray-100 truncate">
+                      <h4 className="font-semibold text-sm sm:text-base dark:text-gray-100 line-clamp-2 break-words">
                         {itemName}
                       </h4>
                       {itemDescription && (
-                        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
+                        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 whitespace-pre-line break-words line-clamp-3">
                           {itemDescription}
                         </p>
                       )}
@@ -495,12 +495,12 @@ function RecursiveTreeNode({
               </div>
               <div className="flex-1 min-w-0 overflow-hidden">
                 <p
-                  className={`font-medium text-sm ${config.colorScheme.text} truncate`}
+                  className={`font-medium text-sm ${config.colorScheme.text} line-clamp-2 break-words`}
                 >
                   {itemName}
                 </p>
                 {itemDescription && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-pre-line break-words line-clamp-3">
                     {itemDescription}
                   </p>
                 )}
