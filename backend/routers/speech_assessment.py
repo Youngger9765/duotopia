@@ -32,7 +32,7 @@ from models.classroom import Classroom
 from models.organization import ClassroomSchool
 from models.organization import Organization
 from models.organization import OrganizationPointsLog
-from models.progress import PointUsageLog
+from models.subscription import PointUsageLog
 from services.quota_service import QuotaService
 from services.organization_points_service import OrganizationPointsService
 from services.bigquery_logger import get_bigquery_logger
