@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_URL: string;
+  readonly VITE_RESOURCE_ACCOUNT_EMAIL?: string;
   // 更多環境變數...
 }
 

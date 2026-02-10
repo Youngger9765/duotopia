@@ -2,7 +2,14 @@
  * Sidebar 配置 - 定義所有選單分組和項目
  */
 
-import { Home, Building2, GraduationCap, Users, BookOpen } from "lucide-react";
+import {
+  Home,
+  Building2,
+  GraduationCap,
+  Users,
+  BookOpen,
+  Package,
+} from "lucide-react";
 import { SidebarGroup } from "@/types/sidebar";
 
 export const getSidebarGroups = (
@@ -58,6 +65,20 @@ export const getSidebarGroups = (
         label: "學校教材",
         icon: BookOpen,
         path: "/teacher/school-materials",
+      },
+    ],
+  },
+  // 📦 共享資源 (所有教師)
+  {
+    id: "shared-resources",
+    label: "共享資源",
+    icon: Package,
+    items: [
+      {
+        id: "resource-materials",
+        label: "資源教材包",
+        icon: Package,
+        path: "/teacher/resource-materials",
       },
     ],
   },

@@ -7,6 +7,7 @@ import AudioRecorder from "@/components/shared/AudioRecorder";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useAzurePronunciation } from "@/hooks/useAzurePronunciation";
+import { useDemoAzurePronunciation } from "@/hooks/useDemoAzurePronunciation";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ interface ReadingAssessmentProps {
   exampleAudioUrl?: string;
   progressId?: number;
   readOnly?: boolean; // 唯讀模式
+  isDemoMode?: boolean; // Demo mode - uses public demo API endpoints
   timeLimit?: number; // 作答時間限制（秒）
   onTimeout?: () => void; // 超時回調
   onRetry?: () => void; // 重試回調
@@ -47,6 +49,7 @@ export default function ReadingAssessmentTemplate({
   exampleAudioUrl,
   progressId: _progressId, // Legacy prop (not used with Azure direct calls)
   readOnly = false,
+  isDemoMode = false,
   timeLimit = 30, // 預設 30 秒
   onTimeout,
   onRetry,
@@ -63,7 +66,10 @@ export default function ReadingAssessmentTemplate({
   const exampleAudioRef = useRef<HTMLAudioElement>(null);
 
   // 🚀 Azure Speech Service hook for direct API calls
-  const { analyzePronunciation } = useAzurePronunciation();
+  // Use demo hook when in demo mode (no authentication required)
+  const regularHook = useAzurePronunciation();
+  const demoHook = useDemoAzurePronunciation();
+  const { analyzePronunciation } = isDemoMode ? demoHook : regularHook;
 
   // 計時器狀態
   const [timeRemaining, setTimeRemaining] = useState(timeLimit);

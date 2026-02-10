@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useAzurePronunciation } from "@/hooks/useAzurePronunciation";
+import { useDemoAzurePronunciation } from "@/hooks/useDemoAzurePronunciation";
 import {
   Dialog,
   DialogContent,
@@ -96,6 +97,9 @@ interface WordReadingTemplateProps {
   // Time limit (0 = unlimited)
   timeLimit?: number;
 
+  // Demo mode
+  isDemoMode?: boolean; // Demo mode - uses public demo API endpoints
+
   // Callbacks
   onTimeout?: () => void;
   onRetry?: () => void;
@@ -113,6 +117,7 @@ export default function WordReadingTemplate({
   onRecordingComplete,
   progressId: _progressId,
   readOnly = false,
+  isDemoMode = false,
   timeLimit = 0, // Default unlimited
   onTimeout,
   onRetry,
@@ -147,7 +152,10 @@ export default function WordReadingTemplate({
   const [playbackRate, setPlaybackRate] = useState(1.0);
 
   // Azure Speech Service hook for direct API calls
-  const { analyzePronunciation } = useAzurePronunciation();
+  // Use demo hook when in demo mode (no authentication required)
+  const regularHook = useAzurePronunciation();
+  const demoHook = useDemoAzurePronunciation();
+  const { analyzePronunciation } = isDemoMode ? demoHook : regularHook;
 
   // Timer state
   const [timeRemaining, setTimeRemaining] = useState(timeLimit);
