@@ -65,6 +65,11 @@ class Settings:
     AZURE_SPEECH_REGION: Optional[str] = os.getenv("AZURE_SPEECH_REGION", "eastasia")
     AZURE_SPEECH_ENDPOINT: Optional[str] = os.getenv("AZURE_SPEECH_ENDPOINT")
 
+    # Resource Account (資源教材包來源帳號)
+    RESOURCE_ACCOUNT_EMAIL: str = os.getenv(
+        "RESOURCE_ACCOUNT_EMAIL", "contact@duotopia.co"
+    )
+
     # GCP (optional)
     GCP_PROJECT_ID: Optional[str] = os.getenv("GCP_PROJECT_ID", "duotopia-469413")
 

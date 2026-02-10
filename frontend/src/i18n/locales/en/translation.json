@@ -37,7 +37,16 @@
     "backToHome": "Back to Home",
     "configError": "Failed to load demo configuration",
     "notAvailable": "This demo is currently unavailable",
-    "invalidConfig": "Invalid demo configuration"
+    "invalidConfig": "Invalid demo configuration",
+    "limitReached": {
+      "title": "Daily free trial limit reached",
+      "description": "You have used all {{limit}} free speech practice sessions today.",
+      "ctaTitle": "Register for unlimited access!",
+      "ctaDescription": "Completely free — unlock all features now",
+      "resetInfo": "Or wait until {{resetTime}} for your free quota to reset",
+      "login": "Log In",
+      "register": "Sign Up Free"
+    }
   },
   "rearrangement": {
     "loading": "Loading questions...",
@@ -242,8 +251,9 @@
       "benefits": "No Credit Card Required • Forever Free Plan • Get Started in 5 Minutes"
     },
     "demo": {
-      "title": "Try Four Learning Modes Now",
+      "title": "Try Five Learning Modes Now",
       "subtitle": "No registration required - experience Duotopia's interactive learning instantly",
+      "tryNow": "Try Now",
       "reading": {
         "title": "Sentence Reading",
         "description": "AI instantly scores your pronunciation"
@@ -256,7 +266,11 @@
         "title": "Word Reading",
         "description": "Learn correct word pronunciation"
       },
-      "wordSelection": {
+      "wordSelectionListening": {
+        "title": "Word Listening Quiz",
+        "description": "Listen and select the correct word"
+      },
+      "wordSelectionWriting": {
         "title": "Word Selection",
         "description": "Choose the correct answer from options"
       }
@@ -296,7 +310,9 @@
       "copyright": "© 2025 Duotopia. All rights reserved."
     },
     "header": {
-      "logo": "Duotopia"
+      "logo": "Duotopia",
+      "teacherLogin": "Teacher Login",
+      "studentLogin": "Student Login"
     },
     "cta2": {
       "title": "Ready to Reclaim Your Teaching Time?",
@@ -1938,7 +1954,9 @@
       "publicPrograms": "My Teaching Materials",
       "subscription": "Subscription",
       "systemAdmin": "System Admin",
-      "profile": "Profile"
+      "profile": "Profile",
+      "orgManagement": "Organization",
+      "language": "Language"
     }
   },
   "teacherProfile": {

@@ -148,7 +148,8 @@ export default function AdminOrganizations() {
   };
 
   // Format date
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("zh-TW", {
       year: "numeric",
       month: "2-digit",
@@ -531,7 +532,8 @@ export default function AdminOrganizations() {
                           {/* Expired Status */}
                           <TableCell className="text-center">
                             {org.subscription_end_date ? (
-                              new Date(org.subscription_end_date) < new Date() ? (
+                              new Date(org.subscription_end_date) <
+                              new Date() ? (
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                   已到期
                                 </span>

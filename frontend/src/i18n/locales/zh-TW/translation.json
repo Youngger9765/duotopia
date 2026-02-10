@@ -37,7 +37,16 @@
     "backToHome": "返回首頁",
     "configError": "無法載入 Demo 設定",
     "notAvailable": "此 Demo 目前無法使用",
-    "invalidConfig": "Demo 設定錯誤"
+    "invalidConfig": "Demo 設定錯誤",
+    "limitReached": {
+      "title": "今日免費試用次數已達上限",
+      "description": "您今日已使用完 {{limit}} 次免費語音練習機會。",
+      "ctaTitle": "註冊帳號即可無限使用！",
+      "ctaDescription": "完全免費，立即解鎖所有功能",
+      "resetInfo": "或等待 {{resetTime}} 後重置免費額度",
+      "login": "登入",
+      "register": "免費註冊"
+    }
   },
   "rearrangement": {
     "loading": "正在載入題目...",
@@ -242,8 +251,9 @@
       "benefits": "無需信用卡 • 永久免費方案 • 5 分鐘快速上手"
     },
     "demo": {
-      "title": "立即體驗四種學習模式",
+      "title": "立即體驗五種學習模式",
       "subtitle": "無需註冊，點擊即可體驗 Duotopia 的互動式學習",
+      "tryNow": "立即體驗",
       "reading": {
         "title": "例句朗讀",
         "description": "AI 即時評分你的發音"
@@ -256,7 +266,11 @@
         "title": "單字朗讀",
         "description": "學習單字正確發音"
       },
-      "wordSelection": {
+      "wordSelectionListening": {
+        "title": "單字聽力選擇",
+        "description": "聽音選出正確單字"
+      },
+      "wordSelectionWriting": {
         "title": "單字選擇",
         "description": "從選項中選出正確答案"
       }
@@ -296,7 +310,9 @@
       "copyright": "© 2025 Duotopia. All rights reserved."
     },
     "header": {
-      "logo": "Duotopia"
+      "logo": "Duotopia",
+      "teacherLogin": "教師登入",
+      "studentLogin": "學生登入"
     },
     "cta2": {
       "title": "準備好重獲老師的自由時光?",
@@ -1937,7 +1953,9 @@
       "publicPrograms": "我的教材",
       "subscription": "訂閱管理",
       "systemAdmin": "系統管理",
-      "profile": "個人資料"
+      "profile": "個人資料",
+      "orgManagement": "組織管理",
+      "language": "語言"
     }
   },
   "teacherProfile": {

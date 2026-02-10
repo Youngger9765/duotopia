@@ -17,6 +17,7 @@ from .base import (
     ContentType,
     PracticeMode,
     ScoreCategory,
+    ProgramVisibility,
 )
 
 # User models
@@ -45,7 +46,7 @@ from .organization import (
 from .classroom import Classroom, ClassroomStudent
 
 # Program models
-from .program import Program, Lesson, Content, ContentItem
+from .program import Program, Lesson, Content, ContentItem, ProgramCopyLog
 
 # Assignment models
 from .assignment import Assignment, AssignmentContent, StudentAssignment
@@ -76,6 +77,7 @@ __all__ = [
     "ContentType",
     "PracticeMode",
     "ScoreCategory",
+    "ProgramVisibility",
     # Users
     "Teacher",
     "Student",
@@ -99,6 +101,7 @@ __all__ = [
     "Lesson",
     "Content",
     "ContentItem",
+    "ProgramCopyLog",
     # Assignments
     "Assignment",
     "AssignmentContent",

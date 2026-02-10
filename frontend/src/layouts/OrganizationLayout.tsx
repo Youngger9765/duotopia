@@ -20,7 +20,12 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { token, logout: storeLogout, user, setUserRoles } = useTeacherAuthStore();
+  const {
+    token,
+    logout: storeLogout,
+    user,
+    setUserRoles,
+  } = useTeacherAuthStore();
   const { setOrganizations, setIsFetchingOrgs } = useOrganization();
 
   // Fetch organizations on mount

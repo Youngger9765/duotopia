@@ -38,7 +38,7 @@ describe("CreateOrganization - Subscription Fields (Issue #209)", () => {
     return render(
       <BrowserRouter>
         <CreateOrganization />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
   };
 
@@ -74,7 +74,9 @@ describe("CreateOrganization - Subscription Fields (Issue #209)", () => {
   it("should allow filling subscription dates", () => {
     renderComponent();
 
-    const startDateInput = screen.getByLabelText(/啟用時間/) as HTMLInputElement;
+    const startDateInput = screen.getByLabelText(
+      /啟用時間/,
+    ) as HTMLInputElement;
     const endDateInput = screen.getByLabelText(/停用時間/) as HTMLInputElement;
 
     fireEvent.change(startDateInput, { target: { value: "2026-02-01" } });
@@ -87,7 +89,9 @@ describe("CreateOrganization - Subscription Fields (Issue #209)", () => {
   it("should allow filling initial points", () => {
     renderComponent();
 
-    const pointsInput = screen.getByPlaceholderText("10000") as HTMLInputElement;
+    const pointsInput = screen.getByPlaceholderText(
+      "10000",
+    ) as HTMLInputElement;
     fireEvent.change(pointsInput, { target: { value: "50000" } });
 
     expect(pointsInput.value).toBe("50000");

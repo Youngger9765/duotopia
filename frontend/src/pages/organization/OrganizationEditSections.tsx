@@ -12,6 +12,7 @@ import {
   Users,
   BookOpen,
   ArrowRight,
+  Package,
 } from "lucide-react";
 
 export interface Organization {
@@ -159,7 +160,7 @@ export function QuickActionsCards({
   const navigate = useNavigate();
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <Card className="hover:shadow-md transition-shadow cursor-pointer">
         <CardContent
           className="p-6"
@@ -213,6 +214,26 @@ export function QuickActionsCards({
               <div>
                 <h3 className="font-semibold text-gray-900">組織教材</h3>
                 <p className="text-sm text-gray-500">教材與課程</p>
+              </div>
+            </div>
+            <ArrowRight className="h-5 w-5 text-gray-400" />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        <CardContent
+          className="p-6"
+          onClick={() => navigate(`/organization/${orgId}/resource-materials`)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Package className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">資源教材包</h3>
+                <p className="text-sm text-gray-500">瀏覽與複製教材</p>
               </div>
             </div>
             <ArrowRight className="h-5 w-5 text-gray-400" />
