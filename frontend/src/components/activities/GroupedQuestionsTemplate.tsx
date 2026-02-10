@@ -427,6 +427,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
         formData.append("progress_id", progressId.toString());
       }
 
+      // 🎯 Issue #208: Generate unique analysis_id for deduction
+      const analysisId = crypto.randomUUID();
+      formData.append("analysis_id", analysisId);
+
       // 不等待結果，立即返回（背景上傳）
       fetch(`${apiUrl}/api/speech/upload-analysis`, {
         method: "POST",

@@ -188,6 +188,10 @@ export default function ReadingAssessmentTemplate({
         formData.append("progress_id", _progressId.toString());
       }
 
+      // 🎯 Issue #208: Generate unique analysis_id for deduction
+      const analysisId = crypto.randomUUID();
+      formData.append("analysis_id", analysisId);
+
       // 背景上傳（不等待結果）
       fetch(`${apiUrl}/api/speech/upload-analysis`, {
         method: "POST",

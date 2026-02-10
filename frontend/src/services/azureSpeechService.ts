@@ -327,6 +327,7 @@ export class AzureSpeechService {
 
   /**
    * 🎯 Issue #118: Internal upload to server
+   * 🎯 Issue #208: Generate unique analysis_id for deduction idempotency
    */
   private async uploadToServer(
     audioBlob: Blob,
@@ -349,6 +350,13 @@ export class AzureSpeechService {
     if (progressId) {
       formData.append("progress_id", progressId.toString());
     }
+
+    // 🎯 Issue #208: Generate unique analysis_id for each upload
+    // This enables backend to:
+    // 1. Deduct points for each Azure SDK call (not just on submit)
+    // 2. Prevent duplicate deduction on network retry (same analysis_id)
+    const analysisId = crypto.randomUUID();
+    formData.append("analysis_id", analysisId);
 
     const apiUrl = import.meta.env.VITE_API_URL || "";
     await axios.post(`${apiUrl}/api/speech/upload-analysis`, formData, {
