@@ -21,8 +21,15 @@ export class ApiError extends Error {
     public originalError?: unknown,
   ) {
     // Extract message for Error base class
-    const message =
-      typeof detail === "object" && detail?.message
+    // Handle Pydantic validation error arrays: [{ msg, loc, type, input, url }]
+    const message = Array.isArray(detail)
+      ? detail
+          .map((e: { msg?: string; loc?: (string | number)[] }) => {
+            const field = e.loc?.slice(-1)[0];
+            return field ? `${field}: ${e.msg}` : (e.msg ?? "Validation error");
+          })
+          .join("; ")
+      : typeof detail === "object" && detail?.message
         ? detail.message
         : typeof detail === "string"
           ? detail
