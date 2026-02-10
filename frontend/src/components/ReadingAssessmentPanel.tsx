@@ -1121,10 +1121,11 @@ export default function ReadingAssessmentPanel({
   const [isBatchGeneratingTTS, setIsBatchGeneratingTTS] = useState(false); // 批次生成 TTS 中
   const [isBatchGeneratingTranslation, setIsBatchGeneratingTranslation] =
     useState(false); // 批次生成翻譯中
+  const [isPasting, setIsPasting] = useState(false); // 批次貼上中
 
   // 計算是否有批次操作正在進行
   const isBatchProcessing =
-    isBatchGeneratingTTS || isBatchGeneratingTranslation;
+    isBatchGeneratingTTS || isBatchGeneratingTranslation || isPasting;
 
   // dnd-kit sensors
   const sensors = useSensors(
@@ -1767,6 +1768,12 @@ export default function ReadingAssessmentPanel({
       return;
     }
 
+    // 檢查是否超過 25 個例句
+    if (itemsToTranslate.length > 25) {
+      toast.error("一次最多翻譯 25 個例句，請分批處理");
+      return;
+    }
+
     setIsBatchGeneratingTranslation(true);
     toast.info(t("contentEditor.messages.startingBatchTranslation"));
     const newRows = [...rows];
@@ -1848,6 +1855,13 @@ export default function ReadingAssessmentPanel({
       return;
     }
 
+    // 檢查是否超過 25 個例句
+    if (lines.length > 25) {
+      toast.error("一次最多翻譯 25 個例句，請分批處理");
+      return;
+    }
+
+    setIsPasting(true);
     toast.info(
       t("contentEditor.messages.processingItems", { count: lines.length }),
     );
@@ -1919,6 +1933,7 @@ export default function ReadingAssessmentPanel({
       } catch (error) {
         console.error("Batch processing error:", error);
         toast.error(t("contentEditor.messages.batchProcessingFailed"));
+        setIsPasting(false);
         return;
       }
     }
@@ -1959,6 +1974,7 @@ export default function ReadingAssessmentPanel({
       } catch (error) {
         console.error("Failed to save batch paste:", error);
         toast.error(t("contentEditor.messages.batchProcessingFailed"));
+        setIsPasting(false);
         return;
       }
     } else {
@@ -1985,6 +2001,7 @@ export default function ReadingAssessmentPanel({
       );
     }
 
+    setIsPasting(false);
     setBatchPasteDialogOpen(false);
     setBatchPasteText("");
   };
@@ -2424,9 +2441,10 @@ export default function ReadingAssessmentPanel({
               onClick={() =>
                 handleBatchPaste(batchPasteAutoTTS, batchPasteAutoTranslate)
               }
+              disabled={isPasting}
               className="px-6 py-2 text-base bg-blue-600 hover:bg-blue-700"
             >
-              {t("contentEditor.buttons.confirmPaste")}
+              {isPasting ? "生成中..." : t("contentEditor.buttons.confirmPaste")}
             </Button>
           </DialogFooter>
         </DialogContent>

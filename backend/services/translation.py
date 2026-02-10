@@ -282,7 +282,7 @@ Required: Return format must be ["translation1", "translation2", ...]"""
                 translations = await self.vertex_ai.generate_json(
                     prompt=prompt,
                     model_type="flash",
-                    max_tokens=500,
+                    max_tokens=3500,
                     temperature=0.3,
                     system_instruction=system_instruction,
                 )
@@ -297,7 +297,7 @@ Required: Return format must be ["translation1", "translation2", ...]"""
                         {"role": "user", "content": prompt},
                     ],
                     temperature=0.3,
-                    max_tokens=500,  # 與單元測試預期一致
+                    max_tokens=3500,  # 提高上限以支持更多句子的批次翻译
                 )
 
                 # 解析 JSON 回應
