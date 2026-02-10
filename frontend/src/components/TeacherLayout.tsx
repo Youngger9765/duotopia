@@ -257,8 +257,8 @@ function TeacherLayoutInner({
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 side="top"
-                align="start"
-                className="w-56 mb-1"
+                align="end"
+                className="w-56 mb-1 z-50"
               >
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
