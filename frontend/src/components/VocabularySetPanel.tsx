@@ -1321,7 +1321,6 @@ interface VocabularySetPanelProps {
   onSave?: () => void | Promise<void>;
   // Alternative props for ClassroomDetail usage
   lessonId?: number;
-  contentId?: number;
   onCancel?: () => void;
   isOpen?: boolean;
   isCreating?: boolean; // 是否為新增模式

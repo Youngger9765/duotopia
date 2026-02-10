@@ -40,6 +40,18 @@ def get_engine():
         max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "10"))  # Was 15
         pool_timeout = int(os.getenv("DB_POOL_TIMEOUT", "10"))
 
+        # SQLite vs PostgreSQL specific configurations
+        connect_args = {}
+        if DATABASE_URL.startswith("postgresql"):
+            connect_args = {
+                "connect_timeout": 10,  # 連線超時 10 秒
+                "options": "-c statement_timeout=30000",  # SQL 執行超時 30 秒
+            }
+        elif DATABASE_URL.startswith("sqlite"):
+            connect_args = {
+                "check_same_thread": False  # SQLite: Allow multiple threads
+            }
+
         _engine = create_engine(
             DATABASE_URL,
             pool_pre_ping=True,  # 每次取得連線前先測試，防止使用斷線的連線
@@ -47,10 +59,7 @@ def get_engine():
             pool_size=pool_size,  # 連線池大小 (default: 10)
             max_overflow=max_overflow,  # 最大溢出連線數 (default: 10)
             pool_timeout=pool_timeout,  # 連線等待超時 (降低: 30s → 10s 快速失敗)
-            connect_args={
-                "connect_timeout": 10,  # 連線超時 10 秒
-                "options": "-c statement_timeout=30000",  # SQL 執行超時 30 秒
-            },
+            connect_args=connect_args,
         )
     return _engine
 

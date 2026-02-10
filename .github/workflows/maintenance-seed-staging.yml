@@ -1,0 +1,101 @@
+name: Seed Staging Database
+
+on:
+  workflow_dispatch:  # 只允許手動觸發
+    inputs:
+      confirm:
+        description: '⚠️ 確認要重置 STAGING 資料庫？輸入 "RESET" 確認'
+        required: true
+        type: string
+
+jobs:
+  seed-staging:
+    name: 🌱 Seed Staging Database
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⚠️ Validate confirmation
+        run: |
+          if [[ "${{ github.event.inputs.confirm }}" != "RESET" ]]; then
+            echo "❌ ERROR: 必須輸入 'RESET' 才能執行資料庫重置"
+            echo "👉 請在 workflow 觸發時的 confirm 欄位輸入: RESET"
+            exit 1
+          fi
+          echo "✅ 確認輸入正確，繼續執行..."
+
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install dependencies
+        run: |
+          echo "📦 安裝 Python 依賴..."
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: 🔍 Verify database connection
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_POOLER_URL }}
+        run: |
+          echo "🔍 測試資料庫連線..."
+          cd backend
+          python3 -c "from database import get_engine; get_engine().connect(); print('✅ 資料庫連線成功')"
+
+      - name: ⚠️ Show warning
+        run: |
+          echo "⚠️⚠️⚠️ 警告 ⚠️⚠️⚠️"
+          echo "即將執行以下操作："
+          echo "1. 建立 STAGING 環境的 Demo 資料"
+          echo "2. 建立組織、學校、教師帳號"
+          echo ""
+          echo "🎯 目標環境: STAGING (Preview 環境共用)"
+          echo "📊 將創建的資料："
+          echo "   - 組織: 張機構 (21a8a0c7-a5e3-4799-8336-fbb2cf1de91a)"
+          echo "   - 學校: 大安國小、信義國小"
+          echo "   - 教師: owner@duotopia.com (org_owner)"
+          echo "   - 教師: chen@duotopia.com, wang@duotopia.com, liu@duotopia.com, lee@duotopia.com"
+          echo "   - 教材課程 (Programs)"
+          echo ""
+          echo "執行中..."
+
+      - name: 🌱 Run seed_local_org.py (prerequisite)
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_POOLER_URL }}
+          SEED_DEFAULT_PASSWORD: ${{ secrets.SEED_DEFAULT_PASSWORD }}
+        run: |
+          echo "🌱 Creating base organization and owner account..."
+          cd backend
+          python3 seed_local_org.py
+          echo "✅ Base organization created!"
+
+      - name: 🌱 Run seed_demo_data.py
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_POOLER_URL }}
+          SEED_DEFAULT_PASSWORD: ${{ secrets.SEED_DEFAULT_PASSWORD }}
+        run: |
+          echo "🌱 開始執行 seed_demo_data.py..."
+          cd backend
+          python3 seed_demo_data.py
+          echo "✅ Seed 資料建立完成！"
+
+      - name: 📊 Display accounts
+        run: |
+          echo ""
+          echo "✅ Staging 環境 Seed 完成！"
+          echo ""
+          echo "🔑 測試帳號："
+          echo "   - owner@duotopia.com (機構擁有者)"
+          echo "   - chen@duotopia.com (機構管理員)"
+          echo "   - wang@duotopia.com (教師)"
+          echo "   - liu@duotopia.com (教師)"
+          echo "   - lee@duotopia.com (教師)"
+          echo ""
+          echo "🔐 密碼: 已設定為 GitHub Secret (SEED_DEFAULT_PASSWORD)"
+          echo ""
+          echo "🌐 測試環境:"
+          echo "   - Staging: https://staging.duotopia.com"
+          echo "   - Per-Issue Preview: Check PR comments for specific URL"

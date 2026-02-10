@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import TeacherLayout from "@/components/TeacherLayout";
 import StudentTable, { Student } from "@/components/StudentTable";
 import { StudentDialogs } from "@/components/StudentDialogs";
 import { ProgramDialog } from "@/components/ProgramDialog";
@@ -40,6 +39,7 @@ import {
 } from "lucide-react";
 import { apiClient, ApiError } from "@/lib/api";
 import { toast } from "sonner";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   Content,
   Assignment,
@@ -83,6 +83,8 @@ export default function ClassroomDetail({
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { mode } = useWorkspace();
+  const isOrgMode = mode === "organization";
   const [classroom, setClassroom] = useState<ClassroomInfo | null>(null);
   const [templateProgram, setTemplateProgram] = useState<Program | null>(null);
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -1018,55 +1020,46 @@ export default function ClassroomDetail({
 
   if (loading) {
     return (
-      <TeacherLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">{t("common.loading")}</p>
-          </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">{t("common.loading")}</p>
         </div>
-      </TeacherLayout>
+      </div>
     );
   }
 
   if (!classroom && !isTemplateMode) {
     return (
-      <TeacherLayout>
-        <div className="text-center py-12">
-          <p className="text-gray-500">
-            {t("classroomDetail.messages.notFound")}
-          </p>
-          <Button
-            className="mt-4"
-            onClick={() => navigate("/teacher/classrooms")}
-          >
-            {t("classroomDetail.buttons.backToList")}
-          </Button>
-        </div>
-      </TeacherLayout>
+      <div className="text-center py-12">
+        <p className="text-gray-500">
+          {t("classroomDetail.messages.notFound")}
+        </p>
+        <Button
+          className="mt-4"
+          onClick={() => navigate("/teacher/classrooms")}
+        >
+          {t("classroomDetail.buttons.backToList")}
+        </Button>
+      </div>
     );
   }
 
   if (isTemplateMode && !templateProgram) {
     return (
-      <TeacherLayout>
-        <div className="text-center py-12">
-          <p className="text-gray-500">
-            {t("classroomDetail.messages.templateNotFound")}
-          </p>
-          <Button
-            className="mt-4"
-            onClick={() => navigate("/teacher/programs")}
-          >
-            {t("classroomDetail.buttons.backToProgramList")}
-          </Button>
-        </div>
-      </TeacherLayout>
+      <div className="text-center py-12">
+        <p className="text-gray-500">
+          {t("classroomDetail.messages.templateNotFound")}
+        </p>
+        <Button className="mt-4" onClick={() => navigate("/teacher/programs")}>
+          {t("classroomDetail.buttons.backToProgramList")}
+        </Button>
+      </div>
     );
   }
 
   return (
-    <TeacherLayout>
+    <>
       <div className="relative">
         <div
           className={`transition-all duration-300 ${isPanelOpen ? "mr-[50%]" : ""}`}
@@ -1232,6 +1225,8 @@ export default function ClassroomDetail({
                     <Button
                       onClick={handleCreateStudent}
                       className="h-10 bg-blue-500 hover:bg-blue-600 text-white"
+                      disabled={isOrgMode}
+                      title={isOrgMode ? "請從學校後台處理學生管理" : ""}
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       {t("classroomDetail.buttons.addStudent")}
@@ -1239,13 +1234,25 @@ export default function ClassroomDetail({
                   </div>
 
                   <StudentTable
-                    students={classroom?.students || []}
+                    students={[...(classroom?.students || [])].sort((a, b) => {
+                      // 按學號排序，沒有學號的放在後面
+                      if (!a.student_number && !b.student_number) return 0;
+                      if (!a.student_number) return 1;
+                      if (!b.student_number) return -1;
+                      return a.student_number.localeCompare(
+                        b.student_number,
+                        undefined,
+                        { numeric: true },
+                      );
+                    })}
                     showClassroom={false}
                     onAddStudent={handleCreateStudent}
                     onViewStudent={handleViewStudent}
                     onEditStudent={handleEditStudent}
                     onResetPassword={handleResetPassword}
                     emptyMessage={t("classroomDetail.messages.noStudents")}
+                    disableActions={isOrgMode}
+                    disableReason="請從學校後台處理學生管理"
                   />
                 </TabsContent>
               )}
@@ -2427,7 +2434,7 @@ export default function ClassroomDetail({
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
               <ReadingAssessmentPanel
                 content={undefined}
                 editingContent={{ id: editorContentId || undefined }}
@@ -2474,7 +2481,7 @@ export default function ClassroomDetail({
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
               <VocabularySetPanel
                 content={undefined}
                 editingContent={{ id: vocabularySetContentId ?? undefined }}
@@ -2518,6 +2525,6 @@ export default function ClassroomDetail({
           fetchAssignments();
         }}
       />
-    </TeacherLayout>
+    </>
   );
 }

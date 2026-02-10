@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
-import TeacherLayout from "@/components/TeacherLayout";
 import StudentTable, { Student } from "@/components/StudentTable";
 import { StudentDialogs } from "@/components/StudentDialogs";
 import { ClassroomAssignDialog } from "@/components/ClassroomAssignDialog";
@@ -29,6 +29,13 @@ import { Classroom } from "@/types";
 
 export default function TeacherStudents() {
   const { t } = useTranslation();
+  const { selectedSchool, selectedOrganization, mode } = useWorkspace();
+
+  // 在機構學校內的老師只能查看，不能編輯或刪除學生
+  const isInOrganizationSchool =
+    mode === "organization" && selectedSchool !== null;
+  const disableStudentActions = isInOrganizationSchool;
+  const disableReason = isInOrganizationSchool ? "只能在學校後台更改" : "";
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
@@ -46,19 +53,39 @@ export default function TeacherStudents() {
 
   useEffect(() => {
     fetchClassrooms();
-  }, []);
+  }, [selectedSchool, selectedOrganization, mode]);
 
   const fetchClassrooms = async () => {
     try {
       setLoading(true);
 
-      // Fetch classrooms for the dropdown
-      const classroomData =
-        (await apiClient.getTeacherClassrooms()) as Classroom[];
+      // Build API params based on workspace context
+      const apiParams: {
+        mode?: string;
+        school_id?: string;
+        organization_id?: string;
+      } = {};
+
+      if (mode === "personal") {
+        apiParams.mode = "personal";
+      } else if (selectedSchool) {
+        apiParams.mode = "school";
+        apiParams.school_id = selectedSchool.id;
+      } else if (selectedOrganization) {
+        apiParams.mode = "organization";
+        apiParams.organization_id = selectedOrganization.id;
+      }
+
+      // Fetch classrooms for the dropdown (with workspace filtering)
+      const classroomData = (await apiClient.getTeacherClassrooms(
+        apiParams,
+      )) as Classroom[];
       setClassrooms(classroomData);
 
-      // Fetch all students (including those without classroom)
-      const studentsData = (await apiClient.getAllStudents()) as Array<{
+      // Fetch students with workspace filtering (server-side)
+      const studentsData = (await apiClient.getAllStudents(
+        apiParams,
+      )) as Array<{
         id: number;
         name: string;
         email: string;
@@ -115,7 +142,7 @@ export default function TeacherStudents() {
     }
   };
 
-  // 過濾並排序學生
+  // 過濾並排序學生（workspace filtering 已在後端完成）
   const filteredStudents = allStudents
     .filter((student) => {
       // 班級篩選邏輯
@@ -137,7 +164,15 @@ export default function TeacherStudents() {
         (student.email || "").toLowerCase().includes(searchTerm.toLowerCase());
       return matchesClassroom && matchesSearch;
     })
-    .sort((a, b) => a.id - b.id); // 按 ID 排序
+    .sort((a, b) => {
+      // 按學號排序，沒有學號的放在後面
+      if (!a.student_number && !b.student_number) return 0;
+      if (!a.student_number) return 1;
+      if (!b.student_number) return -1;
+      return a.student_number.localeCompare(b.student_number, undefined, {
+        numeric: true,
+      });
+    });
 
   const handleCreateStudent = () => {
     setSelectedStudent(null);
@@ -292,19 +327,19 @@ export default function TeacherStudents() {
 
   if (loading) {
     return (
-      <TeacherLayout>
+      <>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">{t("common.loading")}</p>
           </div>
         </div>
-      </TeacherLayout>
+      </>
     );
   }
 
   return (
-    <TeacherLayout>
+    <>
       <div>
         {/* Header */}
         <div className="mb-6">
@@ -411,6 +446,7 @@ export default function TeacherStudents() {
                 size="sm"
                 onClick={handleExportStudents}
                 className="flex-1 sm:flex-none"
+                disabled={disableStudentActions}
               >
                 <Download className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">
@@ -425,6 +461,7 @@ export default function TeacherStudents() {
                 size="sm"
                 onClick={() => setShowImportDialog(true)}
                 className="flex-1 sm:flex-none"
+                disabled={disableStudentActions}
               >
                 <Upload className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">
@@ -438,6 +475,7 @@ export default function TeacherStudents() {
                 size="sm"
                 onClick={handleCreateStudent}
                 className="flex-1 sm:flex-none"
+                disabled={disableStudentActions}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 {t("teacherStudents.buttons.addStudent")}
@@ -523,6 +561,8 @@ export default function TeacherStudents() {
             onDeleteStudent={handleDeleteStudent}
             onAddStudent={handleCreateStudent}
             onBulkAction={handleBulkAction}
+            disableActions={disableStudentActions}
+            disableReason={disableReason}
             emptyMessage={
               searchTerm
                 ? t("teacherStudents.messages.noStudentsFound")
@@ -585,6 +625,6 @@ export default function TeacherStudents() {
         }}
         classrooms={classrooms}
       />
-    </TeacherLayout>
+    </>
   );
 }

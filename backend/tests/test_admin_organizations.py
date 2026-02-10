@@ -1,0 +1,886 @@
+"""Tests for admin organization creation endpoint"""
+
+import pytest
+from models import Teacher, Organization, TeacherOrganization, School, TeacherSchool
+from auth import get_password_hash, create_access_token
+
+
+@pytest.fixture
+def admin_teacher(shared_test_session):
+    """Create an admin teacher for testing"""
+    teacher = Teacher(
+        email="admin@duotopia.com",
+        password_hash=get_password_hash("admin_password"),
+        name="Admin Teacher",
+        is_active=True,
+        is_admin=True,  # Admin user
+        email_verified=True,
+    )
+    shared_test_session.add(teacher)
+    shared_test_session.commit()
+    shared_test_session.refresh(teacher)
+    return teacher
+
+
+@pytest.fixture
+def regular_teacher(shared_test_session):
+    """Create a regular (non-admin) teacher for testing"""
+    teacher = Teacher(
+        email="regular@duotopia.com",
+        password_hash=get_password_hash("regular_password"),
+        name="Regular Teacher",
+        is_active=True,
+        is_admin=False,  # Not admin
+        email_verified=True,
+    )
+    shared_test_session.add(teacher)
+    shared_test_session.commit()
+    shared_test_session.refresh(teacher)
+    return teacher
+
+
+@pytest.fixture
+def auth_headers_admin(admin_teacher):
+    """Create authentication headers for admin teacher"""
+    access_token = create_access_token(
+        data={"sub": str(admin_teacher.id), "type": "teacher"}
+    )
+    return {"Authorization": f"Bearer {access_token}"}
+
+
+@pytest.fixture
+def auth_headers_regular(regular_teacher):
+    """Create authentication headers for regular teacher"""
+    access_token = create_access_token(
+        data={"sub": str(regular_teacher.id), "type": "teacher"}
+    )
+    return {"Authorization": f"Bearer {access_token}"}
+
+
+def test_create_organization_as_admin_success(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Admin can create organization and assign existing teacher as owner"""
+
+    # Create organization
+    response = test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={
+            "name": "Test Org",
+            "display_name": "測試機構",
+            "tax_id": "12345678",
+            "teacher_limit": 10,
+            "owner_email": regular_teacher.email,
+        },
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["organization_name"] == "Test Org"
+    assert data["owner_email"] == regular_teacher.email
+    assert "organization_id" in data
+
+    # Verify organization created
+    org = (
+        shared_test_session.query(Organization)
+        .filter(Organization.name == "Test Org")
+        .first()
+    )
+    assert org is not None
+    assert org.tax_id == "12345678"
+
+    # Verify owner role assigned
+    teacher_org = (
+        shared_test_session.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.organization_id == org.id,
+            TeacherOrganization.teacher_id == regular_teacher.id,
+        )
+        .first()
+    )
+    assert teacher_org is not None
+    assert teacher_org.role == "org_owner"
+
+
+def test_create_organization_non_admin_forbidden(
+    shared_test_session, regular_teacher, auth_headers_regular, test_client
+):
+    """Non-admin cannot create organization"""
+
+    response = test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_regular,
+        json={"name": "Test Org", "owner_email": regular_teacher.email},
+    )
+
+    assert response.status_code == 403
+    assert "Admin access required" in response.json()["detail"]
+
+
+def test_create_organization_owner_not_found(
+    shared_test_session, admin_teacher, auth_headers_admin, test_client
+):
+    """Cannot create organization with non-existent owner email"""
+
+    response = test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={"name": "Test Org", "owner_email": "nonexistent@example.com"},
+    )
+
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
+
+
+def test_create_organization_duplicate_name(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Cannot create organization with duplicate name"""
+
+    # Create first org
+    test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={"name": "Duplicate Org", "owner_email": regular_teacher.email},
+    )
+
+    # Try to create duplicate
+    response = test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={"name": "Duplicate Org", "owner_email": regular_teacher.email},
+    )
+
+    assert response.status_code == 400
+    assert "already exists" in response.json()["detail"].lower()
+
+
+def test_organization_stats_teacher_deduplication(
+    shared_test_session, admin_teacher, regular_teacher, test_client
+):
+    """
+    Test that organization stats correctly deduplicate teachers with multiple roles.
+
+    Scenario:
+    - Create org with owner (Teacher A)
+    - Create school under org
+    - Add Teacher A to school (now has org_owner + school role)
+    - Create Teacher B and add to school only
+    - Expected teacher count: 2 (not 3)
+
+    This tests the fix for Issue #112 Error 6.
+    """
+    # Create auth headers for regular teacher (will be org owner)
+    access_token = create_access_token(
+        data={"sub": str(regular_teacher.id), "type": "teacher"}
+    )
+    auth_headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Create organization with regular_teacher as owner
+    org_response = test_client.post(
+        "/api/admin/organizations",
+        headers={
+            "Authorization": f"Bearer {create_access_token(data={'sub': str(admin_teacher.id), 'type': 'teacher'})}"
+        },
+        json={
+            "name": "Test Dedup Org",
+            "display_name": "測試去重組織",
+            "owner_email": regular_teacher.email,
+        },
+    )
+    assert org_response.status_code == 201
+    org_id = org_response.json()["organization_id"]
+
+    # Create a school under this organization
+    school = School(
+        organization_id=org_id, name="Test School", display_name="測試學校", is_active=True
+    )
+    shared_test_session.add(school)
+    shared_test_session.commit()
+    shared_test_session.refresh(school)
+
+    # Add regular_teacher to the school (now has org_owner + school role)
+    teacher_school = TeacherSchool(
+        teacher_id=regular_teacher.id,
+        school_id=school.id,
+        roles=["school_admin"],
+        is_active=True,
+    )
+    shared_test_session.add(teacher_school)
+
+    # Create another teacher and add to school only
+    teacher_b = Teacher(
+        email="teacherb@example.com",
+        password_hash=get_password_hash("password"),
+        name="Teacher B",
+        is_active=True,
+        email_verified=True,
+    )
+    shared_test_session.add(teacher_b)
+    shared_test_session.commit()
+    shared_test_session.refresh(teacher_b)
+
+    teacher_school_b = TeacherSchool(
+        teacher_id=teacher_b.id, school_id=school.id, roles=["teacher"], is_active=True
+    )
+    shared_test_session.add(teacher_school_b)
+    shared_test_session.commit()
+
+    # Get organization stats
+    stats_response = test_client.get("/api/organizations/stats", headers=auth_headers)
+
+    assert stats_response.status_code == 200
+    data = stats_response.json()
+
+    # Assert counts
+    assert data["total_organizations"] == 1, "Should have 1 organization"
+    assert data["total_schools"] == 1, "Should have 1 school"
+    assert data["total_teachers"] == 2, (
+        f"Should have 2 unique teachers (got {data['total_teachers']}). "
+        f"Teacher A has both org_owner and school_admin roles, Teacher B has school role only."
+    )
+
+    print(
+        f"✅ Test passed: Teacher count correctly deduplicated to {data['total_teachers']}"
+    )
+
+
+def test_get_organization_statistics_as_admin(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Test admin can get organization statistics"""
+    # Create organization
+    org_data = {
+        "name": "Test Org Stats",
+        "owner_email": regular_teacher.email,
+        "teacher_limit": 10,
+    }
+    create_response = test_client.post(
+        "/api/admin/organizations", json=org_data, headers=auth_headers_admin
+    )
+    assert create_response.status_code == 201
+    org_id = create_response.json()["organization_id"]
+
+    # Add 3 more teachers to organization
+    from models import Teacher, TeacherOrganization
+
+    teacher1 = Teacher(
+        email="t1@test.com",
+        password_hash=get_password_hash("password"),
+        name="T1",
+        email_verified=True,
+        is_active=True,
+    )
+    teacher2 = Teacher(
+        email="t2@test.com",
+        password_hash=get_password_hash("password"),
+        name="T2",
+        email_verified=True,
+        is_active=True,
+    )
+    teacher3 = Teacher(
+        email="t3@test.com",
+        password_hash=get_password_hash("password"),
+        name="T3",
+        email_verified=True,
+        is_active=True,
+    )
+    shared_test_session.add_all([teacher1, teacher2, teacher3])
+    shared_test_session.flush()
+
+    shared_test_session.add_all(
+        [
+            TeacherOrganization(
+                teacher_id=teacher1.id,
+                organization_id=org_id,
+                role="teacher",
+                is_active=True,
+            ),
+            TeacherOrganization(
+                teacher_id=teacher2.id,
+                organization_id=org_id,
+                role="teacher",
+                is_active=True,
+            ),
+            TeacherOrganization(
+                teacher_id=teacher3.id,
+                organization_id=org_id,
+                role="org_admin",
+                is_active=True,
+            ),
+        ]
+    )
+    shared_test_session.commit()
+
+    # Get statistics
+    response = test_client.get(
+        f"/api/admin/organizations/{org_id}/statistics", headers=auth_headers_admin
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["teacher_count"] == 4  # 1 owner + 3 added
+    assert data["teacher_limit"] == 10
+    assert data["usage_percentage"] == 40.0
+
+
+def test_get_organization_statistics_no_limit(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Test statistics when teacher_limit is None (unlimited)"""
+    org_data = {
+        "name": "Test Org Unlimited",
+        "owner_email": regular_teacher.email,
+        # No teacher_limit
+    }
+    create_response = test_client.post(
+        "/api/admin/organizations", json=org_data, headers=auth_headers_admin
+    )
+    assert create_response.status_code == 201
+    org_id = create_response.json()["organization_id"]
+
+    response = test_client.get(
+        f"/api/admin/organizations/{org_id}/statistics", headers=auth_headers_admin
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["teacher_count"] == 1
+    assert data["teacher_limit"] is None
+    assert data["usage_percentage"] == 0.0  # 0% when unlimited
+
+
+# ============ Teacher Lookup Tests ============
+def test_get_teacher_by_email_as_admin(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Admin can lookup teacher by email"""
+    response = test_client.get(
+        f"/api/admin/teachers/lookup?email={regular_teacher.email}",
+        headers=auth_headers_admin,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == regular_teacher.id
+    assert data["email"] == regular_teacher.email
+    assert data["name"] == regular_teacher.name
+    assert data["email_verified"] is True
+    assert "phone" in data
+
+
+def test_get_teacher_by_email_not_found(
+    shared_test_session, admin_teacher, auth_headers_admin, test_client
+):
+    """Returns 404 when teacher email not found"""
+    response = test_client.get(
+        "/api/admin/teachers/lookup?email=nonexistent@example.com",
+        headers=auth_headers_admin,
+    )
+
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
+
+
+def test_get_teacher_by_email_non_admin_forbidden(
+    shared_test_session, regular_teacher, auth_headers_regular, test_client
+):
+    """Non-admin cannot lookup teacher info"""
+    response = test_client.get(
+        f"/api/admin/teachers/lookup?email={regular_teacher.email}",
+        headers=auth_headers_regular,
+    )
+
+    assert response.status_code == 403
+    assert "Admin access required" in response.json()["detail"]
+
+
+def test_create_organization_with_project_staff(
+    shared_test_session, admin_teacher, auth_headers_admin, test_client
+):
+    """Test creating organization with multiple project staff (org_admin)"""
+    # Create test teachers for project staff
+    from models import Teacher
+
+    staff1 = Teacher(
+        email="staff1@duotopia.com",
+        password_hash=get_password_hash("password"),
+        name="Staff 1",
+        email_verified=True,
+        is_active=True,
+    )
+    staff2 = Teacher(
+        email="staff2@duotopia.com",
+        password_hash=get_password_hash("password"),
+        name="Staff 2",
+        email_verified=True,
+        is_active=True,
+    )
+    owner = Teacher(
+        email="owner@duotopia.com",
+        password_hash=get_password_hash("password"),
+        name="Owner",
+        email_verified=True,
+        is_active=True,
+    )
+    shared_test_session.add_all([staff1, staff2, owner])
+    shared_test_session.commit()
+
+    # Create organization with project staff
+    org_data = {
+        "name": "Test Org With Staff",
+        "owner_email": "owner@duotopia.com",
+        "project_staff_emails": ["staff1@duotopia.com", "staff2@duotopia.com"],
+    }
+
+    response = test_client.post(
+        "/api/admin/organizations", json=org_data, headers=auth_headers_admin
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["organization_name"] == "Test Org With Staff"
+    assert "project_staff_assigned" in data
+    assert len(data["project_staff_assigned"]) == 2
+    assert "staff1@duotopia.com" in data["project_staff_assigned"]
+    assert "staff2@duotopia.com" in data["project_staff_assigned"]
+
+    # Verify roles in database
+    from models import TeacherOrganization
+
+    org_id = data["organization_id"]
+
+    staff_roles = (
+        shared_test_session.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.role == "org_admin",
+        )
+        .all()
+    )
+
+    assert len(staff_roles) == 2
+    staff_emails = [r.teacher.email for r in staff_roles]
+    assert "staff1@duotopia.com" in staff_emails
+    assert "staff2@duotopia.com" in staff_emails
+
+
+def test_create_organization_staff_not_verified(
+    shared_test_session, admin_teacher, auth_headers_admin, test_client
+):
+    """Test cannot assign unverified teacher as project staff"""
+    from models import Teacher
+
+    unverified = Teacher(
+        email="unverified@test.com",
+        password_hash=get_password_hash("password"),
+        name="Unverified",
+        email_verified=False,
+        is_active=True,
+    )
+    owner = Teacher(
+        email="owner2@duotopia.com",
+        password_hash=get_password_hash("password"),
+        name="Owner2",
+        email_verified=True,
+        is_active=True,
+    )
+    shared_test_session.add_all([unverified, owner])
+    shared_test_session.commit()
+
+    org_data = {
+        "name": "Test Org",
+        "owner_email": "owner2@duotopia.com",
+        "project_staff_emails": ["unverified@test.com"],
+    }
+
+    response = test_client.post(
+        "/api/admin/organizations", json=org_data, headers=auth_headers_admin
+    )
+
+    assert response.status_code == 400
+    assert "unverified@test.com" in response.json()["detail"]
+    assert "not verified" in response.json()["detail"].lower()
+
+
+def test_create_organization_owner_cannot_be_project_staff(
+    shared_test_session, admin_teacher, auth_headers_admin, test_client
+):
+    """Test that owner email cannot also be in project_staff_emails"""
+    from models import Teacher
+
+    owner = Teacher(
+        email="owner3@duotopia.com",
+        password_hash=get_password_hash("password"),
+        name="Owner3",
+        email_verified=True,
+        is_active=True,
+    )
+    shared_test_session.add(owner)
+    shared_test_session.commit()
+
+    org_data = {
+        "name": "Test Org Owner Conflict",
+        "owner_email": "owner3@duotopia.com",
+        "project_staff_emails": ["owner3@duotopia.com"],  # Owner in staff list
+    }
+
+    response = test_client.post(
+        "/api/admin/organizations", json=org_data, headers=auth_headers_admin
+    )
+
+    assert response.status_code == 400
+    assert "owner3@duotopia.com" in response.json()["detail"]
+    assert "cannot also be project staff" in response.json()["detail"].lower()
+
+
+def test_create_organization_duplicate_staff_emails(
+    shared_test_session, admin_teacher, auth_headers_admin, test_client
+):
+    """Test that duplicate emails in project_staff_emails are rejected"""
+    from models import Teacher
+
+    owner = Teacher(
+        email="owner4@duotopia.com",
+        password_hash=get_password_hash("password"),
+        name="Owner4",
+        email_verified=True,
+        is_active=True,
+    )
+    staff = Teacher(
+        email="staff@duotopia.com",
+        password_hash=get_password_hash("password"),
+        name="Staff",
+        email_verified=True,
+        is_active=True,
+    )
+    shared_test_session.add_all([owner, staff])
+    shared_test_session.commit()
+
+    org_data = {
+        "name": "Test Org Duplicate Staff",
+        "owner_email": "owner4@duotopia.com",
+        "project_staff_emails": [
+            "staff@duotopia.com",
+            "staff@duotopia.com",
+        ],  # Duplicate
+    }
+
+    response = test_client.post(
+        "/api/admin/organizations", json=org_data, headers=auth_headers_admin
+    )
+
+    assert response.status_code == 400
+    assert "duplicate" in response.json()["detail"].lower()
+    assert "staff@duotopia.com" in response.json()["detail"]
+
+
+# ============ List Organizations Tests ============
+def test_list_organizations_requires_admin(auth_headers_regular, test_client):
+    """Non-admin should get 403"""
+    response = test_client.get(
+        "/api/admin/organizations",
+        headers=auth_headers_regular,
+    )
+    assert response.status_code == 403
+
+
+def test_list_organizations_success(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Admin can list organizations"""
+    # Create a test organization
+    test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={
+            "name": "Test Org List",
+            "owner_email": regular_teacher.email,
+            "total_points": 10000,
+        },
+    )
+
+    response = test_client.get(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "items" in data
+    assert "total" in data
+    assert data["total"] >= 1
+
+    # Check first org has required fields
+    org = data["items"][0]
+    assert "id" in org
+    assert "name" in org
+    assert "owner_email" in org
+    assert "total_points" in org
+    assert "remaining_points" in org
+
+
+# ============ Update Organization Tests ============
+def test_update_organization_requires_admin(
+    shared_test_session, regular_teacher, auth_headers_regular, test_client
+):
+    """Non-admin should get 403"""
+    # Create a test org first
+    from models import Organization
+
+    test_org = Organization(
+        id=str(__import__("uuid").uuid4()),
+        name="Test Org for Update",
+        is_active=True,
+    )
+    shared_test_session.add(test_org)
+    shared_test_session.commit()
+
+    response = test_client.put(
+        f"/api/admin/organizations/{test_org.id}",
+        headers=auth_headers_regular,
+        json={"display_name": "Updated Name"},
+    )
+    assert response.status_code == 403
+
+
+def test_update_organization_basic_fields(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Admin can update basic organization fields"""
+    # Create organization
+    create_response = test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={
+            "name": "Test Update Org",
+            "owner_email": regular_teacher.email,
+            "display_name": "Original Name",
+            "teacher_limit": 10,
+        },
+    )
+    assert create_response.status_code == 201
+    org_id = create_response.json()["organization_id"]
+
+    # Update organization
+    response = test_client.put(
+        f"/api/admin/organizations/{org_id}",
+        headers=auth_headers_admin,
+        json={
+            "display_name": "New Display Name",
+            "description": "Updated description",
+            "teacher_limit": 20,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["organization_id"] == org_id
+    assert "message" in data
+
+    # Verify changes persisted
+    get_response = test_client.get(
+        "/api/admin/organizations", headers=auth_headers_admin
+    )
+    orgs = get_response.json()["items"]
+    updated_org = next(o for o in orgs if o["id"] == org_id)
+    assert updated_org["display_name"] == "New Display Name"
+    assert updated_org["teacher_limit"] == 20
+
+
+def test_update_organization_points(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Admin can adjust total_points allocation"""
+    # Create organization with initial points
+    create_response = test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={
+            "name": "Test Points Org",
+            "owner_email": regular_teacher.email,
+            "total_points": 1000,
+        },
+    )
+    assert create_response.status_code == 201
+    org_id = create_response.json()["organization_id"]
+
+    # Manually set used_points in database
+    from models import Organization
+
+    org = (
+        shared_test_session.query(Organization)
+        .filter(Organization.id == org_id)
+        .first()
+    )
+    org.used_points = 300
+    shared_test_session.commit()
+
+    # Increase points
+    response = test_client.put(
+        f"/api/admin/organizations/{org_id}",
+        headers=auth_headers_admin,
+        json={"total_points": 2000},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["points_adjusted"] is True
+    assert data["points_change"] == 1000
+
+    # Verify new points
+    shared_test_session.refresh(org)
+    assert org.total_points == 2000
+    assert org.used_points == 300  # Unchanged
+    assert org.last_points_update is not None
+
+
+def test_update_organization_not_found(auth_headers_admin, test_client):
+    """Should return 404 for non-existent org"""
+    fake_id = "00000000-0000-0000-0000-000000000000"
+    response = test_client.put(
+        f"/api/admin/organizations/{fake_id}",
+        headers=auth_headers_admin,
+        json={"display_name": "Test"},
+    )
+    assert response.status_code == 404
+
+
+# ============ Subscription Dates Tests (Issue #209) ============
+def test_create_organization_with_subscription_dates(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Test creating organization with subscription_start_date and subscription_end_date"""
+    org_data = {
+        "name": "Test Org With Subscription",
+        "owner_email": regular_teacher.email,
+        "total_points": 10000,
+        "subscription_start_date": "2026-02-01T00:00:00Z",
+        "subscription_end_date": "2026-12-31T23:59:59Z",
+    }
+
+    response = test_client.post(
+        "/api/admin/organizations", json=org_data, headers=auth_headers_admin
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    org_id = data["organization_id"]
+
+    # Verify dates in database
+    from models import Organization
+
+    org = (
+        shared_test_session.query(Organization)
+        .filter(Organization.id == org_id)
+        .first()
+    )
+    assert org is not None
+    assert org.subscription_start_date is not None
+    assert org.subscription_end_date is not None
+    assert org.subscription_start_date.year == 2026
+    assert org.subscription_start_date.month == 2
+    assert org.subscription_end_date.month == 12
+
+
+def test_create_organization_without_subscription_dates(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Test creating organization without subscription dates (optional fields)"""
+    org_data = {
+        "name": "Test Org No Subscription",
+        "owner_email": regular_teacher.email,
+        "total_points": 5000,
+        # No subscription dates
+    }
+
+    response = test_client.post(
+        "/api/admin/organizations", json=org_data, headers=auth_headers_admin
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    org_id = data["organization_id"]
+
+    # Verify dates are None in database
+    from models import Organization
+
+    org = (
+        shared_test_session.query(Organization)
+        .filter(Organization.id == org_id)
+        .first()
+    )
+    assert org is not None
+    assert org.subscription_start_date is None
+    assert org.subscription_end_date is None
+
+
+def test_update_organization_subscription_dates(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Test updating organization subscription dates"""
+    # Create org without dates
+    create_response = test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={
+            "name": "Test Update Subscription",
+            "owner_email": regular_teacher.email,
+        },
+    )
+    assert create_response.status_code == 201
+    org_id = create_response.json()["organization_id"]
+
+    # Update with subscription dates
+    response = test_client.put(
+        f"/api/admin/organizations/{org_id}",
+        headers=auth_headers_admin,
+        json={
+            "subscription_start_date": "2026-03-01T00:00:00Z",
+            "subscription_end_date": "2027-02-28T23:59:59Z",
+        },
+    )
+    assert response.status_code == 200
+
+    # Verify dates in database
+    from models import Organization
+
+    org = (
+        shared_test_session.query(Organization)
+        .filter(Organization.id == org_id)
+        .first()
+    )
+    shared_test_session.refresh(org)
+    assert org.subscription_start_date is not None
+    assert org.subscription_end_date is not None
+    assert org.subscription_start_date.month == 3
+    assert org.subscription_end_date.year == 2027
+
+
+def test_list_organizations_includes_subscription_dates(
+    shared_test_session, admin_teacher, regular_teacher, auth_headers_admin, test_client
+):
+    """Test that organization list includes subscription dates"""
+    # Create org with dates
+    test_client.post(
+        "/api/admin/organizations",
+        headers=auth_headers_admin,
+        json={
+            "name": "Test Org List Dates",
+            "owner_email": regular_teacher.email,
+            "subscription_start_date": "2026-01-01T00:00:00Z",
+            "subscription_end_date": "2026-06-30T23:59:59Z",
+        },
+    )
+
+    # Get list
+    response = test_client.get(
+        "/api/admin/organizations?search=Test Org List Dates",
+        headers=auth_headers_admin,
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Find our org
+    org = next((o for o in data["items"] if o["name"] == "Test Org List Dates"), None)
+    assert org is not None
+    assert "subscription_start_date" in org
+    assert "subscription_end_date" in org
+    assert org["subscription_start_date"] is not None
+    assert org["subscription_end_date"] is not None

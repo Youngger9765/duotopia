@@ -50,8 +50,10 @@ import { retryAudioUpload } from "@/utils/retryHelper";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { useTranslation } from "react-i18next";
 import { useAzurePronunciation } from "@/hooks/useAzurePronunciation";
+import { useDemoAzurePronunciation } from "@/hooks/useDemoAzurePronunciation";
 import { azureSpeechService } from "@/services/azureSpeechService";
 import { useAutoAnalysis } from "@/hooks/useAutoAnalysis"; // Issue #141: 例句朗讀自動分析
+import { DemoLimitModal } from "@/components/demo/DemoLimitModal";
 
 // Activity type from API
 export interface Activity {
@@ -148,6 +150,7 @@ interface StudentActivityPageContentProps {
   assignmentTitle: string;
   assignmentId: number;
   isPreviewMode?: boolean;
+  isDemoMode?: boolean; // Demo mode - uses public demo API endpoints
   authToken?: string; // 認證 token（預覽模式用）
   onBack?: () => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -187,6 +190,7 @@ export default function StudentActivityPageContent({
   assignmentTitle,
   assignmentId,
   isPreviewMode = false,
+  isDemoMode = false,
   authToken,
   onBack,
   onSubmit,
@@ -197,7 +201,19 @@ export default function StudentActivityPageContent({
   const { t } = useTranslation();
 
   // 🚀 Azure Speech Service hook for direct API calls (background analysis)
-  const { analyzePronunciation } = useAzurePronunciation();
+  // Use demo hook when in demo mode (no authentication required)
+  const regularHook = useAzurePronunciation();
+  const demoHook = useDemoAzurePronunciation();
+
+  // Select the appropriate hook based on mode
+  const { analyzePronunciation } = isDemoMode ? demoHook : regularHook;
+
+  // Demo limit exceeded state (only used in demo mode)
+  const {
+    limitExceeded: demoLimitExceeded,
+    limitError: demoLimitError,
+    clearLimitError: clearDemoLimitError,
+  } = demoHook;
 
   // 🎯 Issue #141: 例句朗讀自動分析 hook
   const {
@@ -1678,6 +1694,7 @@ export default function StudentActivityPageContent({
           readOnly={isReadOnly}
           assignmentId={assignmentId.toString()}
           isPreviewMode={isPreviewMode}
+          isDemoMode={isDemoMode}
           authToken={authToken}
           itemAnalysisState={itemAnalysisStates.get(
             getItemKey(activity.id, currentSubQuestionIndex),
@@ -1758,6 +1775,7 @@ export default function StudentActivityPageContent({
           <RearrangementActivity
             studentAssignmentId={assignmentId}
             isPreviewMode={isPreviewMode}
+            isDemoMode={isDemoMode}
             showAnswer={showAnswer}
             currentQuestionIndex={rearrangementQuestionIndex}
             onQuestionIndexChange={setRearrangementQuestionIndex}
@@ -1790,6 +1808,7 @@ export default function StudentActivityPageContent({
             exampleAudioUrl={activity.example_audio_url}
             progressId={activity.id}
             readOnly={isReadOnly}
+            isDemoMode={isDemoMode}
             timeLimit={activity.duration || 60}
             onSkip={
               currentActivityIndex < activities.length - 1
@@ -1810,6 +1829,7 @@ export default function StudentActivityPageContent({
           <WordReadingActivity
             assignmentId={assignmentId}
             isPreviewMode={isPreviewMode}
+            isDemoMode={isDemoMode}
             authToken={authToken}
             onComplete={() => {
               toast.success(t("wordReading.toast.completed") || "作業已完成！");
@@ -1829,6 +1849,7 @@ export default function StudentActivityPageContent({
           <WordSelectionActivity
             assignmentId={assignmentId}
             isPreviewMode={isPreviewMode}
+            isDemoMode={isDemoMode}
             onComplete={() => {
               toast.success(
                 t("wordSelection.toast.completed") || "作業已完成！",
@@ -1906,6 +1927,7 @@ export default function StudentActivityPageContent({
             onRecordingComplete={handleRecordingComplete}
             progressId={activity.id}
             readOnly={isReadOnly}
+            isDemoMode={isDemoMode}
             timeLimit={activity.duration || 60}
             onSkip={
               currentActivityIndex < activities.length - 1
@@ -2654,6 +2676,16 @@ export default function StudentActivityPageContent({
             </p>
           </div>
         </div>
+      )}
+
+      {/* Demo 模式：每日配額用盡提示 */}
+      {isDemoMode && demoLimitExceeded && demoLimitError && (
+        <DemoLimitModal
+          open={demoLimitExceeded}
+          onClose={clearDemoLimitError}
+          resetAt={demoLimitError.resetAt}
+          limit={demoLimitError.limit}
+        />
       )}
     </div>
   );

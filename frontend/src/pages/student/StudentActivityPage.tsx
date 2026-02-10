@@ -158,7 +158,7 @@ export default function StudentActivityPage() {
   };
 
   // Handle final submission
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSubmit = async (_data?: { answers: any[] }) => {
     const apiUrl = import.meta.env.VITE_API_URL || "";
     const response = await fetch(

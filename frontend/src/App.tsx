@@ -19,6 +19,8 @@ import TeacherAssignmentDetailPage from "./pages/teacher/TeacherAssignmentDetail
 import TeacherAssignmentPreviewPage from "./pages/teacher/TeacherAssignmentPreviewPage";
 import GradingPage from "./pages/teacher/GradingPage";
 import TeacherTemplatePrograms from "./pages/teacher/TeacherTemplatePrograms";
+import SchoolMaterialsPage from "./pages/teacher/SchoolMaterialsPage";
+import ResourceMaterialsPage from "./pages/teacher/ResourceMaterialsPage";
 import TeacherSubscription from "./pages/teacher/TeacherSubscription";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
 import StudentLogin from "./pages/StudentLogin";
@@ -27,15 +29,18 @@ import StudentAssignmentList from "./pages/student/StudentAssignmentList";
 import StudentAssignmentDetail from "./pages/student/StudentAssignmentDetail";
 import StudentActivityPage from "./pages/student/StudentActivityPage";
 import StudentLayout from "./components/StudentLayout";
+import TeacherLayout from "./components/TeacherLayout";
 import EmailVerification from "./pages/EmailVerification";
 import StudentProfile from "./pages/student/StudentProfile";
 import DatabaseAdminPage from "./pages/admin/DatabaseAdminPage";
 import AdminMonitoringPage from "./pages/admin/AdminMonitoringPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import CreateOrganization from "./pages/admin/CreateOrganization";
 import DebugPage from "./pages/DebugPage";
 import TermsOfService from "./pages/TermsOfService";
 import PricingPage from "./pages/PricingPage";
 import TestSubscription from "./pages/TestSubscription";
+import DemoAssignmentPage from "./pages/DemoAssignmentPage";
 import { Toaster } from "sonner";
 
 /**
@@ -82,6 +87,9 @@ function App() {
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/pricing" element={<PricingPage />} />
 
+        {/* Demo Route - Public, no authentication required */}
+        <Route path="/demo/:assignmentId" element={<DemoAssignmentPage />} />
+
         {/* Organization Routes - Must come before teacher routes */}
         {organizationRoutes}
 
@@ -108,7 +116,9 @@ function App() {
           path="/teacher/dashboard"
           element={
             <ProtectedRoute>
-              <TeacherDashboard />
+              <TeacherLayout>
+                <TeacherDashboard />
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -116,7 +126,9 @@ function App() {
           path="/teacher/classrooms"
           element={
             <ProtectedRoute>
-              <TeacherClassrooms />
+              <TeacherLayout>
+                <TeacherClassrooms />
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -124,7 +136,9 @@ function App() {
           path="/teacher/classroom/:id"
           element={
             <ProtectedRoute>
-              <ClassroomDetail />
+              <TeacherLayout>
+                <ClassroomDetail />
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -157,7 +171,9 @@ function App() {
           path="/teacher/students"
           element={
             <ProtectedRoute>
-              <TeacherStudents />
+              <TeacherLayout>
+                <TeacherStudents />
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -182,6 +198,24 @@ function App() {
           element={
             <ProtectedRoute>
               <ClassroomDetail isTemplateMode={true} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/school-materials"
+          element={
+            <ProtectedRoute>
+              <TeacherLayout>
+                <SchoolMaterialsPage />
+              </TeacherLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/resource-materials"
+          element={
+            <ProtectedRoute>
+              <ResourceMaterialsPage />
             </ProtectedRoute>
           }
         />
@@ -220,6 +254,14 @@ function App() {
           }
         />
         <Route path="/admin/database" element={<DatabaseAdminPage />} />
+        <Route
+          path="/admin/organizations/create"
+          element={
+            <ProtectedRoute requireAdmin>
+              <CreateOrganization />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Student Routes with Layout */}
         <Route path="/student" element={<StudentLayout />}>

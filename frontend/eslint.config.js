@@ -37,7 +37,11 @@ export default [
     },
     rules: {
       // TypeScript rules - 嚴格型別檢查
-      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-unused-vars': ['warn', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_'
+      }],
       '@typescript-eslint/no-explicit-any': 'error',  // 禁止使用 any！
       // TODO: 下面這些規則需要 parserOptions.project，暫時關閉
       // '@typescript-eslint/no-unsafe-assignment': 'error',

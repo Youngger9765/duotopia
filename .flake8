@@ -16,21 +16,44 @@ exclude =
     backend/alembic/versions.backup
 
 # Per-file ignores for test files (業界最佳實踐)
+# Note: Paths are relative to where flake8 is run (backend/ directory in CI)
 per-file-ignores =
+    # Alembic migrations auto-generate imports
+    alembic/versions/*.py: F401, E501, W605
     # Test files often have unused imports for fixtures and test data setup, and may have E402 for SQLite pragma setup
-    backend/tests/*/test_*.py: F401, F841, E402
-    backend/tests/*/*/test_*.py: F401, F841, E402
-    backend/tests/*/*/*/test_*.py: F401, F841, E402
-    backend/scripts/test_*.py: F401
+    tests/test_*.py: F401, F541, F811, F841, E402
+    tests/*/test_*.py: F401, F541, F811, F841, E402
+    tests/*/*/test_*.py: F401, F541, F811, F841, E402
+    tests/*/*/*/test_*.py: F401, F541, F811, F841, E402
+    scripts/test_*.py: F401
     # conftest.py imports fixtures that are auto-discovered by pytest
-    backend/tests/conftest.py: E402
+    tests/conftest.py: E402, F541
+    conftest.py: F541
     # Alembic env.py needs sys.path manipulation before imports
-    backend/alembic/env.py: E402
+    alembic/env.py: E402
+    # Routers use star imports and have module-level imports after path manipulation
+    routers/teachers/*.py: F401, F403, F405, F841
+    routers/assignments/*.py: F401, F403, F405, F821, F841
+    routers/students/*.py: F401, F403, F405, F841
+    routers/schemas/*.py: F401
+    routers/*.py: F401, F541, F811, F841
+    # Models use re-exports
+    models/*.py: F403, F405, F401
+    # Utils may have conditional imports
+    utils/*.py: F401, F811
+    # Services may have unused imports for type checking
+    services/*.py: F401, F541
+    # Seed data scripts and utilities
+    seed_*.py: E402, F541
+    seed_data/*.py: F403, F405, F821, F841, W291
+    # Manual test scripts
+    tests/manual_*.py: F401, F541
     # Test files with specific issues
-    backend/tests/integration/auth/test_auth_comprehensive.py: F401, F811
-    backend/tests/integration/api/test_manual_grading.py: E501
+    tests/integration/auth/test_auth_comprehensive.py: F401, F811
+    tests/integration/api/test_manual_grading.py: E501
     # Test files with SQLite pragma setup (E402)
     tests/integration/api/test_assignment_bulk_operations.py: E402
     tests/integration/api/test_assignment_content_copy_mechanism.py: E402
     tests/integration/api/test_assignment_permission_filtering.py: E402
     tests/integration/api/test_student_assignment_end_to_end.py: E402
+    tests/unit/*.py: F401

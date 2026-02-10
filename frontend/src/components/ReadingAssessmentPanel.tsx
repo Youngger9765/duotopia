@@ -2117,7 +2117,7 @@ export default function ReadingAssessmentPanel({
           items={rows.map((row) => row.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+          <div className="flex-1 overflow-y-auto space-y-3 pr-2 min-h-0">
             {rows.map((row, index) => {
               // useSortable must be called inside the component that's in SortableContext
               // so we'll use a nested component
@@ -2157,7 +2157,7 @@ export default function ReadingAssessmentPanel({
 
       {/* Footer with Save Button */}
       {onSave && (
-        <div className="flex-shrink-0 pt-4 mt-4 border-t border-gray-200">
+        <div className="flex-shrink-0 pt-4 mt-4 border-t border-gray-200 sticky bottom-0 bg-white z-10">
           <div className="flex justify-end gap-3">
             <Button
               size="lg"

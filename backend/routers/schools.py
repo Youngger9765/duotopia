@@ -154,8 +154,12 @@ def check_org_permission(
     Raises HTTPException if not found or no permission.
     Returns organization if permission granted.
     """
-    # Check if organization exists
-    org = db.query(Organization).filter(Organization.id == org_id).first()
+    # Check if organization exists and is active (soft delete strategy)
+    org = (
+        db.query(Organization)
+        .filter(Organization.id == org_id, Organization.is_active.is_(True))
+        .first()
+    )
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found"
@@ -189,8 +193,12 @@ def check_school_permission(
     Check if teacher has access to school.
     Requires org_owner or org_admin of the school's organization.
     """
-    # Check if school exists
-    school = db.query(School).filter(School.id == school_id).first()
+    # Check if school exists and is active (soft delete strategy)
+    school = (
+        db.query(School)
+        .filter(School.id == school_id, School.is_active.is_(True))
+        .first()
+    )
     if not school:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="School not found"
@@ -583,7 +591,7 @@ async def list_school_teachers(
 
                 try:
                     roles = json.loads(roles)
-                except:
+                except Exception:
                     roles = []
 
             result.append(

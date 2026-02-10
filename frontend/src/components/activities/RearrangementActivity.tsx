@@ -51,6 +51,7 @@ interface RearrangementActivityProps {
   studentAssignmentId: number;
   onComplete?: (totalScore: number, totalQuestions: number) => void;
   isPreviewMode?: boolean;
+  isDemoMode?: boolean; // Demo mode - uses public demo API endpoints
   showAnswer?: boolean; // 答題結束後是否顯示正確答案
   // 受控導航 props（由父組件控制題目切換）
   currentQuestionIndex?: number;
@@ -83,6 +84,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
   studentAssignmentId,
   onComplete,
   isPreviewMode = false,
+  isDemoMode = false,
   showAnswer = false,
   currentQuestionIndex: controlledIndex,
   onQuestionIndexChange,
@@ -171,10 +173,12 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
   const loadQuestions = async () => {
     try {
       setLoading(true);
-      // 根據是否為預覽模式選擇不同的 API
-      const apiUrl = isPreviewMode
-        ? `/api/teachers/assignments/${studentAssignmentId}/preview/rearrangement-questions`
-        : `/api/students/assignments/${studentAssignmentId}/rearrangement-questions`;
+      // 根據模式選擇不同的 API
+      const apiUrl = isDemoMode
+        ? `/api/demo/assignments/${studentAssignmentId}/preview/rearrangement-questions`
+        : isPreviewMode
+          ? `/api/teachers/assignments/${studentAssignmentId}/preview/rearrangement-questions`
+          : `/api/students/assignments/${studentAssignmentId}/rearrangement-questions`;
 
       const response = await apiClient.get<{
         student_assignment_id: number;
@@ -329,7 +333,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
     setResultModalOpen(true); // 打開結果 Modal（時間到也顯示結果）
 
     // 學生模式：呼叫 API 儲存 timeout 分數
-    if (!isPreviewMode) {
+    if (!isPreviewMode && !isDemoMode) {
       try {
         await apiClient.post(
           `/api/students/assignments/${studentAssignmentId}/rearrangement-complete`,
@@ -342,6 +346,22 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
         );
       } catch (error) {
         console.error("Failed to save timeout completion:", error);
+        // 不影響 UI，靜默失敗
+      }
+    } else if (isDemoMode) {
+      // Demo 模式：呼叫 demo API
+      try {
+        await apiClient.post(
+          `/api/demo/assignments/${studentAssignmentId}/preview/rearrangement-complete`,
+          {
+            content_item_id: contentItemId,
+            timeout: true,
+            expected_score: actualScore,
+            error_count: errorCount,
+          },
+        );
+      } catch (error) {
+        console.error("Failed to save demo timeout completion:", error);
         // 不影響 UI，靜默失敗
       }
     }
@@ -450,7 +470,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
       setResultModalOpen(true); // 打開結果 Modal
 
       // 學生模式：完成時呼叫 API 儲存分數
-      if (!isPreviewMode) {
+      if (!isPreviewMode && !isDemoMode) {
         try {
           await apiClient.post(
             `/api/students/assignments/${studentAssignmentId}/rearrangement-complete`,
@@ -462,6 +482,21 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
           );
         } catch (error) {
           console.error("Failed to save completion:", error);
+          // 不影響 UI，靜默失敗
+        }
+      } else if (isDemoMode) {
+        // Demo 模式：呼叫 demo API
+        try {
+          await apiClient.post(
+            `/api/demo/assignments/${studentAssignmentId}/preview/rearrangement-complete`,
+            {
+              content_item_id: currentQuestion.content_item_id,
+              expected_score: finalScore,
+              error_count: newErrorCount,
+            },
+          );
+        } catch (error) {
+          console.error("Failed to save demo completion:", error);
           // 不影響 UI，靜默失敗
         }
       }
@@ -501,7 +536,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
     toast.info(t("rearrangement.messages.retryStarted"));
 
     // 學生模式：通知後端重試（用於記錄 retry_count）
-    if (!isPreviewMode) {
+    if (!isPreviewMode && !isDemoMode) {
       try {
         await apiClient.post(
           `/api/students/assignments/${studentAssignmentId}/rearrangement-retry`,
@@ -511,6 +546,19 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
         );
       } catch (error) {
         console.error("Failed to record retry:", error);
+        // 不影響 UI，靜默失敗
+      }
+    } else if (isDemoMode) {
+      // Demo 模式：呼叫 demo API
+      try {
+        await apiClient.post(
+          `/api/demo/assignments/${studentAssignmentId}/preview/rearrangement-retry`,
+          {
+            content_item_id: currentQuestion.content_item_id,
+          },
+        );
+      } catch (error) {
+        console.error("Failed to record demo retry:", error);
         // 不影響 UI，靜默失敗
       }
     }

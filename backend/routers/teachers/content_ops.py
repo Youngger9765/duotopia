@@ -414,14 +414,19 @@ async def update_content(
                     audio_manager.delete_old_audio(existing_item.audio_url)
 
         # 使用參數化查詢刪除所有現有的 ContentItem，確保唯一約束不衝突
-
-        db.execute(
-            text("DELETE FROM content_items WHERE content_id = :content_id"),
-            {"content_id": content.id},
-        )
-
-        # 確保刪除操作執行完成
-        db.flush()
+        try:
+            db.execute(
+                text("DELETE FROM content_items WHERE content_id = :content_id"),
+                {"content_id": content.id},
+            )
+            # 確保刪除操作執行完成
+            db.flush()
+        except IntegrityError as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail="無法刪除內容項目，因為存在相關引用",
+            )
 
         # 創建新的 ContentItem
         for idx, item_data in enumerate(update_data.items):

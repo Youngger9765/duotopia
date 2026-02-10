@@ -17,6 +17,7 @@ from .base import (
     ContentType,
     PracticeMode,
     ScoreCategory,
+    ProgramVisibility,
 )
 
 # User models
@@ -33,17 +34,19 @@ from .subscription import (
 # Organization models
 from .organization import (
     Organization,
+    OrganizationPointsLog,
     School,
     TeacherOrganization,
     TeacherSchool,
     ClassroomSchool,
+    StudentSchool,
 )
 
 # Classroom models
 from .classroom import Classroom, ClassroomStudent
 
 # Program models
-from .program import Program, Lesson, Content, ContentItem
+from .program import Program, Lesson, Content, ContentItem, ProgramCopyLog
 
 # Assignment models
 from .assignment import Assignment, AssignmentContent, StudentAssignment
@@ -55,6 +58,9 @@ from .progress import (
     PracticeSession,
     PracticeAnswer,
 )
+
+# Demo models
+from .demo_config import DemoConfig
 
 __all__ = [
     # Base
@@ -71,6 +77,7 @@ __all__ = [
     "ContentType",
     "PracticeMode",
     "ScoreCategory",
+    "ProgramVisibility",
     # Users
     "Teacher",
     "Student",
@@ -85,6 +92,7 @@ __all__ = [
     "TeacherOrganization",
     "TeacherSchool",
     "ClassroomSchool",
+    "StudentSchool",
     # Classrooms
     "Classroom",
     "ClassroomStudent",
@@ -93,6 +101,7 @@ __all__ = [
     "Lesson",
     "Content",
     "ContentItem",
+    "ProgramCopyLog",
     # Assignments
     "Assignment",
     "AssignmentContent",
@@ -102,4 +111,6 @@ __all__ = [
     "StudentItemProgress",
     "PracticeSession",
     "PracticeAnswer",
+    # Demo
+    "DemoConfig",
 ]

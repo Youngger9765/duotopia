@@ -1,0 +1,5 @@
+# Password-related field names (not secrets)
+password_changed
+passwordStatus
+resetPassword
+handleResetPassword

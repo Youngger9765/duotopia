@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +10,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import TeacherLayout from "@/components/TeacherLayout";
 import {
   Users,
   UserCheck,
@@ -39,12 +39,18 @@ interface DashboardData {
     name: string;
     description?: string;
     student_count: number;
+    school_id?: string;
+    school_name?: string;
+    organization_id?: string;
   }>;
   recent_students: Array<{
     id: number;
     name: string;
     email: string;
     classroom_name: string;
+    school_id?: string;
+    school_name?: string;
+    organization_id?: string;
   }>;
   subscription_status?: string;
   subscription_end_date?: string;
@@ -55,6 +61,7 @@ interface DashboardData {
 
 export default function TeacherDashboard() {
   const { t } = useTranslation();
+  const { selectedSchool, selectedOrganization, mode } = useWorkspace();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null,
   );
@@ -104,33 +111,60 @@ export default function TeacherDashboard() {
 
   if (loading) {
     return (
-      <TeacherLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">
-              {t("teacherDashboard.loading")}
-            </p>
-          </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">{t("teacherDashboard.loading")}</p>
         </div>
-      </TeacherLayout>
+      </div>
     );
   }
 
   if (!dashboardData) {
     return (
-      <TeacherLayout>
-        <div className="text-center py-12">
-          <p className="text-gray-500">
-            {t("teacherDashboard.error.loadFailed")}
-          </p>
-        </div>
-      </TeacherLayout>
+      <div className="text-center py-12">
+        <p className="text-gray-500">
+          {t("teacherDashboard.error.loadFailed")}
+        </p>
+      </div>
     );
   }
 
+  // Filter classrooms based on workspace selection
+  const filteredClassrooms = dashboardData.classrooms.filter((classroom) => {
+    if (mode === "personal") {
+      // Personal mode: only show classrooms without school_id or organization_id
+      return !classroom.school_id && !classroom.organization_id;
+    }
+    if (selectedSchool) {
+      return classroom.school_id === selectedSchool.id;
+    }
+    if (selectedOrganization) {
+      return classroom.organization_id === selectedOrganization.id;
+    }
+    return true;
+  });
+
+  // Filter students based on workspace selection
+  const filteredStudents = dashboardData.recent_students.filter((student) => {
+    if (mode === "personal") return true;
+    if (selectedSchool) {
+      return student.school_id === selectedSchool.id;
+    }
+    if (selectedOrganization) {
+      return student.organization_id === selectedOrganization.id;
+    }
+    return true;
+  });
+
+  // Calculate filtered stats
+  const filteredStudentCount = filteredClassrooms.reduce(
+    (sum, c) => sum + c.student_count,
+    0,
+  );
+
   return (
-    <TeacherLayout>
+    <>
       {/* Share to Students Dialog */}
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
         <DialogContent className="sm:max-w-md">
@@ -277,7 +311,7 @@ export default function TeacherDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {dashboardData.classroom_count}
+                {filteredClassrooms.length}
               </div>
             </CardContent>
           </Card>
@@ -290,9 +324,7 @@ export default function TeacherDashboard() {
               <UserCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {dashboardData.student_count}
-              </div>
+              <div className="text-2xl font-bold">{filteredStudentCount}</div>
             </CardContent>
           </Card>
 
@@ -319,7 +351,7 @@ export default function TeacherDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {dashboardData.classrooms.map((classroom) => (
+                {filteredClassrooms.map((classroom) => (
                   <div
                     key={classroom.id}
                     className="flex items-center justify-between p-3 border rounded"
@@ -349,7 +381,7 @@ export default function TeacherDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {dashboardData.recent_students.map((student) => (
+                {filteredStudents.map((student) => (
                   <div
                     key={student.id}
                     className="flex items-center space-x-3 p-3 border rounded"
@@ -372,6 +404,6 @@ export default function TeacherDashboard() {
           </Card>
         </div>
       </div>
-    </TeacherLayout>
+    </>
   );
 }

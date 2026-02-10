@@ -52,6 +52,13 @@ The Organization Hierarchy system provides a multi-tenant architecture where:
 | Create Classroom | ✅ | ✅ | ✅ | ❌ |
 | Manage Assignments | ✅ | ✅ | ✅ | ✅ |
 
+### Materials Copy Rules
+
+- Organization → School only (no direct org → classroom/teacher)
+- School → Teacher / Classroom (requires school_admin or teacher role in that school)
+- Teacher ↔ Classroom (same teacher only)
+- Classroom ↔ Classroom (same teacher only)
+
 ---
 
 ## Organization APIs

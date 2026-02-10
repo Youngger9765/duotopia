@@ -1,11 +1,12 @@
 """
 Student Ops operations for teachers.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, selectinload, joinedload
 from sqlalchemy import func
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
+from uuid import UUID
 
 from database import get_db
 from models import Teacher, Classroom, Student, Program, Lesson, Content, ContentItem
@@ -16,6 +17,7 @@ from models import (
     TeacherSchool,
     Organization,
     School,
+    ClassroomSchool,
 )
 from .dependencies import get_current_teacher
 from .validators import *
@@ -27,6 +29,13 @@ router = APIRouter()
 
 @router.get("/students")
 async def get_all_students(
+    mode: Optional[str] = Query(
+        None, description="Filter mode: personal|school|organization"
+    ),
+    school_id: Optional[str] = Query(
+        None, description="School UUID (requires mode=school)"
+    ),
+    organization_id: Optional[str] = Query(None, description="Organization UUID"),
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
@@ -35,7 +44,36 @@ async def get_all_students(
     # 1. All students in teacher's classrooms
     # 2. Unassigned students created in last 24 hours (for assignment purposes)
 
-    # Get students in teacher's classrooms
+    # Authorization checks (if mode specified)
+    if mode == "school" and school_id:
+        # Verify teacher has access to this school
+        has_access = (
+            db.query(TeacherSchool)
+            .filter(
+                TeacherSchool.teacher_id == current_teacher.id,
+                TeacherSchool.school_id == school_id,
+                TeacherSchool.is_active.is_(True),
+            )
+            .first()
+        )
+        if not has_access:
+            raise HTTPException(403, detail="Access denied to this school")
+
+    elif mode == "organization" and organization_id:
+        # Verify teacher has access to this organization
+        has_access = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == current_teacher.id,
+                TeacherOrganization.organization_id == organization_id,
+                TeacherOrganization.is_active.is_(True),
+            )
+            .first()
+        )
+        if not has_access:
+            raise HTTPException(403, detail="Access denied to this organization")
+
+    # Get students in teacher's classrooms with school/organization relationships
     students_in_classrooms = (
         db.query(Student)
         .join(ClassroomStudent, Student.id == ClassroomStudent.student_id)
@@ -83,26 +121,91 @@ async def get_all_students(
     )
     classroom_students_dict = {cs.student_id: cs for cs in classroom_students_list}
 
-    # 批次查詢教室資訊
+    # 批次查詢教室資訊 (with school/organization relationships)
     classroom_ids = [cs.classroom_id for cs in classroom_students_list]
     classrooms_dict = {}
     if classroom_ids:
         classrooms_list = (
-            db.query(Classroom).filter(Classroom.id.in_(classroom_ids)).all()
+            db.query(Classroom)
+            .filter(Classroom.id.in_(classroom_ids))
+            .options(
+                selectinload(Classroom.classroom_schools)
+                .selectinload(ClassroomSchool.school)
+                .selectinload(School.organization)
+            )
+            .all()
         )
         classrooms_dict = {c.id: c for c in classrooms_list}
 
-    # Build response with classroom info
+    # Server-side filtering based on mode
+    if mode == "personal":
+        # Only show students in classrooms without school link OR unassigned students
+        filtered_student_ids = set()
+        for student in all_students:
+            cs = classroom_students_dict.get(student.id)
+            if cs:
+                classroom = classrooms_dict.get(cs.classroom_id)
+                if classroom and not classroom.classroom_schools:
+                    filtered_student_ids.add(student.id)
+            else:
+                # Unassigned students are considered personal
+                filtered_student_ids.add(student.id)
+        all_students = [s for s in all_students if s.id in filtered_student_ids]
+
+    elif mode == "school" and school_id:
+        # Only show students in classrooms belonging to this school
+        filtered_student_ids = set()
+        for student in all_students:
+            cs = classroom_students_dict.get(student.id)
+            if cs:
+                classroom = classrooms_dict.get(cs.classroom_id)
+                if classroom and any(
+                    ccs.school_id == UUID(school_id) and ccs.is_active
+                    for ccs in classroom.classroom_schools
+                ):
+                    filtered_student_ids.add(student.id)
+        all_students = [s for s in all_students if s.id in filtered_student_ids]
+
+    elif mode == "organization" and organization_id:
+        # Only show students in classrooms in schools under this organization
+        filtered_student_ids = set()
+        for student in all_students:
+            cs = classroom_students_dict.get(student.id)
+            if cs:
+                classroom = classrooms_dict.get(cs.classroom_id)
+                if classroom and any(
+                    ccs.school
+                    and ccs.school.organization_id == UUID(organization_id)
+                    and ccs.is_active
+                    for ccs in classroom.classroom_schools
+                ):
+                    filtered_student_ids.add(student.id)
+        all_students = [s for s in all_students if s.id in filtered_student_ids]
+
+    # Build response with classroom info and school/organization IDs
     result = []
     for student in all_students:
         # 使用字典查找，避免重複查詢
         classroom_student = classroom_students_dict.get(student.id)
 
         classroom_info = None
+        school_id = None
+        organization_id = None
+
         if classroom_student:
             classroom = classrooms_dict.get(classroom_student.classroom_id)
             if classroom:
                 classroom_info = {"id": classroom.id, "name": classroom.name}
+
+                # Extract school_id and organization_id from classroom_schools
+                if classroom.classroom_schools:
+                    active_cs = next(
+                        (cs for cs in classroom.classroom_schools if cs.is_active), None
+                    )
+                    if active_cs and active_cs.school:
+                        school_id = str(active_cs.school.id)
+                        if active_cs.school.organization:
+                            organization_id = str(active_cs.school.organization.id)
 
         result.append(
             {
@@ -121,6 +224,8 @@ async def get_all_students(
                 "status": "active" if student.is_active else "inactive",
                 "classroom_id": classroom_info["id"] if classroom_info else None,
                 "classroom_name": (classroom_info["name"] if classroom_info else "未分配"),
+                "school_id": school_id,
+                "organization_id": organization_id,
                 "email_verified": student.email_verified,
                 "email_verified_at": (
                     student.email_verified_at.isoformat()
@@ -142,6 +247,9 @@ async def create_student(
     """創建新學生"""
     # Verify classroom belongs to teacher (only if classroom_id is provided)
     if student_data.classroom_id:
+        from utils.permissions import check_classroom_is_personal
+        from models import ClassroomSchool
+
         classroom = (
             db.query(Classroom)
             .filter(
@@ -153,6 +261,10 @@ async def create_student(
 
         if not classroom:
             raise HTTPException(status_code=404, detail="Classroom not found")
+
+        # Check if classroom belongs to school (should not be allowed)
+        if not check_classroom_is_personal(classroom.id, db):
+            raise HTTPException(status_code=403, detail="此班級屬於學校，請通過學校管理頁面創建學生")
 
     # Parse birthdate with error handling
     try:

@@ -156,6 +156,16 @@ class ApiClient {
         `Bearer ${currentToken}`;
     }
 
+    // DIAGNOSTIC: Log request details before sending
+    if (DEBUG) {
+      console.log("🔍 [DEBUG] Request details:", {
+        url,
+        method: options.method || "GET",
+        headers,
+        body: options.body ? JSON.parse(options.body as string) : undefined,
+      });
+    }
+
     try {
       const response = await fetch(url, {
         ...options,
@@ -313,16 +323,38 @@ class ApiClient {
     return this.request("/api/teachers/dashboard");
   }
 
-  async getTeacherClassrooms() {
-    return this.request("/api/teachers/classrooms");
+  async getTeacherClassrooms(params?: {
+    mode?: string;
+    school_id?: string;
+    organization_id?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.mode) queryParams.append("mode", params.mode);
+    if (params?.school_id) queryParams.append("school_id", params.school_id);
+    if (params?.organization_id)
+      queryParams.append("organization_id", params.organization_id);
+
+    const query = queryParams.toString();
+    const url = query
+      ? `/api/teachers/classrooms?${query}`
+      : "/api/teachers/classrooms";
+
+    return this.request(url);
   }
 
-  async getTeacherPrograms(isTemplate?: boolean, classroomId?: number) {
+  async getTeacherPrograms(
+    isTemplate?: boolean,
+    classroomId?: number,
+    schoolId?: string,
+    organizationId?: string,
+  ) {
     const params = new URLSearchParams();
     if (isTemplate !== undefined)
       params.append("is_template", String(isTemplate));
     if (classroomId !== undefined)
       params.append("classroom_id", String(classroomId));
+    if (schoolId) params.append("school_id", schoolId);
+    if (organizationId) params.append("organization_id", organizationId);
     const queryString = params.toString();
     return this.request(
       `/api/teachers/programs${queryString ? `?${queryString}` : ""}`,
@@ -387,6 +419,22 @@ class ApiClient {
     });
   }
 
+  async copyProgram(data: {
+    program_id: number;
+    target_scope: "classroom" | "teacher" | "school";
+    target_id: string;
+    name?: string;
+  }) {
+    return this.request(`/api/programs/${data.program_id}/copy`, {
+      method: "POST",
+      body: JSON.stringify({
+        target_scope: data.target_scope,
+        target_id: data.target_id,
+        name: data.name,
+      }),
+    });
+  }
+
   async copyFromClassroom(data: {
     source_program_id: number;
     target_classroom_id: number;
@@ -417,12 +465,22 @@ class ApiClient {
     );
   }
 
-  async getCopyablePrograms(classroomId: number) {
-    return this.request(`/api/programs/copyable?classroom_id=${classroomId}`);
+  async getCopyablePrograms(classroomId: number, schoolId?: string) {
+    let url = `/api/programs/copyable?classroom_id=${classroomId}`;
+    if (schoolId) {
+      url += `&school_id=${schoolId}`;
+    }
+    return this.request(url);
   }
 
   async getClassroomPrograms(classroomId: number) {
     return this.request(`/api/programs/classroom/${classroomId}`);
+  }
+
+  async getSchoolClassroomPrograms(schoolId: string, classroomId: number) {
+    return this.request(
+      `/api/schools/${schoolId}/classrooms/${classroomId}/programs`,
+    );
   }
 
   async softDeleteProgram(programId: number) {
@@ -456,6 +514,188 @@ class ApiClient {
     return this.request("/api/teachers/classrooms", {
       method: "POST",
       body: JSON.stringify(data),
+    });
+  }
+
+  // ============ School Classroom Methods ============
+  async createSchoolClassroom(
+    schoolId: string,
+    data: {
+      name: string;
+      description?: string;
+      level: string;
+      teacher_id?: number | null;
+    },
+  ) {
+    return this.request(`/api/schools/${schoolId}/classrooms`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSchoolClassroom(
+    classroomId: number,
+    data: {
+      name?: string;
+      description?: string;
+      level?: string;
+      is_active?: boolean;
+    },
+  ) {
+    return this.request(`/api/classrooms/${classroomId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async assignTeacherToClassroom(
+    classroomId: number,
+    teacherId: number | null,
+  ) {
+    return this.request(`/api/classrooms/${classroomId}/teacher`, {
+      method: "PUT",
+      body: JSON.stringify({ teacher_id: teacherId }),
+    });
+  }
+
+  // ============ School Student Methods ============
+  async getSchoolStudents(
+    schoolId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      status?: "active" | "inactive";
+      classroom_id?: number;
+      unassigned?: boolean;
+    },
+  ) {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append("page", params.page.toString());
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    if (params?.search) queryParams.append("search", params.search);
+    if (params?.status) queryParams.append("status", params.status);
+    if (params?.classroom_id)
+      queryParams.append("classroom_id", params.classroom_id.toString());
+    if (params?.unassigned !== undefined)
+      queryParams.append("unassigned", params.unassigned.toString());
+
+    const queryString = queryParams.toString();
+    const url = `/api/schools/${schoolId}/students${queryString ? `?${queryString}` : ""}`;
+    return this.request(url);
+  }
+
+  async createSchoolStudent(
+    schoolId: string,
+    data: {
+      name: string;
+      email?: string;
+      student_number?: string;
+      birthdate: string; // YYYY-MM-DD
+      phone?: string;
+    },
+  ) {
+    return this.request(`/api/schools/${schoolId}/students`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async addStudentToSchool(schoolId: string, studentId: number) {
+    return this.request(`/api/schools/${schoolId}/students/${studentId}`, {
+      method: "POST",
+    });
+  }
+
+  async updateSchoolStudent(
+    schoolId: string,
+    studentId: number,
+    data: {
+      name?: string;
+      email?: string;
+      student_number?: string;
+      birthdate?: string;
+      phone?: string;
+      is_active?: boolean;
+    },
+  ) {
+    return this.request(`/api/schools/${schoolId}/students/${studentId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async removeStudentFromSchool(schoolId: string, studentId: number) {
+    return this.request(`/api/schools/${schoolId}/students/${studentId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async addStudentToClassroom(
+    schoolId: string,
+    studentId: number,
+    classroomId: number,
+  ) {
+    return this.request(
+      `/api/schools/${schoolId}/students/${studentId}/classrooms`,
+      {
+        method: "POST",
+        body: JSON.stringify({ classroom_id: classroomId }),
+      },
+    );
+  }
+
+  async removeStudentFromClassroom(
+    schoolId: string,
+    studentId: number,
+    classroomId: number,
+  ) {
+    return this.request(
+      `/api/schools/${schoolId}/students/${studentId}/classrooms/${classroomId}`,
+      {
+        method: "DELETE",
+      },
+    );
+  }
+
+  async getClassroomStudents(schoolId: string, classroomId: number) {
+    return this.request(
+      `/api/schools/${schoolId}/classrooms/${classroomId}/students`,
+    );
+  }
+
+  async batchAddStudentsToClassroom(
+    schoolId: string,
+    classroomId: number,
+    studentIds: number[],
+  ) {
+    return this.request(
+      `/api/schools/${schoolId}/classrooms/${classroomId}/students/batch`,
+      {
+        method: "POST",
+        body: JSON.stringify({ student_ids: studentIds }),
+      },
+    );
+  }
+
+  async batchImportStudentsForSchool(
+    schoolId: string,
+    students: Array<{
+      name: string;
+      email?: string;
+      student_number?: string;
+      birthdate: string;
+      phone?: string;
+      classroom_id?: number;
+    }>,
+    duplicateAction: "skip" | "update" | "add_suffix" = "skip",
+  ) {
+    return this.request(`/api/schools/${schoolId}/students/batch-import`, {
+      method: "POST",
+      body: JSON.stringify({
+        students,
+        duplicate_action: duplicateAction,
+      }),
     });
   }
 
@@ -711,6 +951,16 @@ class ApiClient {
       items?: Array<{
         text: string;
         translation?: string;
+        definition?: string;
+        english_definition?: string;
+        selectedLanguage?: string;
+        audio_url?: string;
+        // Explicit optional fields for backend compatibility
+        options?: Array<unknown>;
+        correct_answer?: unknown;
+        question_type?: string;
+        example_sentence?: string;
+        example_sentence_translation?: string;
       }>;
       target_wpm?: number;
       target_accuracy?: number;
@@ -824,13 +1074,28 @@ class ApiClient {
   }
 
   // ============ Student Management Methods ============
-  async getAllStudents() {
-    return this.request("/api/teachers/students", {
+  async getAllStudents(params?: {
+    mode?: string;
+    school_id?: string;
+    organization_id?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.mode) queryParams.append("mode", params.mode);
+    if (params?.school_id) queryParams.append("school_id", params.school_id);
+    if (params?.organization_id)
+      queryParams.append("organization_id", params.organization_id);
+
+    const query = queryParams.toString();
+    const url = query
+      ? `/api/teachers/students?${query}`
+      : "/api/teachers/students";
+
+    return this.request(url, {
       method: "GET",
     });
   }
 
-  async batchImportStudents(
+  async batchImportStudentsForTeacher(
     students: Array<{
       name: string;
       classroom_name: string;
@@ -978,6 +1243,45 @@ class ApiClient {
         }),
       onRetry,
     );
+  }
+
+  // ============ Admin Organization Methods ============
+  async listOrganizations(params?: {
+    limit?: number;
+    offset?: number;
+    search?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.limit !== undefined)
+      queryParams.append("limit", params.limit.toString());
+    if (params?.offset !== undefined)
+      queryParams.append("offset", params.offset.toString());
+    if (params?.search) queryParams.append("search", params.search);
+
+    const queryString = queryParams.toString();
+    const url = `/api/admin/organizations${queryString ? `?${queryString}` : ""}`;
+    return this.request(url, {
+      method: "GET",
+    });
+  }
+
+  async updateOrganization(
+    orgId: string,
+    data: {
+      display_name?: string;
+      description?: string;
+      tax_id?: string;
+      teacher_limit?: number;
+      contact_email?: string;
+      contact_phone?: string;
+      address?: string;
+      total_points?: number;
+    },
+  ) {
+    return this.request(`/api/admin/organizations/${orgId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
   }
 }
 

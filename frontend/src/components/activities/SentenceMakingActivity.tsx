@@ -55,14 +55,28 @@ interface SentenceMakingState {
   completing: boolean;
 }
 
+interface WordItem {
+  word?: string;
+  text?: string;
+  translation?: string;
+  example_sentence?: string;
+  example_sentence_translation?: string;
+}
+
+interface ActivityContent {
+  words?: WordItem[];
+}
+
 interface SentenceMakingActivityProps {
-  assignmentId: number;
+  assignmentId?: number; // Optional: undefined in organization material context
   onComplete?: () => void;
+  activityContent?: ActivityContent; // Optional: provide content for preview mode
 }
 
 const SentenceMakingActivity: React.FC<SentenceMakingActivityProps> = ({
   assignmentId,
   onComplete,
+  activityContent,
 }) => {
   const [state, setState] = useState<SentenceMakingState>({
     sessionId: null,
@@ -75,9 +89,14 @@ const SentenceMakingActivity: React.FC<SentenceMakingActivityProps> = ({
     completing: false,
   });
 
-  // 初始化：獲取練習題目
+  // 初始化：獲取練習題目 (only if assignmentId is provided)
   useEffect(() => {
-    loadPracticeWords();
+    if (assignmentId) {
+      loadPracticeWords();
+    } else {
+      // Organization material preview mode - no API call needed
+      setState((prev) => ({ ...prev, loading: false }));
+    }
   }, [assignmentId]);
 
   const loadPracticeWords = async () => {
@@ -208,6 +227,47 @@ const SentenceMakingActivity: React.FC<SentenceMakingActivityProps> = ({
     );
   }
 
+  // Organization material preview mode (no assignmentId)
+  if (!assignmentId && activityContent) {
+    const words = activityContent.words || [];
+    return (
+      <div className="border rounded-lg p-6 bg-gray-50">
+        <h3 className="text-lg font-semibold mb-4 text-gray-900">
+          單字列表預覽
+        </h3>
+        <div className="space-y-4">
+          {words.map((word: WordItem, index: number) => (
+            <div key={index} className="p-4 bg-white rounded-lg border">
+              <div className="font-semibold text-lg text-gray-900">
+                {word.word || word.text || "(未填寫)"}
+              </div>
+              <div className="text-gray-600 mt-1">
+                {word.translation || "(未填寫)"}
+              </div>
+              {word.example_sentence && (
+                <div className="mt-2 text-sm text-gray-500">
+                  <div className="font-medium">例句：</div>
+                  <div>{word.example_sentence}</div>
+                  {word.example_sentence_translation && (
+                    <div className="text-gray-400 mt-1">
+                      {word.example_sentence_translation}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+          {words.length === 0 && (
+            <div className="text-center text-gray-500 py-8">
+              尚未新增任何單字
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Student assignment mode (requires assignmentId)
   const currentWord = state.words[state.currentIndex];
   const progress = {
     current: state.currentIndex + 1,

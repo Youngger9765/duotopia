@@ -138,6 +138,79 @@
 - **Estimated**: 16-20 hours
 - **Status**: Waiting for user testing of core features
 
+**5. ✅ Admin Organization Creation - Extended Features - Phase 1 Complete** (2026-01-30)
+- **Source**: `spec/features/organization/機構設定與擁有人註冊.feature`
+- **Design Doc**: `docs/plans/2026-01-30-admin-org-creation-extended-features-design.md` ✅
+
+**Implementation Strategy** (after schema analysis):
+- **Phase 1**: 3 features using existing database fields ✅ COMPLETED
+- **Phase 2**: Unregistered owner flow (simplified) ⏰ PENDING
+- **Phase 3**: 2 features require simple migration (Organization.total_points) ⏸️ ON HOLD
+
+**Phase 1: No Migration Required** ✅ COMPLETED (2026-01-30)
+  1. ✅ **教師授權數顯示** - DONE
+     - Uses existing `Organization.teacher_limit` field
+     - Backend: GET /api/admin/organizations/{id}/statistics
+     - Frontend: TeacherUsageCard component
+     - Tests: test_get_organization_statistics_*, test_organization_stats_teacher_deduplication
+
+  2. ✅ **擁有人姓名、手機欄位** - DONE
+     - Uses existing `Teacher.name` and `Teacher.phone` fields
+     - Backend: GET /api/admin/teachers/lookup?email=xxx
+     - Frontend: Auto-fetch on owner_email change with debouncing
+     - Tests: test_get_teacher_by_email_*
+
+  3. ✅ **專案服務人員指派（org_admin）** - DONE
+     - Uses existing `TeacherOrganization.role` field
+     - Backend: project_staff_emails field support
+     - Frontend: Multi-select input with validation
+     - Casbin: org_admin role permissions (already configured)
+     - Tests: test_create_organization_with_project_staff, test_create_organization_staff_*, test_create_organization_owner_cannot_be_project_staff
+
+**Implementation Details**:
+- **Backend Tests**: 14 tests in test_admin_organizations.py (9 new for Phase 1)
+- **API Endpoints**: 2 new endpoints (statistics, teacher lookup)
+- **Frontend**: Form enhancements, owner info display, staff multi-select, usage card
+- **Commits**: 9 commits (2b7b12df to 967294d7)
+- **Test Coverage**: 100% for new features
+- **E2E Test**: Manual testing completed and documented
+
+**Phase 2: Simplified Unregistered Owner Flow** (Priority 2, 4-5 hours)
+  4. ✅ **擁有人尚未註冊流程 - Option A** (4-5h)
+     - Uses existing `Teacher.email_verification_token` and `password_reset_token` fields
+     - Admin inputs: owner_email, owner_name, owner_phone
+     - System creates Teacher account with random password
+     - Display initial password to admin (offline communication)
+     - Owner must change password on first login
+     - **Note**: Email flow (Option B) deferred as future enhancement
+
+**Phase 3: Points System** (Priority 3, 8-9 hours) - **⏸️ ON HOLD**
+  5. ⏸️ **總點數欄位** (5h) - **Requires Migration**
+     - Add `Organization.total_points` field (simple migration)
+     - Decision: Use organization-level points pool (not teacher-level aggregation)
+     - Matches client spec concept
+     - **Status**: Waiting for migration approval
+
+  6. ⏸️ **剩餘點數顯示** (3-4h) - **Depends on 5**
+     - Calculate: total_points - sum(point_usage_logs.points_used)
+     - Display in organization dashboard
+     - Point usage history API
+
+**Deferred Features** (Future Enhancement):
+  7. ⏸️ **Email 認證流程 - Option B** (12-16h)
+     - Send verification email
+     - Token validation page
+     - Auto-login after password setup
+     - **Reason for deferral**: Requires email infrastructure setup
+
+- **Business value**: Complete admin organization creation workflow per client specs
+- **Estimated**:
+  - Phase 1-2 (no migration): 13-18 hours
+  - Phase 3 (with migration): 8-9 hours
+  - Total: 21-27 hours
+- **Status**: Phase 1-2 ready to implement, Phase 3 pending approval
+- **Reference**: `spec/features/organization/機構設定與擁有人註冊.feature` (lines 35-126)
+
 #### 🟡 Medium Priority (UX Enhancement)
 
 **5. Permission Decorators** (0%)

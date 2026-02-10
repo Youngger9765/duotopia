@@ -19,7 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
-from .base import ProgramLevel, ContentType
+from .base import ProgramLevel, ContentType, ProgramVisibility, UUID
 
 
 # ============ 課程系統（三層架構）============
@@ -41,6 +41,15 @@ class Program(Base):
         Integer, ForeignKey("classrooms.id", ondelete="CASCADE"), nullable=True
     )  # 公版課程為 NULL
     teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
+    organization_id = Column(
+        UUID,
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )  # Organization-owned materials (NOT classroom copies)
+    school_id = Column(
+        UUID, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, index=True
+    )  # School-owned materials
 
     # 來源追蹤
     source_type = Column(
@@ -48,14 +57,20 @@ class Program(Base):
     )  # 'template', 'classroom', 'custom', None
     source_metadata = Column(JSON, nullable=True)
     """
-    範例：
+    範例 - ONLY for COPIED programs (classroom copies):
     - 從公版複製: {"template_id": 123, "template_name": "初級會話"}
     - 從其他班級: {"classroom_id": 456, "classroom_name": "五年級B班", "program_id": 789}
-    - 自建: {"created_by": "manual"}
+    - 從組織教材: {"organization_id": "uuid", "organization_name": "XX學校", "program_id": 123, "source_type": "org_template"}
+
+    NOTE: organization_id column is for ORGANIZATION-OWNED materials
+          source_metadata.organization_id is for COPIES tracking their origin
     """
 
     # 課程屬性
     is_public = Column(Boolean, nullable=True)  # 是否公開（與 DB 一致，但不使用）
+    visibility = Column(
+        String(20), default="private", nullable=False, server_default="private"
+    )  # 資源教材包公開權限: private, public, organization_only, individual_only
     estimated_hours = Column(Integer)  # 預計時數
     order_index = Column(Integer, default=1)  # 排序順序
     tags = Column(JSON, nullable=True)  # 標籤
@@ -86,6 +101,11 @@ class Program(Base):
     def is_classroom_program(self):
         """判斷是否為班級課程"""
         return not self.is_template and self.classroom_id is not None
+
+    @property
+    def is_school_template(self):
+        """判斷是否為學校教材"""
+        return self.is_template and self.school_id is not None
 
     def __repr__(self):
         type_str = "Template" if self.is_template else f"Class {self.classroom_id}"
@@ -234,4 +254,38 @@ class ContentItem(Base):
         return (
             f"<ContentItem(id={self.id}, content_id={self.content_id}, "
             f"order={self.order_index}, text='{self.text[:30]}...')>"
+        )
+
+
+# ============ 資源教材包複製記錄 ============
+class ProgramCopyLog(Base):
+    """記錄資源教材包的複製歷史，用於每日複製次數限制"""
+
+    __tablename__ = "program_copy_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_program_id = Column(
+        Integer, ForeignKey("programs.id"), nullable=False, index=True
+    )
+    copied_by_type = Column(
+        String(20), nullable=False
+    )  # 'individual' or 'organization'
+    copied_by_id = Column(
+        String(100), nullable=False, index=True
+    )  # teacher_id (as str) or organization_id (uuid str)
+    copied_program_id = Column(
+        Integer, ForeignKey("programs.id"), nullable=True
+    )  # 複製後產生的新課程 ID
+    copied_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    source_program = relationship(
+        "Program", foreign_keys=[source_program_id], backref="copy_logs"
+    )
+    copied_program = relationship("Program", foreign_keys=[copied_program_id])
+
+    def __repr__(self):
+        return (
+            f"<ProgramCopyLog(source={self.source_program_id}, "
+            f"by={self.copied_by_type}:{self.copied_by_id})>"
         )

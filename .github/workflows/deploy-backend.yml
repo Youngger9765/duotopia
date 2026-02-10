@@ -64,7 +64,7 @@ jobs:
       working-directory: ./backend
       run: |
         echo "Running Flake8 linting..."
-        flake8 . --max-line-length=120 --ignore=E203,W503 --exclude=alembic,__pycache__,.venv
+        flake8 . --config=../.flake8
 
     - name: Run pytest (Parallel)
       working-directory: ./backend
@@ -256,6 +256,9 @@ jobs:
               'teacher_subscription_transaction', 'teacher_subscription_transactions', 'invoice_status_history',
               'user_word_progress', 'practice_sessions', 'practice_answers',
               'organizations', 'schools', 'teacher_organizations', 'teacher_schools', 'classroom_schools', 'student_schools',
+              'organization_points_log',
+              'program_copy_logs',
+              'demo_config',
               -- n8n 系統表（外部服務，不適用 RLS）
               'annotation_tag_entity', 'auth_identity', 'auth_provider_sync_history', 'binary_data',
               'chat_hub_agents', 'chat_hub_messages', 'chat_hub_sessions', 'credentials_entity',

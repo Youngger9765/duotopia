@@ -43,20 +43,59 @@ def _compile_jsonb_sqlite(type_, compiler, **kw):
 
 
 def get_test_engine():
-    """獲取全域測試引擎"""
+    """獲取全域測試引擎
+
+    使用 alembic migrations 確保測試 DB schema 與生產環境一致
+    """
     global _test_engine
     if _test_engine is None:
-        # 🔧 使用 file-based SQLite + StaticPool for data visibility across requests
-        # StaticPool ensures all connections share the same underlying connection
-        _test_engine = create_engine(
-            "sqlite:///./test_org.db",  # File-based DB
-            echo=False,
-            connect_args={"check_same_thread": False},
-            poolclass=StaticPool,  # Single shared connection
+        import subprocess
+        import os
+        import pathlib
+
+        # 測試資料庫 URL
+        TEST_DATABASE_URL = "sqlite:///./test_org.db"
+        db_path = pathlib.Path("./test_org.db")
+
+        # 刪除舊的測試數據庫
+        if db_path.exists():
+            db_path.unlink()
+
+        # 使用 alembic 創建測試數據庫 schema
+        env = os.environ.copy()
+        env["DATABASE_URL"] = TEST_DATABASE_URL
+        env[
+            "SKIP_MIGRATION_VALIDATION"
+        ] = "true"  # Allow creating all tables in test DB
+
+        result = subprocess.run(
+            ["alembic", "upgrade", "head"],
+            env=env,
+            capture_output=True,
+            text=True,
+            cwd=os.path.dirname(
+                os.path.dirname(__file__)
+            ),  # Run from backend directory
         )
 
-        # checkfirst=True: 避免平行測試時重複創建表
-        Base.metadata.create_all(_test_engine, checkfirst=True)
+        if result.returncode != 0:
+            print(
+                f"⚠️  Alembic migration failed, falling back to Base.metadata.create_all()"
+            )
+            print(f"STDERR: {result.stderr}")
+
+        # 創建引擎（StaticPool for single shared connection）
+        _test_engine = create_engine(
+            TEST_DATABASE_URL,
+            echo=False,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+
+        # Fallback: 如果 alembic 失敗，使用 Base.metadata.create_all
+        if result.returncode != 0:
+            Base.metadata.create_all(_test_engine, checkfirst=True)
+
     return _test_engine
 
 

@@ -20,6 +20,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useAzurePronunciation } from "@/hooks/useAzurePronunciation";
+import { useDemoAzurePronunciation } from "@/hooks/useDemoAzurePronunciation";
 
 interface Question {
   text?: string;
@@ -103,6 +104,7 @@ interface GroupedQuestionsTemplateProps {
   readOnly?: boolean; // 唯讀模式
   assignmentId?: string; // 作業 ID，用於上傳錄音
   isPreviewMode?: boolean; // 預覽模式（老師端預覽）
+  isDemoMode?: boolean; // Demo mode - uses public demo API endpoints
   authToken?: string; // 認證 token（預覽模式用 teacher token）
   itemAnalysisState?: ItemAnalysisState; // 🎯 當前項目的分析狀態
   onUploadSuccess?: (index: number, gcsUrl: string, progressId: number) => void; // 上傳成功回調
@@ -126,13 +128,14 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   onFileUpload,
   formatTime = (s) =>
     `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   progressId: _progressId, // Legacy prop (not used with Azure direct calls)
   progressIds = [], // 接收 progress_id 數組
   initialAssessmentResults,
   readOnly = false, // 唯讀模式
   assignmentId,
   isPreviewMode = false, // 預覽模式
+  isDemoMode = false, // Demo mode
   authToken, // 認證 token
   itemAnalysisState, // 🎯 當前項目的分析狀態
   onUploadSuccess,
@@ -144,7 +147,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   const currentQuestion = items[currentQuestionIndex];
 
   // 🚀 Azure Speech Service hook for direct API calls
-  const { analyzePronunciation } = useAzurePronunciation();
+  // Use demo hook when in demo mode (no authentication required)
+  const regularHook = useAzurePronunciation();
+  const demoHook = useDemoAzurePronunciation();
+  const { analyzePronunciation } = isDemoMode ? demoHook : regularHook;
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -530,9 +536,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
 
       toast.success(t("groupedQuestionsTemplate.messages.assessmentComplete"));
 
-      // 🎯 背景上傳音檔和分析結果（不阻塞 UI，僅在非預覽模式）
+      // 🎯 背景上傳音檔和分析結果（不阻塞 UI，僅在非預覽模式且非 Demo 模式）
       if (
         !isPreviewMode &&
+        !isDemoMode &&
         typeof audioUrl === "string" &&
         audioUrl.startsWith("blob:")
       ) {
@@ -735,9 +742,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           setCurrentTime(0);
                           setDuration(0);
 
-                          // 🎯 Issue #75: 呼叫後端 DELETE API 清空 DB (僅在非預覽模式)
+                          // 🎯 Issue #75: 呼叫後端 DELETE API 清空 DB (僅在非預覽模式且非 Demo 模式)
                           if (
                             !isPreviewMode &&
+                            !isDemoMode &&
                             assignmentId &&
                             currentQuestionIndex !== undefined
                           ) {
@@ -783,7 +791,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                           // 清除前端狀態 - 必須創建新物件才能觸發重新渲染
                           setAssessmentResults((prev) => {
                             // Remove the key using destructuring
-                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
                             const { [currentQuestionIndex]: _, ...newResults } =
                               prev;
                             return newResults;
@@ -1056,9 +1064,10 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                 >
                   <button
                     onClick={async () => {
-                      // 🎯 Issue #75: 呼叫後端 DELETE API 清空 DB (僅在非預覽模式)
+                      // 🎯 Issue #75: 呼叫後端 DELETE API 清空 DB (僅在非預覽模式且非 Demo 模式)
                       if (
                         !isPreviewMode &&
+                        !isDemoMode &&
                         assignmentId &&
                         currentQuestionIndex !== undefined
                       ) {
@@ -1103,7 +1112,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                       // 清除前端狀態 - 必須創建新物件才能觸發重新渲染
                       setAssessmentResults((prev) => {
                         // Remove the key using destructuring
-                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
                         const { [currentQuestionIndex]: _, ...newResults } =
                           prev;
                         return newResults;

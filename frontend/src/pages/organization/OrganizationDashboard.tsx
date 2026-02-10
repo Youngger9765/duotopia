@@ -6,6 +6,8 @@ import { OrganizationTree } from "@/components/organization/OrganizationTree";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, School, Users, GraduationCap } from "lucide-react";
 import { API_URL } from "@/config/api";
+import { OrganizationPointsBalance } from "@/components/OrganizationPointsBalance";
+import { OrganizationPointsHistory } from "@/components/OrganizationPointsHistory";
 
 interface OrganizationStats {
   total_organizations: number;
@@ -281,6 +283,18 @@ export default function OrganizationDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Points Section - Only show for specific organization */}
+      {selectedNode && selectedNode.type === "organization" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1">
+            <OrganizationPointsBalance organizationId={selectedNode.data.id} />
+          </div>
+          <div className="lg:col-span-2">
+            <OrganizationPointsHistory organizationId={selectedNode.data.id} />
+          </div>
+        </div>
+      )}
 
       {/* Organization Tree */}
       <Card>

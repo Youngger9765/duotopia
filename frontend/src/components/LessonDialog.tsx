@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { AlertTriangle } from "lucide-react";
 import { apiClient } from "@/lib/api";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { toast } from "sonner";
 
 interface Lesson {
@@ -30,6 +31,10 @@ interface LessonDialogProps {
   onClose: () => void;
   onSave: (lesson: Lesson) => void;
   onDelete?: (lessonId: number) => void;
+  /** Custom API base path for school-level materials (e.g., `/api/schools/{schoolId}`) */
+  apiBasePath?: string;
+  /** Auth token for API calls (required when using apiBasePath) */
+  authToken?: string;
 }
 
 export function LessonDialog({
@@ -40,8 +45,11 @@ export function LessonDialog({
   onClose,
   onSave,
   onDelete,
+  apiBasePath,
+  authToken,
 }: LessonDialogProps) {
   const { t } = useTranslation();
+  const token = useTeacherAuthStore((state) => state.token);
   const [formData, setFormData] = useState<Lesson>({
     name: "",
     description: "",
@@ -86,21 +94,63 @@ export function LessonDialog({
     setLoading(true);
     try {
       if (dialogType === "create" && programId) {
-        const newLesson = await apiClient.createLesson(programId, {
-          name: formData.name,
-          description: formData.description,
-          order_index: formData.order_index,
-        });
+        let newLesson: Lesson;
+        if (apiBasePath) {
+          // Use custom API path for school-level materials
+          const response = await fetch(
+            `${apiBasePath}/programs/${programId}/lessons`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${authToken || token}`,
+              },
+              body: JSON.stringify({
+                name: formData.name,
+                description: formData.description,
+                order_index: formData.order_index,
+              }),
+            },
+          );
+          if (!response.ok) throw new Error("Failed to create lesson");
+          newLesson = await response.json();
+        } else {
+          newLesson = (await apiClient.createLesson(programId, {
+            name: formData.name,
+            description: formData.description,
+            order_index: formData.order_index,
+          })) as Lesson;
+        }
         toast.success(
           t("dialogs.lessonDialog.success.created", { name: formData.name }),
         );
-        onSave(newLesson as Lesson);
+        onSave(newLesson);
       } else if (dialogType === "edit" && lesson?.id && programId) {
-        await apiClient.updateLesson(lesson.id, {
-          name: formData.name,
-          description: formData.description,
-          order_index: formData.order_index,
-        });
+        if (apiBasePath) {
+          // Use custom API path for school-level materials
+          const response = await fetch(
+            `${apiBasePath}/programs/lessons/${lesson.id}`,
+            {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${authToken || token}`,
+              },
+              body: JSON.stringify({
+                name: formData.name,
+                description: formData.description,
+                order_index: formData.order_index,
+              }),
+            },
+          );
+          if (!response.ok) throw new Error("Failed to update lesson");
+        } else {
+          await apiClient.updateLesson(lesson.id, {
+            name: formData.name,
+            description: formData.description,
+            order_index: formData.order_index,
+          });
+        }
         toast.success(
           t("dialogs.lessonDialog.success.updated", { name: formData.name }),
         );
