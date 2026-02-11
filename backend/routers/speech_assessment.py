@@ -37,6 +37,7 @@ from services.quota_service import QuotaService
 from services.organization_points_service import OrganizationPointsService
 from services.bigquery_logger import get_bigquery_logger
 from sqlalchemy.orm import joinedload
+from sqlalchemy import cast, String
 
 # 設定 logger
 logger = logging.getLogger(__name__)
@@ -1400,7 +1401,7 @@ async def upload_pronunciation_analysis(
             # PointUsageLog 使用 feature_detail (JSON) 而非 description
             existing_quota_log = (
                 db.query(PointUsageLog)
-                .filter(PointUsageLog.feature_detail["analysis_id"].astext == analysis_id)
+                .filter(cast(PointUsageLog.feature_detail["analysis_id"], String) == analysis_id)
                 .first()
             )
 
