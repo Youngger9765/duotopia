@@ -1397,9 +1397,10 @@ async def upload_pronunciation_analysis(
                 .filter(OrganizationPointsLog.description.contains(f"analysis_id={analysis_id}"))
                 .first()
             )
+            # PointUsageLog 使用 feature_detail (JSON) 而非 description
             existing_quota_log = (
                 db.query(PointUsageLog)
-                .filter(PointUsageLog.description.contains(f"analysis_id={analysis_id}"))
+                .filter(PointUsageLog.feature_detail["analysis_id"].astext == analysis_id)
                 .first()
             )
 
