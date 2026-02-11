@@ -155,12 +155,12 @@ async def create_content(
     except ValueError:
         content_type = ContentType.EXAMPLE_SENTENCES
 
-    # 決定 Content 的難度等級
-    # 優先順序：前端指定 > 繼承 Program > 預設 A1
-    content_level = content_data.level
-    if not content_level:
-        # 如果前端沒有指定，繼承 Program 的難度等級
-        content_level = lesson.program.level if hasattr(lesson, "program") and lesson.program else "A1"
+    # Content 的難度等級直接從 Program 繼承
+    # 注意：lesson.program.level 是 ProgramLevel Enum，需要轉換為字串
+    if lesson.program and lesson.program.level:
+        content_level = lesson.program.level.value  # 取得 Enum 的字串值
+    else:
+        content_level = "A1"  # 預設值（理論上不應該發生）
 
     # 建立 Content（不再使用 items 欄位）
     content = Content(
