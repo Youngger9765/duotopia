@@ -40,6 +40,7 @@ import {
   Clock,
   ChevronDown,
 } from "lucide-react";
+import { getContentTypeIcon } from "@/lib/contentTypeIcon";
 import { toast } from "sonner";
 
 export default function ResourceMaterialsPage() {
@@ -76,7 +77,10 @@ function ContentItemAccordion({
       >
         <div className="flex items-center space-x-2 flex-1 min-w-0">
           <div className="w-7 h-7 bg-purple-100 rounded-md flex items-center justify-center flex-shrink-0">
-            <FileText className="h-4 w-4 text-purple-600" />
+            {(() => {
+              const Icon = getContentTypeIcon(content.type);
+              return <Icon className="h-4 w-4 text-purple-600" />;
+            })()}
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm truncate">{content.title}</p>

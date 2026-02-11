@@ -1,12 +1,13 @@
 import { TreeNodeConfig } from "./RecursiveTreeAccordion";
-import { BookOpen, ListOrdered, FileText, Clock } from "lucide-react";
+import { BookOpen, ListOrdered, Clock } from "lucide-react";
+import { getContentTypeIcon } from "@/lib/contentTypeIcon";
 
 // Content types to hide (legacy types that are no longer used)
 const HIDDEN_CONTENT_TYPES = ["sentence_making"];
 
 // Content layer config (leaf nodes)
 const contentConfig: TreeNodeConfig = {
-  icon: FileText,
+  icon: (item: { type?: string }) => getContentTypeIcon(item.type),
   colorScheme: {
     bg: "bg-gray-50",
     text: "text-gray-900",

@@ -37,6 +37,7 @@ import {
   Trash2,
   Sparkles,
 } from "lucide-react";
+import { getContentTypeIcon } from "@/lib/contentTypeIcon";
 import { apiClient, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -1999,7 +2000,10 @@ export default function ClassroomDetail({
                     {/* Content Type Badge */}
                     <div className="flex items-center space-x-2">
                       <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <FileText className="h-4 w-4 text-purple-600" />
+                        {(() => {
+                          const Icon = getContentTypeIcon(selectedContent.type);
+                          return <Icon className="h-4 w-4 text-purple-600" />;
+                        })()}
                       </div>
                       <div>
                         <p className="font-medium">{selectedContent.type}</p>
