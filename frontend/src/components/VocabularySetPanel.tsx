@@ -1321,6 +1321,7 @@ interface VocabularySetPanelProps {
   onSave?: () => void | Promise<void>;
   // Alternative props for ClassroomDetail usage
   lessonId?: number;
+  programLevel?: string; // Program difficulty level for AI generation
   onCancel?: () => void;
   isOpen?: boolean;
   isCreating?: boolean; // 是否為新增模式
@@ -1332,9 +1333,14 @@ export default function VocabularySetPanel({
   onUpdateContent,
   onSave,
   lessonId,
+  programLevel,
   isCreating = false,
 }: VocabularySetPanelProps) {
   const { t } = useTranslation();
+
+  // 🔥 階段1：Console log 確認有抓到 Program level
+  console.log("[VocabularySetPanel] Program Level:", programLevel);
+
   const [title, setTitle] = useState(t("vocabularySet.defaultTitle"));
   const [rows, setRows] = useState<ContentRow[]>([
     {

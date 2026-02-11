@@ -12,6 +12,7 @@ export interface ProgramTreeProgram {
   id: number;
   name: string;
   description?: string;
+  level?: string; // Program difficulty level (A1, A2, B1, B2, C1, C2, preA)
   lessons?: ProgramTreeLesson[];
 }
 

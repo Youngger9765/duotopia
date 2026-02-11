@@ -161,6 +161,22 @@ export function ProgramTreeView({
 
   const programAPI = useProgramAPI({ scope, organizationId, schoolId });
 
+  // 🔥 Helper: 根據 lessonId 找到對應的 Program level
+  const getProgramLevelByLessonId = (lessonId: number | undefined): string | undefined => {
+    if (!lessonId) return undefined;
+
+    for (const program of programs) {
+      const lesson = program.lessons?.find((l) => l.id === lessonId);
+      if (lesson) {
+        console.log(`[ProgramTreeView] Found Program level for lesson ${lessonId}:`, program.level);
+        return program.level;
+      }
+    }
+
+    console.warn(`[ProgramTreeView] No Program found for lesson ${lessonId}`);
+    return undefined;
+  };
+
   const {
     showReadingEditor,
     editorLessonId,
@@ -694,6 +710,7 @@ export function ProgramTreeView({
               <div className="flex-1 overflow-auto p-6 min-h-0">
                 <ReadingAssessmentPanel
                   lessonId={editorLessonId}
+                  programLevel={getProgramLevelByLessonId(editorLessonId)}
                   isCreating={true}
                   onSave={async (newContent?: Content) => {
                     if (newContent && editorLessonId) {
@@ -751,6 +768,7 @@ export function ProgramTreeView({
                   <ReadingAssessmentPanel
                     content={readingPanelContent}
                     lessonId={editorLessonId}
+                    programLevel={getProgramLevelByLessonId(editorLessonId)}
                     contentId={editorContentId}
                     isCreating={false}
                     onSave={async (updatedContent?: Content) => {
@@ -897,6 +915,7 @@ export function ProgramTreeView({
               <div className="flex-1 overflow-y-auto min-h-0">
                 <VocabularySetPanel
                   lessonId={vocabularySetLessonId}
+                  programLevel={getProgramLevelByLessonId(vocabularySetLessonId)}
                   isCreating={true}
                   onSave={async () => {
                     closeVocabularySetEditor();
@@ -958,6 +977,7 @@ export function ProgramTreeView({
                         : undefined
                     }
                     lessonId={vocabularySetLessonId}
+                    programLevel={getProgramLevelByLessonId(vocabularySetLessonId)}
                     isCreating={false}
                     onSave={async () => {
                       closeVocabularySetEditor();

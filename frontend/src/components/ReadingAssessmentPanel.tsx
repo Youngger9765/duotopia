@@ -1055,6 +1055,7 @@ interface ReadingAssessmentPanelProps {
   onSave?: () => void | Promise<void>;
   // Alternative props for ClassroomDetail usage
   lessonId?: number;
+  programLevel?: string; // Program difficulty level for AI generation
   contentId?: number;
   onCancel?: () => void;
   isOpen?: boolean;
@@ -1068,10 +1069,15 @@ export default function ReadingAssessmentPanel({
   onUpdateContent,
   onSave,
   lessonId,
+  programLevel,
   isCreating = false,
   isAssignmentCopy = false,
 }: ReadingAssessmentPanelProps) {
   const { t } = useTranslation();
+
+  // 🔥 階段1：Console log 確認有抓到 Program level
+  console.log("[ReadingAssessmentPanel] Program Level:", programLevel);
+
   const [title, setTitle] = useState("");
   const [rows, setRows] = useState<ContentRow[]>([
     {
