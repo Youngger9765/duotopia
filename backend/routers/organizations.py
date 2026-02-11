@@ -665,7 +665,7 @@ async def list_organization_teachers(
     db: Session = Depends(get_db),
 ):
     """
-    List all teachers in an organization.
+    List all teachers (including inactive) in an organization.
     Requires teacher to be a member of the organization.
 
     Performance optimization: Uses joinedload to fetch teachers in a single query.
@@ -1127,17 +1127,23 @@ async def update_teacher_role(
     if not target_relation:
         raise HTTPException(404, f"Teacher {teacher_id} not found in organization")
 
+    # Determine the final role (use requested role, fallback to current)
+    final_role = update_data.role or target_relation.role
+
     # Handle is_active change
     if (
         update_data.is_active is not None
         and update_data.is_active != target_relation.is_active
     ):
+        # Prevent deactivating org_owner (must transfer ownership first)
+        if not update_data.is_active and target_relation.role == "org_owner":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="無法停用組織擁有者，請先轉移擁有權",
+            )
         if update_data.is_active:
-            # Re-activating: check teacher_limit (exclude org_owner from count)
-            if (
-                organization.teacher_limit is not None
-                and update_data.role != "org_owner"
-            ):
+            # Re-activating: check teacher_limit (org_owner exempt)
+            if organization.teacher_limit is not None and final_role != "org_owner":
                 active_teacher_count = (
                     db.query(TeacherOrganization)
                     .filter(
@@ -1155,26 +1161,23 @@ async def update_teacher_role(
                     )
         target_relation.is_active = update_data.is_active
 
-    # Only allow role/owner changes on active members
-    if target_relation.is_active:
-        # Handle org_owner transfer
-        if update_data.role == "org_owner":
-            current_owner = (
-                db.query(TeacherOrganization)
-                .filter(
-                    TeacherOrganization.organization_id == org_id,
-                    TeacherOrganization.role == "org_owner",
-                    TeacherOrganization.is_active.is_(True),
-                )
-                .first()
+    # Handle org_owner transfer (only when target is/will be active)
+    if final_role == "org_owner" and target_relation.is_active:
+        current_owner = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.organization_id == org_id,
+                TeacherOrganization.role == "org_owner",
+                TeacherOrganization.is_active.is_(True),
             )
-            if current_owner and current_owner.teacher_id != teacher_id:
-                current_owner.role = "org_admin"
-                current_owner.updated_at = datetime.now(timezone.utc)
+            .first()
+        )
+        if current_owner and current_owner.teacher_id != teacher_id:
+            current_owner.role = "org_admin"
+            current_owner.updated_at = datetime.now(timezone.utc)
 
-        # Update role
-        target_relation.role = update_data.role
-
+    # Update role
+    target_relation.role = final_role
     target_relation.updated_at = datetime.now(timezone.utc)
 
     # Update teacher info if provided
