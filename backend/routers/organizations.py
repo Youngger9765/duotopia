@@ -639,6 +639,7 @@ class TeacherUpdateRequest(BaseModel):
     """Request model for updating teacher in organization"""
 
     role: str  # "org_owner" | "org_admin" | "teacher"
+    is_active: Optional[bool] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
@@ -683,7 +684,6 @@ async def list_organization_teachers(
         )
         .filter(
             TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.is_active.is_(True),
         )
         .all()
     )
@@ -1115,36 +1115,66 @@ async def update_teacher_role(
     if teacher_id == current_teacher.id:
         raise HTTPException(400, "Cannot change your own role")
 
-    # Get target teacher
+    # Get target teacher (include inactive members so we can re-activate them)
     target_relation = (
         db.query(TeacherOrganization)
         .filter(
             TeacherOrganization.teacher_id == teacher_id,
             TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.is_active.is_(True),
         )
         .first()
     )
     if not target_relation:
         raise HTTPException(404, f"Teacher {teacher_id} not found in organization")
 
-    # Handle org_owner transfer
-    if update_data.role == "org_owner":
-        current_owner = (
-            db.query(TeacherOrganization)
-            .filter(
-                TeacherOrganization.organization_id == org_id,
-                TeacherOrganization.role == "org_owner",
-                TeacherOrganization.is_active.is_(True),
-            )
-            .first()
-        )
-        if current_owner and current_owner.teacher_id != teacher_id:
-            current_owner.role = "org_admin"
-            current_owner.updated_at = datetime.now(timezone.utc)
+    # Handle is_active change
+    if (
+        update_data.is_active is not None
+        and update_data.is_active != target_relation.is_active
+    ):
+        if update_data.is_active:
+            # Re-activating: check teacher_limit (exclude org_owner from count)
+            if (
+                organization.teacher_limit is not None
+                and update_data.role != "org_owner"
+            ):
+                active_teacher_count = (
+                    db.query(TeacherOrganization)
+                    .filter(
+                        TeacherOrganization.organization_id == org_id,
+                        TeacherOrganization.is_active.is_(True),
+                        TeacherOrganization.role != "org_owner",
+                        TeacherOrganization.teacher_id != teacher_id,
+                    )
+                    .count()
+                )
+                if active_teacher_count >= organization.teacher_limit:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"已達教師授權上限（{organization.teacher_limit} 位），無法重新啟用",
+                    )
+        target_relation.is_active = update_data.is_active
 
-    # Update role
-    target_relation.role = update_data.role
+    # Only allow role/owner changes on active members
+    if target_relation.is_active:
+        # Handle org_owner transfer
+        if update_data.role == "org_owner":
+            current_owner = (
+                db.query(TeacherOrganization)
+                .filter(
+                    TeacherOrganization.organization_id == org_id,
+                    TeacherOrganization.role == "org_owner",
+                    TeacherOrganization.is_active.is_(True),
+                )
+                .first()
+            )
+            if current_owner and current_owner.teacher_id != teacher_id:
+                current_owner.role = "org_admin"
+                current_owner.updated_at = datetime.now(timezone.utc)
+
+        # Update role
+        target_relation.role = update_data.role
+
     target_relation.updated_at = datetime.now(timezone.utc)
 
     # Update teacher info if provided
@@ -1163,6 +1193,7 @@ async def update_teacher_role(
         "teacher_id": target_relation.teacher_id,
         "organization_id": str(target_relation.organization_id),
         "role": target_relation.role,
+        "is_active": target_relation.is_active,
         "updated_at": target_relation.updated_at.isoformat(),
     }
 
