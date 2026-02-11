@@ -1395,7 +1395,9 @@ export default function VocabularySetPanel({
   const [aiGenerateTargetIndex, setAiGenerateTargetIndex] = useState<
     number | null
   >(null); // null 表示批次生成
-  const [aiGenerateLevel, setAiGenerateLevel] = useState<string>("A1");
+  const [aiGenerateLevel, setAiGenerateLevel] = useState<string>(
+    programLevel || "A1"
+  ); // 🔥 階段2：預設使用 Program level
   const [aiGeneratePrompt, setAiGeneratePrompt] = useState("");
   const [aiGenerateTranslate, setAiGenerateTranslate] = useState(true);
   const [aiGenerateTranslateLang, setAiGenerateTranslateLang] =
@@ -2471,6 +2473,8 @@ export default function VocabularySetPanel({
   // 打開 AI 生成例句對話框
   const handleOpenAIGenerateModal = (index: number | null) => {
     setAiGenerateTargetIndex(index);
+    // 🔥 階段2：每次打開 modal 都重設為 Program level
+    setAiGenerateLevel(programLevel || "A1");
     setAiGenerateModalOpen(true);
   };
 

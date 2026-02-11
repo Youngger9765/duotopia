@@ -155,7 +155,7 @@ async def create_content(
     except ValueError:
         content_type = ContentType.EXAMPLE_SENTENCES
 
-    # Content 的難度等級直接從 Program 繼承
+    # 🔥 階段3：Content 的難度等級直接從 Program 繼承
     # 注意：lesson.program.level 是 ProgramLevel Enum，需要轉換為字串
     if lesson.program and lesson.program.level:
         content_level = lesson.program.level.value  # 取得 Enum 的字串值
@@ -170,7 +170,7 @@ async def create_content(
         target_wpm=content_data.target_wpm,
         target_accuracy=content_data.target_accuracy,
         order_index=order_index,
-        level=content_level,
+        level=content_level,  # 🔥 使用從 Program 繼承的 level
         tags=content_data.tags or [],
     )
     db.add(content)
