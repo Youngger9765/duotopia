@@ -64,7 +64,8 @@ import { CSS } from "@dnd-kit/utilities";
 
 export interface TreeNodeConfig {
   // Display config
-  icon: LucideIcon;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon: LucideIcon | ((item: any) => LucideIcon);
   colorScheme: {
     bg: string;
     text: string;
@@ -238,9 +239,23 @@ function RecursiveTreeNode({
                     <div
                       className={`w-7 h-7 sm:w-9 sm:h-9 ${config.colorScheme.iconBg} rounded-md flex items-center justify-center flex-shrink-0`}
                     >
-                      <config.icon
-                        className={`h-4 w-4 sm:h-5 sm:w-5 ${config.colorScheme.iconText}`}
-                      />
+                      {(() => {
+                        const IconComponent =
+                          typeof config.icon === "function" &&
+                          !("render" in config.icon)
+                            ? (
+                                config.icon as (
+                                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                  item: any,
+                                ) => LucideIcon
+                              )(data)
+                            : (config.icon as LucideIcon);
+                        return (
+                          <IconComponent
+                            className={`h-4 w-4 sm:h-5 sm:w-5 ${config.colorScheme.iconText}`}
+                          />
+                        );
+                      })()}
                     </div>
 
                     {/* Name and description */}
@@ -489,9 +504,23 @@ function RecursiveTreeNode({
               <div
                 className={`w-6 h-6 sm:w-7 sm:h-7 ${config.colorScheme.iconBg} rounded-md flex items-center justify-center flex-shrink-0`}
               >
-                <config.icon
-                  className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${config.colorScheme.iconText}`}
-                />
+                {(() => {
+                  const IconComponent =
+                    typeof config.icon === "function" &&
+                    !("render" in config.icon)
+                      ? (
+                          config.icon as (
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            item: any,
+                          ) => LucideIcon
+                        )(data)
+                      : (config.icon as LucideIcon);
+                  return (
+                    <IconComponent
+                      className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${config.colorScheme.iconText}`}
+                    />
+                  );
+                })()}
               </div>
               <div className="flex-1 min-w-0">
                 <p

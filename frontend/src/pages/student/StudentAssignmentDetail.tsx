@@ -16,10 +16,10 @@ import {
   CheckCircle,
   AlertCircle,
   BarChart3,
-  FileText,
   Headphones,
   Mic,
 } from "lucide-react";
+import { getContentTypeIcon } from "@/lib/contentTypeIcon";
 import {
   StudentAssignment,
   StudentContentProgress,
@@ -243,14 +243,16 @@ export default function StudentAssignmentDetail() {
     }
   };
 
-  const getContentTypeIcon = (type?: string) => {
+  const getContentTypeIconElement = (type?: string) => {
     switch (type) {
       case "reading_assessment":
         return <Mic className="h-4 w-4" />;
       case "listening":
         return <Headphones className="h-4 w-4" />;
-      default:
-        return <FileText className="h-4 w-4" />;
+      default: {
+        const Icon = getContentTypeIcon(type);
+        return <Icon className="h-4 w-4" />;
+      }
     }
   };
 
@@ -298,7 +300,7 @@ export default function StudentAssignmentDetail() {
 
   const renderContentProgress = (progress: StudentContentProgress) => {
     const statusDisplay = getStatusDisplay(progress.status);
-    const contentTypeIcon = getContentTypeIcon(progress.content?.type);
+    const contentTypeIcon = getContentTypeIconElement(progress.content?.type);
 
     // 檢查題目的評分狀態
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
