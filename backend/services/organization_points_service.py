@@ -262,6 +262,9 @@ class OrganizationPointsService:
         description = None
         if feature_detail:
             description = f"feature_type={feature_type}, student_id={student_id}, assignment_id={assignment_id}"
+            # Issue #208: Include analysis_id for idempotency check
+            if "analysis_id" in feature_detail:
+                description += f", analysis_id={feature_detail['analysis_id']}"
 
         usage_log = OrganizationPointsLog(
             organization_id=organization_id,
