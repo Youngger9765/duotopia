@@ -145,6 +145,7 @@ jobs:
           ENV_VARS="$ENV_VARS,AZURE_SPEECH_KEY=${{ secrets.AZURE_SPEECH_KEY }}"
           ENV_VARS="$ENV_VARS,AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }}"
           ENV_VARS="$ENV_VARS,AZURE_SPEECH_ENDPOINT=${{ secrets.AZURE_SPEECH_ENDPOINT }}"
+          ENV_VARS="$ENV_VARS,DEMO_ALLOWED_ORIGINS=${FRONTEND_URL}"
           ENV_VARS="$ENV_VARS,GCP_PROJECT_ID=${PROJECT_ID}"
           ENV_VARS="$ENV_VARS,REGION=${REGION}"
           ENV_VARS="$ENV_VARS,GCS_BUCKET_NAME=duotopia-audio"
@@ -329,13 +330,14 @@ jobs:
 
           echo "📝 Frontend URL: ${FRONTEND_URL}"
 
-          # Update only the FRONTEND_URL environment variable
+          # Update FRONTEND_URL and DEMO_ALLOWED_ORIGINS environment variables
           gcloud run services update "${SERVICE}" \
             --platform managed \
             --region ${{ env.REGION }} \
-            --update-env-vars "FRONTEND_URL=${FRONTEND_URL}"
+            --update-env-vars "FRONTEND_URL=${FRONTEND_URL},DEMO_ALLOWED_ORIGINS=${FRONTEND_URL}"
 
           echo "✅ Backend FRONTEND_URL updated to: ${FRONTEND_URL}"
+          echo "✅ Backend DEMO_ALLOWED_ORIGINS updated to: ${FRONTEND_URL}"
 
   cleanup-images:
     runs-on: ubuntu-latest
