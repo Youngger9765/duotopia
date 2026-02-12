@@ -1321,6 +1321,7 @@ interface VocabularySetPanelProps {
   onSave?: () => void | Promise<void>;
   // Alternative props for ClassroomDetail usage
   lessonId?: number;
+  programLevel?: string; // Program difficulty level for AI generation
   onCancel?: () => void;
   isOpen?: boolean;
   isCreating?: boolean; // 是否為新增模式
@@ -1332,9 +1333,11 @@ export default function VocabularySetPanel({
   onUpdateContent,
   onSave,
   lessonId,
+  programLevel,
   isCreating = false,
 }: VocabularySetPanelProps) {
   const { t } = useTranslation();
+
   const [title, setTitle] = useState(t("vocabularySet.defaultTitle"));
   const [rows, setRows] = useState<ContentRow[]>([
     {
@@ -1389,7 +1392,9 @@ export default function VocabularySetPanel({
   const [aiGenerateTargetIndex, setAiGenerateTargetIndex] = useState<
     number | null
   >(null); // null 表示批次生成
-  const [aiGenerateLevel, setAiGenerateLevel] = useState<string>("A1");
+  const [aiGenerateLevel, setAiGenerateLevel] = useState<string>(
+    programLevel || "A1"
+  ); // 🔥 階段2：預設使用 Program level
   const [aiGeneratePrompt, setAiGeneratePrompt] = useState("");
   const [aiGenerateTranslate, setAiGenerateTranslate] = useState(true);
   const [aiGenerateTranslateLang, setAiGenerateTranslateLang] =
@@ -2461,6 +2466,8 @@ export default function VocabularySetPanel({
   // 打開 AI 生成例句對話框
   const handleOpenAIGenerateModal = (index: number | null) => {
     setAiGenerateTargetIndex(index);
+    // 🔥 階段2：每次打開 modal 都重設為 Program level
+    setAiGenerateLevel(programLevel || "A1");
     setAiGenerateModalOpen(true);
   };
 

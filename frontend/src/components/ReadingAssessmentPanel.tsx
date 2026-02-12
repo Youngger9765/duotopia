@@ -1058,6 +1058,7 @@ interface ReadingAssessmentPanelProps {
   onSave?: () => void | Promise<void>;
   // Alternative props for ClassroomDetail usage
   lessonId?: number;
+  programLevel?: string; // Program difficulty level for AI generation
   contentId?: number;
   onCancel?: () => void;
   isOpen?: boolean;
@@ -1071,10 +1072,12 @@ export default function ReadingAssessmentPanel({
   onUpdateContent,
   onSave,
   lessonId,
+  // programLevel - reserved for future AI generation features
   isCreating = false,
   isAssignmentCopy = false,
 }: ReadingAssessmentPanelProps) {
   const { t } = useTranslation();
+
   const [title, setTitle] = useState("");
   const [rows, setRows] = useState<ContentRow[]>([
     {

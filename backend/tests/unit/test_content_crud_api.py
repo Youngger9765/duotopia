@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from main import app
 from database import get_db
-from models import Teacher, Program, Classroom, Lesson
+from models import Teacher, Program, Classroom, Lesson, ProgramLevel
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from passlib.context import CryptContext
@@ -287,6 +287,127 @@ class TestContentCRUD:
             headers={"Authorization": "Bearer invalid_token"},
         )
         assert response.status_code == 401
+
+    def test_content_inherits_program_level(self, auth_token):
+        """測試 Content 正確繼承 Program 的 level (#250)
+
+        驗證：
+        1. Content 應該自動繼承所屬 Program 的 level
+        2. 即使前端沒有傳 level，Content 也應該有正確的 level 值
+        3. ProgramLevel Enum 應該正確轉換為字串存入 Content.level
+        """
+        # 創建一個 B2 級別的 Program
+        db = TestingSessionLocal()
+        program_b2 = Program(
+            name="B2 Test Program",
+            description="B2 Level Program",
+            teacher_id=1,
+            classroom_id=1,
+            level=ProgramLevel.B2,  # 設定為 B2
+        )
+        db.add(program_b2)
+        db.commit()
+        program_b2_id = program_b2.id
+
+        # 創建一個 Lesson
+        lesson_b2 = Lesson(
+            name="B2 Test Lesson",
+            description="B2 Lesson",
+            program_id=program_b2_id,
+            order_index=1,
+            estimated_minutes=30,
+        )
+        db.add(lesson_b2)
+        db.commit()
+        lesson_b2_id = lesson_b2.id
+        db.close()
+
+        # 創建 Content（前端沒有傳 level）
+        response = client.post(
+            f"/api/teachers/lessons/{lesson_b2_id}/contents",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "title": "B2 Test Content",
+                "items": [
+                    {"text": "Advanced English", "translation": "進階英文"},
+                ],
+                "target_wpm": 120,
+                "target_accuracy": 95.0,
+                "order_index": 1,
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # 驗證 Content 繼承了 Program 的 level
+        assert "level" in data
+        assert data["level"] == "B2", f"Expected level 'B2', got '{data['level']}'"
+
+        # 讀取 Content 再次驗證
+        content_id = data["id"]
+        get_response = client.get(
+            f"/api/teachers/contents/{content_id}",
+            headers={"Authorization": f"Bearer {auth_token}"},
+        )
+
+        assert get_response.status_code == 200
+        content_data = get_response.json()
+        assert content_data["level"] == "B2"
+
+    def test_content_inherits_different_program_levels(self, auth_token):
+        """測試不同 Program level 的繼承（PreA, A1, C2）
+
+        驗證所有可能的 ProgramLevel Enum 值都能正確轉換
+        """
+        db = TestingSessionLocal()
+
+        # 測試案例：(ProgramLevel Enum, 期望的字串值)
+        test_cases = [
+            (ProgramLevel.PRE_A, "preA"),
+            (ProgramLevel.A1, "A1"),
+            (ProgramLevel.C2, "C2"),
+        ]
+
+        for program_level, expected_string in test_cases:
+            # 創建指定 level 的 Program
+            program = Program(
+                name=f"{expected_string} Program",
+                description=f"{expected_string} Level",
+                teacher_id=1,
+                classroom_id=1,
+                level=program_level,
+            )
+            db.add(program)
+            db.commit()
+
+            # 創建 Lesson
+            lesson = Lesson(
+                name=f"{expected_string} Lesson",
+                program_id=program.id,
+                order_index=1,
+            )
+            db.add(lesson)
+            db.commit()
+
+            # 創建 Content
+            response = client.post(
+                f"/api/teachers/lessons/{lesson.id}/contents",
+                headers={"Authorization": f"Bearer {auth_token}"},
+                json={
+                    "title": f"{expected_string} Content",
+                    "items": [{"text": "Test", "translation": "測試"}],
+                    "target_wpm": 100,
+                    "target_accuracy": 90.0,
+                },
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["level"] == expected_string, \
+                f"Program level {program_level} should convert to '{expected_string}', got '{data['level']}'"
+
+        db.close()
 
 
 if __name__ == "__main__":
