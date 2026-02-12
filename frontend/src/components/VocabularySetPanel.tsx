@@ -2538,16 +2538,24 @@ export default function VocabularySetPanel({
 
       // 更新 rows
       const newRows = [...rows];
-      const results =
-        (
-          response as {
-            sentences: Array<{
-              sentence: string;
-              translation?: string;
-              word: string;
-            }>;
-          }
-        ).sentences || [];
+      const sentencesData = (
+        response as {
+          sentences?: Array<{
+            sentence: string;
+            translation?: string;
+            word: string;
+          }>;
+        }
+      ).sentences;
+
+      if (!sentencesData || !Array.isArray(sentencesData)) {
+        toast.error(
+          t("vocabularySet.messages.exampleGenerationFailed") ||
+            "例句生成失敗，請稍後再試",
+        );
+        return;
+      }
+      const results = sentencesData;
 
       // 驗證陣列長度是否匹配，防止錯位
       if (results.length !== targetIndices.length) {

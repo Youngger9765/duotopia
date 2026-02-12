@@ -97,6 +97,71 @@ describe("API Error Handling", () => {
     }
   });
 
+  it("🔴 should handle Pydantic validation error array format (422)", async () => {
+    const pydanticErrors = {
+      detail: [
+        {
+          type: "missing",
+          loc: ["body", "students", 0, "birthdate"],
+          msg: "Field required",
+          input: { name: "Test Student" },
+          url: "https://errors.pydantic.dev/2.6/v/missing",
+        },
+        {
+          type: "string_type",
+          loc: ["body", "students", 1, "name"],
+          msg: "Input should be a valid string",
+          input: 123,
+          url: "https://errors.pydantic.dev/2.6/v/string_type",
+        },
+      ],
+    };
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: false,
+      status: 422,
+      json: async () => pydanticErrors,
+    } as Response);
+
+    try {
+      await apiClient.post("/api/schools/s1/students/batch-import", {
+        students: [],
+      });
+      expect.fail("Should have thrown an error");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).isValidationError()).toBe(true);
+      // message should be formatted as "field: msg; field: msg"
+      expect((err as ApiError).message).toBe(
+        "birthdate: Field required; name: Input should be a valid string",
+      );
+    }
+  });
+
+  it("🔴 should handle Pydantic error array with missing loc/msg", async () => {
+    const pydanticErrors = {
+      detail: [
+        { type: "missing" },
+        { type: "value_error", msg: "Custom error" },
+      ],
+    };
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: false,
+      status: 422,
+      json: async () => pydanticErrors,
+    } as Response);
+
+    try {
+      await apiClient.post("/api/test", {});
+      expect.fail("Should have thrown an error");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      // missing loc+msg → fallback "驗證錯誤"; missing loc → use msg directly
+      expect((err as ApiError).message).toBe("驗證錯誤; Custom error");
+    }
+  });
+
   it("✅ should handle network errors gracefully", async () => {
     vi.mocked(global.fetch).mockRejectedValue(
       new Error("Network connection failed"),

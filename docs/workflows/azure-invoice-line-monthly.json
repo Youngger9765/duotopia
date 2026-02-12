@@ -1,0 +1,142 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "everyMonth",
+        "dayOfMonth": 9,
+        "time": "09:00",
+        "timezone": "Asia/Taipei"
+      },
+      "name": "每月 9 號上午 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "id": "c869032f-a931-482a-a92e-33303c73b313",
+      "startNodes": true
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "=https://login.microsoftonline.com/{{$env.AZURE_TENANT_ID}}/oauth2/v2.0/token",
+        "options": {
+          "sendHeaders": true,
+          "bodyContentType": "formUrlencoded"
+        },
+        "sendHeaders": true,
+        "headerParameters": [
+          {
+            "name": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "queryParameters": [],
+        "bodyParameters": [
+          {
+            "name": "grant_type",
+            "value": "client_credentials"
+          },
+          {
+            "name": "client_id",
+            "value": "={{$env.AZURE_CLIENT_ID}}"
+          },
+          {
+            "name": "client_secret",
+            "value": "={{$env.AZURE_CLIENT_SECRET}}"
+          },
+          {
+            "name": "scope",
+            "value": "https://management.azure.com/.default"
+          }
+        ]
+      },
+      "name": "取得 Azure Access Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "id": "40951336-07f7-41a4-9e8c-550117ec88dd",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "=https://management.azure.com/subscriptions/{{$env.AZURE_SUBSCRIPTION_ID}}/providers/Microsoft.CostManagement/query?api-version=2021-10-01",
+        "options": {
+          "sendHeaders": true
+        },
+        "sendHeaders": true,
+        "headerParameters": [
+          {
+            "name": "Authorization",
+            "value": "=Bearer {{$('取得 Azure Access Token').item.json.access_token}}"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "jsonBody": "{\n  \"type\": \"Usage\",\n  \"timeframe\": \"MonthToDate\",\n  \"dataset\": {\n    \"granularity\": \"Daily\",\n    \"aggregation\": {\n      \"totalCost\": {\n        \"name\": \"PreTaxCost\",\n        \"function\": \"Sum\"\n      }\n    }\n  }\n}"
+      },
+      "name": "呼叫 Azure CostManagement API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "id": "e8140409-f1fb-4f67-a720-d306b52a926a",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "functionCode": "const response = $('呼叫 Azure CostManagement API').item.json;\nconst columns = response.properties.columns;\nconst rows = response.properties.rows;\n\nif (!rows || rows.length === 0) {\n  return [];\n}\n\nconst today = new Date();\nconst currentMonth = String(today.getFullYear()) + String(today.getMonth() + 1).padStart(2, '0');\n\nlet monthlyTotal = 0;\nlet currency = 'TWD';\nlet costIndex = -1;\nlet currencyIndex = -1;\n\n// 找到 PreTaxCost 和 Currency 的欄位索引\nfor (let i = 0; i < columns.length; i++) {\n  if (columns[i].name === 'PreTaxCost') costIndex = i;\n  if (columns[i].name === 'Currency') currencyIndex = i;\n}\n\nrows.forEach(row => {\n  const dateStr = String(row[0]);\n  const yearMonth = dateStr.substring(0, 6);\n  \n  if (yearMonth === currentMonth) {\n    if (costIndex >= 0 && row[costIndex] !== undefined) {\n      monthlyTotal += parseFloat(row[costIndex]) || 0;\n    }\n    if (currencyIndex >= 0) {\n      currency = row[currencyIndex];\n    }\n  }\n});\n\nif (monthlyTotal > 0) {\n  const message = `💰 Azure forduotopia 當月成本通知\\n\\n本月累計成本: ${monthlyTotal.toFixed(2)} ${currency}\\n\\n統計至: ${today.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })}`;\n  return [{ json: { formattedMessage: message } }];\n} else {\n  return [];\n}"
+      },
+      "name": "處理成本並組合訊息",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "id": "89b5c378-0136-419b-b0b9-509a259c63c2"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "options": {
+          "sendHeaders": true
+        },
+        "sendHeaders": true,
+        "headerParameters": [
+          {
+            "name": "Authorization",
+            "value": "={{$env.LINE_CHANNEL_ACCESS_TOKEN}}"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "bodyParameters": [],
+        "jsonBody": "{\n  \"to\": \"USER_ID_HERE\",  \n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"{{ $json.formattedMessage }}\"\n    }\n  ]\n}"
+      },
+      "name": "發送 LINE 通知",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "id": "836b1d4c-47fc-4e44-b258-a55808502325",
+      "credentials": {}
+    }
+  ],
+  "connections": {
+    "每月 9 號上午 09:00": [
+      [
+        "取得 Azure Access Token"
+      ]
+    ],
+    "取得 Azure Access Token": [
+      [
+        "呼叫 Azure CostManagement API"
+      ]
+    ],
+    "呼叫 Azure CostManagement API": [
+      [
+        "處理成本並組合訊息"
+      ]
+    ],
+    "處理成本並組合訊息": [
+      [
+        "發送 LINE 通知"
+      ]
+    ]
+  }
+}

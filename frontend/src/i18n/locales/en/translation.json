@@ -3672,6 +3672,7 @@
       "cancel": "Cancel",
       "addItem": "Add Item",
       "confirmPaste": "Confirm Paste",
+      "generating": "Generating...",
       "processing": "Processing...",
       "startRecording": "Start Recording",
       "stopRecording": "Stop Recording",
@@ -3760,7 +3761,10 @@
       "itemsAddedAndSaved": "Added {{added}} items and saved (total {{total}})",
       "itemsAddedSaveToComplete": "Added {{added}} items (total {{total}}), click Save to complete",
       "updateFailedButAudioGenerated": "Update failed, but audio was generated",
-      "items": "items"
+      "items": "items",
+      "batchLimitError": "Maximum {{count}} items per batch, please process in batches",
+      "batchLimitTruncated": "Exceeded limit, only the first {{count}} items will be processed",
+      "batchLimitWarning": "Exceeded {{count}} item limit, only the first {{count}} will be processed"
     },
     "translationLanguages": {
       "chinese": "Chinese",

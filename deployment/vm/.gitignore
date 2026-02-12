@@ -1,0 +1,3 @@
+# Secrets directory should never be committed
+secrets/
+*.env

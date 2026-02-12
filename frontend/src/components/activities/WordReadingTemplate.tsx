@@ -484,6 +484,10 @@ export default function WordReadingTemplate({
         formData.append("progress_id", _progressId.toString());
       }
 
+      // 🎯 Issue #208: Generate unique analysis_id for deduction
+      const analysisId = crypto.randomUUID();
+      formData.append("analysis_id", analysisId);
+
       fetch(`${apiUrl}/api/speech/upload-analysis`, {
         method: "POST",
         headers: {

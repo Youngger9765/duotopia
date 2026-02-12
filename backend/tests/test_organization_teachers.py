@@ -419,3 +419,234 @@ class TestUpdateTeacherRole:
         )
 
         assert response.status_code == 403
+
+
+class TestUpdateTeacherStatus:
+    """Test suite for is_active status changes in PUT /{org_id}/teachers/{teacher_id}"""
+
+    def test_deactivate_and_reactivate_teacher(
+        self,
+        test_client: TestClient,
+        test_db: Session,
+        test_org: Organization,
+        regular_teacher: Teacher,
+        owner_headers: dict,
+    ):
+        """Test deactivating then re-activating a teacher"""
+        teacher_rel = TeacherOrganization(
+            teacher_id=regular_teacher.id,
+            organization_id=test_org.id,
+            role="teacher",
+            is_active=True,
+        )
+        test_db.add(teacher_rel)
+        test_db.commit()
+
+        # Deactivate
+        response = test_client.put(
+            f"/api/organizations/{test_org.id}/teachers/{regular_teacher.id}",
+            json={"role": "teacher", "is_active": False},
+            headers=owner_headers,
+        )
+        assert response.status_code == 200
+        assert response.json()["is_active"] is False
+
+        # Re-activate
+        response = test_client.put(
+            f"/api/organizations/{test_org.id}/teachers/{regular_teacher.id}",
+            json={"role": "teacher", "is_active": True},
+            headers=owner_headers,
+        )
+        assert response.status_code == 200
+        assert response.json()["is_active"] is True
+
+    def test_cannot_deactivate_org_owner(
+        self,
+        test_client: TestClient,
+        test_db: Session,
+        test_org: Organization,
+        org_owner: Teacher,
+        org_admin: Teacher,
+        owner_headers: dict,
+    ):
+        """Test that org_owner cannot be deactivated (must transfer ownership first)"""
+        # Add org_admin so they can make the request
+        admin_rel = TeacherOrganization(
+            teacher_id=org_admin.id,
+            organization_id=test_org.id,
+            role="org_admin",
+            is_active=True,
+        )
+        test_db.add(admin_rel)
+        test_db.commit()
+
+        casbin_service = get_casbin_service()
+        casbin_service.add_role_for_user(
+            org_admin.id, "org_admin", f"org-{test_org.id}"
+        )
+
+        admin_token = create_access_token({"sub": str(org_admin.id), "type": "teacher"})
+        admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+        # Try to deactivate org_owner
+        response = test_client.put(
+            f"/api/organizations/{test_org.id}/teachers/{org_owner.id}",
+            json={"role": "org_owner", "is_active": False},
+            headers=admin_headers,
+        )
+        assert response.status_code == 400
+        assert "擁有者" in response.json()["detail"]
+
+    def test_teacher_limit_enforced_on_reactivation(
+        self,
+        test_client: TestClient,
+        test_db: Session,
+        org_owner: Teacher,
+        owner_headers: dict,
+    ):
+        """Test that teacher_limit is checked when re-activating a teacher"""
+        # Create org with teacher_limit=1
+        org = Organization(
+            name=f"Limited Org {uuid.uuid4().hex[:8]}",
+            display_name="Limited Org",
+            is_active=True,
+            teacher_limit=1,
+        )
+        test_db.add(org)
+        test_db.commit()
+        test_db.refresh(org)
+
+        # Add owner
+        owner_rel = TeacherOrganization(
+            teacher_id=org_owner.id,
+            organization_id=org.id,
+            role="org_owner",
+            is_active=True,
+        )
+        test_db.add(owner_rel)
+        test_db.commit()
+
+        casbin_service = get_casbin_service()
+        casbin_service.add_role_for_user(org_owner.id, "org_owner", f"org-{org.id}")
+
+        # Add active teacher (fills the limit)
+        active_teacher = Teacher(
+            email=f"active_{uuid.uuid4().hex[:8]}@test.com",
+            password_hash=get_password_hash("password123"),
+            name="Active Teacher",
+            is_active=True,
+        )
+        test_db.add(active_teacher)
+        test_db.commit()
+        test_db.refresh(active_teacher)
+
+        active_rel = TeacherOrganization(
+            teacher_id=active_teacher.id,
+            organization_id=org.id,
+            role="teacher",
+            is_active=True,
+        )
+        test_db.add(active_rel)
+        test_db.commit()
+
+        # Add inactive teacher
+        inactive_teacher = Teacher(
+            email=f"inactive_{uuid.uuid4().hex[:8]}@test.com",
+            password_hash=get_password_hash("password123"),
+            name="Inactive Teacher",
+            is_active=True,
+        )
+        test_db.add(inactive_teacher)
+        test_db.commit()
+        test_db.refresh(inactive_teacher)
+
+        inactive_rel = TeacherOrganization(
+            teacher_id=inactive_teacher.id,
+            organization_id=org.id,
+            role="teacher",
+            is_active=False,
+        )
+        test_db.add(inactive_rel)
+        test_db.commit()
+
+        # Try to re-activate - should fail (limit=1, already 1 active)
+        response = test_client.put(
+            f"/api/organizations/{org.id}/teachers/{inactive_teacher.id}",
+            json={"role": "teacher", "is_active": True},
+            headers=owner_headers,
+        )
+        assert response.status_code == 400
+        assert "授權上限" in response.json()["detail"]
+
+    def test_update_role_and_activate_together(
+        self,
+        test_client: TestClient,
+        test_db: Session,
+        test_org: Organization,
+        regular_teacher: Teacher,
+        owner_headers: dict,
+    ):
+        """Test that role change and activation can happen in a single request"""
+        # Add inactive teacher
+        teacher_rel = TeacherOrganization(
+            teacher_id=regular_teacher.id,
+            organization_id=test_org.id,
+            role="teacher",
+            is_active=False,
+        )
+        test_db.add(teacher_rel)
+        test_db.commit()
+
+        # Activate and promote to org_admin in one request
+        response = test_client.put(
+            f"/api/organizations/{test_org.id}/teachers/{regular_teacher.id}",
+            json={"role": "org_admin", "is_active": True},
+            headers=owner_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["role"] == "org_admin"
+        assert data["is_active"] is True
+
+    def test_promote_inactive_to_org_owner_and_activate(
+        self,
+        test_client: TestClient,
+        test_db: Session,
+        test_org: Organization,
+        org_owner: Teacher,
+        regular_teacher: Teacher,
+        owner_headers: dict,
+    ):
+        """Test promoting an inactive teacher to org_owner while activating them"""
+        # Add inactive teacher
+        teacher_rel = TeacherOrganization(
+            teacher_id=regular_teacher.id,
+            organization_id=test_org.id,
+            role="teacher",
+            is_active=False,
+        )
+        test_db.add(teacher_rel)
+        test_db.commit()
+
+        # Activate and promote to org_owner in one request
+        response = test_client.put(
+            f"/api/organizations/{test_org.id}/teachers/{regular_teacher.id}",
+            json={"role": "org_owner", "is_active": True},
+            headers=owner_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["role"] == "org_owner"
+        assert data["is_active"] is True
+
+        # Verify old owner was demoted to org_admin
+        test_db.expire_all()
+        old_owner_rel = (
+            test_db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == org_owner.id,
+                TeacherOrganization.organization_id == test_org.id,
+            )
+            .first()
+        )
+        assert old_owner_rel.role == "org_admin"
