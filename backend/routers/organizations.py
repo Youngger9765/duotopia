@@ -1188,6 +1188,33 @@ async def update_teacher_role(
         if update_data.last_name:
             target_teacher.last_name = update_data.last_name
 
+    db.flush()
+
+    # Re-verify teacher limit AFTER update to prevent race condition (TOCTOU)
+    # Matches the pattern in invite/add endpoints (see RACE_CONDITION_FIX.md)
+    if (
+        target_relation.is_active
+        and organization.teacher_limit is not None
+        and target_relation.role != "org_owner"
+    ):
+        from sqlalchemy import func
+
+        actual_count = (
+            db.query(func.count(TeacherOrganization.id))
+            .filter(
+                TeacherOrganization.organization_id == org_id,
+                TeacherOrganization.is_active.is_(True),
+                TeacherOrganization.role != "org_owner",
+            )
+            .scalar()
+        )
+        if actual_count > organization.teacher_limit:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"已達教師授權上限（{organization.teacher_limit} 位），無法重新啟用",
+            )
+
     db.commit()
     db.refresh(target_relation)
 

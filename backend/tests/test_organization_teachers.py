@@ -607,3 +607,46 @@ class TestUpdateTeacherStatus:
         data = response.json()
         assert data["role"] == "org_admin"
         assert data["is_active"] is True
+
+    def test_promote_inactive_to_org_owner_and_activate(
+        self,
+        test_client: TestClient,
+        test_db: Session,
+        test_org: Organization,
+        org_owner: Teacher,
+        regular_teacher: Teacher,
+        owner_headers: dict,
+    ):
+        """Test promoting an inactive teacher to org_owner while activating them"""
+        # Add inactive teacher
+        teacher_rel = TeacherOrganization(
+            teacher_id=regular_teacher.id,
+            organization_id=test_org.id,
+            role="teacher",
+            is_active=False,
+        )
+        test_db.add(teacher_rel)
+        test_db.commit()
+
+        # Activate and promote to org_owner in one request
+        response = test_client.put(
+            f"/api/organizations/{test_org.id}/teachers/{regular_teacher.id}",
+            json={"role": "org_owner", "is_active": True},
+            headers=owner_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["role"] == "org_owner"
+        assert data["is_active"] is True
+
+        # Verify old owner was demoted to org_admin
+        test_db.expire_all()
+        old_owner_rel = (
+            test_db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == org_owner.id,
+                TeacherOrganization.organization_id == test_org.id,
+            )
+            .first()
+        )
+        assert old_owner_rel.role == "org_admin"
