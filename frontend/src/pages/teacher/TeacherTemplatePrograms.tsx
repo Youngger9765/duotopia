@@ -151,7 +151,6 @@ function TeacherTemplateProgramsInner() {
     }
   };
 
-
   // Program handlers
   const handleCreateProgram = () => {
     setSelectedProgram(null);
@@ -620,7 +619,10 @@ function TeacherTemplateProgramsInner() {
             <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
               <ReadingAssessmentPanel
                 lessonId={editorLessonId}
-                programLevel={getProgramLevelByLessonId(programs, editorLessonId)}
+                programLevel={getProgramLevelByLessonId(
+                  programs,
+                  editorLessonId,
+                )}
                 isCreating={true}
                 onSave={async (
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -725,7 +727,10 @@ function TeacherTemplateProgramsInner() {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     items: (selectedContent.items || []) as any,
                   }}
-                  programLevel={getProgramLevelByLessonId(programs, editorLessonId)}
+                  programLevel={getProgramLevelByLessonId(
+                    programs,
+                    editorLessonId,
+                  )}
                   onSave={async (
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     updatedContent?: any,
@@ -791,7 +796,10 @@ function TeacherTemplateProgramsInner() {
                     id: vocabularySetContentId || undefined,
                   }}
                   lessonId={vocabularySetLessonId}
-                  programLevel={getProgramLevelByLessonId(programs, vocabularySetLessonId)}
+                  programLevel={getProgramLevelByLessonId(
+                    programs,
+                    vocabularySetLessonId,
+                  )}
                   onUpdateContent={(updatedContent) => {
                     console.log("Content updated:", updatedContent);
                   }}
@@ -853,7 +861,10 @@ function TeacherTemplateProgramsInner() {
                   content={{ id: vocabularySetContentId }}
                   editingContent={{ id: vocabularySetContentId }}
                   lessonId={vocabularySetLessonId}
-                  programLevel={getProgramLevelByLessonId(programs, vocabularySetLessonId)}
+                  programLevel={getProgramLevelByLessonId(
+                    programs,
+                    vocabularySetLessonId,
+                  )}
                   onUpdateContent={(updatedContent) => {
                     console.log("Content updated:", updatedContent);
                   }}

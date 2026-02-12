@@ -1393,7 +1393,7 @@ export default function VocabularySetPanel({
     number | null
   >(null); // null 表示批次生成
   const [aiGenerateLevel, setAiGenerateLevel] = useState<string>(
-    programLevel || "A1"
+    programLevel || "A1",
   ); // 🔥 階段2：預設使用 Program level
   const [aiGeneratePrompt, setAiGeneratePrompt] = useState("");
   const [aiGenerateTranslate, setAiGenerateTranslate] = useState(true);
