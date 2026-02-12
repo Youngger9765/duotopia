@@ -1773,7 +1773,7 @@ export default function ReadingAssessmentPanel({
 
     // 檢查是否超過上限
     if (itemsToTranslate.length > MAX_BATCH_ITEMS) {
-      toast.error(`一次最多翻譯 ${MAX_BATCH_ITEMS} 個例句，請分批處理`);
+      toast.error(t("contentEditor.messages.batchLimitError", { count: MAX_BATCH_ITEMS }));
       return;
     }
 
@@ -1858,10 +1858,10 @@ export default function ReadingAssessmentPanel({
       return;
     }
 
-    // 檢查是否超過上限
+    // 超過上限時自動截斷
     if (lines.length > MAX_BATCH_ITEMS) {
-      toast.error(`一次最多翻譯 ${MAX_BATCH_ITEMS} 個例句，請分批處理`);
-      return;
+      toast.warning(t("contentEditor.messages.batchLimitTruncated", { count: MAX_BATCH_ITEMS }));
+      lines.length = MAX_BATCH_ITEMS;
     }
 
     setIsPasting(true);
@@ -2339,20 +2339,7 @@ export default function ReadingAssessmentPanel({
               <textarea
                 value={batchPasteText}
                 onChange={(e) => {
-                  // 過濾出非空行（只計算有內容的項目）
-                  const nonEmptyLines = e.target.value
-                    .split("\n")
-                    .map((line) => line.trim())
-                    .filter((line) => line.length > 0);
-
-                  // 限制最多 MAX_BATCH_ITEMS 個項目（空行不計入）
-                  if (nonEmptyLines.length > MAX_BATCH_ITEMS) {
-                    const limitedText = nonEmptyLines.slice(0, MAX_BATCH_ITEMS).join("\n");
-                    setBatchPasteText(limitedText);
-                    toast.warning(`已自動限制為 ${MAX_BATCH_ITEMS} 個項目`);
-                  } else {
-                    setBatchPasteText(e.target.value);
-                  }
+                  setBatchPasteText(e.target.value);
                 }}
                 placeholder="put&#10;Put it away.&#10;It's time to put everything away. Right now."
                 className="w-full min-h-80 max-h-[60vh] px-4 py-3 border-2 border-gray-300 rounded-lg font-mono text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-y overflow-y-auto"
@@ -2364,9 +2351,9 @@ export default function ReadingAssessmentPanel({
                   {t("contentEditor.messages.items")}
                 </span>
                 {batchPasteText.split("\n").filter((line) => line.trim())
-                  .length >= MAX_BATCH_ITEMS && (
+                  .length > MAX_BATCH_ITEMS && (
                   <span className="text-amber-600 font-medium">
-                    最多支援 {MAX_BATCH_ITEMS} 個項目
+                    {t("contentEditor.messages.batchLimitWarning", { count: MAX_BATCH_ITEMS })}
                   </span>
                 )}
               </div>
@@ -2470,7 +2457,7 @@ export default function ReadingAssessmentPanel({
               disabled={isPasting}
               className="px-6 py-2 text-base bg-blue-600 hover:bg-blue-700"
             >
-              {isPasting ? "生成中..." : t("contentEditor.buttons.confirmPaste")}
+              {isPasting ? t("contentEditor.buttons.generating") : t("contentEditor.buttons.confirmPaste")}
             </Button>
           </DialogFooter>
         </DialogContent>
