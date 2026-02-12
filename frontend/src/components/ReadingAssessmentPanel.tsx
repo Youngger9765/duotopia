@@ -55,6 +55,9 @@ const TRANSLATION_LANGUAGES = [
   { value: "korean" as const, labelKey: "korean", code: "ko" },
 ];
 
+// 批次貼上/翻譯的項目上限
+const MAX_BATCH_ITEMS = 25;
+
 interface ContentRow {
   id: string | number;
   text: string;
@@ -1768,9 +1771,9 @@ export default function ReadingAssessmentPanel({
       return;
     }
 
-    // 檢查是否超過 25 個例句
-    if (itemsToTranslate.length > 25) {
-      toast.error("一次最多翻譯 25 個例句，請分批處理");
+    // 檢查是否超過上限
+    if (itemsToTranslate.length > MAX_BATCH_ITEMS) {
+      toast.error(`一次最多翻譯 ${MAX_BATCH_ITEMS} 個例句，請分批處理`);
       return;
     }
 
@@ -1855,9 +1858,9 @@ export default function ReadingAssessmentPanel({
       return;
     }
 
-    // 檢查是否超過 25 個例句
-    if (lines.length > 25) {
-      toast.error("一次最多翻譯 25 個例句，請分批處理");
+    // 檢查是否超過上限
+    if (lines.length > MAX_BATCH_ITEMS) {
+      toast.error(`一次最多翻譯 ${MAX_BATCH_ITEMS} 個例句，請分批處理`);
       return;
     }
 
@@ -2342,10 +2345,11 @@ export default function ReadingAssessmentPanel({
                     .map((line) => line.trim())
                     .filter((line) => line.length > 0);
 
-                  // 限制最多 25 個項目（空行不計入）
-                  if (nonEmptyLines.length > 25) {
-                    const limitedText = nonEmptyLines.slice(0, 25).join("\n");
+                  // 限制最多 MAX_BATCH_ITEMS 個項目（空行不計入）
+                  if (nonEmptyLines.length > MAX_BATCH_ITEMS) {
+                    const limitedText = nonEmptyLines.slice(0, MAX_BATCH_ITEMS).join("\n");
                     setBatchPasteText(limitedText);
+                    toast.warning(`已自動限制為 ${MAX_BATCH_ITEMS} 個項目`);
                   } else {
                     setBatchPasteText(e.target.value);
                   }
@@ -2360,9 +2364,9 @@ export default function ReadingAssessmentPanel({
                   {t("contentEditor.messages.items")}
                 </span>
                 {batchPasteText.split("\n").filter((line) => line.trim())
-                  .length >= 25 && (
+                  .length >= MAX_BATCH_ITEMS && (
                   <span className="text-amber-600 font-medium">
-                    最多支援 25 個項目
+                    最多支援 {MAX_BATCH_ITEMS} 個項目
                   </span>
                 )}
               </div>
