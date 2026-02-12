@@ -17,7 +17,10 @@ const DEBUG = false; // 暫時關閉以便追蹤其他問題
 export class ApiError extends Error {
   constructor(
     public status: number,
-    public detail: string | { message?: string; errors?: string[] },
+    public detail:
+      | string
+      | { message?: string; errors?: string[] }
+      | Array<{ msg?: string; loc?: (string | number)[]; type?: string }>,
     public originalError?: unknown,
   ) {
     // Extract message for Error base class
@@ -26,7 +29,7 @@ export class ApiError extends Error {
       ? detail
           .map((e: { msg?: string; loc?: (string | number)[] }) => {
             const field = e.loc?.slice(-1)[0];
-            return field ? `${field}: ${e.msg}` : (e.msg ?? "Validation error");
+            return field ? `${field}: ${e.msg}` : (e.msg ?? "驗證錯誤");
           })
           .join("; ")
       : typeof detail === "object" && detail?.message
