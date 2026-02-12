@@ -160,7 +160,11 @@ async def create_content(
     content_level = content_data.level
     if not content_level:
         # 如果前端沒有指定，繼承 Program 的難度等級
-        content_level = lesson.program.level if hasattr(lesson, "program") and lesson.program else "A1"
+        content_level = (
+            lesson.program.level
+            if hasattr(lesson, "program") and lesson.program
+            else "A1"
+        )
 
     # 建立 Content（不再使用 items 欄位）
     content = Content(

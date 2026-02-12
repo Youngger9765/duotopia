@@ -636,9 +636,7 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
                 # 補齊或截斷
                 while len(sentences) < len(words):
                     word = words[len(sentences)]
-                    sentences.append(
-                        {"sentence": f"Example with {word}", "word": word}
-                    )
+                    sentences.append({"sentence": f"Example with {word}", "word": word})
                 sentences = sentences[: len(words)]
 
             # 為每個句子添加 word 欄位，確保 1:1 對應關係
@@ -655,7 +653,7 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
             for word in words:
                 sentence_obj = {
                     "sentence": f"This is an example with {word}.",
-                    "word": word
+                    "word": word,
                 }
                 # 如果需要翻譯，添加翻譯欄位
                 if translate_to:
