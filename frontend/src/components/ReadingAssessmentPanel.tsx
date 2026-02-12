@@ -1429,7 +1429,7 @@ export default function ReadingAssessmentPanel({
         if (error instanceof ApiError) {
           const detail = error.detail;
           const errorMessage =
-            typeof detail === "object" && detail?.message
+            typeof detail === "object" && !Array.isArray(detail) && detail?.message
               ? detail.message
               : typeof detail === "string"
                 ? detail
@@ -1547,7 +1547,7 @@ export default function ReadingAssessmentPanel({
             if (error instanceof ApiError) {
               const detail = error.detail;
               const errorMessage =
-                typeof detail === "object" && detail?.message
+                typeof detail === "object" && !Array.isArray(detail) && detail?.message
                   ? detail.message
                   : typeof detail === "string"
                     ? detail
@@ -1678,7 +1678,7 @@ export default function ReadingAssessmentPanel({
             if (error instanceof ApiError) {
               const detail = error.detail;
               const errorMessage =
-                typeof detail === "object" && detail?.message
+                typeof detail === "object" && !Array.isArray(detail) && detail?.message
                   ? detail.message
                   : typeof detail === "string"
                     ? detail
@@ -2244,7 +2244,7 @@ export default function ReadingAssessmentPanel({
                     if (error instanceof ApiError) {
                       const detail = error.detail;
                       const errorMessage =
-                        typeof detail === "object" && detail?.message
+                        typeof detail === "object" && !Array.isArray(detail) && detail?.message
                           ? detail.message
                           : typeof detail === "string"
                             ? detail
@@ -2279,7 +2279,7 @@ export default function ReadingAssessmentPanel({
                     if (error instanceof ApiError) {
                       const detail = error.detail;
                       const errorMessage =
-                        typeof detail === "object" && detail?.message
+                        typeof detail === "object" && !Array.isArray(detail) && detail?.message
                           ? detail.message
                           : typeof detail === "string"
                             ? detail
