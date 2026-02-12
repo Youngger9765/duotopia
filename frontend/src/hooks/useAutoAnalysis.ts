@@ -127,6 +127,10 @@ export function useAutoAnalysis(assignmentId: number, isPreviewMode: boolean) {
         );
         analysisFormData.append("progress_id", currentProgressId.toString());
 
+        // 🎯 Issue #208: Generate unique analysis_id for deduction
+        const analysisId = crypto.randomUUID();
+        analysisFormData.append("analysis_id", analysisId);
+
         await retryAudioUpload(
           async () => {
             const uploadResponse = await fetch(
