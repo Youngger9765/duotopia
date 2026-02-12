@@ -179,7 +179,7 @@ class ContentCreate(BaseModel):
     target_wpm: Optional[int] = 60
     target_accuracy: Optional[float] = 0.8
     order_index: Optional[int] = None  # None = 自動計算為最後一個位置
-    level: Optional[str] = "A1"
+    level: Optional[str] = None  # None = 繼承 Program 的 level
     tags: Optional[List[str]] = []
     is_public: Optional[bool] = False
 
@@ -208,6 +208,8 @@ class BatchTranslateRequest(BaseModel):
 
 class GenerateSentencesRequest(BaseModel):
     words: List[str]
+    definitions: Optional[List[str]] = None  # 單字的中文翻譯（用於消歧義）
+    lesson_id: Optional[int] = None  # 單元 ID（用於取得單元描述）
     level: Optional[str] = "A1"
     prompt: Optional[str] = None
     translate_to: Optional[str] = None  # zh-TW, ja, ko

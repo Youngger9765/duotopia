@@ -99,11 +99,21 @@ async def batch_translate(
 async def generate_sentences(
     request: GenerateSentencesRequest,
     current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
 ):
     """AI 生成例句"""
     try:
+        # 如果有 lesson_id，查詢 Lesson 取得 description 作為 unit_context
+        unit_context = None
+        if request.lesson_id:
+            lesson = db.query(Lesson).filter(Lesson.id == request.lesson_id).first()
+            if lesson and lesson.description:
+                unit_context = lesson.description
+
         sentences = await translation_service.generate_sentences(
             words=request.words,
+            definitions=request.definitions,
+            unit_context=unit_context,
             level=request.level,
             prompt=request.prompt,
             translate_to=request.translate_to,

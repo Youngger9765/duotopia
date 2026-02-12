@@ -1494,6 +1494,11 @@ export default function VocabularySetPanel({
       };
       setTitle(data.title || "");
 
+      // 預設使用課程難度
+      if (data.level) {
+        setAiGenerateLevel(data.level);
+      }
+
       // Convert items to rows format
       if (data.items && Array.isArray(data.items)) {
         const convertedRows = data.items.map(
@@ -2484,9 +2489,10 @@ export default function VocabularySetPanel({
         return;
       }
 
-      // 收集需要生成的單字和詞性
+      // 收集需要生成的單字、翻譯和詞性
       const wordsToGenerate = targetIndices.map((idx) => ({
         word: rows[idx].text,
+        definition: rows[idx].definition || "",
         partsOfSpeech: rows[idx].partsOfSpeech || [],
       }));
 
@@ -2515,6 +2521,8 @@ export default function VocabularySetPanel({
       // 呼叫 API 生成例句
       const response = await apiClient.generateSentences({
         words: wordsToGenerate.map((w) => w.word),
+        definitions: wordsToGenerate.map((w) => w.definition),
+        lesson_id: lessonId,
         level: aiGenerateLevel,
         prompt: aiGeneratePrompt || undefined,
         translate_to: targetLanguage || undefined,
@@ -2523,26 +2531,62 @@ export default function VocabularySetPanel({
 
       // 更新 rows
       const newRows = [...rows];
-      const results =
-        (
-          response as {
-            sentences: Array<{ sentence: string; translation?: string }>;
-          }
-        ).sentences || [];
+      const sentencesData = (
+        response as {
+          sentences?: Array<{
+            sentence: string;
+            translation?: string;
+            word: string;
+          }>;
+        }
+      ).sentences;
 
-      targetIndices.forEach((idx, i) => {
+      if (!sentencesData || !Array.isArray(sentencesData)) {
+        toast.error(
+          t("vocabularySet.messages.exampleGenerationFailed") ||
+            "例句生成失敗，請稍後再試",
+        );
+        return;
+      }
+      const results = sentencesData;
+
+      // 驗證陣列長度是否匹配，防止錯位
+      if (results.length !== targetIndices.length) {
+        console.error(
+          `Array mismatch: expected ${targetIndices.length} sentences, got ${results.length}`,
+        );
+        toast.warning(
+          t("vocabularySet.messages.exampleGenerationPartialFailure") ||
+            "部分單字造句可能失敗，請檢查結果",
+        );
+        // 繼續處理，但已警告用戶部分可能失敗
+      }
+
+      // 使用 Map 優化查找效率，防止 O(n²) 複雜度
+      const resultMap = new Map(results.map((r) => [r.word, r]));
+
+      // 使用 word 欄位進行匹配，而非依賴索引，以防止錯位
+      targetIndices.forEach((idx) => {
+        const targetWord = newRows[idx].text;
+
         // 先清空現有的例句和翻譯
         newRows[idx].example_sentence = "";
         newRows[idx].example_sentence_translation = "";
 
-        // 填入新生成的例句
-        if (results[i]) {
-          newRows[idx].example_sentence = results[i].sentence;
+        // 使用 Map 查找對應的句子（O(1) 複雜度）
+        const matchedResult = resultMap.get(targetWord);
+
+        if (matchedResult) {
+          newRows[idx].example_sentence = matchedResult.sentence;
           // 只有勾選翻譯且 API 有返回翻譯時才填入
-          if (aiGenerateTranslate && results[i].translation) {
-            newRows[idx].example_sentence_translation = results[i].translation;
+          if (aiGenerateTranslate && matchedResult.translation) {
+            newRows[idx].example_sentence_translation =
+              matchedResult.translation;
           }
-          // 如果未勾選翻譯，翻譯欄位保持空（已在上面清空）
+        } else {
+          console.warn(
+            `No sentence found for word: ${targetWord} at index ${idx}`,
+          );
         }
       });
 

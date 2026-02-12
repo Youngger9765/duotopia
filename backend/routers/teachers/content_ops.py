@@ -155,6 +155,13 @@ async def create_content(
     except ValueError:
         content_type = ContentType.EXAMPLE_SENTENCES
 
+    # 決定 Content 的難度等級
+    # 優先順序：前端指定 > 繼承 Program > 預設 A1
+    content_level = content_data.level
+    if not content_level:
+        # 如果前端沒有指定，繼承 Program 的難度等級
+        content_level = lesson.program.level if hasattr(lesson, "program") and lesson.program else "A1"
+
     # 建立 Content（不再使用 items 欄位）
     content = Content(
         lesson_id=lesson_id,
@@ -163,7 +170,7 @@ async def create_content(
         target_wpm=content_data.target_wpm,
         target_accuracy=content_data.target_accuracy,
         order_index=order_index,
-        level=content_data.level,
+        level=content_level,
         tags=content_data.tags or [],
     )
     db.add(content)
