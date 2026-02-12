@@ -2533,6 +2533,10 @@
       "unassign": "取消指派",
       "grade": "批改"
     },
+    "noCredits": {
+      "message": "AI 點數已用完，請購買點數或升級方案",
+      "tooltip": "AI 點數不足，無法使用 AI 批改"
+    },
     "labels": {
       "contentType": "內容類型",
       "assignedDate": "指派日期",
@@ -3683,6 +3687,10 @@
     }
   },
   "studentActivity": {
+    "aiAnalysis": {
+      "analyze": "分析",
+      "notAvailable": "AI 分析功能未開啟"
+    },
     "toast": {
       "cannotStartRecording": "無法啟動錄音，請檢查麥克風權限",
       "fileTooLarge": "檔案過大",

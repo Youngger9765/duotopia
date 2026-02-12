@@ -86,6 +86,7 @@ interface ActivityResponse {
   show_answer?: boolean; // 例句重組：答題結束後是否顯示正確答案
   total_activities: number;
   activities: Activity[];
+  can_use_ai_analysis?: boolean; // 教師/機構是否有 AI 分析額度
 }
 
 export default function StudentActivityPage() {
@@ -100,6 +101,7 @@ export default function StudentActivityPage() {
   const [assignmentStatus, setAssignmentStatus] = useState<string>("");
   const [practiceMode, setPracticeMode] = useState<string | null>(null);
   const [showAnswer, setShowAnswer] = useState<boolean>(false);
+  const [canUseAiAnalysis, setCanUseAiAnalysis] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
   const [_isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
@@ -158,6 +160,7 @@ export default function StudentActivityPage() {
       setAssignmentStatus(data.status || "");
       setPracticeMode(data.practice_mode || null);
       setShowAnswer(data.show_answer || false);
+      setCanUseAiAnalysis(data.can_use_ai_analysis ?? true);
     } catch (error) {
       console.error("Failed to load activities:", error);
       toast.error(t("studentActivityPage.errors.loadFailed"));
@@ -292,6 +295,7 @@ export default function StudentActivityPage() {
       assignmentStatus={assignmentStatus}
       practiceMode={practiceMode}
       showAnswer={showAnswer}
+      canUseAiAnalysis={canUseAiAnalysis}
       onBack={() => navigate(`/student/assignment/${assignmentId}/detail`)}
       onSubmit={handleSubmit}
     />

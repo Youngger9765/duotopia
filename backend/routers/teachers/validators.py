@@ -73,6 +73,7 @@ class TeacherDashboard(BaseModel):
     subscription_end_date: Optional[str]
     days_remaining: int
     can_assign_homework: bool
+    can_use_ai_grading: bool = True  # 教師/機構是否有 AI 分析額度
     is_test_account: bool  # 是否為測試帳號（白名單）
     # Organization and roles information
     organization: Optional[OrganizationInfo] = None

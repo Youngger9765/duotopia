@@ -19,6 +19,7 @@ from models import (
     School,
     ClassroomSchool,
 )
+from services.quota_service import QuotaService
 from .dependencies import get_current_teacher
 from .validators import *
 from .utils import parse_birthdate  # TEST_SUBSCRIPTION_WHITELIST is defined locally
@@ -255,6 +256,11 @@ async def get_teacher_dashboard(
     else:
         can_assign_homework = True
 
+    # 檢查教師/機構是否有 AI 分析額度
+    can_use_ai_grading = QuotaService.check_ai_analysis_availability(
+        current_teacher.id, db
+    )
+
     return TeacherDashboard(
         teacher=TeacherProfile.from_orm(current_teacher),
         classroom_count=len(classrooms),
@@ -269,6 +275,7 @@ async def get_teacher_dashboard(
         else None,
         days_remaining=current_teacher.days_remaining,
         can_assign_homework=can_assign_homework,
+        can_use_ai_grading=can_use_ai_grading,
         is_test_account=is_test_account,
         # Organization and roles information
         organization=organization_info,
