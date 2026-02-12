@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -99,6 +100,7 @@ export default function ClassroomDetail({
 
   // Teacher subscription state
   const [canAssignHomework, setCanAssignHomework] = useState<boolean>(false);
+  const [canUseAiGrading, setCanUseAiGrading] = useState<boolean>(true);
   const [teacherData, setTeacherData] = useState<{
     subscription_status?: string;
     days_remaining?: number;
@@ -360,10 +362,12 @@ export default function ClassroomDetail({
     try {
       const dashboardData = (await apiClient.getTeacherDashboard()) as {
         can_assign_homework?: boolean;
+        can_use_ai_grading?: boolean;
         subscription_status?: string;
         days_remaining?: number;
       };
       setCanAssignHomework(dashboardData.can_assign_homework || false);
+      setCanUseAiGrading(dashboardData.can_use_ai_grading ?? true);
       setTeacherData({
         subscription_status: dashboardData.subscription_status,
         days_remaining: dashboardData.days_remaining,
@@ -1565,25 +1569,45 @@ export default function ClassroomDetail({
                                     "rearrangement" &&
                                     assignment.practice_mode !==
                                       "word_selection" && (
-                                      <Button
-                                        variant="default"
-                                        size="sm"
-                                        className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-3 flex-shrink-0 gap-1.5"
-                                        onClick={() => {
-                                          setBatchGradingModal({
-                                            open: true,
-                                            assignmentId: assignment.id,
-                                            classroomId: Number(id),
-                                          });
-                                        }}
-                                      >
-                                        <Sparkles className="w-5 h-5" />
-                                        <span className="text-sm font-medium">
-                                          {t(
-                                            "assignmentDetail.buttons.batchGrade",
+                                      <div className="flex flex-col items-end flex-shrink-0">
+                                        <Button
+                                          variant="default"
+                                          size="sm"
+                                          className={cn(
+                                            "h-11 px-3 gap-1.5",
+                                            canUseAiGrading
+                                              ? "bg-purple-600 hover:bg-purple-700 text-white"
+                                              : "bg-gray-400 hover:bg-gray-400 text-white opacity-50 cursor-not-allowed",
                                           )}
-                                        </span>
-                                      </Button>
+                                          disabled={!canUseAiGrading}
+                                          onClick={() => {
+                                            if (canUseAiGrading) {
+                                              setBatchGradingModal({
+                                                open: true,
+                                                assignmentId: assignment.id,
+                                                classroomId: Number(id),
+                                              });
+                                            }
+                                          }}
+                                          title={
+                                            !canUseAiGrading
+                                              ? t("assignmentDetail.noCredits.tooltip")
+                                              : ""
+                                          }
+                                        >
+                                          <Sparkles className="w-5 h-5" />
+                                          <span className="text-sm font-medium">
+                                            {t(
+                                              "assignmentDetail.buttons.batchGrade",
+                                            )}
+                                          </span>
+                                        </Button>
+                                        {!canUseAiGrading && (
+                                          <p className="text-xs text-amber-600 mt-1 max-w-[160px] text-right">
+                                            {t("assignmentDetail.noCredits.message")}
+                                          </p>
+                                        )}
+                                      </div>
                                     )}
                                 </div>
 
@@ -1894,14 +1918,27 @@ export default function ClassroomDetail({
                                             <Button
                                               variant="default"
                                               size="sm"
-                                              className="bg-purple-600 hover:bg-purple-700 text-white h-10 min-h-10"
+                                              className={cn(
+                                                "h-10 min-h-10",
+                                                canUseAiGrading
+                                                  ? "bg-purple-600 hover:bg-purple-700 text-white"
+                                                  : "bg-gray-400 hover:bg-gray-400 text-white opacity-50 cursor-not-allowed",
+                                              )}
+                                              disabled={!canUseAiGrading}
                                               onClick={() => {
-                                                setBatchGradingModal({
-                                                  open: true,
-                                                  assignmentId: assignment.id,
-                                                  classroomId: Number(id),
-                                                });
+                                                if (canUseAiGrading) {
+                                                  setBatchGradingModal({
+                                                    open: true,
+                                                    assignmentId: assignment.id,
+                                                    classroomId: Number(id),
+                                                  });
+                                                }
                                               }}
+                                              title={
+                                                !canUseAiGrading
+                                                  ? t("assignmentDetail.noCredits.tooltip")
+                                                  : ""
+                                              }
                                             >
                                               <Sparkles className="w-4 h-4 mr-1" />
                                               {t(

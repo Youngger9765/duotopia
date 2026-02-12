@@ -2435,6 +2435,10 @@
       "unassign": "Unassign",
       "grade": "Grade"
     },
+    "noCredits": {
+      "message": "AI credits used up. Please purchase credits or upgrade your plan",
+      "tooltip": "Insufficient AI credits for AI grading"
+    },
     "labels": {
       "contentType": "Content Type",
       "assignedDate": "Assigned Date",
@@ -3570,6 +3574,10 @@
     }
   },
   "studentActivity": {
+    "aiAnalysis": {
+      "analyze": "Analyze",
+      "notAvailable": "AI analysis not available"
+    },
     "toast": {
       "cannotStartRecording": "Cannot start recording, please check microphone permissions",
       "fileTooLarge": "File Too Large",

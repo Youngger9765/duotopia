@@ -10,6 +10,7 @@
 
 from sqlalchemy.orm import Session
 from models import Teacher, PointUsageLog
+from models.organization import TeacherOrganization, Organization
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
 import logging
@@ -106,6 +107,45 @@ class QuotaService:
             ),
             "status": current_period.status,
         }
+
+    @staticmethod
+    def check_ai_analysis_availability(teacher_id: int, db: Session) -> bool:
+        """
+        檢查教師（或其機構）是否有 AI 分析額度。
+
+        規則：
+        - 教師屬於機構 → 查機構 remaining_points > 0
+        - 個人教師 → 查教師 quota_remaining > 0
+        """
+        teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+        if not teacher:
+            return False
+
+        # 檢查是否屬於活躍機構
+        teacher_org = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == teacher_id,
+                TeacherOrganization.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if teacher_org:
+            org = (
+                db.query(Organization)
+                .filter(
+                    Organization.id == teacher_org.organization_id,
+                    Organization.is_active.is_(True),
+                )
+                .first()
+            )
+            if org:
+                remaining = org.total_points - org.used_points
+                return remaining > 0
+
+        # 個人教師：查配額
+        return teacher.quota_remaining > 0
 
     @staticmethod
     def deduct_quota(

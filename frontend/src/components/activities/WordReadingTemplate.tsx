@@ -105,6 +105,9 @@ interface WordReadingTemplateProps {
   onRetry?: () => void;
   onSkip?: () => void;
   onAssessmentComplete?: (result: AssessmentResult) => void;
+
+  // AI analysis availability
+  canUseAiAnalysis?: boolean; // 教師/機構是否有 AI 分析額度
 }
 
 export default function WordReadingTemplate({
@@ -123,6 +126,7 @@ export default function WordReadingTemplate({
   onRetry,
   onSkip,
   onAssessmentComplete,
+  canUseAiAnalysis = true,
 }: WordReadingTemplateProps) {
   const { t } = useTranslation();
   const [audioUrl, setAudioUrl] = useState<string | undefined>(
@@ -880,7 +884,8 @@ export default function WordReadingTemplate({
           {/* 右欄 - AI 評估結果 */}
           <div className="w-full sm:col-span-6 space-y-4">
             <div className="bg-white rounded-lg border border-gray-200 p-4">
-              {audioUrl && !assessmentResult ? (
+              {/* 🎯 Issue #227: 只有教師/機構有 AI 分析額度時才顯示分析按鈕 */}
+              {audioUrl && !assessmentResult && canUseAiAnalysis ? (
                 <div className="flex justify-center mb-4 py-6">
                   <Button
                     size="lg"

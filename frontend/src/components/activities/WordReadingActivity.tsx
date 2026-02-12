@@ -58,6 +58,7 @@ interface WordReadingActivityProps {
   showTranslation?: boolean;
   showImage?: boolean;
   onComplete?: () => void;
+  canUseAiAnalysis?: boolean; // 教師/機構是否有 AI 分析額度
 }
 
 export default function WordReadingActivity({
@@ -68,6 +69,7 @@ export default function WordReadingActivity({
   showTranslation: _showTranslationProp = true, // 保留 prop 但使用 API 返回的值
   showImage: _showImageProp = true, // 保留 prop 但使用 API 返回的值
   onComplete,
+  canUseAiAnalysis: canUseAiAnalysisProp,
 }: WordReadingActivityProps) {
   const { t } = useTranslation();
   const { token: studentToken } = useStudentAuthStore();
@@ -84,6 +86,8 @@ export default function WordReadingActivity({
   // 從 API 讀取的顯示設定（解決圖片不顯示的 bug）
   const [showImageFromApi, setShowImageFromApi] = useState(true);
   const [showTranslationFromApi, setShowTranslationFromApi] = useState(true);
+  // AI 分析額度（從 API 讀取，或使用 prop 傳入的值）
+  const [canUseAiAnalysisFromApi, setCanUseAiAnalysisFromApi] = useState(true);
 
   // Load vocabulary items from backend
   const loadItems = useCallback(async () => {
@@ -114,6 +118,7 @@ export default function WordReadingActivity({
       // 讀取 API 返回的顯示設定
       setShowImageFromApi(data.show_image ?? true);
       setShowTranslationFromApi(data.show_translation ?? true);
+      setCanUseAiAnalysisFromApi(data.can_use_ai_analysis ?? true);
 
       // Find first incomplete item
       const firstIncomplete = (data.items || []).findIndex(
@@ -441,6 +446,7 @@ export default function WordReadingActivity({
         timeLimit={timeLimitPerQuestion}
         onSkip={handleSkip}
         onAssessmentComplete={handleAssessmentComplete}
+        canUseAiAnalysis={canUseAiAnalysisProp ?? canUseAiAnalysisFromApi}
       />
 
       {/* Navigation Buttons */}

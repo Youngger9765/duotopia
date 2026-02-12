@@ -37,6 +37,7 @@ from typing import List, Optional, Dict, Any  # noqa: F401
 from datetime import date, datetime, timedelta, timezone  # noqa: F401
 from services.translation import translation_service
 from services.quota_analytics_service import QuotaAnalyticsService
+from services.quota_service import QuotaService
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +154,7 @@ class TeacherDashboard(BaseModel):
     subscription_end_date: Optional[str]
     days_remaining: int
     can_assign_homework: bool
+    can_use_ai_grading: bool = True  # 教師/機構是否有 AI 分析額度
     is_test_account: bool  # 是否為測試帳號（白名單）
     # Organization and roles information
     organization: Optional[OrganizationInfo] = None
@@ -487,6 +489,11 @@ async def get_teacher_dashboard(
     else:
         can_assign_homework = True
 
+    # 檢查教師/機構是否有 AI 分析額度
+    can_use_ai_grading = QuotaService.check_ai_analysis_availability(
+        current_teacher.id, db
+    )
+
     return TeacherDashboard(
         teacher=TeacherProfile.from_orm(current_teacher),
         classroom_count=len(classrooms),
@@ -501,6 +508,7 @@ async def get_teacher_dashboard(
         else None,
         days_remaining=current_teacher.days_remaining,
         can_assign_homework=can_assign_homework,
+        can_use_ai_grading=can_use_ai_grading,
         is_test_account=is_test_account,
         # Organization and roles information
         organization=organization_info,

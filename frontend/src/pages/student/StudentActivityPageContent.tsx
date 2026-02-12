@@ -158,6 +158,7 @@ interface StudentActivityPageContentProps {
   assignmentStatus?: string;
   practiceMode?: string | null; // 例句重組/朗讀模式
   showAnswer?: boolean; // 例句重組：答題結束後是否顯示正確答案
+  canUseAiAnalysis?: boolean; // 教師/機構是否有 AI 分析額度
 }
 
 // =============================================================================
@@ -197,6 +198,7 @@ export default function StudentActivityPageContent({
   assignmentStatus = "",
   practiceMode = null,
   showAnswer = false,
+  canUseAiAnalysis = true,
 }: StudentActivityPageContentProps) {
   const { t } = useTranslation();
 
@@ -1173,7 +1175,25 @@ export default function StudentActivityPageContent({
   const handleNextActivity = async () => {
     const currentActivity = activities[currentActivityIndex];
 
-    // 🎯 Issue #75: 不再觸發背景分析 - 只切換問題
+    // 🎯 Issue #227: 有 AI 分析額度時，按下一題自動背景分析當前題目
+    if (canUseAiAnalysis && !isPreviewMode && currentActivity.items) {
+      const currentItem = currentActivity.items[currentSubQuestionIndex];
+      if (
+        currentItem?.recording_url?.startsWith("blob:") &&
+        !currentItem?.ai_assessment
+      ) {
+        // fire-and-forget：背景分析不阻塞導航
+        analyzeAndUpload(
+          currentItem.recording_url,
+          currentItem.text || currentActivity.target_text || "",
+          currentItem.progress_id,
+          currentItem.id,
+        ).catch((err) =>
+          console.error("Background analysis on next failed:", err),
+        );
+      }
+    }
+
     if (currentActivity.items && currentActivity.items.length > 0) {
       // 切換到下一題
       if (currentSubQuestionIndex < currentActivity.items.length - 1) {
@@ -1413,7 +1433,8 @@ export default function StudentActivityPageContent({
     }
 
     // 🎯 Issue #141: 提交前先分析所有未分析的 blob URL 錄音
-    if (!isPreviewMode) {
+    // 🎯 Issue #227: 只有教師/機構有 AI 分析額度時才執行批次分析
+    if (!isPreviewMode && canUseAiAnalysis) {
       const unanalyzedItems: {
         activity: Activity;
         itemIndex: number;
@@ -1761,6 +1782,7 @@ export default function StudentActivityPageContent({
             });
           }}
           onAnalyzingStateChange={setIsAnalyzing} // 🔒 接收分析狀態變化
+          canUseAiAnalysis={canUseAiAnalysis}
         />
       );
     }
@@ -1810,6 +1832,7 @@ export default function StudentActivityPageContent({
             readOnly={isReadOnly}
             isDemoMode={isDemoMode}
             timeLimit={activity.duration || 60}
+            canUseAiAnalysis={canUseAiAnalysis}
             onSkip={
               currentActivityIndex < activities.length - 1
                 ? () => handleActivitySelect(currentActivityIndex + 1)
@@ -1831,6 +1854,7 @@ export default function StudentActivityPageContent({
             isPreviewMode={isPreviewMode}
             isDemoMode={isDemoMode}
             authToken={authToken}
+            canUseAiAnalysis={canUseAiAnalysis}
             onComplete={() => {
               toast.success(t("wordReading.toast.completed") || "作業已完成！");
               if (onSubmit) {
@@ -2438,8 +2462,10 @@ export default function StudentActivityPageContent({
                       isAutoAnalyzing || // 🔒 Issue #141: 自動分析中禁用
                       (isRearrangementMode
                         ? !hasPrevUnanswered
-                        : // 🎯 Issue #141: 例句朗讀模式必須分析後才能上一題（含預覽模式）
-                          (isReadingMode && !isAssessed) ||
+                        : // 🎯 Issue #227: 無 AI 分析額度時不需等待分析即可切換
+                          (isReadingMode &&
+                            canUseAiAnalysis &&
+                            !isAssessed) ||
                           (currentActivityIndex === 0 &&
                             currentSubQuestionIndex === 0))
                     }
@@ -2516,8 +2542,10 @@ export default function StudentActivityPageContent({
                           isAutoAnalyzing || // 🔒 Issue #141: 自動分析中禁用
                           (isRearrangementMode
                             ? !hasNextUnanswered
-                            : // 🎯 Issue #118 & #141: 例句朗讀模式必須分析後才能下一題（含預覽模式）
-                              isReadingMode && !isAssessed)
+                            : // 🎯 Issue #227: 無 AI 分析額度時不需等待分析即可下一題
+                              isReadingMode &&
+                              canUseAiAnalysis &&
+                              !isAssessed)
                         }
                         className="flex-1 sm:flex-none min-w-0"
                       >
