@@ -563,7 +563,9 @@ export default function ClassroomDetail({
       if (error instanceof ApiError) {
         const detail = error.detail;
         const errorMessage =
-          typeof detail === "object" && !Array.isArray(detail) && detail?.message
+          typeof detail === "object" &&
+          !Array.isArray(detail) &&
+          detail?.message
             ? detail.message
             : typeof detail === "string"
               ? detail
