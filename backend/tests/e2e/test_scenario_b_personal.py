@@ -415,7 +415,9 @@ def main():
     print(f"  Quota deducted:           {quota_deducted} (expected > 0)")
     print(f"  Org points BEFORE:        {org_points_before}")
     print(f"  Org points AFTER:         {org_points_after} (expected same)")
-    print(f"  Org points unchanged:     {'YES' if org_unchanged else 'NO'} (expected YES)")
+    print(
+        f"  Org points unchanged:     {'YES' if org_unchanged else 'NO'} (expected YES)"
+    )
 
     if quota_deducted > 0 and org_unchanged:
         print()

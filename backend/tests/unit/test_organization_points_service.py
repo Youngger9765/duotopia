@@ -272,7 +272,9 @@ class TestCheckPoints:
         """
         from services.organization_points_service import OrganizationPointsService
 
-        result = OrganizationPointsService.check_points(mock_organization_exhausted, 100)
+        result = OrganizationPointsService.check_points(
+            mock_organization_exhausted, 100
+        )
         assert result is False
 
     def test_check_points_exact_remaining(self, mock_organization):
@@ -451,7 +453,9 @@ class TestDeductPoints:
         from services.organization_points_service import OrganizationPointsService
 
         # Setup mock query to return organization
-        mock_db_session.query.return_value.filter.return_value.first.return_value = mock_organization
+        mock_db_session.query.return_value.filter.return_value.first.return_value = (
+            mock_organization
+        )
 
         org_id = mock_organization.id
         teacher_id = 1
@@ -493,7 +497,9 @@ class TestDeductPoints:
         """
         from services.organization_points_service import OrganizationPointsService
 
-        mock_db_session.query.return_value.filter.return_value.first.return_value = mock_organization
+        mock_db_session.query.return_value.filter.return_value.first.return_value = (
+            mock_organization
+        )
 
         log = OrganizationPointsService.deduct_points(
             db=mock_db_session,
@@ -510,7 +516,9 @@ class TestDeductPoints:
         assert log.points_used == 50
         assert mock_organization.used_points == 5050
 
-    def test_deduct_points_buffer_warning(self, mock_db_session, mock_organization_low_points):
+    def test_deduct_points_buffer_warning(
+        self, mock_db_session, mock_organization_low_points
+    ):
         """
         Test deduction when entering buffer zone (100%-120%).
 
@@ -525,7 +533,9 @@ class TestDeductPoints:
         """
         from services.organization_points_service import OrganizationPointsService
 
-        mock_db_session.query.return_value.filter.return_value.first.return_value = mock_organization_low_points
+        mock_db_session.query.return_value.filter.return_value.first.return_value = (
+            mock_organization_low_points
+        )
 
         log = OrganizationPointsService.deduct_points(
             db=mock_db_session,
@@ -543,9 +553,14 @@ class TestDeductPoints:
         assert mock_organization_low_points.used_points == 10100
 
         # Should be in buffer zone
-        assert mock_organization_low_points.used_points > mock_organization_low_points.total_points
+        assert (
+            mock_organization_low_points.used_points
+            > mock_organization_low_points.total_points
+        )
 
-    def test_deduct_points_hard_limit_exceeded(self, mock_db_session, mock_organization_exhausted):
+    def test_deduct_points_hard_limit_exceeded(
+        self, mock_db_session, mock_organization_exhausted
+    ):
         """
         Test deduction when hard limit would be exceeded.
 
@@ -561,7 +576,9 @@ class TestDeductPoints:
         """
         from services.organization_points_service import OrganizationPointsService
 
-        mock_db_session.query.return_value.filter.return_value.first.return_value = mock_organization_exhausted
+        mock_db_session.query.return_value.filter.return_value.first.return_value = (
+            mock_organization_exhausted
+        )
 
         with pytest.raises(HTTPException) as exc_info:
             OrganizationPointsService.deduct_points(
@@ -593,7 +610,9 @@ class TestDeductPoints:
         """
         from services.organization_points_service import OrganizationPointsService
 
-        mock_db_session.query.return_value.filter.return_value.first.return_value = mock_organization
+        mock_db_session.query.return_value.filter.return_value.first.return_value = (
+            mock_organization
+        )
 
         feature_detail = {
             "reference_text": "Hello world",
@@ -644,7 +663,9 @@ class TestDeductPoints:
 
         assert exc_info.value.status_code == 404
 
-    def test_deduct_points_inactive_organization(self, mock_db_session, mock_organization):
+    def test_deduct_points_inactive_organization(
+        self, mock_db_session, mock_organization
+    ):
         """
         Test deduction for inactive organization.
 
@@ -655,7 +676,9 @@ class TestDeductPoints:
         from services.organization_points_service import OrganizationPointsService
 
         mock_organization.is_active = False
-        mock_db_session.query.return_value.filter.return_value.first.return_value = mock_organization
+        mock_db_session.query.return_value.filter.return_value.first.return_value = (
+            mock_organization
+        )
 
         with pytest.raises(HTTPException) as exc_info:
             OrganizationPointsService.deduct_points(
@@ -677,7 +700,9 @@ class TestDeductPoints:
         """
         from services.organization_points_service import OrganizationPointsService
 
-        mock_db_session.query.return_value.filter.return_value.first.return_value = mock_organization
+        mock_db_session.query.return_value.filter.return_value.first.return_value = (
+            mock_organization
+        )
         original_timestamp = mock_organization.last_points_update
 
         OrganizationPointsService.deduct_points(
@@ -694,7 +719,9 @@ class TestDeductPoints:
         # Timestamp should be updated
         assert mock_organization.last_points_update != original_timestamp
 
-    def test_deduct_points_multiple_deductions(self, mock_db_session, mock_organization):
+    def test_deduct_points_multiple_deductions(
+        self, mock_db_session, mock_organization
+    ):
         """
         Test multiple sequential deductions.
 
@@ -705,7 +732,9 @@ class TestDeductPoints:
         """
         from services.organization_points_service import OrganizationPointsService
 
-        mock_db_session.query.return_value.filter.return_value.first.return_value = mock_organization
+        mock_db_session.query.return_value.filter.return_value.first.return_value = (
+            mock_organization
+        )
 
         # First deduction
         OrganizationPointsService.deduct_points(
@@ -787,7 +816,9 @@ class TestBufferCalculation:
         """
         from services.organization_points_service import OrganizationPointsService
 
-        mock_db_session.query.return_value.filter.return_value.first.return_value = mock_organization
+        mock_db_session.query.return_value.filter.return_value.first.return_value = (
+            mock_organization
+        )
 
         log = OrganizationPointsService.deduct_points(
             db=mock_db_session,
@@ -816,7 +847,9 @@ class TestBufferCalculation:
         """
         from services.organization_points_service import OrganizationPointsService
 
-        mock_db_session.query.return_value.filter.return_value.first.return_value = mock_organization
+        mock_db_session.query.return_value.filter.return_value.first.return_value = (
+            mock_organization
+        )
 
         with pytest.raises(HTTPException) as exc_info:
             OrganizationPointsService.deduct_points(
@@ -852,7 +885,9 @@ class TestEdgeCases:
         """
         from services.organization_points_service import OrganizationPointsService
 
-        mock_db_session.query.return_value.filter.return_value.first.return_value = mock_organization
+        mock_db_session.query.return_value.filter.return_value.first.return_value = (
+            mock_organization
+        )
         original_used = mock_organization.used_points
 
         log = OrganizationPointsService.deduct_points(
@@ -891,7 +926,9 @@ class TestEdgeCases:
         """
         from services.organization_points_service import OrganizationPointsService
 
-        mock_db_session.query.return_value.filter.return_value.first.return_value = mock_organization
+        mock_db_session.query.return_value.filter.return_value.first.return_value = (
+            mock_organization
+        )
 
         # Deduct 4000 points (within 5000 remaining)
         log = OrganizationPointsService.deduct_points(
@@ -908,13 +945,17 @@ class TestEdgeCases:
         assert log.points_used == 4000
         assert mock_organization.used_points == 9000
 
-    def test_deduction_with_optional_fields_none(self, mock_db_session, mock_organization):
+    def test_deduction_with_optional_fields_none(
+        self, mock_db_session, mock_organization
+    ):
         """
         Test deduction when optional fields are None.
         """
         from services.organization_points_service import OrganizationPointsService
 
-        mock_db_session.query.return_value.filter.return_value.first.return_value = mock_organization
+        mock_db_session.query.return_value.filter.return_value.first.return_value = (
+            mock_organization
+        )
 
         log = OrganizationPointsService.deduct_points(
             db=mock_db_session,
