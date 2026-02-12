@@ -16,6 +16,20 @@ export interface ProgramTreeProgram {
   lessons?: ProgramTreeLesson[];
 }
 
+/** Find the Program level for a given lessonId from a list of programs. */
+export function getProgramLevelByLessonId(
+  programs: Array<{ level?: string; lessons?: Array<{ id?: number }> }>,
+  lessonId: number | null | undefined,
+): string | undefined {
+  if (!lessonId) return undefined;
+  for (const program of programs) {
+    if (program.lessons?.find((l) => l.id === lessonId)) {
+      return program.level;
+    }
+  }
+  return undefined;
+}
+
 export function useProgramTree<T extends ProgramTreeProgram>(
   initialPrograms: T[] = [],
 ) {

@@ -1072,14 +1072,11 @@ export default function ReadingAssessmentPanel({
   onUpdateContent,
   onSave,
   lessonId,
-  programLevel,
+  // programLevel - reserved for future AI generation features
   isCreating = false,
   isAssignmentCopy = false,
 }: ReadingAssessmentPanelProps) {
   const { t } = useTranslation();
-
-  // 🔥 階段1：Console log 確認有抓到 Program level
-  console.log("[ReadingAssessmentPanel] Program Level:", programLevel);
 
   const [title, setTitle] = useState("");
   const [rows, setRows] = useState<ContentRow[]>([

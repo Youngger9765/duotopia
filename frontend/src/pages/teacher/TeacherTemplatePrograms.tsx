@@ -19,6 +19,7 @@ import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useResourceMaterialsAPI } from "@/hooks/useResourceMaterialsAPI";
 import { toast } from "sonner";
 import { Program, Lesson, Content } from "@/types";
+import { getProgramLevelByLessonId } from "@/hooks/useProgramTree";
 
 const RESOURCE_ACCOUNT_EMAIL =
   import.meta.env.VITE_RESOURCE_ACCOUNT_EMAIL || "contact@duotopia.co";
@@ -150,28 +151,6 @@ function TeacherTemplateProgramsInner() {
     }
   };
 
-  // 🔥 Helper: 根據 lessonId 找到對應的 Program level
-  const getProgramLevelByLessonId = (
-    lessonId: number | null | undefined,
-  ): string | undefined => {
-    if (!lessonId) return undefined;
-
-    for (const program of programs) {
-      const lesson = program.lessons?.find((l) => l.id === lessonId);
-      if (lesson) {
-        console.log(
-          `[TeacherTemplatePrograms] ✅ 找到 Program level for lesson ${lessonId}:`,
-          program.level,
-        );
-        return program.level;
-      }
-    }
-
-    console.warn(
-      `[TeacherTemplatePrograms] ❌ 沒找到 lesson ${lessonId} 對應的 Program`,
-    );
-    return undefined;
-  };
 
   // Program handlers
   const handleCreateProgram = () => {
@@ -641,7 +620,7 @@ function TeacherTemplateProgramsInner() {
             <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
               <ReadingAssessmentPanel
                 lessonId={editorLessonId}
-                programLevel={getProgramLevelByLessonId(editorLessonId)}
+                programLevel={getProgramLevelByLessonId(programs, editorLessonId)}
                 isCreating={true}
                 onSave={async (
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -746,7 +725,7 @@ function TeacherTemplateProgramsInner() {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     items: (selectedContent.items || []) as any,
                   }}
-                  programLevel={getProgramLevelByLessonId(editorLessonId)}
+                  programLevel={getProgramLevelByLessonId(programs, editorLessonId)}
                   onSave={async (
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     updatedContent?: any,
@@ -812,7 +791,7 @@ function TeacherTemplateProgramsInner() {
                     id: vocabularySetContentId || undefined,
                   }}
                   lessonId={vocabularySetLessonId}
-                  programLevel={getProgramLevelByLessonId(vocabularySetLessonId)}
+                  programLevel={getProgramLevelByLessonId(programs, vocabularySetLessonId)}
                   onUpdateContent={(updatedContent) => {
                     console.log("Content updated:", updatedContent);
                   }}
@@ -874,7 +853,7 @@ function TeacherTemplateProgramsInner() {
                   content={{ id: vocabularySetContentId }}
                   editingContent={{ id: vocabularySetContentId }}
                   lessonId={vocabularySetLessonId}
-                  programLevel={getProgramLevelByLessonId(vocabularySetLessonId)}
+                  programLevel={getProgramLevelByLessonId(programs, vocabularySetLessonId)}
                   onUpdateContent={(updatedContent) => {
                     console.log("Content updated:", updatedContent);
                   }}
