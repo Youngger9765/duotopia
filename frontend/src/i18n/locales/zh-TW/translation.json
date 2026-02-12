@@ -3687,6 +3687,7 @@
       "cancel": "取消",
       "addItem": "新增項目",
       "confirmPaste": "確認貼上",
+      "generating": "生成中...",
       "processing": "處理中...",
       "startRecording": "開始錄音",
       "stopRecording": "停止錄音",
@@ -3775,7 +3776,10 @@
       "itemsAddedAndSaved": "已新增 {{added}} 個項目並儲存（共 {{total}} 個）",
       "itemsAddedSaveToComplete": "已新增 {{added}} 個項目（共 {{total}} 個），請按「儲存」完成創建",
       "updateFailedButAudioGenerated": "更新失敗，但音檔已生成",
-      "items": "個項目"
+      "items": "個項目",
+      "batchLimitError": "一次最多翻譯 {{count}} 個例句，請分批處理",
+      "batchLimitTruncated": "已超過上限，僅前 {{count}} 個項目會被處理",
+      "batchLimitWarning": "超過 {{count}} 個項目上限，僅前 {{count}} 個會被處理"
     },
     "translationLanguages": {
       "chinese": "中文",
