@@ -1338,9 +1338,6 @@ export default function VocabularySetPanel({
 }: VocabularySetPanelProps) {
   const { t } = useTranslation();
 
-  // 🔥 階段1：Console log 確認有抓到 Program level
-  console.log("[VocabularySetPanel] Program Level:", programLevel);
-
   const [title, setTitle] = useState(t("vocabularySet.defaultTitle"));
   const [rows, setRows] = useState<ContentRow[]>([
     {
@@ -1503,12 +1500,8 @@ export default function VocabularySetPanel({
       setTitle(data.title || "");
 
       // 預設使用課程難度
-      console.log("[VocabularySetPanel] loadContentData - data.level:", data.level);
       if (data.level) {
         setAiGenerateLevel(data.level);
-        console.log("[VocabularySetPanel] Set aiGenerateLevel to:", data.level);
-      } else {
-        console.log("[VocabularySetPanel] data.level is undefined/null, keeping default A1");
       }
 
       // Convert items to rows format
