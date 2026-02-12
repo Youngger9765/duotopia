@@ -1773,7 +1773,9 @@ export default function ReadingAssessmentPanel({
 
     // 檢查是否超過上限
     if (itemsToTranslate.length > MAX_BATCH_ITEMS) {
-      toast.error(t("contentEditor.messages.batchLimitError", { count: MAX_BATCH_ITEMS }));
+      toast.error(
+        t("contentEditor.messages.batchLimitError", { count: MAX_BATCH_ITEMS }),
+      );
       return;
     }
 
@@ -1860,7 +1862,11 @@ export default function ReadingAssessmentPanel({
 
     // 超過上限時自動截斷
     if (lines.length > MAX_BATCH_ITEMS) {
-      toast.warning(t("contentEditor.messages.batchLimitTruncated", { count: MAX_BATCH_ITEMS }));
+      toast.warning(
+        t("contentEditor.messages.batchLimitTruncated", {
+          count: MAX_BATCH_ITEMS,
+        }),
+      );
       lines.length = MAX_BATCH_ITEMS;
     }
 
@@ -2353,7 +2359,9 @@ export default function ReadingAssessmentPanel({
                 {batchPasteText.split("\n").filter((line) => line.trim())
                   .length > MAX_BATCH_ITEMS && (
                   <span className="text-amber-600 font-medium">
-                    {t("contentEditor.messages.batchLimitWarning", { count: MAX_BATCH_ITEMS })}
+                    {t("contentEditor.messages.batchLimitWarning", {
+                      count: MAX_BATCH_ITEMS,
+                    })}
                   </span>
                 )}
               </div>
@@ -2457,7 +2465,9 @@ export default function ReadingAssessmentPanel({
               disabled={isPasting}
               className="px-6 py-2 text-base bg-blue-600 hover:bg-blue-700"
             >
-              {isPasting ? t("contentEditor.buttons.generating") : t("contentEditor.buttons.confirmPaste")}
+              {isPasting
+                ? t("contentEditor.buttons.generating")
+                : t("contentEditor.buttons.confirmPaste")}
             </Button>
           </DialogFooter>
         </DialogContent>
