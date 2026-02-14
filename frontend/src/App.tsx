@@ -11,6 +11,7 @@ import { TeacherVerifyEmail } from "./pages/TeacherVerifyEmail";
 import { TeacherEmailVerification } from "./pages/TeacherEmailVerification";
 import TeacherForgotPassword from "./pages/TeacherForgotPassword";
 import TeacherResetPassword from "./pages/TeacherResetPassword";
+import TeacherSetupPassword from "./pages/TeacherSetupPassword";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import TeacherClassrooms from "./pages/teacher/TeacherClassrooms";
 import TeacherStudents from "./pages/teacher/TeacherStudents";
@@ -103,6 +104,10 @@ function App() {
         <Route
           path="/teacher/reset-password"
           element={<TeacherResetPassword />}
+        />
+        <Route
+          path="/teacher/setup-password"
+          element={<TeacherSetupPassword />}
         />
         <Route
           path="/teacher/verify-email"
