@@ -566,7 +566,8 @@ class EmailService:
                             <a href="{setup_url}" class="button" style="color: white;">設定密碼並開始使用</a>
                         </div>
 
-                        <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
+                        <div style="background-color: #f0fdf4; border-left: 4px solid #10b981;
+                                    padding: 15px; margin: 20px 0;">
                             <p style="margin: 0;"><strong>✨ 設定密碼後，您將可以：</strong></p>
                             <ul style="margin: 10px 0;">
                                 <li>✅ 登入 Duotopia 教學平台</li>
@@ -578,12 +579,14 @@ class EmailService:
 
                         <p style="color: #666; font-size: 14px;">
                             如果按鈕無法點擊，請複製以下連結到瀏覽器：<br>
-                            <code style="background: #e5e7eb; padding: 4px 8px; border-radius: 4px; font-size: 12px; word-break: break-all;">
+                            <code style="background: #e5e7eb; padding: 4px 8px;
+                                         border-radius: 4px; font-size: 12px; word-break: break-all;">
                                 {setup_url}
                             </code>
                         </p>
 
-                        <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
+                        <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b;
+                                    padding: 15px; margin: 20px 0;">
                             <p style="margin: 0;"><strong>⏰ 注意事項：</strong></p>
                             <ul style="margin: 10px 0;">
                                 <li>此連結將在 48 小時後失效</li>
