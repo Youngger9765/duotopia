@@ -194,7 +194,9 @@ def test_password_setup_token_can_be_used_for_password_reset(db_session: Session
 
     try:
         # 發送密碼設定郵件
-        email_service.send_password_setup_email(db_session, teacher, "Test Organization")
+        email_service.send_password_setup_email(
+            db_session, teacher, "Test Organization"
+        )
         db_session.refresh(teacher)
 
         # 記錄 token
@@ -241,9 +243,7 @@ def test_invite_existing_teacher_does_not_send_setup_email(
 
     try:
         # Mock email service
-        with patch.object(
-            email_service, "send_password_setup_email"
-        ) as mock_email:
+        with patch.object(email_service, "send_password_setup_email") as mock_email:
             # 邀請已存在的教師
             response = client.post(
                 f"/api/organizations/{org.id}/teachers/invite",
@@ -273,7 +273,9 @@ def test_invite_existing_teacher_does_not_send_setup_email(
         db_session.commit()
 
 
-def test_email_failure_does_not_break_invitation(db_session: Session, setup_organization):
+def test_email_failure_does_not_break_invitation(
+    db_session: Session, setup_organization
+):
     """
     測試郵件發送失敗不會中斷邀請流程
     """
@@ -281,9 +283,7 @@ def test_email_failure_does_not_break_invitation(db_session: Session, setup_orga
     token = setup_organization["token"]
 
     # Mock email service to fail
-    with patch.object(
-        email_service, "send_password_setup_email", return_value=False
-    ):
+    with patch.object(email_service, "send_password_setup_email", return_value=False):
         # 邀請新教師
         response = client.post(
             f"/api/organizations/{org.id}/teachers/invite",
@@ -301,7 +301,9 @@ def test_email_failure_does_not_break_invitation(db_session: Session, setup_orga
         assert data["role"] == "teacher"
 
     # 清理
-    teacher = db_session.query(Teacher).filter(Teacher.email == "failtest@test.com").first()
+    teacher = (
+        db_session.query(Teacher).filter(Teacher.email == "failtest@test.com").first()
+    )
     if teacher:
         db_session.query(TeacherOrganization).filter(
             TeacherOrganization.teacher_id == teacher.id

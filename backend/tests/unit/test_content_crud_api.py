@@ -404,8 +404,9 @@ class TestContentCRUD:
 
             assert response.status_code == 200
             data = response.json()
-            assert data["level"] == expected_string, \
-                f"Program level {program_level} should convert to '{expected_string}', got '{data['level']}'"
+            assert (
+                data["level"] == expected_string
+            ), f"Program level {program_level} should convert to '{expected_string}', got '{data['level']}'"
 
         db.close()
 
