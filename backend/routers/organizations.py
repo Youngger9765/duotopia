@@ -18,6 +18,7 @@ from database import get_db
 from models import Teacher, Organization, TeacherOrganization, TeacherSchool, School
 from auth import verify_token, get_password_hash
 from services.casbin_service import get_casbin_service
+from services.email_service import email_service
 import secrets
 
 
@@ -909,8 +910,26 @@ async def invite_teacher_to_organization(
                 f"Failed to sync Casbin roles for teacher {new_teacher.id}: {e}"
             )
 
-        # TODO: Send invitation email with password reset link
-        # For now, just create the account
+        # Send password setup email to the new teacher
+        try:
+            email_sent = email_service.send_password_setup_email(
+                db, new_teacher, org.display_name or org.name
+            )
+            if email_sent:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.info(
+                    f"Password setup email sent to {new_teacher.email} for organization {org.name}"
+                )
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(
+                f"Failed to send password setup email to {new_teacher.email}: {e}"
+            )
+            # Don't fail the request if email sending fails
 
         return TeacherRelationResponse.from_orm(teacher_org)
 
