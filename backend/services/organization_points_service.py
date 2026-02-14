@@ -303,5 +303,3 @@ if __name__ == "__main__":
         print(f"  [{status}] {count} {unit} = {result} points (expected: {expected})")
 
     print("\n" + "=" * 70)
-
-

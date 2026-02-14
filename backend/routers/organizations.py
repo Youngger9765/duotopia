@@ -640,6 +640,7 @@ class TeacherUpdateRequest(BaseModel):
     """Request model for updating teacher in organization"""
 
     role: str  # "org_owner" | "org_admin" | "teacher"
+    is_active: Optional[bool] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
@@ -665,7 +666,7 @@ async def list_organization_teachers(
     db: Session = Depends(get_db),
 ):
     """
-    List all teachers in an organization.
+    List all teachers (including inactive) in an organization.
     Requires teacher to be a member of the organization.
 
     Performance optimization: Uses joinedload to fetch teachers in a single query.
@@ -684,7 +685,6 @@ async def list_organization_teachers(
         )
         .filter(
             TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.is_active.is_(True),
         )
         .all()
     )
@@ -1134,21 +1134,54 @@ async def update_teacher_role(
     if teacher_id == current_teacher.id:
         raise HTTPException(400, "Cannot change your own role")
 
-    # Get target teacher
+    # Get target teacher (include inactive members so we can re-activate them)
     target_relation = (
         db.query(TeacherOrganization)
         .filter(
             TeacherOrganization.teacher_id == teacher_id,
             TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.is_active.is_(True),
         )
         .first()
     )
     if not target_relation:
         raise HTTPException(404, f"Teacher {teacher_id} not found in organization")
 
-    # Handle org_owner transfer
-    if update_data.role == "org_owner":
+    # Determine the final role (use requested role, fallback to current)
+    final_role = update_data.role or target_relation.role
+
+    # Handle is_active change
+    if (
+        update_data.is_active is not None
+        and update_data.is_active != target_relation.is_active
+    ):
+        # Prevent deactivating org_owner (must transfer ownership first)
+        if not update_data.is_active and target_relation.role == "org_owner":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="無法停用組織擁有者，請先轉移擁有權",
+            )
+        if update_data.is_active:
+            # Re-activating: check teacher_limit (org_owner exempt)
+            if organization.teacher_limit is not None and final_role != "org_owner":
+                active_teacher_count = (
+                    db.query(TeacherOrganization)
+                    .filter(
+                        TeacherOrganization.organization_id == org_id,
+                        TeacherOrganization.is_active.is_(True),
+                        TeacherOrganization.role != "org_owner",
+                        TeacherOrganization.teacher_id != teacher_id,
+                    )
+                    .count()
+                )
+                if active_teacher_count >= organization.teacher_limit:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"已達教師授權上限（{organization.teacher_limit} 位），無法重新啟用",
+                    )
+        target_relation.is_active = update_data.is_active
+
+    # Handle org_owner transfer (only when target is/will be active)
+    if final_role == "org_owner" and target_relation.is_active:
         current_owner = (
             db.query(TeacherOrganization)
             .filter(
@@ -1163,7 +1196,7 @@ async def update_teacher_role(
             current_owner.updated_at = datetime.now(timezone.utc)
 
     # Update role
-    target_relation.role = update_data.role
+    target_relation.role = final_role
     target_relation.updated_at = datetime.now(timezone.utc)
 
     # Update teacher info if provided
@@ -1174,6 +1207,33 @@ async def update_teacher_role(
         if update_data.last_name:
             target_teacher.last_name = update_data.last_name
 
+    db.flush()
+
+    # Re-verify teacher limit AFTER update to prevent race condition (TOCTOU)
+    # Matches the pattern in invite/add endpoints (see RACE_CONDITION_FIX.md)
+    if (
+        target_relation.is_active
+        and organization.teacher_limit is not None
+        and target_relation.role != "org_owner"
+    ):
+        from sqlalchemy import func
+
+        actual_count = (
+            db.query(func.count(TeacherOrganization.id))
+            .filter(
+                TeacherOrganization.organization_id == org_id,
+                TeacherOrganization.is_active.is_(True),
+                TeacherOrganization.role != "org_owner",
+            )
+            .scalar()
+        )
+        if actual_count > organization.teacher_limit:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"已達教師授權上限（{organization.teacher_limit} 位），無法重新啟用",
+            )
+
     db.commit()
     db.refresh(target_relation)
 
@@ -1182,6 +1242,7 @@ async def update_teacher_role(
         "teacher_id": target_relation.teacher_id,
         "organization_id": str(target_relation.organization_id),
         "role": target_relation.role,
+        "is_active": target_relation.is_active,
         "updated_at": target_relation.updated_at.isoformat(),
     }
 

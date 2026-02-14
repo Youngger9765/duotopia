@@ -56,6 +56,7 @@ HTTP_TIMEOUT = 30
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def banner(step: int, msg: str):
     print(f"\n{'='*60}")
     print(f"  STEP {step}: {msg}")
@@ -80,7 +81,9 @@ def login_with_retry(url: str, payload: dict, label: str, max_retries: int = 3):
             data = resp.json()
             token = data.get("access_token")
             user = data.get("user", {})
-            print(f"  [{label}] Login OK  user={user.get('name', user.get('email', '?'))}")
+            print(
+                f"  [{label}] Login OK  user={user.get('name', user.get('email', '?'))}"
+            )
             return token, data
 
         if resp.status_code == 429:
@@ -123,6 +126,7 @@ def generate_wav_audio(duration_sec: float = 2.0, freq_hz: float = 440.0) -> byt
 # ---------------------------------------------------------------------------
 # Steps
 # ---------------------------------------------------------------------------
+
 
 def step1_teacher_login() -> str:
     """Login as teacher and return access token."""
@@ -256,7 +260,9 @@ def step5_get_assignment_and_progress(student_token: str) -> dict:
 
     print(f"  Found {len(assignments)} assignment(s)")
     for a in assignments:
-        print(f"    id={a['id']}  title={a.get('title', '?')[:40]}  status={a.get('status')}")
+        print(
+            f"    id={a['id']}  title={a.get('title', '?')[:40]}  status={a.get('status')}"
+        )
 
     # Try each assignment to find one with activities (speech content)
     for assignment in assignments:
@@ -266,7 +272,9 @@ def step5_get_assignment_and_progress(student_token: str) -> dict:
             headers=headers,
             timeout=HTTP_TIMEOUT,
         )
-        print(f"\n  GET /api/students/assignments/{sa_id}/activities -> HTTP {resp2.status_code}")
+        print(
+            f"\n  GET /api/students/assignments/{sa_id}/activities -> HTTP {resp2.status_code}"
+        )
         if resp2.status_code != 200:
             print(f"    Response: {resp2.text[:200]}")
             continue
@@ -280,7 +288,9 @@ def step5_get_assignment_and_progress(student_token: str) -> dict:
         # or we just need any progress_id
         for act in activities:
             act_type = act.get("type", "")
-            act_id = act.get("id")  # This is the StudentContentProgress.id = progress_id
+            act_id = act.get(
+                "id"
+            )  # This is the StudentContentProgress.id = progress_id
             items = act.get("items", [])
             print(f"    Activity: id={act_id}  type={act_type}  items={len(items)}")
 
@@ -321,11 +331,17 @@ def step5_get_assignment_and_progress(student_token: str) -> dict:
                     "progress_id": activities[0]["id"],
                     "reference_text": REFERENCE_TEXT,
                 }
-                print(f"\n  Fallback: assignment_id={sa_id}, progress_id={activities[0]['id']}")
+                print(
+                    f"\n  Fallback: assignment_id={sa_id}, progress_id={activities[0]['id']}"
+                )
                 return result
 
     print("\n  WARNING: No suitable activity found. Using placeholder values.")
-    return {"assignment_id": None, "progress_id": None, "reference_text": REFERENCE_TEXT}
+    return {
+        "assignment_id": None,
+        "progress_id": None,
+        "reference_text": REFERENCE_TEXT,
+    }
 
 
 def step6_generate_audio() -> bytes:
@@ -405,7 +421,11 @@ def step7_speech_assess(
     print(f"  Response: {error_data}")
 
     if resp.status_code == 400:
-        detail = error_data.get("detail", "") if isinstance(error_data, dict) else str(error_data)
+        detail = (
+            error_data.get("detail", "")
+            if isinstance(error_data, dict)
+            else str(error_data)
+        )
         if "No speech could be recognized" in str(detail):
             print("  NOTE: Azure could not recognize speech in the generated audio.")
             print("  This is expected for a simple sine wave. The important thing is")
@@ -413,7 +433,9 @@ def step7_speech_assess(
         elif "Audio format" in str(detail):
             print("  NOTE: Audio format issue. Check ALLOWED_AUDIO_FORMATS.")
     elif resp.status_code == 402:
-        print("  NOTE: Points/quota limit exceeded (402). This means deduction logic is working!")
+        print(
+            "  NOTE: Points/quota limit exceeded (402). This means deduction logic is working!"
+        )
     elif resp.status_code == 503:
         print("  NOTE: Azure Speech API error or timeout (503).")
 
@@ -441,8 +463,12 @@ def step9_print_results(before: dict, after: dict, assess_result: dict):
     if isinstance(used_before, (int, float)) and isinstance(used_after, (int, float)):
         diff_used = used_after - used_before
         diff_remaining = remaining_after - remaining_before
-        print(f"  {'used_points':20s} {used_before:>10}  {used_after:>10}  {diff_used:>+10}")
-        print(f"  {'remaining_points':20s} {remaining_before:>10}  {remaining_after:>10}  {diff_remaining:>+10}")
+        print(
+            f"  {'used_points':20s} {used_before:>10}  {used_after:>10}  {diff_used:>+10}"
+        )
+        print(
+            f"  {'remaining_points':20s} {remaining_before:>10}  {remaining_after:>10}  {diff_remaining:>+10}"
+        )
         print()
         if diff_used > 0:
             print(f"  *** POINTS DEDUCTED: {diff_used} points ***")
@@ -460,7 +486,9 @@ def step9_print_results(before: dict, after: dict, assess_result: dict):
             print(f"  *** UNEXPECTED: Points decreased by {abs(diff_used)}! ***")
     else:
         print(f"  {'used_points':20s} {used_before!s:>10s}  {used_after!s:>10s}")
-        print(f"  {'remaining_points':20s} {remaining_before!s:>10s}  {remaining_after!s:>10s}")
+        print(
+            f"  {'remaining_points':20s} {remaining_before!s:>10s}  {remaining_after!s:>10s}"
+        )
 
     print()
 
@@ -484,6 +512,7 @@ def step9_print_results(before: dict, after: dict, assess_result: dict):
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main():
     print("=" * 60)
@@ -545,5 +574,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n\nFATAL ERROR: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

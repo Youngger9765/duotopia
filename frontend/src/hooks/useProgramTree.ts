@@ -12,7 +12,22 @@ export interface ProgramTreeProgram {
   id: number;
   name: string;
   description?: string;
+  level?: string; // Program difficulty level (A1, A2, B1, B2, C1, C2, preA)
   lessons?: ProgramTreeLesson[];
+}
+
+/** Find the Program level for a given lessonId from a list of programs. */
+export function getProgramLevelByLessonId(
+  programs: Array<{ level?: string; lessons?: Array<{ id?: number }> }>,
+  lessonId: number | null | undefined,
+): string | undefined {
+  if (!lessonId) return undefined;
+  for (const program of programs) {
+    if (program.lessons?.find((l) => l.id === lessonId)) {
+      return program.level;
+    }
+  }
+  return undefined;
 }
 
 export function useProgramTree<T extends ProgramTreeProgram>(

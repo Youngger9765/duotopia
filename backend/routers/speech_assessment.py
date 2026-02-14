@@ -736,11 +736,15 @@ async def assess_pronunciation_endpoint(
         try:
             audio = AudioSegment.from_file(BytesIO(audio_data))
             duration_seconds = len(audio) / 1000.0  # 毫秒轉秒
-            required_points = OrganizationPointsService.convert_unit_to_points(duration_seconds, "秒")
+            required_points = OrganizationPointsService.convert_unit_to_points(
+                duration_seconds, "秒"
+            )
 
             # 根據班級類型決定檢查對象
             classroom = assignment.classroom
-            logger.info(f"🔍 DEBUG: classroom={classroom}, classroom_id={assignment.classroom_id}")
+            logger.info(
+                f"🔍 DEBUG: classroom={classroom}, classroom_id={assignment.classroom_id}"
+            )
             if classroom:
                 logger.info(f"🔍 DEBUG: classroom_schools={classroom.classroom_schools}")
             org_id = get_organization_id_from_classroom(classroom)
@@ -973,9 +977,13 @@ async def assess_pronunciation_endpoint(
 
             # 根據班級類型決定扣點對象
             classroom = assignment.classroom
-            logger.info(f"🔍 DEDUCT DEBUG: classroom={classroom}, classroom_id={assignment.classroom_id}")
+            logger.info(
+                f"🔍 DEDUCT DEBUG: classroom={classroom}, classroom_id={assignment.classroom_id}"
+            )
             if classroom:
-                logger.info(f"🔍 DEDUCT DEBUG: classroom_schools={classroom.classroom_schools}")
+                logger.info(
+                    f"🔍 DEDUCT DEBUG: classroom_schools={classroom.classroom_schools}"
+                )
             org_id = get_organization_id_from_classroom(classroom)
             logger.info(f"🔍 DEDUCT DEBUG: org_id={org_id}")
             if org_id:
@@ -1034,7 +1042,9 @@ async def assess_pronunciation_endpoint(
                         status_code=402,
                         detail={
                             "error": "QUOTA_HARD_LIMIT_EXCEEDED",
-                            "message": "點數已用完（含緩衝額度），請聯繫管理員續費後再繼續使用" if is_org else "老師的配額已用完（含緩衝額度），請聯繫老師續費後再繼續使用",
+                            "message": "點數已用完（含緩衝額度），請聯繫管理員續費後再繼續使用"
+                            if is_org
+                            else "老師的配額已用完（含緩衝額度），請聯繫老師續費後再繼續使用",
                             "quota_info": e.detail,
                         },
                     )
@@ -1395,18 +1405,27 @@ async def upload_pronunciation_analysis(
             # 查詢是否已經處理過此 analysis_id
             existing_org_log = (
                 db.query(OrganizationPointsLog)
-                .filter(OrganizationPointsLog.description.contains(f"analysis_id={analysis_id}"))
+                .filter(
+                    OrganizationPointsLog.description.contains(
+                        f"analysis_id={analysis_id}"
+                    )
+                )
                 .first()
             )
             # PointUsageLog 使用 feature_detail (JSON) 而非 description
             existing_quota_log = (
                 db.query(PointUsageLog)
-                .filter(cast(PointUsageLog.feature_detail["analysis_id"], String) == analysis_id)
+                .filter(
+                    cast(PointUsageLog.feature_detail["analysis_id"], String)
+                    == analysis_id
+                )
                 .first()
             )
 
             if existing_org_log or existing_quota_log:
-                logger.info(f"⚠️ Analysis {analysis_id} already processed, skip deduction")
+                logger.info(
+                    f"⚠️ Analysis {analysis_id} already processed, skip deduction"
+                )
                 return {
                     "status": "success",
                     "note": "Already processed (network retry detected)",
@@ -1459,7 +1478,9 @@ async def upload_pronunciation_analysis(
                 student_assignment = (
                     db.query(StudentAssignment)
                     .options(
-                        joinedload(StudentAssignment.assignment).joinedload(Assignment.teacher),
+                        joinedload(StudentAssignment.assignment).joinedload(
+                            Assignment.teacher
+                        ),
                         joinedload(StudentAssignment.assignment)
                         .joinedload(Assignment.classroom)
                         .joinedload(Classroom.classroom_schools)
@@ -1485,7 +1506,9 @@ async def upload_pronunciation_analysis(
                         audio = AudioSegment.from_file(BytesIO(audio_data))
                         duration_seconds = len(audio) / 1000.0
                     except Exception as e:
-                        logger.warning(f"Failed to calculate audio duration: {e}, using default 30s")
+                        logger.warning(
+                            f"Failed to calculate audio duration: {e}, using default 30s"
+                        )
                         duration_seconds = 30.0
 
                     required_points = OrganizationPointsService.convert_unit_to_points(
@@ -1497,10 +1520,16 @@ async def upload_pronunciation_analysis(
 
                     if org_id:
                         # 🏢 機構班級 → 扣機構點數
-                        org = db.query(Organization).filter(Organization.id == org_id).first()
+                        org = (
+                            db.query(Organization)
+                            .filter(Organization.id == org_id)
+                            .first()
+                        )
 
                         # 事前檢查（僅 warning，不阻擋）
-                        if not OrganizationPointsService.check_points(org, required_points):
+                        if not OrganizationPointsService.check_points(
+                            org, required_points
+                        ):
                             points_info = OrganizationPointsService.get_points_info(org)
                             logger.warning(
                                 f"⚠️ Org {org_id} points low before upload-analysis: "
@@ -1530,7 +1559,9 @@ async def upload_pronunciation_analysis(
                     else:
                         # 👤 個人老師班級 → 扣老師配額
                         if teacher:
-                            if not QuotaService.check_quota(teacher, int(duration_seconds)):
+                            if not QuotaService.check_quota(
+                                teacher, int(duration_seconds)
+                            ):
                                 quota_info = QuotaService.get_quota_info(teacher)
                                 logger.warning(
                                     f"⚠️ Teacher {teacher.id} quota low before upload-analysis: "
@@ -1560,7 +1591,9 @@ async def upload_pronunciation_analysis(
                 # 扣點失敗（硬限制超額），回滾並返回錯誤
                 if e.status_code == 402:
                     db.rollback()
-                    logger.error(f"❌ Quota/Points hard limit exceeded in upload-analysis")
+                    logger.error(
+                        f"❌ Quota/Points hard limit exceeded in upload-analysis"
+                    )
                     raise
                 # 其他 HTTPException 直接拋出
                 raise

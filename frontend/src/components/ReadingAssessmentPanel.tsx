@@ -55,6 +55,9 @@ const TRANSLATION_LANGUAGES = [
   { value: "korean" as const, labelKey: "korean", code: "ko" },
 ];
 
+// 批次貼上/翻譯的項目上限
+const MAX_BATCH_ITEMS = 25;
+
 interface ContentRow {
   id: string | number;
   text: string;
@@ -1055,6 +1058,7 @@ interface ReadingAssessmentPanelProps {
   onSave?: () => void | Promise<void>;
   // Alternative props for ClassroomDetail usage
   lessonId?: number;
+  programLevel?: string; // Program difficulty level for AI generation
   contentId?: number;
   onCancel?: () => void;
   isOpen?: boolean;
@@ -1068,10 +1072,12 @@ export default function ReadingAssessmentPanel({
   onUpdateContent,
   onSave,
   lessonId,
+  // programLevel - reserved for future AI generation features
   isCreating = false,
   isAssignmentCopy = false,
 }: ReadingAssessmentPanelProps) {
   const { t } = useTranslation();
+
   const [title, setTitle] = useState("");
   const [rows, setRows] = useState<ContentRow[]>([
     {
@@ -1121,10 +1127,11 @@ export default function ReadingAssessmentPanel({
   const [isBatchGeneratingTTS, setIsBatchGeneratingTTS] = useState(false); // 批次生成 TTS 中
   const [isBatchGeneratingTranslation, setIsBatchGeneratingTranslation] =
     useState(false); // 批次生成翻譯中
+  const [isPasting, setIsPasting] = useState(false); // 批次貼上中
 
   // 計算是否有批次操作正在進行
   const isBatchProcessing =
-    isBatchGeneratingTTS || isBatchGeneratingTranslation;
+    isBatchGeneratingTTS || isBatchGeneratingTranslation || isPasting;
 
   // dnd-kit sensors
   const sensors = useSensors(
@@ -1425,7 +1432,9 @@ export default function ReadingAssessmentPanel({
         if (error instanceof ApiError) {
           const detail = error.detail;
           const errorMessage =
-            typeof detail === "object" && detail?.message
+            typeof detail === "object" &&
+            !Array.isArray(detail) &&
+            detail?.message
               ? detail.message
               : typeof detail === "string"
                 ? detail
@@ -1543,7 +1552,9 @@ export default function ReadingAssessmentPanel({
             if (error instanceof ApiError) {
               const detail = error.detail;
               const errorMessage =
-                typeof detail === "object" && detail?.message
+                typeof detail === "object" &&
+                !Array.isArray(detail) &&
+                detail?.message
                   ? detail.message
                   : typeof detail === "string"
                     ? detail
@@ -1674,7 +1685,9 @@ export default function ReadingAssessmentPanel({
             if (error instanceof ApiError) {
               const detail = error.detail;
               const errorMessage =
-                typeof detail === "object" && detail?.message
+                typeof detail === "object" &&
+                !Array.isArray(detail) &&
+                detail?.message
                   ? detail.message
                   : typeof detail === "string"
                     ? detail
@@ -1767,6 +1780,14 @@ export default function ReadingAssessmentPanel({
       return;
     }
 
+    // 檢查是否超過上限
+    if (itemsToTranslate.length > MAX_BATCH_ITEMS) {
+      toast.error(
+        t("contentEditor.messages.batchLimitError", { count: MAX_BATCH_ITEMS }),
+      );
+      return;
+    }
+
     setIsBatchGeneratingTranslation(true);
     toast.info(t("contentEditor.messages.startingBatchTranslation"));
     const newRows = [...rows];
@@ -1848,6 +1869,17 @@ export default function ReadingAssessmentPanel({
       return;
     }
 
+    // 超過上限時自動截斷
+    if (lines.length > MAX_BATCH_ITEMS) {
+      toast.warning(
+        t("contentEditor.messages.batchLimitTruncated", {
+          count: MAX_BATCH_ITEMS,
+        }),
+      );
+      lines.length = MAX_BATCH_ITEMS;
+    }
+
+    setIsPasting(true);
     toast.info(
       t("contentEditor.messages.processingItems", { count: lines.length }),
     );
@@ -1919,6 +1951,7 @@ export default function ReadingAssessmentPanel({
       } catch (error) {
         console.error("Batch processing error:", error);
         toast.error(t("contentEditor.messages.batchProcessingFailed"));
+        setIsPasting(false);
         return;
       }
     }
@@ -1959,6 +1992,7 @@ export default function ReadingAssessmentPanel({
       } catch (error) {
         console.error("Failed to save batch paste:", error);
         toast.error(t("contentEditor.messages.batchProcessingFailed"));
+        setIsPasting(false);
         return;
       }
     } else {
@@ -1985,6 +2019,7 @@ export default function ReadingAssessmentPanel({
       );
     }
 
+    setIsPasting(false);
     setBatchPasteDialogOpen(false);
     setBatchPasteText("");
   };
@@ -2218,7 +2253,9 @@ export default function ReadingAssessmentPanel({
                     if (error instanceof ApiError) {
                       const detail = error.detail;
                       const errorMessage =
-                        typeof detail === "object" && detail?.message
+                        typeof detail === "object" &&
+                        !Array.isArray(detail) &&
+                        detail?.message
                           ? detail.message
                           : typeof detail === "string"
                             ? detail
@@ -2253,7 +2290,9 @@ export default function ReadingAssessmentPanel({
                     if (error instanceof ApiError) {
                       const detail = error.detail;
                       const errorMessage =
-                        typeof detail === "object" && detail?.message
+                        typeof detail === "object" &&
+                        !Array.isArray(detail) &&
+                        detail?.message
                           ? detail.message
                           : typeof detail === "string"
                             ? detail
@@ -2318,14 +2357,26 @@ export default function ReadingAssessmentPanel({
               </label>
               <textarea
                 value={batchPasteText}
-                onChange={(e) => setBatchPasteText(e.target.value)}
+                onChange={(e) => {
+                  setBatchPasteText(e.target.value);
+                }}
                 placeholder="put&#10;Put it away.&#10;It's time to put everything away. Right now."
                 className="w-full min-h-80 max-h-[60vh] px-4 py-3 border-2 border-gray-300 rounded-lg font-mono text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-y overflow-y-auto"
               />
-              <div className="text-xs text-gray-500 mt-2">
+              <div className="text-xs mt-2 flex items-center justify-between">
+                <span className="text-gray-500">
+                  {batchPasteText.split("\n").filter((line) => line.trim())
+                    .length || 0}{" "}
+                  {t("contentEditor.messages.items")}
+                </span>
                 {batchPasteText.split("\n").filter((line) => line.trim())
-                  .length || 0}{" "}
-                {t("contentEditor.messages.items")}
+                  .length > MAX_BATCH_ITEMS && (
+                  <span className="text-amber-600 font-medium">
+                    {t("contentEditor.messages.batchLimitWarning", {
+                      count: MAX_BATCH_ITEMS,
+                    })}
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex gap-6 p-4 bg-gray-50 rounded-lg">
@@ -2424,9 +2475,12 @@ export default function ReadingAssessmentPanel({
               onClick={() =>
                 handleBatchPaste(batchPasteAutoTTS, batchPasteAutoTranslate)
               }
+              disabled={isPasting}
               className="px-6 py-2 text-base bg-blue-600 hover:bg-blue-700"
             >
-              {t("contentEditor.buttons.confirmPaste")}
+              {isPasting
+                ? t("contentEditor.buttons.generating")
+                : t("contentEditor.buttons.confirmPaste")}
             </Button>
           </DialogFooter>
         </DialogContent>
