@@ -39,6 +39,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import CreateOrganization from "./pages/admin/CreateOrganization";
 import DebugPage from "./pages/DebugPage";
 import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import PricingPage from "./pages/PricingPage";
 import TestSubscription from "./pages/TestSubscription";
 import DemoAssignmentPage from "./pages/DemoAssignmentPage";
@@ -86,6 +87,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/dashboard" element={<RoleBasedRedirect />} />
         <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/pricing" element={<PricingPage />} />
 
         {/* Demo Route - Public, no authentication required */}
