@@ -1257,6 +1257,54 @@ class ApiClient {
     );
   }
 
+  // ============ Organization Teacher Methods ============
+  async getOrganizationTeachers(organizationId: string) {
+    return this.request<
+      Array<{
+        id: number;
+        email: string;
+        name: string;
+        role: string;
+        is_active: boolean;
+      }>
+    >(`/api/organizations/${organizationId}/teachers`);
+  }
+
+  async inviteTeacherToOrganization(
+    organizationId: string,
+    data: { email: string; name: string; role: string },
+  ) {
+    return this.request<{ teacher_id: number }>(
+      `/api/organizations/${organizationId}/teachers/invite`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+    );
+  }
+
+  async addTeacherToSchool(
+    schoolId: string,
+    data: { teacher_id: number; roles: string[] },
+  ) {
+    return this.request(`/api/schools/${schoolId}/teachers`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getSchoolTeachers(schoolId: string) {
+    return this.request<
+      Array<{
+        id: number;
+        email: string;
+        name: string;
+        roles: string[];
+        is_active: boolean;
+      }>
+    >(`/api/schools/${schoolId}/teachers`);
+  }
+
   // ============ Admin Organization Methods ============
   async listOrganizations(params?: {
     limit?: number;
