@@ -1325,6 +1325,8 @@ async def start_word_selection_practice(
     current_proficiency = (
         float(mastery_result.current_mastery) * 100 if mastery_result else 0
     )
+    words_mastered = int(mastery_result.words_mastered) if mastery_result else 0
+    achieved = bool(mastery_result.achieved) if mastery_result else False
 
     return {
         "session_id": practice_session.id,
@@ -1332,6 +1334,8 @@ async def start_word_selection_practice(
         "total_words": total_words_in_assignment,
         "current_proficiency": current_proficiency,
         "target_proficiency": target_proficiency,
+        "words_mastered": words_mastered,
+        "achieved": achieved,
         "show_word": assignment.show_word if assignment else True,
         "show_image": assignment.show_image if assignment else True,
         "play_audio": assignment.play_audio if assignment else False,

@@ -180,6 +180,8 @@ export default function WordSelectionActivity({
         total_words: number;
         current_proficiency: number;
         target_proficiency: number;
+        words_mastered: number;
+        achieved: boolean;
         show_word: boolean;
         show_image: boolean;
         play_audio: boolean;
@@ -196,8 +198,8 @@ export default function WordSelectionActivity({
       setProficiency({
         current_mastery: data.current_proficiency || 0,
         target_mastery: data.target_proficiency || 80,
-        achieved: false,
-        words_mastered: 0,
+        achieved: data.achieved ?? false,
+        words_mastered: data.words_mastered ?? 0,
         total_words: data.total_words || 0,
       });
       setCurrentIndex(0);
