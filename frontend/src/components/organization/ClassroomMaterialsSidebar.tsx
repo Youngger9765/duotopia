@@ -40,13 +40,13 @@ export function ClassroomMaterialsSidebar({
   classroomId,
   classroomName,
   schoolId,
-  organizationId: _organizationId,
+  organizationId,
   onSuccess,
 }: ClassroomMaterialsSidebarProps) {
   const token = useTeacherAuthStore((state) => state.token);
 
   const [classroomPrograms, setClassroomPrograms] = useState<Program[]>([]);
-  const [schoolPrograms, setSchoolPrograms] = useState<Program[]>([]);
+  const [orgPrograms, setOrgPrograms] = useState<Program[]>([]);
   const [_loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProgramIds, setSelectedProgramIds] = useState<Set<number>>(
@@ -72,7 +72,7 @@ export function ClassroomMaterialsSidebar({
       const classroomProgramsData = programs || [];
       setClassroomPrograms(classroomProgramsData);
       // 獲取班級教材後，立即更新可用教材列表
-      await fetchSchoolPrograms(classroomProgramsData);
+      await fetchOrgPrograms(classroomProgramsData);
     } catch (error) {
       logError("Failed to fetch classroom programs", error, {
         schoolId,
@@ -84,12 +84,12 @@ export function ClassroomMaterialsSidebar({
     }
   };
 
-  const fetchSchoolPrograms = async (
+  const fetchOrgPrograms = async (
     currentClassroomPrograms: Program[] = classroomPrograms,
   ) => {
     try {
       const response = await fetch(
-        `${API_URL}/api/schools/${schoolId}/programs`,
+        `${API_URL}/api/organizations/${organizationId}/programs`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -104,11 +104,11 @@ export function ClassroomMaterialsSidebar({
         const available = (programs || []).filter(
           (p: Program) => !classroomProgramIds.has(p.id),
         );
-        setSchoolPrograms(available);
+        setOrgPrograms(available);
       }
     } catch (error) {
-      logError("Failed to fetch school programs", error, { schoolId });
-      toast.error("載入學校教材失敗");
+      logError("Failed to fetch org programs", error, { organizationId });
+      toast.error("載入機構教材失敗");
     }
   };
 
@@ -167,7 +167,7 @@ export function ClassroomMaterialsSidebar({
     });
   };
 
-  const filteredSchoolPrograms = schoolPrograms.filter((program) =>
+  const filteredOrgPrograms = orgPrograms.filter((program) =>
     searchTerm
       ? program.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         program.description?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -180,7 +180,7 @@ export function ClassroomMaterialsSidebar({
         <SheetHeader>
           <SheetTitle>{classroomName} - 教材清單</SheetTitle>
           <SheetDescription>
-            管理此班級的教材，可以從學校教材中添加教材
+            管理此班級的教材，可以從機構教材中添加教材
           </SheetDescription>
         </SheetHeader>
 
@@ -232,7 +232,7 @@ export function ClassroomMaterialsSidebar({
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-700">
-                從學校添加教材 ({selectedProgramIds.size} 已選擇)
+                從機構添加教材 ({selectedProgramIds.size} 已選擇)
               </h3>
               {selectedProgramIds.size > 0 && (
                 <Button size="sm" onClick={handleAddPrograms}>
@@ -255,7 +255,7 @@ export function ClassroomMaterialsSidebar({
 
             {/* 可用教材列表 */}
             <ScrollArea className="h-[250px] border rounded-md p-3">
-              {filteredSchoolPrograms.length === 0 ? (
+              {filteredOrgPrograms.length === 0 ? (
                 <div className="text-center text-gray-500 py-8">
                   <BookOpen className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                   <p className="text-sm">
@@ -264,7 +264,7 @@ export function ClassroomMaterialsSidebar({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {filteredSchoolPrograms.map((program) => {
+                  {filteredOrgPrograms.map((program) => {
                     const isSelected = selectedProgramIds.has(program.id);
                     return (
                       <div

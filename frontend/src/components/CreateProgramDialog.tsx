@@ -69,8 +69,8 @@ export default function CreateProgramDialog({
   classroomName,
 }: CreateProgramDialogProps) {
   const { t } = useTranslation();
-  const { mode, selectedSchool } = useWorkspace();
-  const isOrganizationMode = mode === "organization" && selectedSchool;
+  const { mode, selectedOrganization } = useWorkspace();
+  const isOrganizationMode = mode === "organization" && selectedOrganization;
 
   const [activeTab, setActiveTab] = useState(
     isOrganizationMode ? "school" : "template",
@@ -79,12 +79,12 @@ export default function CreateProgramDialog({
   const [creating, setCreating] = useState(false);
   const isCreatingRef = useRef(false); // 🔒 同步追蹤處理狀態，防止雙擊
 
-  // 學校教材 (僅組織模式)
-  const [schoolPrograms, setSchoolPrograms] = useState<Program[]>([]);
-  const [selectedSchoolPrograms, setSelectedSchoolPrograms] = useState<
-    Program[]
-  >([]);
-  const [schoolProgramName, setSchoolProgramName] = useState("");
+  // 機構教材 (僅組織模式)
+  const [orgPrograms, setOrgPrograms] = useState<Program[]>([]);
+  const [selectedOrgPrograms, setSelectedOrgPrograms] = useState<Program[]>(
+    [],
+  );
+  const [orgProgramName, setOrgProgramName] = useState("");
 
   // 個人教材 (原 "公版模板")
   const [templates, setTemplates] = useState<Program[]>([]);
@@ -158,24 +158,26 @@ export default function CreateProgramDialog({
         apiClient.getTemplatePrograms() as Promise<Program[]>,
         apiClient.getCopyablePrograms(
           classroomId,
-          isOrganizationMode && selectedSchool ? selectedSchool.id : undefined,
+          isOrganizationMode && selectedOrganization
+            ? selectedOrganization.id
+            : undefined,
         ) as Promise<Program[]>,
       ];
 
-      // 組織模式下載入學校教材
-      if (isOrganizationMode && selectedSchool) {
+      // 組織模式下載入機構教材
+      if (isOrganizationMode && selectedOrganization) {
         promises.push(
           apiClient.getTeacherPrograms(
             true,
             undefined,
-            selectedSchool.id,
             undefined,
+            selectedOrganization.id,
           ) as Promise<Program[]>,
         );
       }
 
       const results = await Promise.all(promises);
-      const [templatesData, copyableData, schoolProgramsData] = results;
+      const [templatesData, copyableData, orgProgramsData] = results;
 
       setTemplates(templatesData);
       // 過濾掉當前班級的課程
@@ -184,9 +186,9 @@ export default function CreateProgramDialog({
       );
       setCopyablePrograms(otherPrograms);
 
-      // 設定學校教材
-      if (schoolProgramsData) {
-        setSchoolPrograms(schoolProgramsData);
+      // 設定機構教材
+      if (orgProgramsData) {
+        setOrgPrograms(orgProgramsData);
       }
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -197,8 +199,8 @@ export default function CreateProgramDialog({
   };
 
   const resetForms = () => {
-    setSelectedSchoolPrograms([]);
-    setSchoolProgramName("");
+    setSelectedOrgPrograms([]);
+    setOrgProgramName("");
     setSelectedTemplates([]);
     setTemplateName("");
     setSelectedPrograms([]);
@@ -268,27 +270,27 @@ export default function CreateProgramDialog({
     }
   };
 
-  const toggleSchoolProgram = (program: Program, e?: React.MouseEvent) => {
+  const toggleOrgProgram = (program: Program, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const isSelected = selectedSchoolPrograms.some((p) => p.id === program.id);
+    const isSelected = selectedOrgPrograms.some((p) => p.id === program.id);
     if (isSelected) {
-      setSelectedSchoolPrograms((prev) =>
+      setSelectedOrgPrograms((prev) =>
         prev.filter((p) => p.id !== program.id),
       );
     } else {
-      setSelectedSchoolPrograms((prev) => [...prev, program]);
+      setSelectedOrgPrograms((prev) => [...prev, program]);
     }
   };
 
   const handleCreateFromSchool = async () => {
-    if (selectedSchoolPrograms.length === 0) return;
+    if (selectedOrgPrograms.length === 0) return;
 
     // 🔒 防止雙擊
     if (isCreatingRef.current) return;
     isCreatingRef.current = true;
 
     // 檢查是否有重複課程
-    const duplicatePrograms = selectedSchoolPrograms.filter(
+    const duplicatePrograms = selectedOrgPrograms.filter(
       (p) => p.is_duplicate,
     );
     if (duplicatePrograms.length > 0) {
@@ -306,14 +308,14 @@ export default function CreateProgramDialog({
 
     setCreating(true);
     try {
-      const promises = selectedSchoolPrograms.map((program) =>
+      const promises = selectedOrgPrograms.map((program) =>
         apiClient.copyProgram({
           program_id: program.id,
           target_scope: "classroom",
           target_id: classroomId.toString(),
           name:
-            selectedSchoolPrograms.length === 1 && schoolProgramName
-              ? schoolProgramName
+            selectedOrgPrograms.length === 1 && orgProgramName
+              ? orgProgramName
               : undefined,
         }),
       );
@@ -321,13 +323,13 @@ export default function CreateProgramDialog({
       await Promise.all(promises);
       toast.success(
         t("dialogs.createProgramDialog.success.created", {
-          count: selectedSchoolPrograms.length,
+          count: selectedOrgPrograms.length,
         }),
       );
       onSuccess();
       onClose();
     } catch (error) {
-      console.error("Failed to create from school programs:", error);
+      console.error("Failed to create from org programs:", error);
       toast.error(t("dialogs.createProgramDialog.errors.createFailed"));
     } finally {
       setCreating(false);
@@ -548,7 +550,7 @@ export default function CreateProgramDialog({
             </TabsTrigger>
           </TabsList>
 
-          {/* 學校教材 (僅組織模式) */}
+          {/* 機構教材 (僅組織模式) */}
           {isOrganizationMode && (
             <TabsContent
               value="school"
@@ -566,23 +568,23 @@ export default function CreateProgramDialog({
                     className="pl-10"
                   />
                 </div>
-                {schoolPrograms.length > 0 && (
+                {orgPrograms.length > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">
                       {t("createProgramDialog.school.selected", {
-                        count: selectedSchoolPrograms.length,
-                        total: schoolPrograms.length,
+                        count: selectedOrgPrograms.length,
+                        total: orgPrograms.length,
                       })}
                     </span>
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() =>
-                          setSelectedSchoolPrograms(schoolPrograms)
+                          setSelectedOrgPrograms(orgPrograms)
                         }
                         disabled={
-                          selectedSchoolPrograms.length ===
-                          schoolPrograms.length
+                          selectedOrgPrograms.length ===
+                          orgPrograms.length
                         }
                         className="text-xs text-blue-600 hover:text-blue-800 disabled:text-gray-400"
                       >
@@ -590,8 +592,8 @@ export default function CreateProgramDialog({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setSelectedSchoolPrograms([])}
-                        disabled={selectedSchoolPrograms.length === 0}
+                        onClick={() => setSelectedOrgPrograms([])}
+                        disabled={selectedOrgPrograms.length === 0}
                         className="text-xs text-gray-600 hover:text-gray-800 disabled:text-gray-400"
                       >
                         {t("createProgramDialog.school.clear")}
@@ -606,21 +608,21 @@ export default function CreateProgramDialog({
                   <div className="text-center py-8 text-gray-500">
                     {t("createProgramDialog.school.loading")}
                   </div>
-                ) : schoolPrograms.length === 0 ? (
+                ) : orgPrograms.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     {t("createProgramDialog.school.empty")}
                   </div>
                 ) : (
-                  schoolPrograms
+                  orgPrograms
                     .filter((p) =>
                       p.name.toLowerCase().includes(searchTerm.toLowerCase()),
                     )
                     .map((program) => (
                       <div
                         key={program.id}
-                        onClick={(e) => toggleSchoolProgram(program, e)}
+                        onClick={(e) => toggleOrgProgram(program, e)}
                         className={`p-4 rounded-lg cursor-pointer transition-all ${
-                          selectedSchoolPrograms.some(
+                          selectedOrgPrograms.some(
                             (p) => p.id === program.id,
                           )
                             ? "bg-blue-50 border-2 border-blue-500 shadow-sm"
@@ -637,7 +639,7 @@ export default function CreateProgramDialog({
                               {program.is_duplicate && (
                                 <AlertTriangle className="h-4 w-4 text-yellow-500" />
                               )}
-                              {selectedSchoolPrograms.some(
+                              {selectedOrgPrograms.some(
                                 (p) => p.id === program.id,
                               ) && (
                                 <CheckCircle className="h-4 w-4 text-blue-500" />
@@ -676,25 +678,25 @@ export default function CreateProgramDialog({
                 )}
               </div>
 
-              {selectedSchoolPrograms.length === 1 && (
+              {selectedOrgPrograms.length === 1 && (
                 <div className="border-t pt-4">
                   <Label htmlFor="school-program-name">
                     {t("createProgramDialog.school.nameLabel")}
                   </Label>
                   <Input
                     id="school-program-name"
-                    value={schoolProgramName}
-                    onChange={(e) => setSchoolProgramName(e.target.value)}
-                    placeholder={selectedSchoolPrograms[0].name}
+                    value={orgProgramName}
+                    onChange={(e) => setOrgProgramName(e.target.value)}
+                    placeholder={selectedOrgPrograms[0].name}
                     className="mt-1"
                   />
                 </div>
               )}
-              {selectedSchoolPrograms.length > 1 && (
+              {selectedOrgPrograms.length > 1 && (
                 <div className="border-t pt-4">
                   <p className="text-sm text-gray-600">
                     {t("createProgramDialog.school.multipleNote", {
-                      count: selectedSchoolPrograms.length,
+                      count: selectedOrgPrograms.length,
                     })}
                   </p>
                 </div>
@@ -1185,13 +1187,13 @@ export default function CreateProgramDialog({
           {activeTab === "school" && (
             <Button
               onClick={handleCreateFromSchool}
-              disabled={selectedSchoolPrograms.length === 0 || creating}
+              disabled={selectedOrgPrograms.length === 0 || creating}
             >
               {creating
                 ? t("createProgramDialog.buttons.creating")
-                : selectedSchoolPrograms.length > 1
+                : selectedOrgPrograms.length > 1
                   ? t("createProgramDialog.buttons.createMultiple", {
-                      count: selectedSchoolPrograms.length,
+                      count: selectedOrgPrograms.length,
                     })
                   : t("createProgramDialog.buttons.create")}
             </Button>

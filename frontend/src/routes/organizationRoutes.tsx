@@ -7,7 +7,7 @@ import TeachersPage from "@/pages/organization/TeachersPage";
 import MaterialsPage from "@/pages/organization/MaterialsPage";
 import OrganizationEditPage from "@/pages/organization/OrganizationEditPage";
 import SchoolDetailPage from "@/pages/organization/SchoolDetailPage";
-import SchoolMaterialsPage from "@/pages/organization/SchoolMaterialsPage";
+
 import SchoolClassroomsPage from "@/pages/organization/SchoolClassroomsPage";
 import SchoolTeachersPage from "@/pages/organization/SchoolTeachersPage";
 import SchoolStudentsPage from "@/pages/organization/SchoolStudentsPage";
@@ -71,12 +71,6 @@ export const organizationRoutes = (
 
     {/* School teachers page */}
     <Route path="schools/:schoolId/teachers" element={<SchoolTeachersPage />} />
-
-    {/* School materials page */}
-    <Route
-      path="schools/:schoolId/materials"
-      element={<SchoolMaterialsPage />}
-    />
 
     {/* School students page */}
     <Route path="schools/:schoolId/students" element={<SchoolStudentsPage />} />

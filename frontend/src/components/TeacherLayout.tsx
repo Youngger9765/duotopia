@@ -110,7 +110,7 @@ function TeacherLayoutInner({
   );
 
   // ✅ 根據 workspace mode 過濾 sidebar 內容
-  // 個人模式：過濾掉組織相關功能（組織架構、學校教材）
+  // 個人模式：過濾掉組織相關功能（組織架構、機構教材）
   // 機構模式：顯示所有功能
   // 資源帳號：隱藏「資源教材包」（不需要複製自己的教材）
   const RESOURCE_ACCOUNT_EMAIL =
@@ -131,11 +131,11 @@ function TeacherLayoutInner({
         return true;
       })
       .map((group) => {
-        // 個人模式下過濾掉「學校教材」item
+        // 個人模式下過濾掉「機構教材」item
         if (mode === "personal" && group.id === "class-management") {
           return {
             ...group,
-            items: group.items.filter((item) => item.id !== "school-materials"),
+            items: group.items.filter((item) => item.id !== "org-materials"),
           };
         }
         return group;

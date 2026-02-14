@@ -34,6 +34,7 @@ from models import (
 )
 from auth import verify_token
 from services.casbin_service import get_casbin_service
+from utils.permissions import has_read_org_materials_permission
 
 logger = logging.getLogger(__name__)
 
@@ -332,16 +333,16 @@ async def list_organization_materials(
     """
     List all active organization materials (templates).
 
-    Permission: org_owner or org_admin with manage_materials
+    Permission: any active organization member
 
     Performance: Uses organization_id column (NOT source_metadata JSON)
     for efficient SQL filtering instead of loading all programs.
     """
     # Check permission
-    if not check_manage_materials_permission(current_teacher.id, org_id, db):
+    if not has_read_org_materials_permission(current_teacher.id, org_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="No permission to manage organization materials",
+            detail="Not a member of this organization",
         )
 
     # Query organization materials using SQL filter (NOT Python filter)
@@ -406,14 +407,14 @@ async def get_organization_material_details(
     """
     Get organization material details with full hierarchy.
 
-    Permission: org_owner or org_admin with manage_materials
+    Permission: any active organization member
     Returns: Program with lessons → contents → items
     """
     # Check permission
-    if not check_manage_materials_permission(current_teacher.id, org_id, db):
+    if not has_read_org_materials_permission(current_teacher.id, org_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="No permission to view organization materials",
+            detail="Not a member of this organization",
         )
 
     # Get program with hierarchy

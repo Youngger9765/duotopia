@@ -39,6 +39,7 @@ import {
   X,
   Globe,
   School,
+  Building2,
   Settings,
 } from "lucide-react";
 import {
@@ -250,27 +251,28 @@ export function AssignmentDialog({
   onSuccess,
 }: AssignmentDialogProps) {
   const { t } = useTranslation();
-  const { mode, selectedSchool } = useWorkspace();
+  const { mode, selectedSchool, selectedOrganization } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [loadingClassroomPrograms, setLoadingClassroomPrograms] =
     useState(false);
-  const [loadingSchoolPrograms, setLoadingSchoolPrograms] = useState(false);
+  const [loadingOrgPrograms, setLoadingOrgPrograms] = useState(false);
   const [loadingLessons, setLoadingLessons] = useState<Record<number, boolean>>(
     {},
   );
   const [currentStep, setCurrentStep] = useState(1);
   const [activeTab, setActiveTab] = useState<
-    "template" | "classroom" | "school"
+    "template" | "classroom" | "organization"
   >("template");
 
-  // 只在機構模式且選擇了學校時顯示「學校教材」tab
-  const showSchoolTab = mode === "organization" && selectedSchool !== null;
+  // 只在機構模式且選擇了機構時顯示「機構教材」tab
+  const showOrgTab =
+    mode === "organization" && selectedOrganization !== null;
 
   // 分別儲存公版和班級課程
   const [templatePrograms, setTemplatePrograms] = useState<Program[]>([]);
   const [classroomPrograms, setClassroomPrograms] = useState<Program[]>([]);
-  const [schoolPrograms, setSchoolPrograms] = useState<Program[]>([]);
+  const [orgPrograms, setOrgPrograms] = useState<Program[]>([]);
 
   const [expandedPrograms, setExpandedPrograms] = useState<Set<number>>(
     new Set(),
@@ -319,8 +321,8 @@ export function AssignmentDialog({
     if (open) {
       loadTemplatePrograms();
       loadClassroomPrograms();
-      if (showSchoolTab) {
-        loadSchoolPrograms();
+      if (showOrgTab) {
+        loadOrgPrograms();
       }
       loadQuotaInfo();
       // Reset form when dialog opens
@@ -435,51 +437,32 @@ export function AssignmentDialog({
     }
   };
 
-  // 加載學校教材（學校層級的課程）
-  const loadSchoolPrograms = async () => {
-    if (!selectedSchool) return;
+  // 加載機構教材（機構層級的課程）
+  const loadOrgPrograms = async () => {
+    if (!selectedOrganization) return;
 
     try {
-      setLoadingSchoolPrograms(true);
-      const params = new URLSearchParams();
-      params.append("school_id", selectedSchool.id);
-      params.append("scope", "school");
-
-      console.log("[DEBUG] loadSchoolPrograms called with:", {
-        school_id: selectedSchool.id,
-        params: params.toString(),
-        url: `/api/teachers/programs?${params.toString()}`,
-      });
-
+      setLoadingOrgPrograms(true);
       const response = await apiClient.get<Program[]>(
-        `/api/teachers/programs?${params.toString()}`,
+        `/api/organizations/${selectedOrganization.id}/programs`,
       );
-
-      console.log("[DEBUG] loadSchoolPrograms response:", {
-        count: response.length,
-        programs: response.map((p) => ({
-          id: p.id,
-          name: p.name,
-          school_id: p.school_id,
-          organization_id: p.organization_id,
-          teacher_id: p.teacher_id,
-          is_template: p.is_template,
-        })),
-      });
-
-      setSchoolPrograms(response);
+      setOrgPrograms(response);
     } catch (error) {
-      console.error("Failed to load school programs:", error);
-      toast.error("載入學校教材失敗");
-      setSchoolPrograms([]);
+      console.error("Failed to load organization programs:", error);
+      toast.error("載入機構教材失敗");
+      setOrgPrograms([]);
     } finally {
-      setLoadingSchoolPrograms(false);
+      setLoadingOrgPrograms(false);
     }
   };
 
   const loadProgramLessons = async (programId: number) => {
-    // Check if lessons already loaded in either list
-    const allPrograms = [...templatePrograms, ...classroomPrograms];
+    // Check if lessons already loaded in any list
+    const allPrograms = [
+      ...templatePrograms,
+      ...classroomPrograms,
+      ...orgPrograms,
+    ];
     const program = allPrograms.find((p) => p.id === programId);
     if (program?.lessons && program.lessons.length > 0) {
       return; // Already loaded
@@ -491,7 +474,7 @@ export function AssignmentDialog({
         `/api/teachers/programs/${programId}`,
       );
 
-      // Update the program with lessons in the correct list
+      // Update the program with lessons in all lists
       const updatePrograms = (prev: Program[]) =>
         prev.map((p) =>
           p.id === programId ? { ...p, lessons: detail.lessons || [] } : p,
@@ -499,6 +482,7 @@ export function AssignmentDialog({
 
       setTemplatePrograms(updatePrograms);
       setClassroomPrograms(updatePrograms);
+      setOrgPrograms(updatePrograms);
     } catch (error) {
       console.debug(`Failed to load lessons for program ${programId}:`, error);
       toast.error(t("dialogs.assignmentDialog.errors.loadLessonsFailed"));
@@ -508,9 +492,13 @@ export function AssignmentDialog({
   };
 
   const loadLessonContents = async (lessonId: number) => {
-    // Find the lesson and check if contents already loaded in either list
+    // Find the lesson and check if contents already loaded in any list
     let foundLesson: Lesson | undefined;
-    const allPrograms = [...templatePrograms, ...classroomPrograms];
+    const allPrograms = [
+      ...templatePrograms,
+      ...classroomPrograms,
+      ...orgPrograms,
+    ];
     allPrograms.forEach((program) => {
       const lesson = program.lessons?.find((l) => l.id === lessonId);
       if (lesson) {
@@ -528,7 +516,7 @@ export function AssignmentDialog({
         `/api/teachers/lessons/${lessonId}/contents`,
       );
 
-      // Update the lesson with contents in both lists
+      // Update the lesson with contents in all lists
       const updatePrograms = (prev: Program[]) =>
         prev.map((program) => ({
           ...program,
@@ -539,6 +527,7 @@ export function AssignmentDialog({
 
       setTemplatePrograms(updatePrograms);
       setClassroomPrograms(updatePrograms);
+      setOrgPrograms(updatePrograms);
     } catch (error) {
       console.debug(`Failed to load contents for lesson ${lessonId}:`, error);
       toast.error(t("dialogs.assignmentDialog.errors.loadContentsFailed"));
@@ -1219,12 +1208,14 @@ export function AssignmentDialog({
                 <Tabs
                   value={activeTab}
                   onValueChange={(v) =>
-                    setActiveTab(v as "template" | "classroom" | "school")
+                    setActiveTab(
+                      v as "template" | "classroom" | "organization",
+                    )
                   }
                   className="flex-1 flex flex-col min-h-0"
                 >
                   <TabsList
-                    className={`grid w-full ${showSchoolTab ? "grid-cols-3" : "grid-cols-2"} mb-2`}
+                    className={`grid w-full ${showOrgTab ? "grid-cols-3" : "grid-cols-2"} mb-2`}
                   >
                     <TabsTrigger
                       value="template"
@@ -1233,20 +1224,20 @@ export function AssignmentDialog({
                       <Globe className="h-4 w-4" />
                       個人教材
                     </TabsTrigger>
-                    {showSchoolTab && (
+                    {showOrgTab && (
                       <TabsTrigger
-                        value="school"
+                        value="organization"
                         className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
                       >
-                        <School className="h-4 w-4" />
-                        學校教材
+                        <Building2 className="h-4 w-4" />
+                        機構教材
                       </TabsTrigger>
                     )}
                     <TabsTrigger
                       value="classroom"
                       className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
                     >
-                      <School className="h-4 w-4" />
+                      <Users className="h-4 w-4" />
                       班級課程
                     </TabsTrigger>
                   </TabsList>
@@ -1495,14 +1486,14 @@ export function AssignmentDialog({
                     </ScrollArea>
                   </TabsContent>
 
-                  {/* 學校教材 Tab */}
-                  {showSchoolTab && (
+                  {/* 機構教材 Tab */}
+                  {showOrgTab && (
                     <TabsContent
-                      value="school"
+                      value="organization"
                       className="flex-1 mt-0 overflow-hidden min-h-0"
                     >
                       <ScrollArea className="h-full border rounded-lg p-3">
-                        {loadingSchoolPrograms ? (
+                        {loadingOrgPrograms ? (
                           <div className="flex flex-col items-center justify-center h-96">
                             <div className="relative">
                               <div className="absolute inset-0 animate-ping">
@@ -1516,20 +1507,20 @@ export function AssignmentDialog({
                               )}
                             </p>
                             <p className="mt-2 text-sm text-gray-500">
-                              載入學校教材中...
+                              載入機構教材中...
                             </p>
                           </div>
-                        ) : schoolPrograms.length === 0 ? (
+                        ) : orgPrograms.length === 0 ? (
                           <div className="flex flex-col items-center justify-center h-96">
-                            <School className="h-16 w-16 text-gray-300 mb-4" />
-                            <p className="text-gray-500">此學校尚無教材</p>
+                            <Building2 className="h-16 w-16 text-gray-300 mb-4" />
+                            <p className="text-gray-500">此機構尚無教材</p>
                             <p className="text-sm text-gray-400 mt-2">
-                              學校管理員可以創建學校層級的教材
+                              請聯絡機構管理員建立共享教材
                             </p>
                           </div>
                         ) : (
                           <div className="space-y-2">
-                            {schoolPrograms.map((program) => (
+                            {orgPrograms.map((program) => (
                               <Card
                                 key={program.id}
                                 className="overflow-hidden"

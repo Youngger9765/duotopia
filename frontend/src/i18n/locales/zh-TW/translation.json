@@ -3195,7 +3195,7 @@
       "template": "從公版複製",
       "classroom": "從其他班級複製",
       "custom": "自建課程",
-      "school": "學校教材",
+      "school": "機構教材",
       "personal": "個人教材"
     },
     "template": {
@@ -3269,15 +3269,15 @@
       "copyFailed": "複製失敗，請稍後再試"
     },
     "school": {
-      "searchPlaceholder": "搜尋學校教材...",
-      "selected": "已選擇 {{count}} / {{total}} 個學校教材",
+      "searchPlaceholder": "搜尋機構教材...",
+      "selected": "已選擇 {{count}} / {{total}} 個機構教材",
       "selectAll": "全選",
       "clear": "清除",
       "loading": "載入中...",
-      "empty": "尚未建立學校教材",
+      "empty": "尚未建立機構教材",
       "duplicate": "⚠️ 已有此課程，重複建立可能造成混淆",
       "nameLabel": "新課程名稱（選填，留空使用原名）",
-      "multipleNote": "已選擇 {{count}} 個學校教材，將使用原始名稱建立課程",
+      "multipleNote": "已選擇 {{count}} 個機構教材，將使用原始名稱建立課程",
       "confirmDuplicate": "以下課程已存在：{{names}}。確定要重複建立嗎？"
     }
   },

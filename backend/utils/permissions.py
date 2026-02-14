@@ -60,6 +60,28 @@ def has_manage_materials_permission(
     )
 
 
+def has_read_org_materials_permission(
+    teacher_id: int, org_id: uuid.UUID, db: Session
+) -> bool:
+    """
+    Check if teacher can READ organization materials.
+
+    Any active member of the organization can read materials.
+    This is less restrictive than has_manage_materials_permission()
+    which requires org_owner role or Casbin manage_materials permission.
+    """
+    membership = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == teacher_id,
+            TeacherOrganization.organization_id == org_id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+    return membership is not None
+
+
 def has_school_materials_permission(teacher_id: int, school_id, db: Session) -> bool:
     """
     Check if teacher can manage school materials.
@@ -138,6 +160,10 @@ def has_program_permission(
 
     # Organization-owned
     if program.organization_id and program.school_id is None:
+        if action == "read":
+            return has_read_org_materials_permission(
+                teacher_id, program.organization_id, db
+            )
         return has_manage_materials_permission(teacher_id, program.organization_id, db)
 
     # School-owned

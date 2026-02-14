@@ -30,6 +30,7 @@ from models import (
 )
 from utils.permissions import (
     has_manage_materials_permission,
+    has_read_org_materials_permission,
     has_school_materials_permission,
     has_program_permission,
     has_lesson_permission,
@@ -270,8 +271,8 @@ def get_programs_by_scope(
         if not organization_id:
             raise ValueError("organization_id required for organization scope")
 
-        # Check permission first
-        if not has_manage_materials_permission(teacher_id, organization_id, db):
+        # Check permission first (read-only: any active member can access)
+        if not has_read_org_materials_permission(teacher_id, organization_id, db):
             raise PermissionError("No permission to access organization materials")
 
         # Organization-owned programs
