@@ -901,12 +901,12 @@ export default function WordReadingTemplate({
                     {isAssessing ? (
                       <>
                         <Loader2 className="w-7 h-7 mr-3 animate-spin" />
-                        {t("wordReading.analyzing") || "上傳並分析中"}
+                        {t("wordReading.analyzing") || "分析中"}
                       </>
                     ) : (
                       <>
                         <Brain className="w-7 h-7 mr-3 animate-pulse" />
-                        {t("wordReading.uploadAndAssess") || "上傳並分析"}
+                        {t("wordReading.analyze") || "分析"}
                       </>
                     )}
                   </Button>
@@ -1084,7 +1084,9 @@ export default function WordReadingTemplate({
                   <Brain className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">
                     {audioUrl
-                      ? t("wordReading.clickToAssess") || "點擊上方按鈕開始評估"
+                      ? canUseAiAnalysis
+                        ? t("wordReading.clickToAssess") || "點擊上方按鈕開始評估"
+                        : t("wordReading.recordingComplete") || "已錄音完成"
                       : t("wordReading.pleaseRecord") || "請先錄音"}
                   </p>
                 </div>

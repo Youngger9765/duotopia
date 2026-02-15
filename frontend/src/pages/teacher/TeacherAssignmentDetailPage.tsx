@@ -1079,37 +1079,23 @@ export default function TeacherAssignmentDetailPage() {
                   <CheckCircle className="h-4 w-4 mr-2" />
                   {t("assignmentDetail.buttons.gradeAssignment")}
                 </Button>
-                {/* AI批改按鈕 */}
-                <div className="flex-1 flex flex-col">
-                  <Button
-                    onClick={() => {
-                      if (canUseAiGrading) {
-                        setShowBatchGradingModal(true);
-                      }
-                    }}
-                    disabled={stats.total === 0 || !canUseAiGrading}
-                    className={cn(
-                      "w-full h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
-                      canUseAiGrading
-                        ? "bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white"
-                        : "bg-gray-400 hover:bg-gray-400 text-white opacity-50 cursor-not-allowed",
-                      "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500",
-                    )}
-                    title={
-                      !canUseAiGrading
-                        ? t("assignmentDetail.noCredits.tooltip")
-                        : ""
-                    }
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    {t("assignmentDetail.buttons.batchGrade")}
-                  </Button>
-                  {!canUseAiGrading && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      {t("assignmentDetail.noCredits.message")}
-                    </p>
-                  )}
-                </div>
+                {/* AI批改按鈕 — 只有額度足夠時顯示 (#227) */}
+                {canUseAiGrading && (
+                  <div className="flex-1 flex flex-col">
+                    <Button
+                      onClick={() => setShowBatchGradingModal(true)}
+                      disabled={stats.total === 0}
+                      className={cn(
+                        "w-full h-12 min-h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800",
+                        "bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white",
+                        "disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500",
+                      )}
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      {t("assignmentDetail.buttons.batchGrade")}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
         </div>
