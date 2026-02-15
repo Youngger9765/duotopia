@@ -11,7 +11,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Lock, CheckCircle, XCircle, Eye, EyeOff, Building2 } from "lucide-react";
+import {
+  Loader2,
+  Lock,
+  CheckCircle,
+  XCircle,
+  Eye,
+  EyeOff,
+  Building2,
+} from "lucide-react";
 import { apiClient } from "../lib/api";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useTranslation } from "react-i18next";
@@ -64,7 +72,9 @@ export default function TeacherSetupPassword() {
             setUserInfo({
               email: response.email as string,
               name: response.name as string,
-              organization_name: response.organization_name as string | undefined,
+              organization_name: response.organization_name as
+                | string
+                | undefined,
             });
           }
         }
@@ -169,7 +179,9 @@ export default function TeacherSetupPassword() {
                   <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
                     <div className="flex items-center justify-center gap-2 text-purple-700">
                       <Building2 className="h-4 w-4" />
-                      <span className="font-medium">{userInfo.organization_name}</span>
+                      <span className="font-medium">
+                        {userInfo.organization_name}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -226,9 +238,7 @@ export default function TeacherSetupPassword() {
                 <XCircle className="h-8 w-8 text-red-600" />
               </div>
               <CardTitle className="text-2xl">連結無效或已過期</CardTitle>
-              <CardDescription>
-                此密碼設定連結已失效
-              </CardDescription>
+              <CardDescription>此密碼設定連結已失效</CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
