@@ -362,7 +362,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
         );
       } catch (error) {
         console.error("Failed to save demo timeout completion:", error);
-        // 不影響 UI，靜默失敗
+        toast.warning(t("rearrangement.messages.saveFailed"));
       }
     }
   };
@@ -497,7 +497,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
           );
         } catch (error) {
           console.error("Failed to save demo completion:", error);
-          // 不影響 UI，靜默失敗
+          toast.warning(t("rearrangement.messages.saveFailed"));
         }
       }
     } else if (isChallengeFailed) {

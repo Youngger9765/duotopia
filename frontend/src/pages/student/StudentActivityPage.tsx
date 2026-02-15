@@ -14,6 +14,7 @@ import {
   setErrorLoggingContext,
   clearErrorLoggingContext,
 } from "@/contexts/ErrorLoggingContext";
+import { retryWithBackoff } from "@/utils/retryHelper";
 import StudentActivityPageContent from "./StudentActivityPageContent";
 
 // Activity type from API
@@ -162,51 +163,62 @@ export default function StudentActivityPage() {
   const handleSubmit = async (_data?: { answers: any[] }) => {
     const apiUrl = import.meta.env.VITE_API_URL || "";
     const maxRetries = 3;
+    const toastId = toast.loading(
+      t("studentActivityPage.errors.submitRetrying", {
+        attempt: 1,
+        maxRetries,
+      }),
+    );
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const response = await fetch(
-          `${apiUrl}/api/students/assignments/${assignmentId}/submit`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
+    try {
+      await retryWithBackoff(
+        async () => {
+          const response = await fetch(
+            `${apiUrl}/api/students/assignments/${assignmentId}/submit`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
             },
-          },
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Failed to submit:", response.status, errorText);
-          throw new Error(`Failed to submit assignment: ${response.status}`);
-        }
-
-        // Success - navigate to assignments list
-        navigate("/student/assignments");
-        return;
-      } catch (error) {
-        console.error(
-          `Submit attempt ${attempt}/${maxRetries} failed:`,
-          error,
-        );
-
-        if (attempt < maxRetries) {
-          // Exponential backoff: 1s, 2s, 4s
-          const delay = Math.pow(2, attempt - 1) * 1000;
-          toast.error(
-            t("studentActivityPage.errors.submitRetrying", {
-              attempt,
-              maxRetries,
-            }),
           );
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        } else {
-          // All retries exhausted
-          toast.error(t("studentActivityPage.errors.submitFailed"));
-          throw error;
-        }
-      }
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Failed to submit:", response.status, errorText);
+            throw new Error(
+              `Failed to submit assignment: ${response.status}`,
+            );
+          }
+        },
+        {
+          maxRetries,
+          initialDelay: 1000,
+          maxDelay: 5000,
+          onRetry: (attempt, error) => {
+            console.error(
+              `Submit attempt ${attempt}/${maxRetries} failed:`,
+              error,
+            );
+            toast.loading(
+              t("studentActivityPage.errors.submitRetrying", {
+                attempt: attempt + 1,
+                maxRetries,
+              }),
+              { id: toastId },
+            );
+          },
+        },
+      );
+
+      toast.dismiss(toastId);
+      navigate("/student/assignments");
+    } catch (error) {
+      toast.error(t("studentActivityPage.errors.submitFailed"), {
+        id: toastId,
+      });
+      throw error;
     }
   };
 
