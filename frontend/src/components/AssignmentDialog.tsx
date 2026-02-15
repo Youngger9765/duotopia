@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -274,6 +274,12 @@ export function AssignmentDialog({
   const [classroomPrograms, setClassroomPrograms] = useState<Program[]>([]);
   const [orgPrograms, setOrgPrograms] = useState<Program[]>([]);
 
+  // Memoize combined programs to avoid repeated array concatenation
+  const allPrograms = useMemo(
+    () => [...templatePrograms, ...classroomPrograms, ...orgPrograms],
+    [templatePrograms, classroomPrograms, orgPrograms],
+  );
+
   const [expandedPrograms, setExpandedPrograms] = useState<Set<number>>(
     new Set(),
   );
@@ -458,11 +464,6 @@ export function AssignmentDialog({
 
   const loadProgramLessons = async (programId: number) => {
     // Check if lessons already loaded in any list
-    const allPrograms = [
-      ...templatePrograms,
-      ...classroomPrograms,
-      ...orgPrograms,
-    ];
     const program = allPrograms.find((p) => p.id === programId);
     if (program?.lessons && program.lessons.length > 0) {
       return; // Already loaded
@@ -494,11 +495,6 @@ export function AssignmentDialog({
   const loadLessonContents = async (lessonId: number) => {
     // Find the lesson and check if contents already loaded in any list
     let foundLesson: Lesson | undefined;
-    const allPrograms = [
-      ...templatePrograms,
-      ...classroomPrograms,
-      ...orgPrograms,
-    ];
     allPrograms.forEach((program) => {
       const lesson = program.lessons?.find((l) => l.id === lessonId);
       if (lesson) {

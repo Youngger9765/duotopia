@@ -28,6 +28,7 @@ import {
   ChevronDown,
   ChevronRight,
   School,
+  Building2,
   AlertTriangle,
 } from "lucide-react";
 import {
@@ -73,7 +74,7 @@ export default function CreateProgramDialog({
   const isOrganizationMode = mode === "organization" && selectedOrganization;
 
   const [activeTab, setActiveTab] = useState(
-    isOrganizationMode ? "school" : "template",
+    isOrganizationMode ? "organization" : "template",
   );
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -213,7 +214,7 @@ export default function CreateProgramDialog({
       tags: [],
     });
     setSearchTerm("");
-    setActiveTab(isOrganizationMode ? "school" : "template");
+    setActiveTab(isOrganizationMode ? "organization" : "template");
     setExpandedClassrooms(new Set());
     isCreatingRef.current = false; // 🔒 重置處理狀態
   };
@@ -520,10 +521,10 @@ export default function CreateProgramDialog({
           >
             {isOrganizationMode && (
               <TabsTrigger
-                value="school"
+                value="organization"
                 className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white"
               >
-                <School className="h-4 w-4" />
+                <Building2 className="h-4 w-4" />
                 {t("createProgramDialog.tabs.school")}
               </TabsTrigger>
             )}
@@ -553,7 +554,7 @@ export default function CreateProgramDialog({
           {/* 機構教材 (僅組織模式) */}
           {isOrganizationMode && (
             <TabsContent
-              value="school"
+              value="organization"
               className="flex-1 overflow-hidden flex flex-col"
             >
               <div className="mb-4 space-y-3">
@@ -634,7 +635,7 @@ export default function CreateProgramDialog({
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <School className="h-4 w-4 text-gray-400" />
+                              <Building2 className="h-4 w-4 text-gray-400" />
                               <h4 className="font-medium">{program.name}</h4>
                               {program.is_duplicate && (
                                 <AlertTriangle className="h-4 w-4 text-yellow-500" />
@@ -1184,7 +1185,7 @@ export default function CreateProgramDialog({
           <Button variant="outline" onClick={onClose} disabled={creating}>
             {t("createProgramDialog.buttons.cancel")}
           </Button>
-          {activeTab === "school" && (
+          {activeTab === "organization" && (
             <Button
               onClick={handleCreateFromSchool}
               disabled={selectedOrgPrograms.length === 0 || creating}

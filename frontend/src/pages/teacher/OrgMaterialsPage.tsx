@@ -18,7 +18,9 @@ export default function OrgMaterialsPage() {
   const { t } = useTranslation();
   const { selectedOrganization, mode } = useWorkspace();
   const isOrgMode = mode === "organization";
-  const canManage = selectedOrganization?.role === "org_owner";
+  const canManage =
+    selectedOrganization?.role === "org_owner" ||
+    selectedOrganization?.role === "org_admin";
 
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
