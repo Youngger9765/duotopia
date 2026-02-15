@@ -1328,6 +1328,7 @@
         "total": "/ {{total}} 秒",
         "depleted": "配額已用完",
         "exhausted": "配額已用完",
+        "noAiAnalysis": "學生僅能練習錄音",
         "low": "配額不足",
         "error": "配額不足，無法派發作業",
         "errorDesc": "請升級方案或等待下個計費週期",

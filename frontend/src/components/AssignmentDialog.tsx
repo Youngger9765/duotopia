@@ -772,12 +772,7 @@ export function AssignmentDialog({
       return;
     }
 
-    // 配額不足時顯示警告，但不阻擋建立作業（#227）
-    if (quotaInfo && quotaInfo.quota_remaining <= 0) {
-      toast.warning(t("dialogs.assignmentDialog.warnings.quotaLow"), {
-        description: t("dialogs.assignmentDialog.warnings.quotaLowDesc"),
-      });
-    }
+    // #227: 配額不足不阻擋建立作業，配額提示已在 header 顯示
 
     setLoading(true);
     try {
@@ -1077,7 +1072,7 @@ export function AssignmentDialog({
                 className={cn(
                   "h-3 w-3",
                   quotaInfo.quota_remaining <= 0
-                    ? "text-red-500"
+                    ? "text-amber-500"
                     : "text-gray-500",
                 )}
               />
@@ -1105,14 +1100,14 @@ export function AssignmentDialog({
               </span>
               {quotaInfo.quota_remaining <= 0 ? (
                 <Badge
-                  variant="destructive"
-                  className="text-xs py-0 px-1.5 animate-pulse"
+                  variant="outline"
+                  className="text-xs py-0 px-1.5 text-amber-600 border-amber-300"
                 >
-                  {t("dialogs.assignmentDialog.quota.exhausted")}
+                  {t("dialogs.assignmentDialog.quota.noAiAnalysis")}
                 </Badge>
               ) : (
                 quotaInfo.quota_remaining <= 100 && (
-                  <Badge variant="destructive" className="text-xs py-0 px-1.5">
+                  <Badge variant="outline" className="text-xs py-0 px-1.5 text-amber-600 border-amber-300">
                     {t("dialogs.assignmentDialog.quota.low")}
                   </Badge>
                 )

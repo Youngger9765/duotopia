@@ -1323,6 +1323,7 @@
         "total": "/ {{total}} seconds",
         "depleted": "Quota Depleted",
         "exhausted": "Quota Exhausted",
+        "noAiAnalysis": "Practice only (no AI analysis)",
         "low": "Low Quota",
         "error": "Insufficient quota, cannot assign assignment",
         "errorDesc": "Please upgrade your plan or wait for the next billing cycle",
