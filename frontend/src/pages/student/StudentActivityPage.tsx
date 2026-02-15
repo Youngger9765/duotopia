@@ -4,7 +4,7 @@
  * 從 API 載入資料，然後使用共用的 StudentActivityPageContent 元件顯示
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { toast } from "sonner";
@@ -102,6 +102,14 @@ export default function StudentActivityPage() {
   const [showAnswer, setShowAnswer] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
+
+  // Cleanup toasts on unmount
+  useEffect(() => {
+    return () => {
+      toast.dismiss();
+    };
+  }, []);
 
   // Set error logging context for audio error tracking
   useEffect(() => {
@@ -162,7 +170,8 @@ export default function StudentActivityPage() {
   // Handle final submission with retry
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSubmit = async (_data?: { answers: any[] }) => {
-    if (isSubmitting) return;
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
 
     const apiUrl = import.meta.env.VITE_API_URL || "";
@@ -238,6 +247,7 @@ export default function StudentActivityPage() {
       });
       throw error;
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
