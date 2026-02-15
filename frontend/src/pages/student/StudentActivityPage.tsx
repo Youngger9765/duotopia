@@ -200,9 +200,7 @@ export default function StudentActivityPage() {
           if (!response.ok) {
             const errorText = await response.text();
             console.error("Failed to submit:", response.status, errorText);
-            throw new Error(
-              `Failed to submit assignment: ${response.status}`,
-            );
+            throw new Error(`Failed to submit assignment: ${response.status}`);
           }
         },
         {
