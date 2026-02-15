@@ -101,6 +101,7 @@ export default function StudentActivityPage() {
   const [practiceMode, setPracticeMode] = useState<string | null>(null);
   const [showAnswer, setShowAnswer] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Set error logging context for audio error tracking
   useEffect(() => {
@@ -161,6 +162,9 @@ export default function StudentActivityPage() {
   // Handle final submission with retry
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSubmit = async (_data?: { answers: any[] }) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     const apiUrl = import.meta.env.VITE_API_URL || "";
     const maxRetries = 3;
     const toastId = toast.loading(
@@ -196,6 +200,20 @@ export default function StudentActivityPage() {
           maxRetries,
           initialDelay: 1000,
           maxDelay: 5000,
+          shouldRetry: (error) => {
+            const retryableErrors = [
+              "NetworkError",
+              "TimeoutError",
+              "500",
+              "502",
+              "503",
+              "504",
+              "ECONNRESET",
+              "ETIMEDOUT",
+            ];
+            const errorMessage = error.message || "";
+            return retryableErrors.some((err) => errorMessage.includes(err));
+          },
           onRetry: (attempt, error) => {
             console.error(
               `Submit attempt ${attempt}/${maxRetries} failed:`,
@@ -219,6 +237,8 @@ export default function StudentActivityPage() {
         id: toastId,
       });
       throw error;
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
