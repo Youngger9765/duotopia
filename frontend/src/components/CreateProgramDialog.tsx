@@ -82,9 +82,7 @@ export default function CreateProgramDialog({
 
   // 機構教材 (僅組織模式)
   const [orgPrograms, setOrgPrograms] = useState<Program[]>([]);
-  const [selectedOrgPrograms, setSelectedOrgPrograms] = useState<Program[]>(
-    [],
-  );
+  const [selectedOrgPrograms, setSelectedOrgPrograms] = useState<Program[]>([]);
   const [orgProgramName, setOrgProgramName] = useState("");
 
   // 個人教材 (原 "公版模板")
@@ -275,9 +273,7 @@ export default function CreateProgramDialog({
     if (e) e.stopPropagation();
     const isSelected = selectedOrgPrograms.some((p) => p.id === program.id);
     if (isSelected) {
-      setSelectedOrgPrograms((prev) =>
-        prev.filter((p) => p.id !== program.id),
-      );
+      setSelectedOrgPrograms((prev) => prev.filter((p) => p.id !== program.id));
     } else {
       setSelectedOrgPrograms((prev) => [...prev, program]);
     }
@@ -291,9 +287,7 @@ export default function CreateProgramDialog({
     isCreatingRef.current = true;
 
     // 檢查是否有重複課程
-    const duplicatePrograms = selectedOrgPrograms.filter(
-      (p) => p.is_duplicate,
-    );
+    const duplicatePrograms = selectedOrgPrograms.filter((p) => p.is_duplicate);
     if (duplicatePrograms.length > 0) {
       const duplicateNames = duplicatePrograms.map((p) => p.name).join("、");
       const confirmed = window.confirm(
@@ -580,12 +574,9 @@ export default function CreateProgramDialog({
                     <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={() =>
-                          setSelectedOrgPrograms(orgPrograms)
-                        }
+                        onClick={() => setSelectedOrgPrograms(orgPrograms)}
                         disabled={
-                          selectedOrgPrograms.length ===
-                          orgPrograms.length
+                          selectedOrgPrograms.length === orgPrograms.length
                         }
                         className="text-xs text-blue-600 hover:text-blue-800 disabled:text-gray-400"
                       >
@@ -623,9 +614,7 @@ export default function CreateProgramDialog({
                         key={program.id}
                         onClick={(e) => toggleOrgProgram(program, e)}
                         className={`p-4 rounded-lg cursor-pointer transition-all ${
-                          selectedOrgPrograms.some(
-                            (p) => p.id === program.id,
-                          )
+                          selectedOrgPrograms.some((p) => p.id === program.id)
                             ? "bg-blue-50 border-2 border-blue-500 shadow-sm"
                             : program.is_duplicate
                               ? "border border-yellow-300 bg-yellow-50 hover:bg-yellow-100"

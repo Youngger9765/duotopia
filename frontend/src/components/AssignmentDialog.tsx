@@ -266,8 +266,7 @@ export function AssignmentDialog({
   >("template");
 
   // 只在機構模式且選擇了機構時顯示「機構教材」tab
-  const showOrgTab =
-    mode === "organization" && selectedOrganization !== null;
+  const showOrgTab = mode === "organization" && selectedOrganization !== null;
 
   // 分別儲存公版和班級課程
   const [templatePrograms, setTemplatePrograms] = useState<Program[]>([]);
@@ -1204,9 +1203,7 @@ export function AssignmentDialog({
                 <Tabs
                   value={activeTab}
                   onValueChange={(v) =>
-                    setActiveTab(
-                      v as "template" | "classroom" | "organization",
-                    )
+                    setActiveTab(v as "template" | "classroom" | "organization")
                   }
                   className="flex-1 flex flex-col min-h-0"
                 >
