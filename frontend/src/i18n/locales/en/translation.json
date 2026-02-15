@@ -215,6 +215,7 @@
         "description": "Intuitive interface design, teachers can get started in 5 minutes, students require no additional training"
       },
       "carousel": {
+        "label": "Feature highlights carousel",
         "prev": "Previous slide",
         "next": "Next slide",
         "goToSlide": "Go to slide {{number}}",

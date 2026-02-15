@@ -1,6 +1,9 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
+
+const SWIPE_THRESHOLD = 50; // pixels
+const TRANSITION_DURATION = 300; // milliseconds
 
 interface ImageCarouselProps {
   images: { src: string; caption?: string }[];
@@ -13,12 +16,20 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({ images }) => {
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
+  useEffect(() => {
+    if (!isTransitioning) return;
+    const timer = setTimeout(
+      () => setIsTransitioning(false),
+      TRANSITION_DURATION,
+    );
+    return () => clearTimeout(timer);
+  }, [isTransitioning]);
+
   const goTo = useCallback(
     (idx: number) => {
       if (isTransitioning || idx === current) return;
       setIsTransitioning(true);
       setCurrent(idx);
-      setTimeout(() => setIsTransitioning(false), 300);
     },
     [current, isTransitioning],
   );
@@ -43,10 +54,15 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({ images }) => {
 
   const handleTouchEnd = () => {
     const diff = touchStartX.current - touchEndX.current;
-    if (Math.abs(diff) > 50) {
+    if (Math.abs(diff) > SWIPE_THRESHOLD) {
       if (diff > 0) next();
       else prev();
     }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowLeft") prev();
+    if (e.key === "ArrowRight") next();
   };
 
   return (
@@ -68,10 +84,15 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({ images }) => {
       </div>
 
       <div
-        className="relative w-full flex items-center justify-center select-none"
+        className="relative w-full flex items-center justify-center select-none outline-none"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="region"
+        aria-roledescription="carousel"
+        aria-label={t("home.features.carousel.label")}
       >
         {/* Left arrow */}
         <button
@@ -102,7 +123,11 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({ images }) => {
       </div>
 
       {/* Caption area */}
-      <div className="mt-2 min-h-[2.5rem] text-center text-lg text-gray-700 whitespace-pre-line">
+      <div
+        className="mt-2 min-h-[2.5rem] text-center text-lg text-gray-700 whitespace-pre-line"
+        aria-live="polite"
+        aria-atomic="true"
+      >
         {images[current].caption || (
           <span className="text-gray-400">&nbsp;</span>
         )}
