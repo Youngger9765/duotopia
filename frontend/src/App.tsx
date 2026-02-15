@@ -20,7 +20,7 @@ import TeacherAssignmentDetailPage from "./pages/teacher/TeacherAssignmentDetail
 import TeacherAssignmentPreviewPage from "./pages/teacher/TeacherAssignmentPreviewPage";
 import GradingPage from "./pages/teacher/GradingPage";
 import TeacherTemplatePrograms from "./pages/teacher/TeacherTemplatePrograms";
-import SchoolMaterialsPage from "./pages/teacher/SchoolMaterialsPage";
+import OrgMaterialsPage from "./pages/teacher/OrgMaterialsPage";
 import ResourceMaterialsPage from "./pages/teacher/ResourceMaterialsPage";
 import TeacherSubscription from "./pages/teacher/TeacherSubscription";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
@@ -207,11 +207,11 @@ function App() {
           }
         />
         <Route
-          path="/teacher/school-materials"
+          path="/teacher/org-materials"
           element={
             <ProtectedRoute>
               <TeacherLayout>
-                <SchoolMaterialsPage />
+                <OrgMaterialsPage />
               </TeacherLayout>
             </ProtectedRoute>
           }

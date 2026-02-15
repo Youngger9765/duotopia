@@ -14,10 +14,13 @@ import { toast } from "sonner";
 import { Program, Lesson, Content } from "@/types";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
-export default function SchoolMaterialsPage() {
+export default function OrgMaterialsPage() {
   const { t } = useTranslation();
-  const { selectedSchool, selectedOrganization, mode } = useWorkspace();
+  const { selectedOrganization, mode } = useWorkspace();
   const isOrgMode = mode === "organization";
+  const canManage =
+    selectedOrganization?.role === "org_owner" ||
+    selectedOrganization?.role === "org_admin";
 
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,22 +65,23 @@ export default function SchoolMaterialsPage() {
   >(null);
 
   useEffect(() => {
-    fetchSchoolPrograms();
-  }, [selectedSchool, selectedOrganization]);
+    fetchOrgPrograms();
+  }, [selectedOrganization]);
 
-  const fetchSchoolPrograms = async () => {
+  const fetchOrgPrograms = async () => {
+    if (!selectedOrganization) {
+      setPrograms([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      // Fetch programs filtered by school/organization
-      const response = await apiClient.getTeacherPrograms(
-        true, // is_template
-        undefined, // classroom_id
-        selectedSchool?.id, // school_id
-        selectedOrganization?.id, // organization_id
+      const response = await apiClient.get<Program[]>(
+        `/api/organizations/${selectedOrganization.id}/programs`,
       );
       setPrograms(response as Program[]);
     } catch (err) {
-      console.error("Failed to fetch school programs:", err);
+      console.error("Failed to fetch organization programs:", err);
       toast.error(t("teacherTemplatePrograms.messages.loadFailed"));
     } finally {
       setLoading(false);
@@ -108,7 +112,7 @@ export default function SchoolMaterialsPage() {
 
   const handleSaveProgram = (program: Program) => {
     setPrograms(programs.map((p) => (p.id === program.id ? program : p)));
-    fetchSchoolPrograms();
+    fetchOrgPrograms();
   };
 
   const handleDeleteProgramConfirm = (programId: number) => {
@@ -453,18 +457,18 @@ export default function SchoolMaterialsPage() {
     );
   }
 
-  // Show prompt if no school is selected
-  if (!selectedSchool && !selectedOrganization) {
+  // Show prompt if no organization is selected
+  if (!selectedOrganization) {
     return (
       <>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center max-w-md">
             <AlertCircle className="h-16 w-16 text-amber-500 mx-auto mb-4" />
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-              請先選擇學校
+              請先選擇機構
             </h2>
             <p className="text-gray-600">
-              請使用右上角的工作區切換器選擇要管理的學校
+              請使用右上角的工作區切換器選擇要查看的機構
             </p>
           </div>
         </div>
@@ -473,9 +477,7 @@ export default function SchoolMaterialsPage() {
   }
 
   // Display workspace context
-  const workspaceInfo = selectedSchool
-    ? `${selectedOrganization?.name || ""} - ${selectedSchool.name}`
-    : selectedOrganization?.name || "";
+  const workspaceInfo = selectedOrganization?.name || "";
 
   return (
     <>
@@ -500,12 +502,12 @@ export default function SchoolMaterialsPage() {
           <RecursiveTreeAccordion
             data={programs}
             config={programTreeConfig}
-            title="學校教材"
-            showCreateButton
+            title="機構教材"
+            showCreateButton={canManage}
             createButtonText={t("teacherTemplatePrograms.buttons.addProgram")}
             onCreateClick={handleCreateProgram}
-            disableActions={isOrgMode}
-            disableReason="學校教材由學校後台統一管理"
+            disableActions={!canManage}
+            disableReason="僅機構管理員可編輯機構教材"
             onEdit={(item, level, parentId) => {
               if (level === 0) handleEditProgram(item.id);
               else if (level === 1)
@@ -768,7 +770,7 @@ export default function SchoolMaterialsPage() {
                       setShowVocabularySetEditor(false);
                       setVocabularySetLessonId(null);
                       setVocabularySetContentId(null);
-                      await fetchSchoolPrograms();
+                      await fetchOrgPrograms();
                       toast.success("內容已成功儲存");
                     }}
                     onCancel={() => {
@@ -829,7 +831,7 @@ export default function SchoolMaterialsPage() {
                       setShowVocabularySetEditor(false);
                       setVocabularySetLessonId(null);
                       setVocabularySetContentId(null);
-                      await fetchSchoolPrograms();
+                      await fetchOrgPrograms();
                       toast.success("內容已成功儲存");
                     }}
                     onCancel={() => {
