@@ -78,7 +78,9 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({ images }) => {
                 : "bg-gray-300 hover:bg-gray-400"
             }`}
             onClick={() => goTo(idx)}
-            aria-label={t("home.features.carousel.goToSlide", { number: idx + 1 })}
+            aria-label={t("home.features.carousel.goToSlide", {
+              number: idx + 1,
+            })}
           />
         ))}
       </div>

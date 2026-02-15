@@ -123,7 +123,18 @@ export default function Home() {
                 {t("home.hero.tagline")}
               </p>
               <p className="text-yellow-400 text-base lg:text-lg font-medium mb-2">
-                <span className="bg-white/20 text-white font-bold px-1.5 py-0.5 rounded">{t("home.hero.preClass")}</span>{t("home.hero.preClassDesc")}<span className="bg-white/20 text-white font-bold px-1.5 py-0.5 rounded">{t("home.hero.inClass")}</span>{t("home.hero.inClassDesc")}<span className="bg-white/20 text-white font-bold px-1.5 py-0.5 rounded">{t("home.hero.postClass")}</span>{t("home.hero.postClassDesc")}
+                <span className="bg-white/20 text-white font-bold px-1.5 py-0.5 rounded">
+                  {t("home.hero.preClass")}
+                </span>
+                {t("home.hero.preClassDesc")}
+                <span className="bg-white/20 text-white font-bold px-1.5 py-0.5 rounded">
+                  {t("home.hero.inClass")}
+                </span>
+                {t("home.hero.inClassDesc")}
+                <span className="bg-white/20 text-white font-bold px-1.5 py-0.5 rounded">
+                  {t("home.hero.postClass")}
+                </span>
+                {t("home.hero.postClassDesc")}
               </p>
               <h1 className="mb-4 flex justify-center">
                 <img
@@ -132,10 +143,14 @@ export default function Home() {
                   className="h-[60px] lg:h-[80px] min-[1440px]:h-[100px]"
                 />
               </h1>
-              <h2 className={`mb-4 text-blue-100 ${isEn ? "text-base lg:text-lg min-[1440px]:text-xl" : "text-lg lg:text-xl min-[1440px]:text-2xl"}`}>
+              <h2
+                className={`mb-4 text-blue-100 ${isEn ? "text-base lg:text-lg min-[1440px]:text-xl" : "text-lg lg:text-xl min-[1440px]:text-2xl"}`}
+              >
                 {t("home.hero.subtitle")}
               </h2>
-              <p className={`font-bold mb-8 text-yellow-400 ${isEn ? "text-lg lg:text-xl min-[1440px]:text-2xl" : "text-xl lg:text-2xl min-[1440px]:text-3xl"}`}>
+              <p
+                className={`font-bold mb-8 text-yellow-400 ${isEn ? "text-lg lg:text-xl min-[1440px]:text-2xl" : "text-xl lg:text-2xl min-[1440px]:text-3xl"}`}
+              >
                 {t("home.hero.description")}
               </p>
 
@@ -367,7 +382,12 @@ export default function Home() {
                     </Link>
                   </li>
                   <li>
-                    <a href="https://forms.gle/azFtAQCW13afA8ab6" target="_blank" rel="noopener noreferrer" className="hover:text-white">
+                    <a
+                      href="https://forms.gle/azFtAQCW13afA8ab6"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-white"
+                    >
                       {t("home.footer.eduPlan")}
                     </a>
                   </li>
@@ -379,7 +399,10 @@ export default function Home() {
                 </h4>
                 <ul className="space-y-2 text-sm">
                   <li>
-                    <button onClick={() => setIsVideoModalOpen(true)} className="hover:text-white">
+                    <button
+                      onClick={() => setIsVideoModalOpen(true)}
+                      className="hover:text-white"
+                    >
                       {t("home.footer.tutorial")}
                     </button>
                   </li>
