@@ -83,6 +83,7 @@ export function AssignTeacherDialog({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Fetch org teachers when dialog opens
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchOrgTeachers is stable, only re-run on open/organizationId change
   useEffect(() => {
     if (open && organizationId) {
       fetchOrgTeachers();
@@ -153,8 +154,7 @@ export function AssignTeacherDialog({
     filtered.schoolTeachers.length > 0 || filtered.orgOnlyTeachers.length > 0;
 
   // Check if search looks like an email with no results
-  const isEmailSearch =
-    searchQuery.includes("@") && searchQuery.includes(".");
+  const isEmailSearch = searchQuery.includes("@") && searchQuery.includes(".");
   const showNoResultInvite =
     !hasResults && searchQuery.trim().length > 0 && !showInviteForm;
 
@@ -177,13 +177,18 @@ export function AssignTeacherDialog({
           roles: ["teacher"],
         });
       } catch (error) {
-        if (error instanceof ApiError && error.status !== 409) {
+        if (error instanceof ApiError && error.status === 409) {
+          // 409 = already in school, proceed with assignment
+          logError("Teacher already in school (expected 409)", error, {
+            teacherId: teacher.id,
+            schoolId,
+          });
+        } else {
           logError("Failed to add teacher to school", error);
           toast.error("將教師加入分校失敗");
           setIsSubmitting(false);
           return;
         }
-        // 409 = already in school, proceed with assignment
       }
     }
 
@@ -247,8 +252,8 @@ export function AssignTeacherDialog({
         );
         teacherId = result.teacher_id;
       } catch (error) {
-        if (error instanceof ApiError) {
-          // Teacher may already be in org, try to find them
+        if (error instanceof ApiError && error.status === 409) {
+          // 409 = Teacher already in org, try to find them
           const orgList =
             await apiClient.getOrganizationTeachers(organizationId);
           const existing = orgList.find((t) => t.email === email);
