@@ -150,6 +150,7 @@
     "playing": "Playing",
     "analyzing": "Analyzing",
     "uploadAndAnalyze": "Upload and Analyze",
+    "analyze": "Analyze",
     "reRecord": "Re-record",
     "delete": "Delete Recording",
     "deleteConfirm": "Are you sure you want to delete this recording?"
@@ -1398,6 +1399,10 @@
         "missingAudio": "Selected content is missing audio",
         "missingAudioDesc": "This practice mode requires audio. Please go to content management to generate TTS audio first",
         "mixedContentType": "Only {{type}} can be selected. Please clear selected content before choosing a different type"
+      },
+      "warnings": {
+        "quotaLow": "AI analysis quota insufficient",
+        "quotaLowDesc": "Assignment created, but students cannot use AI analysis at this time. They can still upload audio for practice."
       },
       "success": {
         "created": "Assignment created successfully, assigned to {{count}} students"
@@ -3593,13 +3598,15 @@
       "passed": "Passed",
       "notPassed": "Not Passed",
       "uploadAndAnalyze": "Upload & Analyze",
+      "analyze": "Analyze",
       "analyzing": "Analyzing...",
       "analyzed": "Analyzed",
       "analysisFailed": "Analysis Failed (Click to Retry)",
       "aiAnalyzing": "AI is analyzing...",
       "pleaseWait": "Please wait a moment",
       "clickToAssess": "Click button above to assess",
-      "pleaseRecordFirst": "Please record first"
+      "pleaseRecordFirst": "Please record first",
+      "recordingComplete": "Recording complete"
     },
     "messages": {
       "recordingRequired": "Please record and ensure reference text exists",
@@ -3981,6 +3988,7 @@
     "submitting": "Submitting...",
     "analyzing": "AI Analyzing...",
     "uploadAndAssess": "Upload & Assess",
+    "analyze": "Analyze",
     "aiResult": "AI Assessment Result",
     "overallScore": "Overall Score",
     "points": " Points",
@@ -4002,6 +4010,7 @@
     "studentAnswer": "Student Answer",
     "pleaseRecord": "Please record first",
     "clickToAssess": "Click button above to assess",
+    "recordingComplete": "Recording complete",
     "startRecordOrUpload": "Start recording or upload",
     "noTeacherFeedback": "No teacher feedback yet",
     "toast": {

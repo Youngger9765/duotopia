@@ -1044,7 +1044,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                   ) : (
                     <>
                       <Brain className="w-7 h-7 mr-3 animate-pulse" />
-                      {t("groupedQuestionsTemplate.labels.uploadAndAnalyze")}
+                      {t("groupedQuestionsTemplate.labels.analyze")}
                     </>
                   )}
                 </Button>
@@ -1211,7 +1211,9 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                 <Brain className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">
                   {items[currentQuestionIndex]?.recording_url
-                    ? t("groupedQuestionsTemplate.labels.clickToAssess")
+                    ? canUseAiAnalysis
+                      ? t("groupedQuestionsTemplate.labels.clickToAssess")
+                      : t("groupedQuestionsTemplate.labels.recordingComplete")
                     : t("groupedQuestionsTemplate.labels.pleaseRecordFirst")}
                 </p>
               </div>

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,6 +36,7 @@ import {
   Mic,
   Trash2,
   Sparkles,
+  Eye,
 } from "lucide-react";
 import { getContentTypeIcon } from "@/lib/contentTypeIcon";
 import { apiClient, ApiError } from "@/lib/api";
@@ -1570,42 +1570,44 @@ export default function ClassroomDetail({
                                     assignment.practice_mode !==
                                       "word_selection" && (
                                       <div className="flex flex-col items-end flex-shrink-0">
-                                        <Button
-                                          variant="default"
-                                          size="sm"
-                                          className={cn(
-                                            "h-11 px-3 gap-1.5",
-                                            canUseAiGrading
-                                              ? "bg-purple-600 hover:bg-purple-700 text-white"
-                                              : "bg-gray-400 hover:bg-gray-400 text-white opacity-50 cursor-not-allowed",
-                                          )}
-                                          disabled={!canUseAiGrading}
-                                          onClick={() => {
-                                            if (canUseAiGrading) {
+                                        {canUseAiGrading ? (
+                                          <Button
+                                            variant="default"
+                                            size="sm"
+                                            className="h-11 px-3 gap-1.5 bg-purple-600 hover:bg-purple-700 text-white"
+                                            onClick={() => {
                                               setBatchGradingModal({
                                                 open: true,
                                                 assignmentId: assignment.id,
                                                 classroomId: Number(id),
                                               });
-                                            }
-                                          }}
-                                          title={
-                                            !canUseAiGrading
-                                              ? t("assignmentDetail.noCredits.tooltip")
-                                              : ""
-                                          }
-                                        >
-                                          <Sparkles className="w-5 h-5" />
-                                          <span className="text-sm font-medium">
-                                            {t(
-                                              "assignmentDetail.buttons.batchGrade",
-                                            )}
-                                          </span>
-                                        </Button>
-                                        {!canUseAiGrading && (
-                                          <p className="text-xs text-amber-600 mt-1 max-w-[160px] text-right">
-                                            {t("assignmentDetail.noCredits.message")}
-                                          </p>
+                                            }}
+                                          >
+                                            <Sparkles className="w-5 h-5" />
+                                            <span className="text-sm font-medium">
+                                              {t(
+                                                "assignmentDetail.buttons.batchGrade",
+                                              )}
+                                            </span>
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-11 px-3 gap-1.5"
+                                            onClick={() => {
+                                              navigate(
+                                                `/teacher/classroom/${id}/assignment/${assignment.id}`,
+                                              );
+                                            }}
+                                          >
+                                            <Eye className="w-5 h-5" />
+                                            <span className="text-sm font-medium">
+                                              {t(
+                                                "classroomDetail.buttons.viewDetails",
+                                              )}
+                                            </span>
+                                          </Button>
                                         )}
                                       </div>
                                     )}
@@ -1914,38 +1916,42 @@ export default function ClassroomDetail({
                                         {assignment.practice_mode !==
                                           "rearrangement" &&
                                           assignment.practice_mode !==
-                                            "word_selection" && (
+                                            "word_selection" &&
+                                          (canUseAiGrading ? (
                                             <Button
                                               variant="default"
                                               size="sm"
-                                              className={cn(
-                                                "h-10 min-h-10",
-                                                canUseAiGrading
-                                                  ? "bg-purple-600 hover:bg-purple-700 text-white"
-                                                  : "bg-gray-400 hover:bg-gray-400 text-white opacity-50 cursor-not-allowed",
-                                              )}
-                                              disabled={!canUseAiGrading}
+                                              className="h-10 min-h-10 bg-purple-600 hover:bg-purple-700 text-white"
                                               onClick={() => {
-                                                if (canUseAiGrading) {
-                                                  setBatchGradingModal({
-                                                    open: true,
-                                                    assignmentId: assignment.id,
-                                                    classroomId: Number(id),
-                                                  });
-                                                }
+                                                setBatchGradingModal({
+                                                  open: true,
+                                                  assignmentId: assignment.id,
+                                                  classroomId: Number(id),
+                                                });
                                               }}
-                                              title={
-                                                !canUseAiGrading
-                                                  ? t("assignmentDetail.noCredits.tooltip")
-                                                  : ""
-                                              }
                                             >
                                               <Sparkles className="w-4 h-4 mr-1" />
                                               {t(
                                                 "assignmentDetail.buttons.batchGrade",
                                               )}
                                             </Button>
-                                          )}
+                                          ) : (
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="h-10 min-h-10"
+                                              onClick={() => {
+                                                navigate(
+                                                  `/teacher/classroom/${id}/assignment/${assignment.id}`,
+                                                );
+                                              }}
+                                            >
+                                              <Eye className="w-4 h-4 mr-1" />
+                                              {t(
+                                                "classroomDetail.buttons.viewDetails",
+                                              )}
+                                            </Button>
+                                          ))}
                                       </div>
                                     </td>
                                   </tr>

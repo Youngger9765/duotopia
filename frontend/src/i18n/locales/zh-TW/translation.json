@@ -150,6 +150,7 @@
     "playing": "播放中",
     "analyzing": "分析中",
     "uploadAndAnalyze": "上傳並分析",
+    "analyze": "分析",
     "reRecord": "重新錄音",
     "delete": "刪除錄音",
     "deleteConfirm": "確定要刪除此錄音嗎？"
@@ -1403,6 +1404,10 @@
         "missingAudio": "選擇的內容缺少音檔",
         "missingAudioDesc": "此練習模式需要音檔，請先回到內容管理頁面產生 TTS 音檔",
         "mixedContentType": "目前只能選擇{{type}}，請先清除已選擇的內容再選擇其他類型"
+      },
+      "warnings": {
+        "quotaLow": "AI 分析額度不足",
+        "quotaLowDesc": "作業已建立，但學生目前無法使用 AI 分析功能，僅能上傳音檔練習"
       },
       "success": {
         "created": "成功創建作業，已指派給 {{count}} 位學生"
@@ -3608,13 +3613,15 @@
       "passed": "通過",
       "notPassed": "未通過",
       "uploadAndAnalyze": "上傳並分析",
+      "analyze": "分析",
       "analyzing": "分析中...",
       "analyzed": "已分析",
       "analysisFailed": "分析失敗（點擊重試）",
       "aiAnalyzing": "AI 正在分析中...",
       "pleaseWait": "請稍候片刻",
       "clickToAssess": "點擊上方按鈕開始評估",
-      "pleaseRecordFirst": "請先錄音"
+      "pleaseRecordFirst": "請先錄音",
+      "recordingComplete": "已錄音完成"
     },
     "messages": {
       "recordingRequired": "請先錄音並確保有參考文本",
@@ -3996,6 +4003,7 @@
     "submitting": "提交中...",
     "analyzing": "AI 分析中...",
     "uploadAndAssess": "上傳並分析",
+    "analyze": "分析",
     "aiResult": "AI 評估結果",
     "overallScore": "綜合評分",
     "points": " 分",
@@ -4017,6 +4025,7 @@
     "studentAnswer": "學生作答",
     "pleaseRecord": "請先錄音",
     "clickToAssess": "點擊上方按鈕開始評估",
+    "recordingComplete": "已錄音完成",
     "startRecordOrUpload": "開始錄音或上傳",
     "noTeacherFeedback": "尚無老師評語",
     "toast": {
