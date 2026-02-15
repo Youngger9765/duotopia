@@ -346,7 +346,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
         );
       } catch (error) {
         console.error("Failed to save timeout completion:", error);
-        // 不影響 UI，靜默失敗
+        toast.warning(t("rearrangement.messages.saveFailed"));
       }
     } else if (isDemoMode) {
       // Demo 模式：呼叫 demo API
@@ -362,7 +362,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
         );
       } catch (error) {
         console.error("Failed to save demo timeout completion:", error);
-        // 不影響 UI，靜默失敗
+        toast.warning(t("rearrangement.messages.saveFailed"));
       }
     }
   };
@@ -482,7 +482,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
           );
         } catch (error) {
           console.error("Failed to save completion:", error);
-          // 不影響 UI，靜默失敗
+          toast.warning(t("rearrangement.messages.saveFailed"));
         }
       } else if (isDemoMode) {
         // Demo 模式：呼叫 demo API
@@ -497,7 +497,7 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
           );
         } catch (error) {
           console.error("Failed to save demo completion:", error);
-          // 不影響 UI，靜默失敗
+          toast.warning(t("rearrangement.messages.saveFailed"));
         }
       }
     } else if (isChallengeFailed) {

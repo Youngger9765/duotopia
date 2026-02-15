@@ -1,10 +1,10 @@
 /**
- * 學生作業活動頁面
+ * 學生作業活動頁面 - 含重試機制 (#280)
  *
  * 從 API 載入資料，然後使用共用的 StudentActivityPageContent 元件顯示
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import {
   setErrorLoggingContext,
   clearErrorLoggingContext,
 } from "@/contexts/ErrorLoggingContext";
+import { retryWithBackoff } from "@/utils/retryHelper";
 import StudentActivityPageContent from "./StudentActivityPageContent";
 
 // Activity type from API
@@ -100,6 +101,15 @@ export default function StudentActivityPage() {
   const [practiceMode, setPracticeMode] = useState<string | null>(null);
   const [showAnswer, setShowAnswer] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
+
+  // Cleanup toasts on unmount
+  useEffect(() => {
+    return () => {
+      toast.dismiss();
+    };
+  }, []);
 
   // Set error logging context for audio error tracking
   useEffect(() => {
@@ -157,32 +167,89 @@ export default function StudentActivityPage() {
     }
   };
 
-  // Handle final submission
+  // Handle final submission with retry
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSubmit = async (_data?: { answers: any[] }) => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+
     const apiUrl = import.meta.env.VITE_API_URL || "";
-    const response = await fetch(
-      `${apiUrl}/api/students/assignments/${assignmentId}/submit`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      },
+    const maxRetries = 3;
+    const toastId = toast.loading(
+      t("studentActivityPage.errors.submitRetrying", {
+        attempt: 1,
+        maxRetries,
+      }),
     );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Failed to submit:", response.status, errorText);
-      throw new Error(`Failed to submit assignment: ${response.status}`);
-    }
+    try {
+      await retryWithBackoff(
+        async () => {
+          const response = await fetch(
+            `${apiUrl}/api/students/assignments/${assignmentId}/submit`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            },
+          );
 
-    // Success - navigate to assignments list
-    setTimeout(() => {
-      // Issue #28: Navigate directly to assignment list instead of detail page
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Failed to submit:", response.status, errorText);
+            throw new Error(
+              `Failed to submit assignment: ${response.status}`,
+            );
+          }
+        },
+        {
+          maxRetries,
+          initialDelay: 1000,
+          maxDelay: 5000,
+          shouldRetry: (error) => {
+            const retryableErrors = [
+              "NetworkError",
+              "TimeoutError",
+              "500",
+              "502",
+              "503",
+              "504",
+              "ECONNRESET",
+              "ETIMEDOUT",
+            ];
+            const errorMessage = error.message || "";
+            return retryableErrors.some((err) => errorMessage.includes(err));
+          },
+          onRetry: (attempt, error) => {
+            console.error(
+              `Submit attempt ${attempt}/${maxRetries} failed:`,
+              error,
+            );
+            toast.loading(
+              t("studentActivityPage.errors.submitRetrying", {
+                attempt: attempt + 1,
+                maxRetries,
+              }),
+              { id: toastId },
+            );
+          },
+        },
+      );
+
+      toast.dismiss(toastId);
       navigate("/student/assignments");
-    }, 500);
+    } catch (error) {
+      toast.error(t("studentActivityPage.errors.submitFailed"), {
+        id: toastId,
+      });
+      throw error;
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   if (loading) {
