@@ -5,14 +5,7 @@ import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   Mic,
-  Brain,
-  Trophy,
-  BarChart3,
-  Shield,
-  Zap,
-  ArrowRight,
-  Play,
-  CheckCircle,
+  GraduationCap,
   X,
   Puzzle,
   BookOpen,
@@ -20,6 +13,7 @@ import {
   Headphones,
 } from "lucide-react";
 import { DemoCard } from "@/components/DemoCard";
+import { ImageCarousel } from "@/components/ImageCarousel";
 import { demoApi } from "@/lib/demoApi";
 import { toast } from "sonner";
 import TeacherLoginSheet from "@/components/TeacherLoginSheet";
@@ -40,7 +34,8 @@ interface DemoConfig {
 }
 
 export default function Home() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isEn = i18n.language === "en";
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [isTeacherLoginOpen, setIsTeacherLoginOpen] = useState(false);
 
@@ -123,36 +118,29 @@ export default function Home() {
         <div className="container mx-auto px-4 sm:px-8 lg:px-16">
           <div className="grid lg:grid-cols-2 gap-8 xl:gap-10 min-[1440px]:gap-12 items-center max-w-6xl mx-auto">
             {/* 左側文案 */}
-            <div>
+            <div className="text-center">
               <p className="text-yellow-400 mb-2 text-base lg:text-lg font-medium">
                 {t("home.hero.tagline")}
               </p>
-              <h1 className="text-4xl lg:text-5xl min-[1440px]:text-6xl font-bold mb-4">
-                {t("home.hero.brand")}
+              <p className="text-yellow-400 text-base lg:text-lg font-medium mb-2">
+                <span className="bg-white/20 text-white font-bold px-1.5 py-0.5 rounded">{t("home.hero.preClass")}</span>{t("home.hero.preClassDesc")}<span className="bg-white/20 text-white font-bold px-1.5 py-0.5 rounded">{t("home.hero.inClass")}</span>{t("home.hero.inClassDesc")}<span className="bg-white/20 text-white font-bold px-1.5 py-0.5 rounded">{t("home.hero.postClass")}</span>{t("home.hero.postClassDesc")}
+              </p>
+              <h1 className="mb-4 flex justify-center">
+                <img
+                  src="https://storage.googleapis.com/duotopia-social-media-videos/website/whitelogoword.png"
+                  alt={t("home.hero.brand")}
+                  className="h-[60px] lg:h-[80px] min-[1440px]:h-[100px]"
+                />
               </h1>
-              <h2 className="text-xl lg:text-2xl min-[1440px]:text-3xl mb-6 text-blue-100">
+              <h2 className={`mb-4 text-blue-100 ${isEn ? "text-base lg:text-lg min-[1440px]:text-xl" : "text-lg lg:text-xl min-[1440px]:text-2xl"}`}>
                 {t("home.hero.subtitle")}
               </h2>
-              <p className="text-base lg:text-lg mb-4 leading-relaxed">
+              <p className={`font-bold mb-8 text-yellow-400 ${isEn ? "text-lg lg:text-xl min-[1440px]:text-2xl" : "text-xl lg:text-2xl min-[1440px]:text-3xl"}`}>
                 {t("home.hero.description")}
               </p>
-              <ul className="mb-8 space-y-2 text-blue-50">
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  <span>{t("home.hero.benefit1")}</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  <span>{t("home.hero.benefit2")}</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  <span>{t("home.hero.benefit3")}</span>
-                </li>
-              </ul>
 
               {/* 按鈕區域 */}
-              <div className="flex flex-wrap gap-4 justify-center sm:justify-start">
+              <div className="flex flex-wrap gap-4 justify-center">
                 {/* 免費體驗按鈕 */}
                 <Link to="/teacher/register">
                   <Button
@@ -168,20 +156,25 @@ export default function Home() {
                   </Button>
                 </Link>
 
-                {/* 觀看介紹影片按鈕 */}
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-2 border-white text-white hover:bg-white hover:text-blue-700 px-8 py-[22px] text-lg font-semibold transition-colors"
-                  onClick={() => setIsVideoModalOpen(true)}
+                {/* 教育機構方案按鈕 */}
+                <a
+                  href="https://forms.gle/azFtAQCW13afA8ab6"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  <Play className="w-5 h-5 mr-2" />
-                  {t("home.hero.watchVideo")}
-                </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-2 border-white text-white hover:bg-white hover:text-blue-700 px-8 py-[22px] text-lg font-semibold transition-colors"
+                  >
+                    <GraduationCap className="w-5 h-5 mr-2" />
+                    {t("home.hero.eduPlan")}
+                  </Button>
+                </a>
               </div>
 
               {/* 教師頭像 + 統計 */}
-              <div className="mt-8 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-center sm:text-left">
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-center sm:text-left">
                 <div className="flex -space-x-3">
                   {[1, 2, 3, 4].map((i) => (
                     <img
@@ -203,41 +196,13 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 右側圖片 + 浮動徽章 */}
-            <div className="hidden lg:flex lg:justify-end">
-              <div className="relative inline-block">
-                {/* 背景藍色區塊 - 跟隨圖片大小 */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl transform rotate-3 scale-105"></div>
-                <img
-                  src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600"
-                  alt="Students learning"
-                  className="relative rounded-2xl shadow-2xl max-w-[320px] xl:max-w-[400px] min-[1440px]:max-w-[500px] h-auto"
-                />
-                {/* 左下徽章 - AI 語音辨識 */}
-                <div className="absolute -bottom-4 -left-4 bg-white rounded-xl shadow-xl p-3 flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900 text-sm">
-                      AI 語音辨識
-                    </div>
-                    <div className="text-gray-500 text-xs">AI 語音辨識</div>
-                  </div>
-                </div>
-                {/* 右上徽章 - 多元智能學習 */}
-                <div className="absolute -top-4 -right-4 bg-white rounded-xl shadow-xl p-3 flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Brain className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900 text-sm">
-                      多元智能學習
-                    </div>
-                    <div className="text-gray-500 text-xs">多元智能學習</div>
-                  </div>
-                </div>
-              </div>
+            {/* 右側圖片 */}
+            <div className="hidden lg:flex lg:justify-end lg:items-center">
+              <img
+                src="https://storage.googleapis.com/duotopia-social-media-videos/website/girlspeaksenglish.png"
+                alt="Girl speaks English"
+                className="max-w-[208px] sm:max-w-[240px] lg:max-w-[312px] xl:max-w-[368px] min-[1440px]:max-w-[424px] h-auto drop-shadow-[0_0_40px_rgba(255,255,255,0.25)]"
+              />
             </div>
           </div>
         </div>
@@ -319,11 +284,11 @@ export default function Home() {
         </section>
       )}
 
-      {/* 第四區段: 為什麼選擇 Duotopia (保留原樣) */}
-      <section className="py-20 lg:py-28">
+      {/* 第四區段: 為什麼選擇 Duotopia */}
+      <section id="features" className="py-20 lg:py-28">
         <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
               <h2 className="text-4xl font-bold text-gray-900 mb-4">
                 {t("home.features.title")}
               </h2>
@@ -332,255 +297,39 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {/* Feature 1 */}
-              <div className="group hover:shadow-xl transition-all duration-300 rounded-2xl p-8 border border-gray-100">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Mic className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">
-                  {t("home.features.aiSpeech.title")}
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  {t("home.features.aiSpeech.description")}
-                </p>
-                <Link
-                  to="/teacher/register"
-                  className="text-blue-600 font-semibold flex items-center hover:text-blue-700"
-                >
-                  {t("home.features.learnMore")}{" "}
-                  <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </div>
-
-              {/* Feature 2 */}
-              <div className="group hover:shadow-xl transition-all duration-300 rounded-2xl p-8 border border-gray-100">
-                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Brain className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">
-                  {t("home.features.multiIntelligence.title")}
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  {t("home.features.multiIntelligence.description")}
-                </p>
-                <Link
-                  to="/teacher/register"
-                  className="text-blue-600 font-semibold flex items-center hover:text-blue-700"
-                >
-                  {t("home.features.learnMore")}{" "}
-                  <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </div>
-
-              {/* Feature 3 */}
-              <div className="group hover:shadow-xl transition-all duration-300 rounded-2xl p-8 border border-gray-100">
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <BarChart3 className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">
-                  {t("home.features.analytics.title")}
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  {t("home.features.analytics.description")}
-                </p>
-                <Link
-                  to="/teacher/register"
-                  className="text-blue-600 font-semibold flex items-center hover:text-blue-700"
-                >
-                  {t("home.features.learnMore")}{" "}
-                  <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </div>
-
-              {/* Feature 4 */}
-              <div className="group hover:shadow-xl transition-all duration-300 rounded-2xl p-8 border border-gray-100">
-                <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Trophy className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">
-                  {t("home.features.gamification.title")}
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  {t("home.features.gamification.description")}
-                </p>
-                <Link
-                  to="/teacher/register"
-                  className="text-blue-600 font-semibold flex items-center hover:text-blue-700"
-                >
-                  {t("home.features.learnMore")}{" "}
-                  <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </div>
-
-              {/* Feature 5 */}
-              <div className="group hover:shadow-xl transition-all duration-300 rounded-2xl p-8 border border-gray-100">
-                <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Shield className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">
-                  {t("home.features.security.title")}
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  {t("home.features.security.description")}
-                </p>
-                <Link
-                  to="/teacher/register"
-                  className="text-blue-600 font-semibold flex items-center hover:text-blue-700"
-                >
-                  {t("home.features.learnMore")}{" "}
-                  <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </div>
-
-              {/* Feature 6 */}
-              <div className="group hover:shadow-xl transition-all duration-300 rounded-2xl p-8 border border-gray-100">
-                <div className="w-14 h-14 bg-gradient-to-br from-teal-500 to-green-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Zap className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">
-                  {t("home.features.easyToUse.title")}
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  {t("home.features.easyToUse.description")}
-                </p>
-                <Link
-                  to="/teacher/register"
-                  className="text-blue-600 font-semibold flex items-center hover:text-blue-700"
-                >
-                  {t("home.features.learnMore")}{" "}
-                  <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </div>
-            </div>
+            <ImageCarousel
+              images={[
+                {
+                  src: "https://storage.googleapis.com/duotopia-social-media-videos/website/whyus01.png",
+                  caption: t("home.features.carousel.captions.orgMaterial"),
+                },
+                {
+                  src: "https://storage.googleapis.com/duotopia-social-media-videos/website/whyus03.png",
+                  caption: t("home.features.carousel.captions.forgettingCurve"),
+                },
+                {
+                  src: "https://storage.googleapis.com/duotopia-social-media-videos/website/whyus04.jpg",
+                  caption: t("home.features.carousel.captions.aiGrading"),
+                },
+                {
+                  src: "https://storage.googleapis.com/duotopia-social-media-videos/website/whyus05.png",
+                  caption: t("home.features.carousel.captions.speakingWriting"),
+                },
+                {
+                  src: "https://storage.googleapis.com/duotopia-social-media-videos/website/whyus06.png",
+                  caption: t("home.features.carousel.captions.anyMaterial"),
+                },
+                {
+                  src: "https://storage.googleapis.com/duotopia-social-media-videos/website/whyus07.png",
+                  caption: t("home.features.carousel.captions.moreFeatures"),
+                },
+              ]}
+            />
           </div>
         </div>
       </section>
 
-      {/* 第五區段: CTA - 漸層背景 */}
-      <section className="bg-gradient-to-b from-[#204dc0] to-[#101f6b] text-white py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-              {t("home.cta2.title")}
-            </h2>
-            <p className="text-xl mb-10 text-blue-100">
-              ✨ {t("home.cta2.subtitle")}
-            </p>
-
-            {/* 按鈕 + 教師頭像：大螢幕水平排列，小螢幕垂直排列 */}
-            <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12">
-              {/* 左側：按鈕 + 無須信用卡 */}
-              <div className="flex flex-col items-center lg:items-end">
-                <Link to="/teacher/register">
-                  <Button
-                    size="lg"
-                    className="bg-white text-gray-900 hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-xl"
-                  >
-                    <img
-                      src="https://storage.googleapis.com/duotopia-social-media-videos/website/assigment_icon.png"
-                      alt=""
-                      className="w-6 h-6 mr-2"
-                    />
-                    {t("home.cta2.button")}
-                  </Button>
-                </Link>
-                <p className="mt-3 text-sm text-blue-200">
-                  {t("home.cta2.noCreditCard")}
-                </p>
-              </div>
-
-              {/* 右側：教師頭像 + 統計 */}
-              <div className="flex items-center gap-4">
-                <div className="flex -space-x-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <img
-                      key={i}
-                      src={`https://storage.googleapis.com/duotopia-social-media-videos/website/teacherprofile_0${i}.png`}
-                      alt={`Teacher ${i}`}
-                      className="w-12 h-12 rounded-full border-2 border-white"
-                    />
-                  ))}
-                </div>
-                <div className="text-left">
-                  <p className="font-semibold text-yellow-400">
-                    {t("home.hero.trustedTeachers")}
-                  </p>
-                  <p className="text-blue-200 text-sm">
-                    {t("home.hero.studentsImproved")}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 第六區段: 三步驟 */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl lg:text-4xl font-bold text-center mb-12 text-gray-900">
-              {t("home.steps.title")}
-            </h2>
-
-            {/* 三個步驟圖示：小螢幕垂直排列，大螢幕水平排列 */}
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-8 sm:gap-12 lg:gap-16 mb-12">
-              {/* 步驟 1 */}
-              <div className="text-center">
-                <img
-                  src="https://storage.googleapis.com/duotopia-social-media-videos/website/sbs_icon01.png"
-                  alt="Step 1"
-                  className="w-20 h-20 mx-auto mb-4"
-                />
-                <p className="text-xl font-semibold text-gray-900">
-                  {t("home.steps.step1")}
-                </p>
-              </div>
-
-              {/* 步驟 2 */}
-              <div className="text-center">
-                <img
-                  src="https://storage.googleapis.com/duotopia-social-media-videos/website/sbs_icon02.png"
-                  alt="Step 2"
-                  className="w-20 h-20 mx-auto mb-4"
-                />
-                <p className="text-xl font-semibold text-gray-900">
-                  {t("home.steps.step2")}
-                </p>
-              </div>
-
-              {/* 步驟 3 */}
-              <div className="text-center">
-                <img
-                  src="https://storage.googleapis.com/duotopia-social-media-videos/website/sbs_icon03.png"
-                  alt="Step 3"
-                  className="w-20 h-20 mx-auto mb-4"
-                />
-                <p className="text-xl font-semibold text-gray-900">
-                  {t("home.steps.step3")}
-                </p>
-              </div>
-            </div>
-
-            {/* 下方展示圖：小螢幕垂直排列，大螢幕水平排列 */}
-            <div className="flex flex-col lg:flex-row justify-center gap-8 items-center">
-              <img
-                src="https://storage.googleapis.com/duotopia-social-media-videos/website/sbs_image01.png"
-                alt="Demo 1"
-                className="w-full max-w-sm lg:max-w-md rounded-xl shadow-lg"
-              />
-              <img
-                src="https://storage.googleapis.com/duotopia-social-media-videos/website/sbs_image02.png"
-                alt="Demo 2"
-                className="w-full max-w-sm lg:max-w-md rounded-xl shadow-lg"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 第七區段: Footer (保留原樣) */}
+      {/* Footer */}
       <footer className="bg-gray-900 text-gray-300 py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
@@ -608,7 +357,7 @@ export default function Home() {
                 </h4>
                 <ul className="space-y-2 text-sm">
                   <li>
-                    <a href="#" className="hover:text-white">
+                    <a href="#features" className="hover:text-white">
                       {t("home.footer.features")}
                     </a>
                   </li>
@@ -616,6 +365,11 @@ export default function Home() {
                     <Link to="/pricing" className="hover:text-white">
                       {t("home.footer.pricing")}
                     </Link>
+                  </li>
+                  <li>
+                    <a href="https://forms.gle/azFtAQCW13afA8ab6" target="_blank" rel="noopener noreferrer" className="hover:text-white">
+                      {t("home.footer.eduPlan")}
+                    </a>
                   </li>
                 </ul>
               </div>
@@ -625,14 +379,9 @@ export default function Home() {
                 </h4>
                 <ul className="space-y-2 text-sm">
                   <li>
-                    <a href="#" className="hover:text-white">
+                    <button onClick={() => setIsVideoModalOpen(true)} className="hover:text-white">
                       {t("home.footer.tutorial")}
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" className="hover:text-white">
-                      {t("home.footer.faq")}
-                    </a>
+                    </button>
                   </li>
                 </ul>
               </div>
@@ -647,9 +396,9 @@ export default function Home() {
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white">
+                    <Link to="/privacy" className="hover:text-white">
                       {t("home.footer.privacy")}
-                    </a>
+                    </Link>
                   </li>
                   <li>
                     <Link to="/terms" className="hover:text-white">
@@ -698,6 +447,19 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Meta Messenger 浮動按鈕 */}
+      <a
+        href="https://m.me/duotopia"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-[#0084FF] hover:bg-[#0073E6] rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-110"
+        aria-label="Meta Messenger 客服"
+      >
+        <svg viewBox="0 0 36 36" fill="white" className="w-7 h-7">
+          <path d="M18 2.1C9.1 2.1 2 8.6 2 16.6c0 4.6 2.3 8.6 5.8 11.2V34l5.7-3.1c1.5.4 3 .6 4.5.6 8.9 0 16-6.5 16-14.5S26.9 2.1 18 2.1zm1.6 19.5l-4.1-4.3-7.9 4.3 8.7-9.2 4.2 4.3 7.8-4.3-8.7 9.2z" />
+        </svg>
+      </a>
 
       {/* 教師登入 Sheet */}
       <TeacherLoginSheet

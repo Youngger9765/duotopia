@@ -158,19 +158,26 @@
       "badge": "AI-Powered English Learning Revolution",
       "title": "Duotopia",
       "subtitle": "AI-Powered Gamified English Learning Platform for Listening, Speaking, Reading, and Writing",
-      "description": "Duotopia creates personalized gamified learning experiences for students, teachers, and parents aged 6-18, helping every student speak English with confidence!",
+      "description": "Personalized English learning for ages 6-18.",
       "freeTrial": "Free Trial",
       "watchVideo": "Watch Demo Video",
       "trustedBy": "Trusted by {{count}}+ teachers",
       "studentsUsing": "{{count}}+ students using",
-      "tagline": "AI-Powered English Learning & Smart Assignment Grading",
+      "tagline": "AI-Powered Smart English Teaching Platform for Students, Teachers & Parents",
       "brand": "Duotopia",
       "benefit1": "Helps ESL teachers save time through AI-powered lesson planning and automated grading;",
       "benefit2": "Students practice effectively through gamified resources and activities, improving learning outcomes;",
       "benefit3": "Teachers and parents build trust through data-driven insights and efficient communication.",
       "trustedTeachers": "Trusted by 1,000+ ESL Teachers",
       "studentsImproved": "Improved 10,000,000+ Students' Speaking Skills",
-      "freeTrialBtn": "Start Free Trial"
+      "freeTrialBtn": "Free Trial",
+      "preClass": "Pre-class",
+      "preClassDesc": " rapid prep, ",
+      "inClass": "In-class",
+      "inClassDesc": " instant practice, ",
+      "postClass": "Post-class",
+      "postClassDesc": " assign homework",
+      "eduPlan": "Institutional Plans"
     },
     "stats": {
       "satisfaction": "Student Satisfaction",
@@ -206,6 +213,20 @@
       "easyToUse": {
         "title": "Easy to Use",
         "description": "Intuitive interface design, teachers can get started in 5 minutes, students require no additional training"
+      },
+      "carousel": {
+        "label": "Feature highlights carousel",
+        "prev": "Previous slide",
+        "next": "Next slide",
+        "goToSlide": "Go to slide {{number}}",
+        "captions": {
+          "orgMaterial": "Institution material management system, exclusively for branch campuses, ensuring intellectual property protection.",
+          "forgettingCurve": "Ebbinghaus forgetting curve × \"Listen & Match\" vocabulary selection\nAutomatically captures weak vocabulary for smart review, turning short-term memory into long-term memory through gamified practice.",
+          "aiGrading": "Say goodbye to tedious manual grading — AI one-click grading lets teachers focus on teaching and mentoring.",
+          "speakingWriting": "Speaking & writing dual-mode training (Coming Soon...)\nProvides instant feedback based on student age, level, and assignment goals, effectively simulating native speaker learning patterns.",
+          "anyMaterial": "Works with any textbook — paste and let AI transform it, compatible with students worldwide.",
+          "moreFeatures": "More features — your wish is our command\nBuilding a friendly bilingual education environment together, so students become more than just test-taking machines."
+        }
       }
     },
     "howItWorks": {
@@ -300,6 +321,7 @@
       "product": "Product",
       "features": "Features",
       "pricing": "Pricing",
+      "eduPlan": "Institutional Plans",
       "support": "Support",
       "tutorial": "Tutorial",
       "faq": "FAQ",
@@ -1212,6 +1234,80 @@
       "taxId": "Tax ID: 60619397",
       "contactPrompt": "If you have any questions about these terms, please contact us through the following:",
       "email": "Email: contact@duotopia.co"
+    }
+  },
+  "privacyPolicy": {
+    "header": {
+      "title": "Privacy Policy",
+      "lastUpdated": "Last updated: February 14, 2026"
+    },
+    "section1": {
+      "title": "1. General",
+      "item1": "1.1 Duotopia Digital Learning Co., Ltd. (hereinafter referred to as \"the Company\") values your privacy. This Privacy Policy explains how we collect, use, protect, and manage your personal data.",
+      "item2": "1.2 By using the Duotopia platform (hereinafter referred to as \"the Service\"), you agree to the terms of this Privacy Policy."
+    },
+    "section2": {
+      "title": "2. Types of Personal Data Collected",
+      "item1": "2.1 To provide the Service, we may collect the following types of personal data:",
+      "list": {
+        "item1": "Basic information: name, email address, school or organization name",
+        "item2": "Account information: login credentials, role type (teacher, student, parent)",
+        "item3": "Learning records: assignment scores, practice records, learning progress",
+        "item4": "Voice data: audio recordings required for AI speech recognition",
+        "item5": "Payment information: subscription plans, transaction records (payment processing is handled by third-party payment provider TapPay; the Company does not store credit card numbers)"
+      }
+    },
+    "section3": {
+      "title": "3. Purpose of Personal Data Use",
+      "item1": "3.1 Your personal data will be used for the following purposes:",
+      "list": {
+        "item1": "Providing, maintaining, and improving the Service",
+        "item2": "AI speech recognition analysis and learning effectiveness assessment",
+        "item3": "Learning progress tracking and personalized learning experiences",
+        "item4": "Subscription management and customer service"
+      }
+    },
+    "section4": {
+      "title": "4. Teaching Materials and Data Sharing",
+      "item1": "4.1 Teaching materials created by teachers are visible and accessible only to the creator by default.",
+      "item2": "4.2 Within the organization module, materials may be shared with internal members as configured by the organization administrator, but will not be made publicly available.",
+      "item3": "4.3 Student learning records and assignment content are accessible only to the relevant teacher and the student."
+    },
+    "section5": {
+      "title": "5. Third-Party Services",
+      "item1": "5.1 The Service uses the following third-party services to process data: cloud infrastructure (Google Cloud Platform), database services (Supabase), and payment processing (TapPay).",
+      "item2": "5.2 These third-party service providers have their own privacy policies. We only provide the minimum data necessary to complete the relevant services."
+    },
+    "section6": {
+      "title": "6. User Rights",
+      "item1": "6.1 You have the following rights regarding your personal data:",
+      "list": {
+        "item1": "Access your personal data",
+        "item2": "Request supplementation or correction of your personal data",
+        "item3": "Request cessation of collection, processing, or use of your personal data",
+        "item4": "Request deletion of your personal data"
+      }
+    },
+    "section7": {
+      "title": "7. Children's Privacy Protection",
+      "item1": "7.1 The Service may be used by minors under the age of 18. Minor users must obtain consent from a legal guardian (parent or guardian) before using the Service.",
+      "item2": "7.2 Legal guardians have the right to exercise the rights of access, correction, cessation of collection, and deletion of personal data on behalf of minor users."
+    },
+    "section8": {
+      "title": "8. Data Security and Protection",
+      "item1": "8.1 The Company employs industry-standard encryption technologies and security measures to protect your personal data.",
+      "item2": "8.2 We implement access control mechanisms to ensure only authorized personnel can access personal data.",
+      "item3": "8.3 Your data may be stored on overseas servers (Google Cloud Platform, Supabase). The Company ensures that these service providers offer data protection that meets international standards."
+    },
+    "section9": {
+      "title": "9. Cookies and Tracking Technologies",
+      "item1": "9.1 The Service uses cookies and similar technologies to maintain login status, record user preferences, and improve service quality.",
+      "item2": "9.2 You may manage or reject cookies through your browser settings, but some features may be affected as a result."
+    },
+    "section10": {
+      "title": "10. Policy Changes",
+      "item1": "10.1 The Company reserves the right to modify this Privacy Policy at any time. Changes will be posted on this page.",
+      "item2": "10.2 Continued use of the Service constitutes your agreement to the revised Privacy Policy."
     }
   },
   "dialogs": {
