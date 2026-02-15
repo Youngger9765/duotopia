@@ -543,4 +543,44 @@ describe("AssignTeacherDialog", () => {
       expect(screen.getByText("(目前導師)")).toBeInTheDocument();
     });
   });
+
+  it("should show error message when org teachers fetch fails", async () => {
+    vi.mocked(apiClient.getOrganizationTeachers).mockRejectedValue(
+      new Error("Network error"),
+    );
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText("無法載入機構教師列表")).toBeInTheDocument();
+    });
+  });
+
+  it("should not show invite option for malformed email like @.", async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText("王老師")).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText("輸入姓名或 Email 搜尋...");
+    fireEvent.change(searchInput, { target: { value: "@." } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/找不到符合/)).toBeInTheDocument();
+    });
+
+    // Should NOT show invite option for malformed email
+    expect(screen.queryByText(/邀請.*為新教師/)).not.toBeInTheDocument();
+  });
+
+  it("should have accessibility attributes on search input", async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      const input = screen.getByRole("combobox");
+      expect(input).toHaveAttribute("aria-label", "搜尋教師");
+      expect(input).toHaveAttribute("aria-controls", "teacher-listbox");
+    });
+  });
 });

@@ -78,32 +78,34 @@ export function AssignTeacherDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orgTeachers, setOrgTeachers] = useState<OrgTeacher[]>([]);
   const [loadingOrg, setLoadingOrg] = useState(false);
+  const [orgTeachersError, setOrgTeachersError] = useState<string | null>(null);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteName, setInviteName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Fetch org teachers when dialog opens
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchOrgTeachers is stable, only re-run on open/organizationId change
   useEffect(() => {
-    if (open && organizationId) {
-      fetchOrgTeachers();
-      setSearchQuery("");
-      setShowInviteForm(false);
-      setInviteName("");
-    }
-  }, [open, organizationId]);
+    if (!open || !organizationId) return;
 
-  const fetchOrgTeachers = async () => {
-    setLoadingOrg(true);
-    try {
-      const data = await apiClient.getOrganizationTeachers(organizationId);
-      setOrgTeachers(data.filter((t) => t.is_active));
-    } catch (error) {
-      logError("Failed to fetch org teachers", error, { organizationId });
-    } finally {
-      setLoadingOrg(false);
-    }
-  };
+    const fetchOrgTeachers = async () => {
+      setLoadingOrg(true);
+      setOrgTeachersError(null);
+      try {
+        const data = await apiClient.getOrganizationTeachers(organizationId);
+        setOrgTeachers(data.filter((t) => t.is_active));
+      } catch (error) {
+        logError("Failed to fetch org teachers", error, { organizationId });
+        setOrgTeachersError("無法載入機構教師列表");
+      } finally {
+        setLoadingOrg(false);
+      }
+    };
+
+    fetchOrgTeachers();
+    setSearchQuery("");
+    setShowInviteForm(false);
+    setInviteName("");
+  }, [open, organizationId]);
 
   // Build unified teacher list with deduplication
   const schoolTeacherIds = useMemo(
@@ -154,7 +156,7 @@ export function AssignTeacherDialog({
     filtered.schoolTeachers.length > 0 || filtered.orgOnlyTeachers.length > 0;
 
   // Check if search looks like an email with no results
-  const isEmailSearch = searchQuery.includes("@") && searchQuery.includes(".");
+  const isEmailSearch = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(searchQuery.trim());
   const showNoResultInvite =
     !hasResults && searchQuery.trim().length > 0 && !showInviteForm;
 
@@ -168,33 +170,31 @@ export function AssignTeacherDialog({
   const handleSelectTeacher = async (teacher: TeacherOption) => {
     if (!classroom) return;
 
-    // If teacher is from org but not in school, add to school first
-    if (teacher.source === "org") {
-      setIsSubmitting(true);
-      try {
-        await apiClient.addTeacherToSchool(schoolId, {
-          teacher_id: teacher.id,
-          roles: ["teacher"],
-        });
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 409) {
-          // 409 = already in school, proceed with assignment
-          logError("Teacher already in school (expected 409)", error, {
-            teacherId: teacher.id,
-            schoolId,
-          });
-        } else {
-          logError("Failed to add teacher to school", error);
-          toast.error("將教師加入分校失敗");
-          setIsSubmitting(false);
-          return;
-        }
-      }
-    }
-
-    // Assign to classroom
     setIsSubmitting(true);
     try {
+      // If teacher is from org but not in school, add to school first
+      if (teacher.source === "org") {
+        try {
+          await apiClient.addTeacherToSchool(schoolId, {
+            teacher_id: teacher.id,
+            roles: ["teacher"],
+          });
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 409) {
+            // 409 = already in school, proceed with assignment
+            logError("Teacher already in school (expected 409)", error, {
+              teacherId: teacher.id,
+              schoolId,
+            });
+          } else {
+            logError("Failed to add teacher to school", error);
+            toast.error("將教師加入分校失敗");
+            return;
+          }
+        }
+      }
+
+      // Assign to classroom
       await apiClient.assignTeacherToClassroom(
         parseInt(classroom.id),
         teacher.id,
@@ -354,6 +354,8 @@ export function AssignTeacherDialog({
       <button
         key={`${teacher.source}-${teacher.id}`}
         type="button"
+        role="option"
+        aria-selected={isCurrentTeacher}
         className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition-colors hover:bg-accent/50 disabled:opacity-50 ${
           isCurrentTeacher ? "bg-accent/30" : ""
         }`}
@@ -414,6 +416,10 @@ export function AssignTeacherDialog({
               className="pl-9 pr-8"
               autoFocus
               disabled={isSubmitting}
+              aria-label="搜尋教師"
+              role="combobox"
+              aria-expanded={hasResults}
+              aria-controls="teacher-listbox"
             />
             {searchQuery && (
               <button
@@ -434,7 +440,12 @@ export function AssignTeacherDialog({
         {/* Teacher List */}
         {!showInviteForm && (
           <ScrollArea className="max-h-[320px] px-3">
-            <div className="space-y-0.5 pb-2">
+            <div
+              className="space-y-0.5 pb-2"
+              role="listbox"
+              id="teacher-listbox"
+              aria-label="教師列表"
+            >
               {/* Unassign option - only when classroom has a teacher */}
               {classroom.teacher_id && !searchQuery && (
                 <>
@@ -491,9 +502,19 @@ export function AssignTeacherDialog({
 
               {/* Loading state */}
               {loadingOrg && (
-                <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+                <div
+                  className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground"
+                  aria-live="polite"
+                >
                   <Loader2 className="h-4 w-4 animate-spin" />
                   載入教師列表...
+                </div>
+              )}
+
+              {/* Error state for org teachers fetch */}
+              {orgTeachersError && !loadingOrg && (
+                <div className="px-2.5 py-2">
+                  <p className="text-sm text-destructive">{orgTeachersError}</p>
                 </div>
               )}
 
