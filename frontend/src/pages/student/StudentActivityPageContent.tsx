@@ -1784,7 +1784,7 @@ export default function StudentActivityPageContent({
               setRearrangementQuestionStates(states);
             }}
             onQuestionStateChange={setRearrangementQuestionStates}
-            onComplete={(totalScore, totalQuestions) => {
+            onComplete={async (totalScore, totalQuestions) => {
               toast.success(
                 t("rearrangement.messages.allComplete", {
                   score: totalScore,
@@ -1792,7 +1792,11 @@ export default function StudentActivityPageContent({
                 }),
               );
               if (onSubmit) {
-                onSubmit({ answers: [] });
+                try {
+                  await onSubmit({ answers: [] });
+                } catch (error) {
+                  console.error("Submission failed:", error);
+                }
               }
             }}
           />
@@ -1831,10 +1835,14 @@ export default function StudentActivityPageContent({
             isPreviewMode={isPreviewMode}
             isDemoMode={isDemoMode}
             authToken={authToken}
-            onComplete={() => {
+            onComplete={async () => {
               toast.success(t("wordReading.toast.completed") || "作業已完成！");
               if (onSubmit) {
-                onSubmit({ answers: [] });
+                try {
+                  await onSubmit({ answers: [] });
+                } catch (error) {
+                  console.error("Submission failed:", error);
+                }
               }
             }}
           />

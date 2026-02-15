@@ -81,7 +81,8 @@
       "tooManyErrors": "Too many errors",
       "tryAgain": "Click the button below to try again",
       "retryPenalty": "Since you've seen the answer, the maximum score after retry is 60 points",
-      "allComplete": "All done! Score: {{score}} points"
+      "allComplete": "All done! Score: {{score}} points",
+      "saveFailed": "Failed to save progress. Will retry on submission."
     },
     "buttons": {
       "retry": "Try Again",
@@ -795,7 +796,8 @@
     },
     "errors": {
       "loadFailed": "Failed to load activities. Please try again later",
-      "submitFailed": "Failed to submit. Please try again later"
+      "submitFailed": "Failed to submit. Please try again later",
+      "submitRetrying": "Submit failed, retrying ({{attempt}}/{{maxRetries}})..."
     },
     "buttons": {
       "back": "Back",

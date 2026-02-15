@@ -157,32 +157,57 @@ export default function StudentActivityPage() {
     }
   };
 
-  // Handle final submission
+  // Handle final submission with retry
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSubmit = async (_data?: { answers: any[] }) => {
     const apiUrl = import.meta.env.VITE_API_URL || "";
-    const response = await fetch(
-      `${apiUrl}/api/students/assignments/${assignmentId}/submit`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      },
-    );
+    const maxRetries = 3;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Failed to submit:", response.status, errorText);
-      throw new Error(`Failed to submit assignment: ${response.status}`);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(
+          `${apiUrl}/api/students/assignments/${assignmentId}/submit`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          },
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Failed to submit:", response.status, errorText);
+          throw new Error(`Failed to submit assignment: ${response.status}`);
+        }
+
+        // Success - navigate to assignments list
+        navigate("/student/assignments");
+        return;
+      } catch (error) {
+        console.error(
+          `Submit attempt ${attempt}/${maxRetries} failed:`,
+          error,
+        );
+
+        if (attempt < maxRetries) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          toast.error(
+            t("studentActivityPage.errors.submitRetrying", {
+              attempt,
+              maxRetries,
+            }),
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        } else {
+          // All retries exhausted
+          toast.error(t("studentActivityPage.errors.submitFailed"));
+          throw error;
+        }
+      }
     }
-
-    // Success - navigate to assignments list
-    setTimeout(() => {
-      // Issue #28: Navigate directly to assignment list instead of detail page
-      navigate("/student/assignments");
-    }, 500);
   };
 
   if (loading) {

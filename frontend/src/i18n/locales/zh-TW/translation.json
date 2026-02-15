@@ -81,7 +81,8 @@
       "tooManyErrors": "錯誤次數過多",
       "tryAgain": "點擊下方按鈕重新挑戰",
       "retryPenalty": "因已看過答案，重試後滿分為 60 分",
-      "allComplete": "全部完成！得 {{score}} 分"
+      "allComplete": "全部完成！得 {{score}} 分",
+      "saveFailed": "進度儲存失敗，完成作業時將再次嘗試"
     },
     "buttons": {
       "retry": "重新挑戰",
@@ -795,7 +796,8 @@
     },
     "errors": {
       "loadFailed": "無法載入題目，請稍後再試",
-      "submitFailed": "提交失敗，請稍後再試"
+      "submitFailed": "提交失敗，請稍後再試",
+      "submitRetrying": "提交失敗，正在重試（第 {{attempt}}/{{maxRetries}} 次）..."
     },
     "buttons": {
       "back": "返回",
