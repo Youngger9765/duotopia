@@ -1785,18 +1785,25 @@ export default function StudentActivityPageContent({
             }}
             onQuestionStateChange={setRearrangementQuestionStates}
             onComplete={async (totalScore, totalQuestions) => {
-              toast.success(
-                t("rearrangement.messages.allComplete", {
-                  score: totalScore,
-                  total: totalQuestions * 100,
-                }),
-              );
               if (onSubmit) {
                 try {
                   await onSubmit({ answers: [] });
+                  toast.success(
+                    t("rearrangement.messages.allComplete", {
+                      score: totalScore,
+                      total: totalQuestions * 100,
+                    }),
+                  );
                 } catch (error) {
                   console.error("Submission failed:", error);
                 }
+              } else {
+                toast.success(
+                  t("rearrangement.messages.allComplete", {
+                    score: totalScore,
+                    total: totalQuestions * 100,
+                  }),
+                );
               }
             }}
           />
@@ -1836,13 +1843,19 @@ export default function StudentActivityPageContent({
             isDemoMode={isDemoMode}
             authToken={authToken}
             onComplete={async () => {
-              toast.success(t("wordReading.toast.completed") || "作業已完成！");
               if (onSubmit) {
                 try {
                   await onSubmit({ answers: [] });
+                  toast.success(
+                    t("wordReading.toast.completed") || "作業已完成！",
+                  );
                 } catch (error) {
                   console.error("Submission failed:", error);
                 }
+              } else {
+                toast.success(
+                  t("wordReading.toast.completed") || "作業已完成！",
+                );
               }
             }}
           />
