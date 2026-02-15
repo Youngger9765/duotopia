@@ -1,11 +1,13 @@
 import React, { useState, useRef, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface ImageCarouselProps {
   images: { src: string; caption?: string }[];
 }
 
 export const ImageCarousel: React.FC<ImageCarouselProps> = ({ images }) => {
+  const { t } = useTranslation();
   const [current, setCurrent] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const touchStartX = useRef(0);
@@ -60,7 +62,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({ images }) => {
                 : "bg-gray-300 hover:bg-gray-400"
             }`}
             onClick={() => goTo(idx)}
-            aria-label={`切換到第${idx + 1}張`}
+            aria-label={t("home.features.carousel.goToSlide", { number: idx + 1 })}
           />
         ))}
       </div>
@@ -75,7 +77,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({ images }) => {
         <button
           className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-transparent hover:bg-white/80 rounded-full p-2 hover:shadow-md transition-all"
           onClick={prev}
-          aria-label="上一張"
+          aria-label={t("home.features.carousel.prev")}
         >
           <ChevronLeft className="h-6 w-6 text-gray-700" />
         </button>
@@ -93,7 +95,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({ images }) => {
         <button
           className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-transparent hover:bg-white/80 rounded-full p-2 hover:shadow-md transition-all"
           onClick={next}
-          aria-label="下一張"
+          aria-label={t("home.features.carousel.next")}
         >
           <ChevronRight className="h-6 w-6 text-gray-700" />
         </button>

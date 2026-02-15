@@ -213,6 +213,19 @@
       "easyToUse": {
         "title": "Easy to Use",
         "description": "Intuitive interface design, teachers can get started in 5 minutes, students require no additional training"
+      },
+      "carousel": {
+        "prev": "Previous slide",
+        "next": "Next slide",
+        "goToSlide": "Go to slide {{number}}",
+        "captions": {
+          "orgMaterial": "Institution material management system, exclusively for branch campuses, ensuring intellectual property protection.",
+          "forgettingCurve": "Ebbinghaus forgetting curve × \"Listen & Match\" vocabulary selection\nAutomatically captures weak vocabulary for smart review, turning short-term memory into long-term memory through gamified practice.",
+          "aiGrading": "Say goodbye to tedious manual grading — AI one-click grading lets teachers focus on teaching and mentoring.",
+          "speakingWriting": "Speaking & writing dual-mode training (Coming Soon...)\nProvides instant feedback based on student age, level, and assignment goals, effectively simulating native speaker learning patterns.",
+          "anyMaterial": "Works with any textbook — paste and let AI transform it, compatible with students worldwide.",
+          "moreFeatures": "More features — your wish is our command\nBuilding a friendly bilingual education environment together, so students become more than just test-taking machines."
+        }
       }
     },
     "howItWorks": {

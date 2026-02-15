@@ -301,33 +301,27 @@ export default function Home() {
               images={[
                 {
                   src: "https://storage.googleapis.com/duotopia-social-media-videos/website/whyus01.png",
-                  caption:
-                    "機構教材管理系統，僅供機構分校使用，教材智慧財產權有保障。",
+                  caption: t("home.features.carousel.captions.orgMaterial"),
                 },
                 {
                   src: "https://storage.googleapis.com/duotopia-social-media-videos/website/whyus03.png",
-                  caption:
-                    "艾賓浩斯遺忘曲線 x 「聽音辨義」單字選擇\n自動捕捉弱項單字進行智慧推播，讓學生在遊戲刷題中，將短期記憶轉化為長期記憶",
+                  caption: t("home.features.carousel.captions.forgettingCurve"),
                 },
                 {
                   src: "https://storage.googleapis.com/duotopia-social-media-videos/website/whyus04.jpg",
-                  caption:
-                    "告別繁瑣的人工批閱，AI一鍵批改，讓老師將心力回歸於教學輔導。",
+                  caption: t("home.features.carousel.captions.aiGrading"),
                 },
                 {
                   src: "https://storage.googleapis.com/duotopia-social-media-videos/website/whyus05.png",
-                  caption:
-                    "口說、寫作造句雙模式訓練  (Coming Soon...)\n依照學生年齡、程度、作業訓練目標，給予及時反饋，有效模擬母語者學習模式。",
+                  caption: t("home.features.carousel.captions.speakingWriting"),
                 },
                 {
                   src: "https://storage.googleapis.com/duotopia-social-media-videos/website/whyus06.png",
-                  caption:
-                    "不限教材皆可使用，一鍵貼上AI協作轉化，多國學生通用",
+                  caption: t("home.features.carousel.captions.anyMaterial"),
                 },
                 {
                   src: "https://storage.googleapis.com/duotopia-social-media-videos/website/whyus07.png",
-                  caption:
-                    "更多功能，由您許願\n共同打造友善雙語教育環境，讓學生不只是英文考試機器",
+                  caption: t("home.features.carousel.captions.moreFeatures"),
                 },
               ]}
             />
