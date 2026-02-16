@@ -1524,8 +1524,99 @@ export default function StudentActivityPageContent({
       }
     }
 
-    // 🎯 Issue #141: 提交前先分析所有未分析的 blob URL 錄音
-    // 🎯 Issue #227: 只有教師/機構有 AI 分析額度時才執行批次分析
+    // 🎯 Issue #227: 提交前確保所有錄音都上傳到 GCS（安全網）
+    if (!isPreviewMode) {
+      const pendingBlobItems: {
+        activity: Activity;
+        itemIndex: number;
+        item: Activity["items"] extends (infer T)[] | undefined ? T : never;
+      }[] = [];
+
+      activities.forEach((activity) => {
+        if (activity.items) {
+          activity.items.forEach((item, itemIndex) => {
+            if (item.recording_url?.startsWith("blob:")) {
+              pendingBlobItems.push({ activity, itemIndex, item });
+            }
+          });
+        }
+      });
+
+      if (pendingBlobItems.length > 0) {
+        setSubmitting(true);
+        const apiUrl = import.meta.env.VITE_API_URL || "";
+        const authToken = useStudentAuthStore.getState().token;
+
+        for (const { activity, itemIndex, item } of pendingBlobItems) {
+          try {
+            const contentItemId = item.id;
+            if (!contentItemId || !item.recording_url) continue;
+
+            const resp = await fetch(item.recording_url);
+            const audioBlob = await resp.blob();
+
+            const ext = audioBlob.type.includes("mp4")
+              ? "recording.mp4"
+              : audioBlob.type.includes("webm")
+                ? "recording.webm"
+                : "recording.audio";
+
+            const formData = new FormData();
+            formData.append("assignment_id", assignmentId!.toString());
+            formData.append("content_item_id", contentItemId.toString());
+            formData.append("audio_file", audioBlob, ext);
+
+            const uploadResult = await retryAudioUpload(
+              async () => {
+                const uploadResp = await fetch(
+                  `${apiUrl}/api/students/upload-recording`,
+                  {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${authToken}` },
+                    body: formData,
+                  },
+                );
+                if (!uploadResp.ok)
+                  throw new Error(`Upload failed: ${uploadResp.status}`);
+                return await uploadResp.json();
+              },
+              () => {},
+            );
+
+            // 更新 recording_url 為 GCS URL
+            setActivities((prev) => {
+              const newActivities = [...prev];
+              const actIdx = newActivities.findIndex(
+                (a) => a.id === activity.id,
+              );
+              if (actIdx !== -1 && newActivities[actIdx].items) {
+                const newItems = [...newActivities[actIdx].items!];
+                if (newItems[itemIndex]) {
+                  newItems[itemIndex] = {
+                    ...newItems[itemIndex],
+                    recording_url: uploadResult.audio_url,
+                    progress_id: uploadResult.progress_id,
+                  };
+                }
+                newActivities[actIdx] = {
+                  ...newActivities[actIdx],
+                  items: newItems,
+                };
+              }
+              return newActivities;
+            });
+          } catch (error) {
+            console.error(
+              `Failed to upload blob for item ${itemIndex + 1}:`,
+              error,
+            );
+          }
+        }
+        setSubmitting(false);
+      }
+    }
+
+    // 🎯 Issue #227: 提交前補分析所有有錄音但未分析的題目（blob + GCS URL）
     if (!isPreviewMode && canUseAiAnalysis) {
       const unanalyzedItems: {
         activity: Activity;
@@ -1533,7 +1624,7 @@ export default function StudentActivityPageContent({
         item: Activity["items"] extends (infer T)[] | undefined ? T : never;
       }[] = [];
 
-      // 收集所有有 blob URL 但未分析的題目
+      // 收集所有有錄音但未分析的題目（不限 blob URL）
       activities.forEach((activity) => {
         if (
           isExampleSentencesType(activity.type) &&
@@ -1543,11 +1634,9 @@ export default function StudentActivityPageContent({
           activity.items.forEach((item, itemIndex) => {
             const hasRecording =
               item.recording_url && item.recording_url !== "";
-            const isBlobUrl =
-              hasRecording && item.recording_url!.startsWith("blob:");
             const hasAssessment = !!item?.ai_assessment;
 
-            if (isBlobUrl && !hasAssessment) {
+            if (hasRecording && !hasAssessment) {
               unanalyzedItems.push({ activity, itemIndex, item });
             }
           });

@@ -28,6 +28,8 @@ import WordReadingTemplate from "./WordReadingTemplate";
 import { useTranslation } from "react-i18next";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { cn } from "@/lib/utils";
+import { useAzurePronunciation } from "@/hooks/useAzurePronunciation";
+import { retryAudioUpload } from "@/utils/retryHelper";
 
 interface WordItem {
   id: number;
@@ -88,6 +90,8 @@ export default function WordReadingActivity({
   const [showTranslationFromApi, setShowTranslationFromApi] = useState(true);
   // AI 分析額度（從 API 讀取，或使用 prop 傳入的值）
   const [canUseAiAnalysisFromApi, setCanUseAiAnalysisFromApi] = useState(true);
+  const canUseAiAnalysis = canUseAiAnalysisProp ?? canUseAiAnalysisFromApi;
+  const { analyzePronunciation } = useAzurePronunciation();
 
   // Load vocabulary items from backend
   const loadItems = useCallback(async () => {
@@ -312,6 +316,162 @@ export default function WordReadingActivity({
       setSubmitting(true);
       const apiUrl = import.meta.env.VITE_API_URL || "";
 
+      // 🎯 Issue #227: 提交前確保所有 blob URL 上傳到 GCS
+      const blobItems = items
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => item.recording_url?.startsWith("blob:"));
+
+      if (blobItems.length > 0) {
+        for (const { item, index } of blobItems) {
+          try {
+            const resp = await fetch(item.recording_url!);
+            const audioBlob = await resp.blob();
+            const ext = audioBlob.type.includes("mp4")
+              ? "recording.mp4"
+              : audioBlob.type.includes("webm")
+                ? "recording.webm"
+                : "recording.audio";
+
+            const formData = new FormData();
+            formData.append("assignment_id", assignmentId.toString());
+            formData.append("content_item_id", item.id.toString());
+            formData.append("audio_file", audioBlob, ext);
+
+            const uploadResult = await retryAudioUpload(
+              async () => {
+                const uploadResp = await fetch(
+                  `${apiUrl}/api/students/upload-recording`,
+                  {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` },
+                    body: formData,
+                  },
+                );
+                if (!uploadResp.ok)
+                  throw new Error(`Upload failed: ${uploadResp.status}`);
+                return await uploadResp.json();
+              },
+              () => {},
+            );
+
+            setItems((prev) => {
+              const updated = [...prev];
+              updated[index] = {
+                ...updated[index],
+                recording_url: uploadResult.audio_url,
+                progress_id: uploadResult.progress_id,
+              };
+              return updated;
+            });
+          } catch (error) {
+            console.error(`Failed to upload blob for item ${index + 1}:`, error);
+          }
+        }
+      }
+
+      // 🎯 Issue #227: 提交前補分析所有有錄音但未分析的題目
+      if (canUseAiAnalysis) {
+        const unanalyzedItems = items
+          .map((item, index) => ({ item, index }))
+          .filter(
+            ({ item }) =>
+              item.recording_url &&
+              item.recording_url !== "" &&
+              !item.ai_assessment,
+          );
+
+        if (unanalyzedItems.length > 0) {
+          for (const { item, index } of unanalyzedItems) {
+            try {
+              const audioResp = await fetch(item.recording_url!);
+              const audioBlob = await audioResp.blob();
+
+              const azureResult = await analyzePronunciation(
+                audioBlob,
+                item.text,
+              );
+              if (!azureResult) continue;
+
+              const assessment = {
+                accuracy_score: azureResult.accuracyScore,
+                fluency_score: azureResult.fluencyScore,
+                completeness_score: azureResult.completenessScore,
+                pronunciation_score: azureResult.pronunciationScore,
+              };
+
+              // 更新本地 state
+              setItems((prev) => {
+                const updated = [...prev];
+                updated[index] = {
+                  ...updated[index],
+                  ai_assessment: assessment,
+                };
+                return updated;
+              });
+
+              // 儲存分析結果到後端
+              if (item.progress_id) {
+                await fetch(
+                  `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/save-assessment`,
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      progress_id: item.progress_id,
+                      ai_assessment: assessment,
+                    }),
+                  },
+                ).catch((err) =>
+                  console.error("Save assessment failed:", err),
+                );
+
+                // 上傳分析結果（含配額扣除）
+                const ext = audioBlob.type.includes("mp4")
+                  ? "recording.mp4"
+                  : audioBlob.type.includes("webm")
+                    ? "recording.webm"
+                    : "recording.audio";
+
+                const analysisForm = new FormData();
+                analysisForm.append("audio_file", audioBlob, ext);
+                analysisForm.append(
+                  "analysis_json",
+                  JSON.stringify({
+                    pronunciation_score: azureResult.pronunciationScore,
+                    accuracy_score: azureResult.accuracyScore,
+                    fluency_score: azureResult.fluencyScore,
+                    completeness_score: azureResult.completenessScore,
+                    overall_score: azureResult.pronunciationScore,
+                  }),
+                );
+                analysisForm.append(
+                  "progress_id",
+                  item.progress_id.toString(),
+                );
+                analysisForm.append("analysis_id", crypto.randomUUID());
+
+                fetch(`${apiUrl}/api/speech/upload-analysis`, {
+                  method: "POST",
+                  headers: { Authorization: `Bearer ${token}` },
+                  body: analysisForm,
+                }).catch((err) =>
+                  console.error("Upload analysis failed:", err),
+                );
+              }
+            } catch (error) {
+              console.error(
+                `Failed to analyze item ${index + 1}:`,
+                error,
+              );
+            }
+          }
+        }
+      }
+
+      // 提交作業
       const response = await fetch(
         `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/submit`,
         {
