@@ -426,9 +426,9 @@ async def get_assignment_activities(
             show_answer = assignment.show_answer or False
             score_category = assignment.score_category
 
-    # 檢查教師/機構是否有 AI 分析額度
+    # 檢查 AI 分析額度（根據作業所屬班級判斷：機構班級→機構點數，個人班級→個人配額）
     can_use_ai_analysis = (
-        QuotaService.check_ai_analysis_availability(assignment.teacher_id, db)
+        QuotaService.check_ai_analysis_availability_by_assignment(assignment, db)
         if assignment
         else True
     )
@@ -442,7 +442,7 @@ async def get_assignment_activities(
         "score_category": score_category,  # 分數記錄分類
         "total_activities": len(activities),
         "activities": activities,
-        "can_use_ai_analysis": can_use_ai_analysis,  # 教師/機構是否有 AI 分析額度
+        "can_use_ai_analysis": can_use_ai_analysis,  # 根據工作區判斷的 AI 分析額度
     }
 
 
@@ -876,9 +876,9 @@ async def get_vocabulary_activities(
     show_translation = assignment.show_translation if assignment else True
     show_image = assignment.show_image if assignment else True
 
-    # 檢查教師/機構是否有 AI 分析額度
+    # 檢查 AI 分析額度（根據作業所屬班級判斷：機構班級→機構點數，個人班級→個人配額）
     can_use_ai_analysis = (
-        QuotaService.check_ai_analysis_availability(assignment.teacher_id, db)
+        QuotaService.check_ai_analysis_availability_by_assignment(assignment, db)
         if assignment
         else True
     )
@@ -892,7 +892,7 @@ async def get_vocabulary_activities(
         "show_image": show_image,
         "total_items": len(items),
         "items": items,
-        "can_use_ai_analysis": can_use_ai_analysis,  # 教師/機構是否有 AI 分析額度
+        "can_use_ai_analysis": can_use_ai_analysis,  # 根據工作區判斷的 AI 分析額度
     }
 
 

@@ -1,7 +1,7 @@
 """
 Subscription Ops operations for teachers.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, selectinload, joinedload
 from sqlalchemy import func
 from typing import List, Optional, Dict, Any
@@ -29,27 +29,20 @@ router = APIRouter()
 async def get_teacher_subscription(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
+    organization_id: Optional[str] = Query(None, description="機構工作區的 organization ID"),
 ):
     """取得教師訂閱資訊（用於顯示配額）
 
-    機構教師 → 顯示機構的 total_points / used_points
-    個人教師 → 顯示個人的 subscription_period 配額
+    根據工作區 context 決定顯示哪個配額：
+    - 帶 organization_id → 顯示該機構的點數
+    - 不帶 → 顯示教師個人配額
     """
-    # 檢查是否屬於活躍機構（與 check_ai_analysis_availability 邏輯一致）
-    teacher_org = (
-        db.query(TeacherOrganization)
-        .filter(
-            TeacherOrganization.teacher_id == current_teacher.id,
-            TeacherOrganization.is_active.is_(True),
-        )
-        .first()
-    )
-
-    if teacher_org:
+    if organization_id:
+        # 機構工作區 → 查機構點數
         org = (
             db.query(Organization)
             .filter(
-                Organization.id == teacher_org.organization_id,
+                Organization.id == organization_id,
                 Organization.is_active.is_(True),
             )
             .first()
@@ -66,7 +59,7 @@ async def get_teacher_subscription(
                 "source": "organization",
             }
 
-    # 個人教師：回傳個人配額
+    # 個人工作區 → 回傳個人配額
     current_period = current_teacher.current_period
 
     if not current_period:

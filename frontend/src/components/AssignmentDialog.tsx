@@ -356,13 +356,20 @@ export function AssignmentDialog({
 
   const loadQuotaInfo = async () => {
     try {
+      // 根據工作區 context 決定查哪個配額
+      const params = new URLSearchParams();
+      if (mode === "organization" && selectedOrganization) {
+        params.append("organization_id", selectedOrganization.id);
+      }
+      const url = `/api/teachers/subscription${params.toString() ? `?${params.toString()}` : ""}`;
+
       const response = await apiClient.get<{
         subscription_period: {
           quota_total: number;
           quota_used: number;
           plan_name: string;
         };
-      }>("/api/teachers/subscription");
+      }>(url);
 
       if (response.subscription_period) {
         setQuotaInfo({
