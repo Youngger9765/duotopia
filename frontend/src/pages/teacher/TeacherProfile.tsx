@@ -40,36 +40,11 @@ interface QuotaInfo {
   source: "personal" | "organization";
 }
 
-export default function TeacherProfile() {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
+// 配額卡片獨立元件（必須在 TeacherLayout/WorkspaceProvider 內才能使用 useWorkspace）
+function QuotaCard() {
   const { mode, selectedOrganization } = useWorkspace();
-  const [teacherInfo, setTeacherInfo] = useState<TeacherInfo | null>(null);
-  const [loading, setLoading] = useState(true);
   const [quotaInfo, setQuotaInfo] = useState<QuotaInfo | null>(null);
 
-  // Name update states
-  const [showNameEdit, setShowNameEdit] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [isUpdatingName, setIsUpdatingName] = useState(false);
-
-  // Phone update states
-  const [showPhoneEdit, setShowPhoneEdit] = useState(false);
-  const [newPhone, setNewPhone] = useState("");
-  const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
-
-  // Password update states
-  const [showPasswordEdit, setShowPasswordEdit] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
-
-  useEffect(() => {
-    loadTeacherInfo();
-  }, []);
-
-  // 當工作區切換時重新載入配額
   useEffect(() => {
     loadQuotaInfo();
   }, [mode, selectedOrganization?.id]);
@@ -109,6 +84,103 @@ export default function TeacherProfile() {
       console.error("Failed to load quota info:", error);
     }
   };
+
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Gauge className="h-5 w-5" />
+          {quotaInfo?.source === "organization"
+            ? `${quotaInfo.plan_name} 配額`
+            : "個人配額"}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {quotaInfo ? (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-500">
+              目前工作區：
+              <span className="font-medium text-gray-700">
+                {mode === "organization" && selectedOrganization
+                  ? selectedOrganization.name
+                  : "個人模式"}
+              </span>
+            </p>
+
+            <div className="flex items-baseline gap-2">
+              <span
+                className={`text-2xl font-bold ${
+                  quotaInfo.quota_remaining > quotaInfo.quota_total * 0.3
+                    ? "text-green-600"
+                    : quotaInfo.quota_remaining > quotaInfo.quota_total * 0.1
+                      ? "text-orange-600"
+                      : "text-red-600"
+                }`}
+              >
+                {quotaInfo.quota_remaining.toLocaleString()}
+              </span>
+              <span className="text-gray-500">
+                / {quotaInfo.quota_total.toLocaleString()} 秒
+              </span>
+            </div>
+
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div
+                className={`h-2.5 rounded-full transition-all ${
+                  quotaInfo.quota_remaining > quotaInfo.quota_total * 0.3
+                    ? "bg-green-500"
+                    : quotaInfo.quota_remaining > quotaInfo.quota_total * 0.1
+                      ? "bg-orange-500"
+                      : "bg-red-500"
+                }`}
+                style={{
+                  width: `${Math.max(0, Math.min(100, (quotaInfo.quota_remaining / quotaInfo.quota_total) * 100))}%`,
+                }}
+              />
+            </div>
+
+            <p className="text-xs text-gray-400">
+              已使用 {quotaInfo.quota_used.toLocaleString()} 秒
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">
+            {mode === "organization"
+              ? "此機構尚無配額資訊"
+              : "尚無有效訂閱"}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function TeacherProfile() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [teacherInfo, setTeacherInfo] = useState<TeacherInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Name update states
+  const [showNameEdit, setShowNameEdit] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
+
+  // Phone update states
+  const [showPhoneEdit, setShowPhoneEdit] = useState(false);
+  const [newPhone, setNewPhone] = useState("");
+  const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
+
+  // Password update states
+  const [showPasswordEdit, setShowPasswordEdit] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  useEffect(() => {
+    loadTeacherInfo();
+  }, []);
 
   const loadTeacherInfo = async () => {
     try {
@@ -396,76 +468,7 @@ export default function TeacherProfile() {
         </Card>
 
         {/* Quota Info Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Gauge className="h-5 w-5" />
-              {quotaInfo?.source === "organization"
-                ? `${quotaInfo.plan_name} 配額`
-                : "個人配額"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {quotaInfo ? (
-              <div className="space-y-3">
-                {/* 工作區標示 */}
-                <p className="text-sm text-gray-500">
-                  目前工作區：
-                  <span className="font-medium text-gray-700">
-                    {mode === "organization" && selectedOrganization
-                      ? selectedOrganization.name
-                      : "個人模式"}
-                  </span>
-                </p>
-
-                {/* 配額數字 */}
-                <div className="flex items-baseline gap-2">
-                  <span
-                    className={`text-2xl font-bold ${
-                      quotaInfo.quota_remaining > quotaInfo.quota_total * 0.3
-                        ? "text-green-600"
-                        : quotaInfo.quota_remaining > quotaInfo.quota_total * 0.1
-                          ? "text-orange-600"
-                          : "text-red-600"
-                    }`}
-                  >
-                    {quotaInfo.quota_remaining.toLocaleString()}
-                  </span>
-                  <span className="text-gray-500">
-                    / {quotaInfo.quota_total.toLocaleString()} 秒
-                  </span>
-                </div>
-
-                {/* 進度條 */}
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div
-                    className={`h-2.5 rounded-full transition-all ${
-                      quotaInfo.quota_remaining > quotaInfo.quota_total * 0.3
-                        ? "bg-green-500"
-                        : quotaInfo.quota_remaining > quotaInfo.quota_total * 0.1
-                          ? "bg-orange-500"
-                          : "bg-red-500"
-                    }`}
-                    style={{
-                      width: `${Math.max(0, Math.min(100, (quotaInfo.quota_remaining / quotaInfo.quota_total) * 100))}%`,
-                    }}
-                  />
-                </div>
-
-                {/* 已使用 */}
-                <p className="text-xs text-gray-400">
-                  已使用 {quotaInfo.quota_used.toLocaleString()} 秒
-                </p>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">
-                {mode === "organization"
-                  ? "此機構尚無配額資訊"
-                  : "尚無有效訂閱"}
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <QuotaCard />
 
         {/* Password Settings Card */}
         <Card className="mb-6">
