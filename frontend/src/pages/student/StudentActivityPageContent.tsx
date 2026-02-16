@@ -645,6 +645,7 @@ export default function StudentActivityPageContent({
   const handleRecordingComplete = useCallback(
     (blob: Blob, url: string) => {
       const currentActivity = activities[currentActivityIndex];
+      const subIdx = currentSubQuestionIndex;
 
       setAnswers((prev) => {
         const newAnswers = new Map(prev);
@@ -673,9 +674,9 @@ export default function StudentActivityPageContent({
           );
           if (activityIndex !== -1 && newActivities[activityIndex].items) {
             const newItems = [...newActivities[activityIndex].items!];
-            if (newItems[currentSubQuestionIndex]) {
-              newItems[currentSubQuestionIndex] = {
-                ...newItems[currentSubQuestionIndex],
+            if (newItems[subIdx]) {
+              newItems[subIdx] = {
+                ...newItems[subIdx],
                 recording_url: url,
               };
             }
@@ -686,9 +687,100 @@ export default function StudentActivityPageContent({
           }
           return newActivities;
         });
+
+        // 🎯 Issue #227: 錄音完成後立即上傳到 GCS（與單字朗讀行為一致）
+        // 不論 canUseAiAnalysis 為何，錄音檔案都應保存到伺服器
+        const contentItemId = currentActivity.items[subIdx]?.id;
+        if (!isPreviewMode && !isDemoMode && assignmentId && contentItemId) {
+          const uploadFileExtension = blob.type.includes("mp4")
+            ? "recording.mp4"
+            : blob.type.includes("webm")
+              ? "recording.webm"
+              : "recording.audio";
+
+          const formData = new FormData();
+          formData.append("assignment_id", assignmentId.toString());
+          formData.append("content_item_id", contentItemId.toString());
+          formData.append("audio_file", blob, uploadFileExtension);
+
+          const apiUrl = import.meta.env.VITE_API_URL || "";
+          const authToken = useStudentAuthStore.getState().token;
+
+          retryAudioUpload(
+            async () => {
+              const uploadResponse = await fetch(
+                `${apiUrl}/api/students/upload-recording`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${authToken}`,
+                  },
+                  body: formData,
+                },
+              );
+
+              if (!uploadResponse.ok) {
+                throw new Error(`Upload failed: ${uploadResponse.status}`);
+              }
+
+              return await uploadResponse.json();
+            },
+            () => {},
+          )
+            .then((uploadResult) => {
+              // 更新 recording_url 為 GCS URL
+              setActivities((prevActivities) => {
+                const newActivities = [...prevActivities];
+                const activityIndex = newActivities.findIndex(
+                  (a) => a.id === currentActivity.id,
+                );
+                if (
+                  activityIndex !== -1 &&
+                  newActivities[activityIndex].items
+                ) {
+                  const newItems = [...newActivities[activityIndex].items!];
+                  if (newItems[subIdx]) {
+                    newItems[subIdx] = {
+                      ...newItems[subIdx],
+                      recording_url: uploadResult.audio_url,
+                    };
+                  }
+                  newActivities[activityIndex] = {
+                    ...newActivities[activityIndex],
+                    items: newItems,
+                  };
+                }
+                return newActivities;
+              });
+
+              // 更新 progressIds
+              setAnswers((prev) => {
+                const newAnswers = new Map(prev);
+                const answer = newAnswers.get(currentActivity.id);
+                if (answer) {
+                  if (!answer.progressIds) answer.progressIds = [];
+                  while (answer.progressIds.length <= subIdx) {
+                    answer.progressIds.push(0);
+                  }
+                  answer.progressIds[subIdx] = uploadResult.progress_id;
+                }
+                return newAnswers;
+              });
+            })
+            .catch((error) => {
+              console.error("❌ 錄音上傳失敗:", error);
+            });
+        }
       }
     },
-    [activities, currentActivityIndex, currentSubQuestionIndex],
+    [
+      activities,
+      currentActivityIndex,
+      currentSubQuestionIndex,
+      assignmentId,
+      isPreviewMode,
+      isDemoMode,
+    ],
   );
 
   const handleFileUpload = async (file: File) => {
