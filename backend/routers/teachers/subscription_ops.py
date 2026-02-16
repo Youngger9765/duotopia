@@ -30,7 +30,43 @@ async def get_teacher_subscription(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """取得教師訂閱資訊（用於顯示配額）"""
+    """取得教師訂閱資訊（用於顯示配額）
+
+    機構教師 → 顯示機構的 total_points / used_points
+    個人教師 → 顯示個人的 subscription_period 配額
+    """
+    # 檢查是否屬於活躍機構（與 check_ai_analysis_availability 邏輯一致）
+    teacher_org = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == current_teacher.id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if teacher_org:
+        org = (
+            db.query(Organization)
+            .filter(
+                Organization.id == teacher_org.organization_id,
+                Organization.is_active.is_(True),
+            )
+            .first()
+        )
+        if org:
+            return {
+                "subscription_period": {
+                    "quota_total": org.total_points,
+                    "quota_used": org.used_points,
+                    "plan_name": org.name,
+                    "status": "active",
+                    "end_date": None,
+                },
+                "source": "organization",
+            }
+
+    # 個人教師：回傳個人配額
     current_period = current_teacher.current_period
 
     if not current_period:
@@ -46,7 +82,8 @@ async def get_teacher_subscription(
             "plan_name": current_period.plan_name,
             "status": current_period.status,
             "end_date": current_period.end_date.isoformat(),
-        }
+        },
+        "source": "personal",
     }
 
 
