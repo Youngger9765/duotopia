@@ -210,6 +210,84 @@ export default function WordReadingActivity({
       });
 
       toast.success(t("wordReading.toast.uploaded") || "Recording uploaded");
+
+      // 🎯 Issue #227: 上傳成功後，有額度時自動背景分析
+      if (canUseAiAnalysis && currentItem.text) {
+        (async () => {
+          try {
+            const azureResult = await analyzePronunciation(
+              blob,
+              currentItem.text,
+            );
+            if (!azureResult) return;
+
+            const assessment = {
+              accuracy_score: azureResult.accuracyScore,
+              fluency_score: azureResult.fluencyScore,
+              completeness_score: azureResult.completenessScore,
+              pronunciation_score: azureResult.pronunciationScore,
+            };
+
+            setItems((prev) => {
+              const updated = [...prev];
+              updated[currentIndex] = {
+                ...updated[currentIndex],
+                ai_assessment: assessment,
+              };
+              return updated;
+            });
+
+            // 儲存到後端
+            if (result.progress_id) {
+              fetch(
+                `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/save-assessment`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    progress_id: result.progress_id,
+                    ai_assessment: assessment,
+                  }),
+                },
+              ).catch((err) =>
+                console.error("Save assessment failed:", err),
+              );
+
+              // 上傳分析結果（含配額扣除）
+              const analysisForm = new FormData();
+              analysisForm.append("audio_file", blob, uploadFileExtension);
+              analysisForm.append(
+                "analysis_json",
+                JSON.stringify({
+                  pronunciation_score: azureResult.pronunciationScore,
+                  accuracy_score: azureResult.accuracyScore,
+                  fluency_score: azureResult.fluencyScore,
+                  completeness_score: azureResult.completenessScore,
+                  overall_score: azureResult.pronunciationScore,
+                }),
+              );
+              analysisForm.append(
+                "progress_id",
+                result.progress_id.toString(),
+              );
+              analysisForm.append("analysis_id", crypto.randomUUID());
+
+              fetch(`${apiUrl}/api/speech/upload-analysis`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+                body: analysisForm,
+              }).catch((err) =>
+                console.error("Upload analysis failed:", err),
+              );
+            }
+          } catch (err) {
+            console.error("Background analysis after upload failed:", err);
+          }
+        })();
+      }
     } catch (error) {
       console.error("Upload error:", error);
       toast.error(t("wordReading.toast.uploadFailed") || "Upload failed");
@@ -275,6 +353,98 @@ export default function WordReadingActivity({
 
   // Navigate to next item
   const handleNext = () => {
+    // 🎯 Issue #227: 切換到下一題時，背景分析當前未分析的題目
+    if (canUseAiAnalysis && !isPreviewMode && !isDemoMode) {
+      const currentItem = items[currentIndex];
+      const hasRecording =
+        currentItem?.recording_url && currentItem.recording_url !== "";
+      if (hasRecording && !currentItem?.ai_assessment && currentItem.text) {
+        // fire-and-forget：背景分析不阻塞導航
+        (async () => {
+          try {
+            const resp = await fetch(currentItem.recording_url!);
+            const audioBlob = await resp.blob();
+            const azureResult = await analyzePronunciation(
+              audioBlob,
+              currentItem.text,
+            );
+            if (!azureResult) return;
+
+            const assessment = {
+              accuracy_score: azureResult.accuracyScore,
+              fluency_score: azureResult.fluencyScore,
+              completeness_score: azureResult.completenessScore,
+              pronunciation_score: azureResult.pronunciationScore,
+            };
+
+            setItems((prev) => {
+              const updated = [...prev];
+              updated[currentIndex] = {
+                ...updated[currentIndex],
+                ai_assessment: assessment,
+              };
+              return updated;
+            });
+
+            // 儲存到後端
+            const apiUrl = import.meta.env.VITE_API_URL || "";
+            if (currentItem.progress_id) {
+              fetch(
+                `${apiUrl}/api/students/assignments/${assignmentId}/vocabulary/save-assessment`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    progress_id: currentItem.progress_id,
+                    ai_assessment: assessment,
+                  }),
+                },
+              ).catch((err) =>
+                console.error("Save assessment failed:", err),
+              );
+
+              // 上傳分析結果（含配額扣除）
+              const ext = audioBlob.type.includes("mp4")
+                ? "recording.mp4"
+                : audioBlob.type.includes("webm")
+                  ? "recording.webm"
+                  : "recording.audio";
+              const analysisForm = new FormData();
+              analysisForm.append("audio_file", audioBlob, ext);
+              analysisForm.append(
+                "analysis_json",
+                JSON.stringify({
+                  pronunciation_score: azureResult.pronunciationScore,
+                  accuracy_score: azureResult.accuracyScore,
+                  fluency_score: azureResult.fluencyScore,
+                  completeness_score: azureResult.completenessScore,
+                  overall_score: azureResult.pronunciationScore,
+                }),
+              );
+              analysisForm.append(
+                "progress_id",
+                currentItem.progress_id.toString(),
+              );
+              analysisForm.append("analysis_id", crypto.randomUUID());
+
+              fetch(`${apiUrl}/api/speech/upload-analysis`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+                body: analysisForm,
+              }).catch((err) =>
+                console.error("Upload analysis failed:", err),
+              );
+            }
+          } catch (err) {
+            console.error("Background analysis on next failed:", err);
+          }
+        })();
+      }
+    }
+
     if (currentIndex < items.length - 1) {
       setCurrentIndex(currentIndex + 1);
     }

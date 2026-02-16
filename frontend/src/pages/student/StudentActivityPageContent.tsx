@@ -766,6 +766,27 @@ export default function StudentActivityPageContent({
                 }
                 return newAnswers;
               });
+
+              // 🎯 Issue #227: 上傳成功後，有額度時自動背景分析
+              if (canUseAiAnalysis) {
+                const targetText =
+                  currentActivity.items![subIdx]?.text ||
+                  currentActivity.target_text ||
+                  "";
+                if (targetText) {
+                  analyzeAndUpload(
+                    uploadResult.audio_url,
+                    targetText,
+                    uploadResult.progress_id,
+                    contentItemId,
+                  ).catch((err) =>
+                    console.error(
+                      "Background analysis after upload failed:",
+                      err,
+                    ),
+                  );
+                }
+              }
             })
             .catch((error) => {
               console.error("❌ 錄音上傳失敗:", error);
@@ -780,6 +801,8 @@ export default function StudentActivityPageContent({
       assignmentId,
       isPreviewMode,
       isDemoMode,
+      canUseAiAnalysis,
+      analyzeAndUpload,
     ],
   );
 
@@ -1267,16 +1290,15 @@ export default function StudentActivityPageContent({
   const handleNextActivity = async () => {
     const currentActivity = activities[currentActivityIndex];
 
-    // 🎯 Issue #227: 有 AI 分析額度時，按下一題自動背景分析當前題目
+    // 🎯 Issue #227: 有 AI 分析額度時，按下一題自動背景分析當前題目（blob + GCS URL）
     if (canUseAiAnalysis && !isPreviewMode && currentActivity.items) {
       const currentItem = currentActivity.items[currentSubQuestionIndex];
-      if (
-        currentItem?.recording_url?.startsWith("blob:") &&
-        !currentItem?.ai_assessment
-      ) {
+      const hasRecording =
+        currentItem?.recording_url && currentItem.recording_url !== "";
+      if (hasRecording && !currentItem?.ai_assessment) {
         // fire-and-forget：背景分析不阻塞導航
         analyzeAndUpload(
-          currentItem.recording_url,
+          currentItem.recording_url!,
           currentItem.text || currentActivity.target_text || "",
           currentItem.progress_id,
           currentItem.id,
