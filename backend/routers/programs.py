@@ -2,7 +2,7 @@
 課程管理 API - 支援公版模板和班級課程
 """
 
-from datetime import datetime  # noqa: F401
+from datetime import datetime, timezone  # noqa: F401
 from typing import List, Literal, Optional  # noqa: F401
 from copy import deepcopy
 import uuid
@@ -39,7 +39,7 @@ from schemas import (
     ContentCreate,
 )
 from auth import verify_token
-from utils.permissions import has_manage_materials_permission
+from utils.permissions import has_manage_materials_permission, has_school_materials_permission
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
 
@@ -786,7 +786,7 @@ async def soft_delete_program(
 
     # 軟刪除
     program.is_active = False
-    program.deleted_at = datetime.now()
+    program.deleted_at = datetime.now(timezone.utc)
 
     db.commit()
 
@@ -1279,7 +1279,7 @@ async def copy_program(
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to copy program: {str(e)}",
+            detail="Failed to copy program. Please try again later.",
         )
 
     program_data = ProgramResponse.from_orm(new_program)
@@ -1671,7 +1671,7 @@ async def reorder_programs(
             Program.teacher_id == current_teacher.id,
             Program.organization_id.is_(None),
             Program.school_id.is_(None),
-            Program.class_id.is_(None),
+            Program.classroom_id.is_(None),
         )
     elif scope == "organization":
         try:
@@ -1680,6 +1680,11 @@ async def reorder_programs(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid organization_id format",
+            )
+        if not has_manage_materials_permission(current_teacher.id, org_uuid, db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No permission to reorder organization materials",
             )
         # Organization programs don't have teacher_id (they are NULL)
         query = query.filter(Program.organization_id == org_uuid)
@@ -1690,6 +1695,11 @@ async def reorder_programs(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid school_id format",
+            )
+        if not has_school_materials_permission(current_teacher.id, sch_uuid, db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No permission to reorder school materials",
             )
         # School programs don't have teacher_id (they are NULL)
         query = query.filter(Program.school_id == sch_uuid)
@@ -1753,6 +1763,11 @@ async def reorder_lessons(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid organization_id format",
             )
+        if not has_manage_materials_permission(current_teacher.id, org_uuid, db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No permission to reorder organization materials",
+            )
         # Organization programs don't have teacher_id (they are NULL)
         query = query.filter(Program.organization_id == org_uuid)
     elif scope == "school":
@@ -1762,6 +1777,11 @@ async def reorder_lessons(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid school_id format",
+            )
+        if not has_school_materials_permission(current_teacher.id, sch_uuid, db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No permission to reorder school materials",
             )
         # School programs don't have teacher_id (they are NULL)
         query = query.filter(Program.school_id == sch_uuid)
@@ -1832,6 +1852,11 @@ async def reorder_contents(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid organization_id format",
             )
+        if not has_manage_materials_permission(current_teacher.id, org_uuid, db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No permission to reorder organization materials",
+            )
         # Organization programs don't have teacher_id (they are NULL)
         query = query.filter(Program.organization_id == org_uuid)
     elif scope == "school":
@@ -1841,6 +1866,11 @@ async def reorder_contents(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid school_id format",
+            )
+        if not has_school_materials_permission(current_teacher.id, sch_uuid, db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No permission to reorder school materials",
             )
         # School programs don't have teacher_id (they are NULL)
         query = query.filter(Program.school_id == sch_uuid)

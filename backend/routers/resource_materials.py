@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
 import logging
+import uuid
 
 from database import get_db
 from models import Teacher
@@ -96,7 +97,14 @@ async def list_materials(
                 detail="organization_id required for organization scope",
             )
         # Check org permission
-        if not has_manage_materials_permission(teacher.id, organization_id, db):
+        try:
+            org_uuid = uuid.UUID(organization_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid organization_id format",
+            )
+        if not has_manage_materials_permission(teacher.id, org_uuid, db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No permission to access organization resources",
@@ -198,7 +206,14 @@ async def copy_material(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="organization_id required for organization copy",
             )
-        if not has_manage_materials_permission(teacher.id, request.organization_id, db):
+        try:
+            org_uuid = uuid.UUID(request.organization_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid organization_id format",
+            )
+        if not has_manage_materials_permission(teacher.id, org_uuid, db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No permission to copy to this organization",
