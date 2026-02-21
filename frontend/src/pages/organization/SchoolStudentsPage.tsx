@@ -17,7 +17,13 @@ import { AssignClassroomDialog } from "@/components/organization/AssignClassroom
 import { ImportStudentsDialog } from "@/components/organization/ImportStudentsDialog";
 import { ConfirmDialog } from "@/components/organization/ConfirmDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Users, Plus, Search, Upload } from "lucide-react";
@@ -162,9 +168,10 @@ export default function SchoolStudentsPage() {
         limit?: number;
       } = { limit: 200 };
 
-      if (searchTerm) params.search = searchTerm;
-
-      if (selectedTab === "unassigned") {
+      if (searchTerm) {
+        // 有搜尋詞時跨班搜尋，不帶 classroom 限制
+        params.search = searchTerm;
+      } else if (selectedTab === "unassigned") {
         params.unassigned = true;
       } else {
         params.classroom_id = parseInt(selectedTab);
@@ -326,27 +333,44 @@ export default function SchoolStudentsPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Classroom Tabs */}
-          <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-            <TabsList className="flex-wrap h-auto gap-1">
-              <TabsTrigger value="unassigned">未分配</TabsTrigger>
+          {/* Classroom Selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 whitespace-nowrap">選擇班級</span>
+            <Select
+              value={selectedTab}
+              onValueChange={setSelectedTab}
+              disabled={!!searchTerm}
+            >
+            <SelectTrigger className="w-[240px]">
+              <SelectValue placeholder="選擇班級" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">未分配</SelectItem>
               {classrooms.map((classroom) => (
-                <TabsTrigger key={classroom.id} value={classroom.id}>
+                <SelectItem key={classroom.id} value={classroom.id}>
                   {classroom.name}（{classroom.student_count}）
-                </TabsTrigger>
+                </SelectItem>
               ))}
-            </TabsList>
-          </Tabs>
+            </SelectContent>
+          </Select>
+          </div>
 
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="搜尋學生（姓名、學號、Email）"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+          <div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="搜尋學生（姓名、學號、Email）"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            {searchTerm && (
+              <p className="text-xs text-blue-500 mt-1 ml-1">
+                正在搜尋全校學生
+              </p>
+            )}
           </div>
 
           {/* Error Message */}
