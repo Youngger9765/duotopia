@@ -145,6 +145,17 @@ const extractPosFromTranslation = (
   return { text, pos: null };
 };
 
+/**
+ * 批次翻譯用：若有多義，只取第一個定義並提取 POS
+ */
+const extractFirstDefinition = (
+  raw: string,
+): { text: string; pos: string | null } => {
+  const multiDefs = parseMultipleDefinitions(raw);
+  const first = multiDefs.length > 0 ? multiDefs[0] : raw;
+  return extractPosFromTranslation(first);
+};
+
 // 單字翻譯語言選項（含英文）
 type WordTranslationLanguage = "chinese" | "english" | "japanese" | "korean";
 
@@ -2110,7 +2121,7 @@ export default function VocabularySetPanel({
           const results = posResponse.results || [];
           needsPOS.forEach((item, idx) => {
             if (results[idx]) {
-              const parsed = extractPosFromTranslation(
+              const parsed = extractFirstDefinition(
                 results[idx].translation,
               );
               newRows[item.index].definition = parsed.text;
@@ -2139,7 +2150,7 @@ export default function VocabularySetPanel({
             [];
           needsPOS.forEach((item, idx) => {
             const raw = translations[idx] || item.text;
-            const parsed = extractPosFromTranslation(raw);
+            const parsed = extractFirstDefinition(raw);
             if (batchLang === "english") {
               newRows[item.index].translation = parsed.text;
             } else if (batchLang === "japanese") {
@@ -2169,7 +2180,7 @@ export default function VocabularySetPanel({
 
         hasPOS.forEach((item, idx) => {
           const raw = translations[idx] || item.text;
-          const parsed = extractPosFromTranslation(raw);
+          const parsed = extractFirstDefinition(raw);
           if (batchLang === "chinese") {
             newRows[item.index].definition = parsed.text;
           } else if (batchLang === "english") {
@@ -2562,7 +2573,7 @@ export default function VocabularySetPanel({
           const results = posResponse.results || [];
           needsPOS.forEach((item, idx) => {
             if (results[idx]) {
-              const parsed = extractPosFromTranslation(
+              const parsed = extractFirstDefinition(
                 results[idx].translation,
               );
               newRows[item.index].definition = parsed.text;
@@ -2591,7 +2602,7 @@ export default function VocabularySetPanel({
             [];
           needsPOS.forEach((item, idx) => {
             const raw = translations[idx] || item.text;
-            const parsed = extractPosFromTranslation(raw);
+            const parsed = extractFirstDefinition(raw);
             if (batchLang === "english") {
               newRows[item.index].translation = parsed.text;
             } else if (batchLang === "japanese") {
@@ -2621,7 +2632,7 @@ export default function VocabularySetPanel({
 
         hasPOS.forEach((item, idx) => {
           const raw = translations[idx] || item.text;
-          const parsed = extractPosFromTranslation(raw);
+          const parsed = extractFirstDefinition(raw);
           if (batchLang === "chinese") {
             newRows[item.index].definition = parsed.text;
           } else if (batchLang === "english") {
@@ -2930,7 +2941,7 @@ export default function VocabularySetPanel({
             );
             const results = posResponse.results || [];
             newItems = newItems.map((item, i) => {
-              const parsed = extractPosFromTranslation(
+              const parsed = extractFirstDefinition(
                 results[i]?.translation || "",
               );
               return {
@@ -2954,7 +2965,7 @@ export default function VocabularySetPanel({
               (translateResponse as { translations?: string[] })
                 .translations || [];
             newItems = newItems.map((item, i) => {
-              const parsed = extractPosFromTranslation(
+              const parsed = extractFirstDefinition(
                 translations[i] || "",
               );
               const updated: Partial<ContentRow> = {
