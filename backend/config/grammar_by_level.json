@@ -1,0 +1,81 @@
+{
+  "A1": [
+    "simple present (I like, she runs)",
+    "simple past with regular verbs (walked, played)",
+    "simple past with common irregular verbs (went, had, was)",
+    "present continuous (is running, are playing)",
+    "can / can't",
+    "there is / there are",
+    "imperatives (Open the door, Don't run)",
+    "basic prepositions of place (in, on, at, under)",
+    "basic prepositions of time (in, on, at)",
+    "subject pronouns and possessive adjectives (I/my, he/his)"
+  ],
+  "A2": [
+    "simple future with will and going to",
+    "past continuous (was walking, were talking)",
+    "comparatives and superlatives (bigger, the most beautiful)",
+    "countable / uncountable nouns (much, many, a few, a little)",
+    "adverbs of frequency (always, usually, sometimes, never)",
+    "have to / don't have to",
+    "should / shouldn't",
+    "present perfect simple with ever, never, just, already, yet",
+    "infinitive of purpose (to + verb: I went to the store to buy milk)",
+    "conjunctions (and, but, or, so, because)"
+  ],
+  "B1": [
+    "present perfect continuous (have been doing)",
+    "past perfect simple (had done)",
+    "first conditional (If it rains, I will stay home)",
+    "second conditional (If I had money, I would travel)",
+    "passive voice - present and past (is made, was built)",
+    "relative clauses with who, which, that, where",
+    "used to + infinitive (I used to play tennis)",
+    "modals of deduction: must, might, can't (She must be tired)",
+    "reported speech - statements (He said that...)",
+    "gerund vs infinitive (enjoy doing, want to do)",
+    "too / enough (too expensive, old enough)",
+    "so / such (so tired, such a good idea)"
+  ],
+  "B2": [
+    "third conditional (If I had studied, I would have passed)",
+    "mixed conditionals (If I had left earlier, I would be there now)",
+    "wish + past simple / past perfect (I wish I knew, I wish I had known)",
+    "passive voice - all tenses including modals (should be done, might have been taken)",
+    "causative: have/get something done (I had my car repaired)",
+    "reported speech - questions and commands",
+    "as long as, provided that, unless, in case",
+    "once / after / as soon as + present for future (Once you finish, call me)",
+    "despite / in spite of + noun/gerund",
+    "although / even though / while (contrast)",
+    "whoever, whatever, wherever, whenever",
+    "would rather / had better",
+    "phrasal verbs in context (give up, look into, come across)"
+  ],
+  "C1": [
+    "subjunctive (It's essential that he be present)",
+    "inversion after negative adverbials (Not only did he..., Never have I...)",
+    "inversion in conditionals (Had I known..., Were it not for...)",
+    "cleft sentences (It was John who..., What I need is...)",
+    "passive causative (had it repaired vs got it stolen)",
+    "advanced wish structures (If only I hadn't...)",
+    "participle clauses (Having finished the work, she left)",
+    "fronting for emphasis (Rarely do we see..., Little did they know...)",
+    "formal subjunctive (I suggest that he leave)",
+    "complex noun phrases (The decision taken by the committee last week...)",
+    "hedging language (It would appear that..., There seems to be...)",
+    "distancing (is said to be, is believed to have)"
+  ],
+  "C2": [
+    "ellipsis and substitution (I think so, If so, If not)",
+    "advanced inversion patterns (So spectacular was the view that...)",
+    "nominalization (the destruction of, the failure to comply)",
+    "rhetorical questions and structures",
+    "advanced modality (need not have done, might well have been)",
+    "complex hypothetical structures (But for his help, we would have failed)",
+    "archaic/literary subjunctive (Be that as it may, Come what may)",
+    "garden-path sentences for nuance",
+    "double comparatives (The more you practice, the better you get)",
+    "concessive clauses (Much as I admire him, ...)"
+  ]
+}

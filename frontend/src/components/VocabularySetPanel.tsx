@@ -2744,9 +2744,13 @@ export default function VocabularySetPanel({
         // 單個生成：只處理該項目
         targetIndices.push(aiGenerateTargetIndex);
       } else {
-        // 批次生成：所有有單字的項目（不管有沒有例句，全部重新生成）
+        // 批次生成：只處理有單字且尚無例句的項目（跳過已有例句的）
         rows.forEach((row, index) => {
-          if (row.text && row.text.trim()) {
+          if (
+            row.text &&
+            row.text.trim() &&
+            !row.example_sentence?.trim()
+          ) {
             targetIndices.push(index);
           }
         });
@@ -3466,20 +3470,35 @@ export default function VocabularySetPanel({
                 </div>
               ) : (
                 <div>
-                  <span className="text-amber-700">
-                    {t("vocabularySet.messages.wordsWillRegenerate", {
-                      count: rows.filter((r) => r.text && r.text.trim()).length,
-                    })}
-                  </span>
-                  <div className="text-amber-600 text-xs mt-1">
-                    {t("vocabularySet.messages.allExistingExamples")}
-                    {aiGenerateTranslate
-                      ? t("vocabularySet.messages.andTranslations")
-                      : ""}
-                    {t("vocabularySet.messages.willBeOverwritten")}
-                    {!aiGenerateTranslate &&
-                      `，${t("vocabularySet.messages.translationFieldsCleared")}`}
-                  </div>
+                  {(() => {
+                    const total = rows.filter(
+                      (r) => r.text && r.text.trim(),
+                    ).length;
+                    const skipped = rows.filter(
+                      (r) =>
+                        r.text &&
+                        r.text.trim() &&
+                        r.example_sentence?.trim(),
+                    ).length;
+                    const toGenerate = total - skipped;
+                    return (
+                      <>
+                        <span className="text-amber-700">
+                          {t("vocabularySet.messages.wordsWillRegenerate", {
+                            count: toGenerate,
+                          })}
+                        </span>
+                        {skipped > 0 && (
+                          <div className="text-muted-foreground text-xs mt-1">
+                            {t(
+                              "vocabularySet.messages.existingSentencesSkipped",
+                              { count: skipped },
+                            )}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>

@@ -5,12 +5,19 @@ Supports switching between OpenAI and Vertex AI via USE_VERTEX_AI environment va
 """
 
 import os
+import json as json_module
 import asyncio
 import logging
+from pathlib import Path
 from typing import List, Dict, Optional  # noqa: F401
 from openai import OpenAI, AsyncOpenAI
 from dotenv import load_dotenv
 from utils.http_client import get_http_client
+
+# 載入文法規則（按 CEFR 級別）
+_grammar_rules_path = Path(__file__).parent.parent / "config" / "grammar_by_level.json"
+with open(_grammar_rules_path, "r", encoding="utf-8") as _f:
+    GRAMMAR_BY_LEVEL: Dict[str, List[str]] = json_module.load(_f)
 
 load_dotenv()
 
@@ -598,7 +605,7 @@ Only reply with JSON array, no other text."""
             for i, word in enumerate(words):
                 info = {"word": word}
                 if definitions and i < len(definitions) and definitions[i]:
-                    info["definition"] = definitions[i]  # 中文翻譯（用於消歧義）
+                    info["definition"] = definitions[i]  # 翻譯/解釋（用於消歧義，可能是任何語言）
                 if parts_of_speech and i < len(parts_of_speech) and parts_of_speech[i]:
                     info["pos"] = ", ".join(parts_of_speech[i])
                 words_info.append(info)
@@ -613,21 +620,31 @@ The sentences should be natural, educational, and appropriate for the difficulty
 CRITICAL REQUIREMENTS:
 1. Each sentence MUST contain the exact target word (the word being learned). Do NOT use synonyms or derivatives.
 2. If translating to Chinese, you MUST use Traditional Chinese (繁體中文), NOT Simplified Chinese.
-3. **IF A WORD HAS A "definition" FIELD (Chinese translation), YOU MUST USE THAT SPECIFIC MEANING.**
+3. **IF A WORD HAS A "definition" FIELD, YOU MUST USE THAT SPECIFIC MEANING.**
+   - The "definition" field contains the teacher's chosen translation/meaning (may be in any language)
    - Many English words have multiple meanings (e.g., "like" = 喜歡 or 像是, "change" = 改變 or 零錢)
-   - The "definition" field tells you which meaning the teacher wants
    - Example: {{"word": "put", "definition": "放置"}} → generate sentence about placing/putting, NOT other meanings
    - This is the HIGHEST PRIORITY requirement
-4. **IF USER PROVIDES CUSTOM INSTRUCTIONS, YOU MUST FOLLOW THEM EXACTLY.**
+4. **IF A WORD HAS A SINGLE "pos" FIELD (e.g., "n." or "v."), THE SENTENCE MUST USE THE WORD AS THAT PART OF SPEECH.**
+   - Example: {{"word": "run", "pos": "n."}} → "The morning run felt refreshing." (noun usage, NOT verb)
+   - Example: {{"word": "like", "pos": "prep."}} → "She looks like her mother." (preposition, NOT verb)
+   - If "pos" contains multiple values (e.g., "n., v."), use the meaning indicated by the "definition" field instead
+5. **IF USER PROVIDES CUSTOM INSTRUCTIONS, YOU MUST FOLLOW THEM EXACTLY.**
    - Custom instructions override the default interpretation
 
 Level guidelines:
 - A1: Simple present/past, basic vocabulary, short sentences (5-8 words)
 - A2: Simple sentences with common phrases, everyday topics (8-12 words)
-- B1: Compound sentences, wider vocabulary, various tenses (10-15 words)
-- B2: Complex sentences, idiomatic expressions, abstract topics (12-18 words)
-- C1: Sophisticated vocabulary, nuanced meaning, formal/informal register
-- C2: Near-native fluency, literary style, rare vocabulary acceptable"""
+- B1: Compound sentences, wider vocabulary, various tenses (12-20 words)
+- B2: Complex sentences, idiomatic expressions, abstract topics (15-25 words)
+- C1: Sophisticated vocabulary, nuanced meaning, formal/informal register (18-30 words)
+- C2: Near-native fluency, literary style, rare vocabulary acceptable
+
+6. **GRAMMAR VARIETY**: When generating MULTIPLE sentences (batch), distribute grammar patterns across the batch.
+   Do NOT repeat the same tense/structure for every sentence. Use the following grammar points for level {level}:
+{chr(10).join(f'   - {g}' for g in GRAMMAR_BY_LEVEL.get(level, GRAMMAR_BY_LEVEL.get("B1", [])))}
+
+7. **SUBJECT VARIETY**: Do NOT start every sentence with pronouns (He, She, They, I). Vary sentence subjects: use proper names (Tom, Maria), job titles (The teacher, A scientist), concrete nouns (The old building, This recipe), abstract nouns (Happiness, His decision), gerund phrases (Running every day...), or "There/It" structures."""
 
             # 構建 user prompt
             user_prompt = ""

@@ -63,6 +63,7 @@ tmp/
 temp/
 scripts/
 *.json
+!config/grammar_by_level.json
 service-account-key.json
 
 # Generated files
