@@ -4088,5 +4088,30 @@
     "personalMode": "Personal Mode",
     "selectOrganization": "Select Organization",
     "noSchoolsInOrg": "No schools in this organization"
+  },
+  "organizationPoints": {
+    "title": "AI Usage Points",
+    "loading": "Loading points balance...",
+    "loadingHistory": "Loading history...",
+    "error": "Error: {{error}}",
+    "total": "total",
+    "used": "Used",
+    "available": "Available",
+    "lastUpdated": "Last updated",
+    "lowWarning": "⚠️ Points running low. Contact admin to add more points.",
+    "history": {
+      "title": "Points Usage History",
+      "empty": "No usage history yet.",
+      "totalEntries": "Total entries: {{count}}",
+      "date": "Date",
+      "user": "User",
+      "feature": "Feature",
+      "description": "Description",
+      "points": "Points",
+      "unknown": "Unknown",
+      "showing": "Showing {{from}} to {{to}} of {{total}} results",
+      "previous": "Previous",
+      "next": "Next"
+    }
   }
 }

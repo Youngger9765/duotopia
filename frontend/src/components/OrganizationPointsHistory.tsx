@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { PointsHistory, PointsLogItem } from "../types/points";
 import { apiClient } from "../lib/api";
 
@@ -9,6 +10,7 @@ interface Props {
 export const OrganizationPointsHistory: React.FC<Props> = ({
   organizationId,
 }) => {
+  const { t } = useTranslation();
   const [history, setHistory] = useState<PointsHistory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,18 +39,18 @@ export const OrganizationPointsHistory: React.FC<Props> = ({
   }, [organizationId, page]);
 
   if (loading) {
-    return <div className="animate-pulse">Loading history...</div>;
+    return <div className="animate-pulse">{t("organizationPoints.loadingHistory")}</div>;
   }
 
   if (error) {
-    return <div className="text-red-600">Error: {error}</div>;
+    return <div className="text-red-600">{t("organizationPoints.error", { error })}</div>;
   }
 
   if (!history || history.items.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Points Usage History</h3>
-        <p className="text-gray-500">No usage history yet.</p>
+        <h3 className="text-lg font-semibold mb-4">{t("organizationPoints.history.title")}</h3>
+        <p className="text-gray-500">{t("organizationPoints.history.empty")}</p>
       </div>
     );
   }
@@ -68,8 +70,8 @@ export const OrganizationPointsHistory: React.FC<Props> = ({
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-6 border-b">
-        <h3 className="text-lg font-semibold">Points Usage History</h3>
-        <p className="text-sm text-gray-500">Total entries: {history.total}</p>
+        <h3 className="text-lg font-semibold">{t("organizationPoints.history.title")}</h3>
+        <p className="text-sm text-gray-500">{t("organizationPoints.history.totalEntries", { count: history.total })}</p>
       </div>
 
       {/* History Table */}
@@ -78,19 +80,19 @@ export const OrganizationPointsHistory: React.FC<Props> = ({
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
+                {t("organizationPoints.history.date")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                User
+                {t("organizationPoints.history.user")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Feature
+                {t("organizationPoints.history.feature")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Description
+                {t("organizationPoints.history.description")}
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Points
+                {t("organizationPoints.history.points")}
               </th>
             </tr>
           </thead>
@@ -101,7 +103,7 @@ export const OrganizationPointsHistory: React.FC<Props> = ({
                   {new Date(item.created_at).toLocaleString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {item.teacher_name || "Unknown"}
+                  {item.teacher_name || t("organizationPoints.history.unknown")}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
@@ -128,9 +130,11 @@ export const OrganizationPointsHistory: React.FC<Props> = ({
       {totalPages > 1 && (
         <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t">
           <div className="text-sm text-gray-700">
-            Showing {page * limit + 1} to{" "}
-            {Math.min((page + 1) * limit, history.total)} of {history.total}{" "}
-            results
+            {t("organizationPoints.history.showing", {
+              from: page * limit + 1,
+              to: Math.min((page + 1) * limit, history.total),
+              total: history.total,
+            })}
           </div>
           <div className="flex gap-2">
             <button
@@ -138,14 +142,14 @@ export const OrganizationPointsHistory: React.FC<Props> = ({
               disabled={page === 0}
               className="px-4 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
             >
-              Previous
+              {t("organizationPoints.history.previous")}
             </button>
             <button
               onClick={() => setPage(page + 1)}
               disabled={page >= totalPages - 1}
               className="px-4 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
             >
-              Next
+              {t("organizationPoints.history.next")}
             </button>
           </div>
         </div>

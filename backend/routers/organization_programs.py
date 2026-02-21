@@ -32,9 +32,8 @@ from models import (
     Classroom,
 )
 from models.program import ProgramCopyLog, COPIED_BY_ORGANIZATION
-from services.casbin_service import get_casbin_service
-from utils.permissions import has_read_org_materials_permission
 from routers.teachers import get_current_teacher
+from utils.permissions import has_read_org_materials_permission, has_manage_materials_permission
 
 logger = logging.getLogger(__name__)
 
@@ -144,47 +143,6 @@ class ProgramResponse(BaseModel):
 
 
 # ============ Helper Functions ============
-
-
-def check_manage_materials_permission(
-    teacher_id: int, org_id: uuid.UUID, db: Session
-) -> bool:
-    """
-    Check if teacher has manage_materials permission in organization.
-
-    Permission hierarchy:
-    - org_owner: Always has permission
-    - org_admin: Needs explicit manage_materials permission via Casbin
-    - teacher: No permission
-    """
-    # Check if teacher is member of organization
-    membership = (
-        db.query(TeacherOrganization)
-        .filter(
-            TeacherOrganization.teacher_id == teacher_id,
-            TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.is_active.is_(True),
-        )
-        .first()
-    )
-
-    if not membership:
-        return False
-
-    # org_owner always has permission
-    if membership.role == "org_owner":
-        return True
-
-    # For org_admin and others, check Casbin permission
-    casbin = get_casbin_service()
-    has_permission = casbin.check_permission(
-        teacher_id=teacher_id,
-        domain=f"org-{org_id}",
-        resource="manage_materials",
-        action="write",
-    )
-
-    return has_permission
 
 
 def get_organization_programs(
@@ -432,7 +390,7 @@ async def create_organization_material(
     - classroom_id = None
     """
     # Check permission
-    if not check_manage_materials_permission(current_teacher.id, org_id, db):
+    if not has_manage_materials_permission(current_teacher.id, org_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No permission to create organization materials",
@@ -485,7 +443,7 @@ async def update_organization_material(
     Note: Cannot change organization_id
     """
     # Check permission
-    if not check_manage_materials_permission(current_teacher.id, org_id, db):
+    if not has_manage_materials_permission(current_teacher.id, org_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No permission to update organization materials",
@@ -538,7 +496,7 @@ async def soft_delete_organization_material(
     Action: Set is_active = False (NOT hard delete)
     """
     # Check permission
-    if not check_manage_materials_permission(current_teacher.id, org_id, db):
+    if not has_manage_materials_permission(current_teacher.id, org_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No permission to delete organization materials",
