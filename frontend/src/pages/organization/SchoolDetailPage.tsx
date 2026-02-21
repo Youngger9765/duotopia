@@ -7,10 +7,9 @@ import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { SchoolEditDialog } from "@/components/organization/SchoolEditDialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  School as SchoolIcon,
   Users,
   GraduationCap,
   UserCheck,
@@ -175,10 +174,6 @@ export default function SchoolDetailPage() {
     } catch (error) {
       console.error("Failed to fetch classrooms:", error);
     }
-  };
-
-  const getPrincipal = () => {
-    return teachers.find((t) => t.roles.includes("school_admin"));
   };
 
   const handleEditSuccess = () => {

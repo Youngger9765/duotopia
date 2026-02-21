@@ -23,7 +23,6 @@ export default function OrganizationEditPage() {
   const {
     setSelectedNode,
     setExpandedOrgs,
-    refreshSchools,
     refreshOrganizations,
   } = useOrganization();
   const [organization, setOrganization] = useState<Organization | null>(null);

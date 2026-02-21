@@ -17,10 +17,18 @@ import { AssignClassroomDialog } from "@/components/organization/AssignClassroom
 import { ImportStudentsDialog } from "@/components/organization/ImportStudentsDialog";
 import { ConfirmDialog } from "@/components/organization/ConfirmDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Users, Plus, Search, Upload } from "lucide-react";
 import { toast } from "sonner";
+
+interface Classroom {
+  id: string;
+  name: string;
+  student_count: number;
+  is_active: boolean;
+}
 
 interface School {
   id: string;
@@ -39,6 +47,8 @@ export default function SchoolStudentsPage() {
   const token = useTeacherAuthStore((state) => state.token);
 
   const [students, setStudents] = useState<Student[]>([]);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+  const [selectedTab, setSelectedTab] = useState("all");
   const [school, setSchool] = useState<School | null>(
     location.state?.school ?? null,
   );
@@ -67,6 +77,7 @@ export default function SchoolStudentsPage() {
   useEffect(() => {
     if (schoolId && token) {
       fetchSchool();
+      fetchClassrooms();
     }
   }, [schoolId]);
 
@@ -121,15 +132,41 @@ export default function SchoolStudentsPage() {
     }
   };
 
+  const fetchClassrooms = async () => {
+    if (!schoolId) return;
+    try {
+      const response = await fetch(
+        `${API_URL}/api/schools/${schoolId}/classrooms`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setClassrooms(data.filter((c: Classroom) => c.is_active));
+      }
+    } catch (error) {
+      logError("Failed to fetch classrooms", error, { schoolId });
+    }
+  };
+
   const fetchStudents = async () => {
     if (!schoolId) return;
 
     try {
       setError(null);
 
-      const params: { search?: string } = {};
-      if (searchTerm) {
-        params.search = searchTerm;
+      const params: {
+        search?: string;
+        classroom_id?: number;
+        unassigned?: boolean;
+        limit?: number;
+      } = { limit: 500 };
+
+      if (searchTerm) params.search = searchTerm;
+
+      if (selectedTab === "unassigned") {
+        params.unassigned = true;
+      } else if (selectedTab !== "all") {
+        params.classroom_id = parseInt(selectedTab);
       }
 
       const data = (await apiClient.getSchoolStudents(
@@ -151,7 +188,7 @@ export default function SchoolStudentsPage() {
 
       return () => clearTimeout(debounceTimer);
     }
-  }, [searchTerm, schoolId]);
+  }, [searchTerm, selectedTab, schoolId]);
 
   const handleCreateSuccess = async () => {
     await fetchStudents();
@@ -285,25 +322,40 @@ export default function SchoolStudentsPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Classroom Tabs */}
+          <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+            <TabsList className="flex-wrap h-auto gap-1">
+              <TabsTrigger value="all">
+                全部（{classrooms.reduce((sum, c) => sum + c.student_count, 0)}）
+              </TabsTrigger>
+              <TabsTrigger value="unassigned">未分配</TabsTrigger>
+              {classrooms.map((classroom) => (
+                <TabsTrigger key={classroom.id} value={classroom.id}>
+                  {classroom.name}（{classroom.student_count}）
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
           {/* Search */}
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="搜尋學生（姓名、學號、Email）"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="搜尋學生（姓名、學號、Email）"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
 
           {/* Error Message */}
           {error && <ErrorMessage message={error} />}
 
           {/* Student List */}
-          {!loading && (
+          {loading ? (
+            <LoadingSpinner />
+          ) : (
             <StudentListTable
               students={students}
               onEdit={handleEdit}
