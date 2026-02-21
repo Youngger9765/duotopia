@@ -31,7 +31,7 @@ from models import (
     ContentItem,
     Classroom,
 )
-from models.program import ProgramCopyLog, COPIED_BY_ORGANIZATION
+from models.program import ProgramCopyLog
 from routers.teachers import get_current_teacher
 from utils.permissions import has_read_org_materials_permission, has_manage_materials_permission
 
@@ -620,6 +620,15 @@ async def copy_material_to_classroom(
             detail="You are not a member of this organization",
         )
 
+    # Check daily copy limit per teacher
+    from services.resource_materials_service import check_copy_limit
+
+    if not check_copy_limit(db, program_id, "individual", str(current_teacher.id)):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Daily copy limit reached for this material. Please try again tomorrow.",
+        )
+
     # Deep copy program with error handling and rollback
     try:
         new_program = deep_copy_program(
@@ -633,8 +642,8 @@ async def copy_material_to_classroom(
         # Record copy log for audit/rate-limiting
         copy_log = ProgramCopyLog(
             source_program_id=source_program.id,
-            copied_by_type=COPIED_BY_ORGANIZATION,
-            copied_by_id=str(org_id),
+            copied_by_type="individual",
+            copied_by_id=str(current_teacher.id),
             copied_program_id=new_program.id,
         )
         db.add(copy_log)
