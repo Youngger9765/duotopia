@@ -2720,6 +2720,16 @@ export default function VocabularySetPanel({
     setAiGenerateTargetIndex(index);
     // 🔥 階段2：每次打開 modal 都重設為 Program level
     setAiGenerateLevel(programLevel || "A1");
+    // 使用用戶最後選擇的翻譯語言作為預設，english 回退到中文
+    const langMap: Record<string, string> = {
+      chinese: "中文",
+      japanese: "日文",
+      korean: "韓文",
+      english: "中文",
+    };
+    setAiGenerateTranslateLang(
+      langMap[lastSelectedWordLang] || "中文",
+    );
     setAiGenerateModalOpen(true);
   };
 
