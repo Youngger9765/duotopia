@@ -7,15 +7,13 @@ import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { SchoolEditDialog } from "@/components/organization/SchoolEditDialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Edit2,
-  School as SchoolIcon,
   Users,
-  ArrowRight,
   GraduationCap,
   UserCheck,
+  Settings,
 } from "lucide-react";
 
 interface School {
@@ -178,10 +176,6 @@ export default function SchoolDetailPage() {
     }
   };
 
-  const getPrincipal = () => {
-    return teachers.find((t) => t.roles.includes("school_admin"));
-  };
-
   const handleEditSuccess = () => {
     fetchSchool();
   };
@@ -204,184 +198,91 @@ export default function SchoolDetailPage() {
 
   return (
     <div className="space-y-4">
-      {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: "組織管理" },
-          ...(organization
-            ? [
-                {
-                  label: organization.name,
-                  href: `/organization/${organization.id}`,
-                },
-              ]
-            : []),
-          { label: school.name },
-        ]}
-      />
-
-      {/* School Info Card - Compact layout like Organization */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <SchoolIcon className="h-5 w-5 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <CardTitle className="text-xl">{school.name}</CardTitle>
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      school.is_active
-                        ? "bg-green-100 text-green-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
-                  >
-                    {school.is_active ? "啟用" : "停用"}
-                  </span>
-                  <span className="text-sm text-gray-500">
-                    建立時間：
-                    {new Date(school.created_at).toLocaleDateString("zh-TW")}
-                  </span>
-                  {(() => {
-                    const principal = getPrincipal();
-                    return principal ? (
-                      <span className="text-sm text-gray-500">
-                        | 校長：{principal.name}
-                      </span>
-                    ) : null;
-                  })()}
-                </div>
-                {school.description && (
-                  <p className="text-sm text-gray-600">{school.description}</p>
-                )}
-              </div>
-            </div>
-            <Button
-              onClick={() => setEditDialogOpen(true)}
-              size="sm"
-              className="gap-2 ml-4"
-            >
-              <Edit2 className="h-4 w-4" />
-              編輯學校
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2 pt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {/* Organization */}
-            {organization && (
-              <div className="col-span-2 p-3 bg-green-50 rounded-lg">
-                <h4 className="text-sm font-medium text-green-900 mb-2">
-                  所屬機構
-                </h4>
-                <button
-                  onClick={() => navigate(`/organization/${organization.id}`)}
-                  className="text-green-700 hover:text-green-900 hover:underline transition-colors font-semibold"
-                >
-                  {organization.name}
-                </button>
-              </div>
-            )}
-
-            {/* Contact Info */}
-            {school.contact_email && (
-              <div className="p-2 bg-gray-50 rounded-lg">
-                <h4 className="text-xs font-medium text-gray-500 mb-1">
-                  聯絡信箱
-                </h4>
-                <p className="text-sm text-gray-900">{school.contact_email}</p>
-              </div>
-            )}
-
-            {school.contact_phone && (
-              <div className="p-2 bg-gray-50 rounded-lg">
-                <h4 className="text-xs font-medium text-gray-500 mb-1">
-                  聯絡電話
-                </h4>
-                <p className="text-sm text-gray-900">{school.contact_phone}</p>
-              </div>
-            )}
-
-            {school.address && (
-              <div className="col-span-2 p-2 bg-gray-50 rounded-lg">
-                <h4 className="text-xs font-medium text-gray-500 mb-1">地址</h4>
-                <p className="text-sm text-gray-900">{school.address}</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Breadcrumb with Settings Button */}
+      <div className="flex items-center justify-between">
+        <Breadcrumb
+          items={[
+            { label: "組織管理" },
+            ...(organization
+              ? [
+                  {
+                    label: organization.name,
+                    href: `/organization/${organization.id}`,
+                  },
+                ]
+              : []),
+            { label: school.name },
+          ]}
+        />
+        <Button
+          onClick={() => setEditDialogOpen(true)}
+          variant="ghost"
+          size="icon"
+          title="編輯學校"
+        >
+          <Settings className="h-5 w-5" />
+        </Button>
+      </div>
 
       {/* Quick Actions Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+      <div className="flex flex-wrap gap-4">
+        <Card className="w-[200px] h-[200px] hover:shadow-md transition-shadow cursor-pointer">
           <CardContent
-            className="p-6"
+            className="h-full p-4 flex flex-col justify-center"
             onClick={() =>
               navigate(`/organization/schools/${schoolId}/classrooms`)
             }
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 rounded-lg">
-                  <GraduationCap className="h-5 w-5 text-amber-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">班級管理</h3>
-                  <p className="text-sm text-gray-500">
-                    {classrooms.length} 個班級
-                  </p>
-                </div>
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="p-3 bg-amber-100 rounded-lg">
+                <GraduationCap className="h-6 w-6 text-amber-600" />
               </div>
-              <ArrowRight className="h-5 w-5 text-gray-400" />
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">班級管理</h3>
+                <p className="text-sm text-gray-500">
+                  {classrooms.length} 個班級
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        <Card className="w-[200px] h-[200px] hover:shadow-md transition-shadow cursor-pointer">
           <CardContent
-            className="p-6"
+            className="h-full p-4 flex flex-col justify-center"
             onClick={() =>
               navigate(`/organization/schools/${schoolId}/teachers`)
             }
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Users className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">教師管理</h3>
-                  <p className="text-sm text-gray-500">
-                    {teachers.length} 位教師
-                  </p>
-                </div>
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="p-3 bg-purple-100 rounded-lg">
+                <Users className="h-6 w-6 text-purple-600" />
               </div>
-              <ArrowRight className="h-5 w-5 text-gray-400" />
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">教師管理</h3>
+                <p className="text-sm text-gray-500">
+                  {teachers.length} 位教師
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        <Card className="w-[200px] h-[200px] hover:shadow-md transition-shadow cursor-pointer">
           <CardContent
-            className="p-6"
+            className="h-full p-4 flex flex-col justify-center"
             onClick={() =>
               navigate(`/organization/schools/${schoolId}/students`)
             }
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <UserCheck className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">學生管理</h3>
-                  <p className="text-sm text-gray-500">學生名冊</p>
-                </div>
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="p-3 bg-green-100 rounded-lg">
+                <UserCheck className="h-6 w-6 text-green-600" />
               </div>
-              <ArrowRight className="h-5 w-5 text-gray-400" />
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">學生管理</h3>
+                <p className="text-sm text-gray-500">學生名冊</p>
+              </div>
             </div>
           </CardContent>
         </Card>
