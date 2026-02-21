@@ -30,7 +30,7 @@ import { Users, Plus, Search, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 interface Classroom {
-  id: string;
+  id: number;
   name: string;
   student_count: number;
   is_active: boolean;
@@ -85,7 +85,7 @@ export default function SchoolStudentsPage() {
       fetchSchool();
       fetchClassrooms();
     }
-  }, [schoolId]);
+  }, [schoolId, token]);
 
   const fetchSchool = async () => {
     if (!schoolId) return;
@@ -174,7 +174,10 @@ export default function SchoolStudentsPage() {
       } else if (selectedTab === "unassigned") {
         params.unassigned = true;
       } else {
-        params.classroom_id = parseInt(selectedTab);
+        const id = Number(selectedTab);
+        if (!Number.isNaN(id)) {
+          params.classroom_id = id;
+        }
       }
 
       const data = (await apiClient.getSchoolStudents(
@@ -341,18 +344,18 @@ export default function SchoolStudentsPage() {
               onValueChange={setSelectedTab}
               disabled={!!searchTerm}
             >
-            <SelectTrigger className="w-[240px]">
-              <SelectValue placeholder="選擇班級" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="unassigned">未分配</SelectItem>
-              {classrooms.map((classroom) => (
-                <SelectItem key={classroom.id} value={classroom.id}>
-                  {classroom.name}（{classroom.student_count}）
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <SelectTrigger className="w-[240px]">
+                <SelectValue placeholder="選擇班級" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">未分配</SelectItem>
+                {classrooms.map((classroom) => (
+                  <SelectItem key={classroom.id} value={String(classroom.id)}>
+                    {classroom.name}（{classroom.student_count}）
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Search */}
