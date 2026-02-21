@@ -1486,7 +1486,12 @@ export default function VocabularySetPanel({
   const [aiGeneratePrompt, setAiGeneratePrompt] = useState("");
   const [aiGenerateTranslate, setAiGenerateTranslate] = useState(true);
   const [aiGenerateTranslateLang, setAiGenerateTranslateLang] =
-    useState<string>("中文");
+    useState<string>(() => {
+      const lang = navigator.language || "zh-TW";
+      if (lang.startsWith("ja")) return "日文";
+      if (lang.startsWith("ko")) return "韓文";
+      return "中文"; // 預設中文（含 zh、en 及其他語言）
+    });
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   // dnd-kit sensors
