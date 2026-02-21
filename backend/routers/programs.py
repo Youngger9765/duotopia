@@ -39,7 +39,10 @@ from schemas import (
     ContentCreate,
 )
 from auth import verify_token
-from utils.permissions import has_manage_materials_permission, has_school_materials_permission
+from utils.permissions import (
+    has_manage_materials_permission,
+    has_school_materials_permission,
+)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
 

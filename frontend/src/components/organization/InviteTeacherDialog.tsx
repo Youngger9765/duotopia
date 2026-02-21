@@ -79,7 +79,6 @@ export function InviteTeacherDialog({
     }
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.email || !formData.name) {
@@ -177,7 +176,10 @@ export function InviteTeacherDialog({
               </div>
 
               <div className="grid grid-cols-[100px_1fr] gap-x-4 gap-y-4 items-center">
-                <Label htmlFor="role" className="text-right flex items-center justify-end gap-2">
+                <Label
+                  htmlFor="role"
+                  className="text-right flex items-center justify-end gap-2"
+                >
                   角色
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -195,10 +197,12 @@ export function InviteTeacherDialog({
                       <div className="space-y-2 text-left">
                         <p className="font-medium text-sm">角色權限說明：</p>
                         <p className="text-xs">
-                          <strong>組織管理員：</strong>可編輯組織教材、管理班級與學生、派發/批改作業
+                          <strong>組織管理員：</strong>
+                          可編輯組織教材、管理班級與學生、派發/批改作業
                         </p>
                         <p className="text-xs">
-                          <strong>學校管理員：</strong>可管理班級與學生、派發/批改作業
+                          <strong>學校管理員：</strong>
+                          可管理班級與學生、派發/批改作業
                         </p>
                         <p className="text-xs">
                           <strong>教師：</strong>僅可派發/批改作業

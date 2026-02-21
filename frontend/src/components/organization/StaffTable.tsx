@@ -127,9 +127,7 @@ export function StaffTable({
                 <TableRow>
                   <TableHead className="w-[150px]">角色</TableHead>
                   <TableHead className="text-center">編輯組織教材</TableHead>
-                  <TableHead className="text-center">
-                    管理班級與學生
-                  </TableHead>
+                  <TableHead className="text-center">管理班級與學生</TableHead>
                   <TableHead className="text-center">派發/批改作業</TableHead>
                 </TableRow>
               </TableHeader>
