@@ -580,9 +580,106 @@ export default function StudentActivityPageContent({
 
         isReRecording.current = false;
 
-        // 🎯 Issue #118: 不自動上傳，等待用戶點擊「上傳並分析」按鈕
-        // recording_url 已在 Line 544 設置為 localAudioUrl (blob URL)
-        // GroupedQuestionsTemplate 會顯示「上傳並分析」按鈕
+        // 🎯 Issue #227: 錄音完成後立即上傳到 GCS（與單字朗讀行為一致）
+        // 不論 canUseAiAnalysis 為何，錄音檔案都應保存到伺服器
+        if (currentActivity.items && currentActivity.items.length > 0) {
+          const contentItemId =
+            currentActivity.items[currentSubQuestionIndex]?.id;
+          if (
+            !isPreviewMode &&
+            !isDemoMode &&
+            assignmentId &&
+            contentItemId
+          ) {
+            const uploadFileExtension = audioBlob.type.includes("mp4")
+              ? "recording.mp4"
+              : audioBlob.type.includes("webm")
+                ? "recording.webm"
+                : "recording.audio";
+
+            const formData = new FormData();
+            formData.append("assignment_id", assignmentId.toString());
+            formData.append("content_item_id", contentItemId.toString());
+            formData.append("audio_file", audioBlob, uploadFileExtension);
+
+            const apiUrl = import.meta.env.VITE_API_URL || "";
+            const authToken = useStudentAuthStore.getState().token;
+            const subIdx = currentSubQuestionIndex;
+            const activityId = currentActivity.id;
+
+            retryAudioUpload(
+              async () => {
+                const uploadResponse = await fetch(
+                  `${apiUrl}/api/students/upload-recording`,
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${authToken}`,
+                    },
+                    body: formData,
+                  },
+                );
+
+                if (!uploadResponse.ok) {
+                  throw new Error(`Upload failed: ${uploadResponse.status}`);
+                }
+
+                return await uploadResponse.json();
+              },
+              () => {},
+            )
+              .then((uploadResult) => {
+                // 更新 recording_url 為 GCS URL
+                setActivities((prevActivities) => {
+                  const newActivities = [...prevActivities];
+                  const activityIndex = newActivities.findIndex(
+                    (a) => a.id === activityId,
+                  );
+                  if (
+                    activityIndex !== -1 &&
+                    newActivities[activityIndex].items
+                  ) {
+                    const newItems = [
+                      ...newActivities[activityIndex].items!,
+                    ];
+                    if (newItems[subIdx]) {
+                      newItems[subIdx] = {
+                        ...newItems[subIdx],
+                        recording_url: uploadResult.audio_url,
+                      };
+                    }
+                    newActivities[activityIndex] = {
+                      ...newActivities[activityIndex],
+                      items: newItems,
+                    };
+                  }
+                  return newActivities;
+                });
+
+                // 更新 progressIds
+                setAnswers((prev) => {
+                  const newAnswers = new Map(prev);
+                  const ans = newAnswers.get(activityId);
+                  if (ans) {
+                    if (!ans.progressIds) ans.progressIds = [];
+                    while (ans.progressIds.length <= subIdx) {
+                      ans.progressIds.push(0);
+                    }
+                    ans.progressIds[subIdx] = uploadResult.progress_id;
+                  }
+                  return newAnswers;
+                });
+
+                console.log(
+                  `✅ Recording uploaded for item ${subIdx + 1}:`,
+                  uploadResult.audio_url,
+                );
+              })
+              .catch((error) => {
+                console.error("❌ 錄音上傳失敗:", error);
+              });
+          }
+        }
 
         // 🔧 錄音完成後清理所有錄音狀態
         if (streamRef.current) {
