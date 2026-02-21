@@ -48,7 +48,7 @@ export default function SchoolStudentsPage() {
 
   const [students, setStudents] = useState<Student[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [selectedTab, setSelectedTab] = useState("all");
+  const [selectedTab, setSelectedTab] = useState("unassigned");
   const [school, setSchool] = useState<School | null>(
     location.state?.school ?? null,
   );
@@ -159,13 +159,13 @@ export default function SchoolStudentsPage() {
         classroom_id?: number;
         unassigned?: boolean;
         limit?: number;
-      } = { limit: 500 };
+      } = { limit: 200 };
 
       if (searchTerm) params.search = searchTerm;
 
       if (selectedTab === "unassigned") {
         params.unassigned = true;
-      } else if (selectedTab !== "all") {
+      } else {
         params.classroom_id = parseInt(selectedTab);
       }
 
@@ -326,9 +326,6 @@ export default function SchoolStudentsPage() {
           {/* Classroom Tabs */}
           <Tabs value={selectedTab} onValueChange={setSelectedTab}>
             <TabsList className="flex-wrap h-auto gap-1">
-              <TabsTrigger value="all">
-                全部（{classrooms.reduce((sum, c) => sum + c.student_count, 0)}）
-              </TabsTrigger>
               <TabsTrigger value="unassigned">未分配</TabsTrigger>
               {classrooms.map((classroom) => (
                 <TabsTrigger key={classroom.id} value={classroom.id}>
