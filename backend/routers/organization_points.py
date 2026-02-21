@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from datetime import datetime, timezone
@@ -123,10 +123,11 @@ async def deduct_organization_points(
     if deduction.points <= 0:
         raise HTTPException(status_code=400, detail="Points must be positive")
 
-    # Check organization exists
+    # Check organization exists and lock row to prevent concurrent overdraft
     organization = (
         db.query(Organization)
         .filter(Organization.id == organization_id, Organization.is_active.is_(True))
+        .with_for_update()
         .first()
     )
 
@@ -188,8 +189,8 @@ async def deduct_organization_points(
 @router.get("/{organization_id}/points/history", response_model=PointsHistoryResponse)
 async def get_organization_points_history(
     organization_id: uuid.UUID,
-    limit: int = 20,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     current_teacher: Teacher = Depends(get_current_teacher),
 ):

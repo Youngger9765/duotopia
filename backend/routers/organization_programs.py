@@ -470,8 +470,12 @@ async def create_organization_material(
             detail="No permission to create organization materials",
         )
 
-    # Verify organization exists
-    organization = db.query(Organization).filter(Organization.id == org_id).first()
+    # Verify organization exists and is active
+    organization = (
+        db.query(Organization)
+        .filter(Organization.id == org_id, Organization.is_active.is_(True))
+        .first()
+    )
     if not organization:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found"
