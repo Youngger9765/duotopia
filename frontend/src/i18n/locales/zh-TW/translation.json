@@ -741,6 +741,9 @@
         "title": "沒有已訂正的作業",
         "description": "已訂正的作業會顯示在這裡。"
       }
+    },
+    "pagination": {
+      "label": "第{{current}}頁 / 共{{total}}頁"
     }
   },
   "studentAssignmentDetail": {

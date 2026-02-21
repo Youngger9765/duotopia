@@ -741,6 +741,9 @@
         "title": "No resubmitted assignments",
         "description": "Resubmitted assignments will appear here."
       }
+    },
+    "pagination": {
+      "label": "Page {{current}} / {{total}}"
     }
   },
   "studentAssignmentDetail": {

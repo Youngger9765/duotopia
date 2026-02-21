@@ -20,6 +20,7 @@ import {
   CheckCircle,
   AlertCircle,
   BarChart3,
+  ChevronLeft,
   ChevronRight,
   ArrowRight,
   Mic,
@@ -67,8 +68,14 @@ export default function StudentAssignmentList() {
   const [activeTab, setActiveTab] = useState(
     searchParams.get("tab") || "todo",
   );
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  };
   const [sortBy, setSortBy] = useState("due_date_asc");
   const [filterMode, setFilterMode] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 8;
   const [stats, setStats] = useState({
     totalAssignments: 0,
     todo: 0,
@@ -464,10 +471,40 @@ export default function StudentAssignmentList() {
   const renderTabContent = (tab: string) => {
     const filtered = filterAssignments(tab);
     if (filtered.length === 0) return renderEmptyState(tab);
+
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+    const startIdx = (safeCurrentPage - 1) * PAGE_SIZE;
+    const paged = filtered.slice(startIdx, startIdx + PAGE_SIZE);
+
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3 sm:gap-4">
-        {filtered.map(renderAssignmentCard)}
-      </div>
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3 sm:gap-4">
+          {paged.map(renderAssignmentCard)}
+        </div>
+        <div className="flex items-center justify-center gap-3 mt-6">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={safeCurrentPage <= 1}
+            className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronLeft className="h-5 w-5 text-gray-600" />
+          </button>
+          <span className="text-sm text-gray-700 font-medium">
+            {t("studentAssignmentList.pagination.label", {
+              current: safeCurrentPage,
+              total: totalPages,
+            })}
+          </span>
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safeCurrentPage >= totalPages}
+            className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronRight className="h-5 w-5 text-gray-600" />
+          </button>
+        </div>
+      </>
     );
   };
 
@@ -540,7 +577,7 @@ export default function StudentAssignmentList() {
               ).map((item, idx, arr) => (
                 <div key={item.key} className="flex items-center">
                   <button
-                    onClick={() => setActiveTab(item.key)}
+                    onClick={() => handleTabChange(item.key)}
                     className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
                       activeTab === item.key
                         ? "scale-105"
@@ -592,7 +629,7 @@ export default function StudentAssignmentList() {
           {/* Sort dropdown */}
           <div className="flex items-center gap-2">
             <ArrowUpDown className="h-4 w-4 text-gray-500" />
-            <Select value={sortBy} onValueChange={setSortBy}>
+            <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-[200px] h-8 text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
@@ -619,7 +656,7 @@ export default function StudentAssignmentList() {
               variant={filterMode === null ? "default" : "outline"}
               size="sm"
               className="h-7 text-xs px-2.5"
-              onClick={() => setFilterMode(null)}
+              onClick={() => { setFilterMode(null); setCurrentPage(1); }}
             >
               {t("studentAssignmentList.practiceMode.all")}
             </Button>
@@ -629,7 +666,7 @@ export default function StudentAssignmentList() {
                 variant={filterMode === mode ? "default" : "outline"}
                 size="sm"
                 className="h-7 text-xs px-2.5"
-                onClick={() => setFilterMode(filterMode === mode ? null : mode)}
+                onClick={() => { setFilterMode(filterMode === mode ? null : mode); setCurrentPage(1); }}
               >
                 {t(`studentAssignmentList.practiceMode.${mode}`)}
               </Button>
@@ -640,7 +677,7 @@ export default function StudentAssignmentList() {
         {/* Assignment Lists by Status */}
         <Tabs
           value={activeTab}
-          onValueChange={setActiveTab}
+          onValueChange={handleTabChange}
           className="space-y-4"
         >
           <TabsList className="hidden">
