@@ -17,7 +17,6 @@ depends_on = None
 # Demo account configuration
 DEMO_EMAIL = "contact@duotopia.co"
 DEMO_NAME = "Duotopia Demo"
-# Password: DemoPass2026! (bcrypt hash)
 DEMO_PASSWORD_HASH = "$2b$12$pyTz1WOVSBDCNadNuNKnxODOkRluKaC/kUJXZv/bGAuz.ea4LvcNi"
 
 

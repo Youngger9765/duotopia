@@ -13,7 +13,6 @@ Endpoints:
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel, Field, field_serializer, model_validator
 from typing import List, Optional
@@ -33,45 +32,14 @@ from models import (
     Classroom,
 )
 from models.program import ProgramCopyLog
-from auth import verify_token
 from services.casbin_service import get_casbin_service
 from utils.permissions import has_read_org_materials_permission
+from routers.teachers import get_current_teacher
 
 logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/api/organizations", tags=["organization-programs"])
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
-
-
-# ============ Dependencies ============
-
-
-async def get_current_teacher(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
-) -> Teacher:
-    """Get current authenticated teacher"""
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-        )
-
-    teacher_id = payload.get("sub")
-    teacher_type = payload.get("type")
-
-    if teacher_type != "teacher":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not a teacher"
-        )
-
-    teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
-    if not teacher:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
-        )
-
-    return teacher
 
 
 # ============ Request/Response Models ============
