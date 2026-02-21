@@ -9,12 +9,7 @@ import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { SchoolEditDialog } from "@/components/organization/SchoolEditDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Users,
-  GraduationCap,
-  UserCheck,
-  Settings,
-} from "lucide-react";
+import { Users, GraduationCap, UserCheck, Settings } from "lucide-react";
 
 interface School {
   id: string;

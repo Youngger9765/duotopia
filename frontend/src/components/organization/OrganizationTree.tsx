@@ -61,7 +61,9 @@ export function OrganizationTree({
   const location = useLocation();
   const token = useTeacherAuthStore((state) => state.token);
   const user = useTeacherAuthStore((state) => state.user);
-  const [expandedSchools, setExpandedSchools] = useState<Set<string>>(new Set());
+  const [expandedSchools, setExpandedSchools] = useState<Set<string>>(
+    new Set(),
+  );
   const {
     selectedNode,
     setSelectedNode,

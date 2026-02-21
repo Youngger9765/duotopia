@@ -338,7 +338,9 @@ export default function SchoolStudentsPage() {
         <CardContent className="space-y-4">
           {/* Classroom Selector */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 whitespace-nowrap">選擇班級</span>
+            <span className="text-sm text-gray-600 whitespace-nowrap">
+              選擇班級
+            </span>
             <Select
               value={selectedTab}
               onValueChange={setSelectedTab}

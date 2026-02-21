@@ -191,7 +191,6 @@ export default function OrganizationDashboard() {
     fetchStats();
   }, [token, organizations.length]);
 
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -266,7 +265,6 @@ export default function OrganizationDashboard() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
