@@ -670,10 +670,6 @@ export default function StudentActivityPageContent({
                   return newAnswers;
                 });
 
-                console.log(
-                  `✅ Recording uploaded for item ${subIdx + 1}:`,
-                  uploadResult.audio_url,
-                );
               })
               .catch((error) => {
                 console.error("❌ 錄音上傳失敗:", error);

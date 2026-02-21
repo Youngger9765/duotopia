@@ -31,7 +31,6 @@ from models import (
 )
 from routers.teachers import get_current_teacher
 from services.tappay_service import TapPayService
-from services.quota_service import QuotaService
 from services.casbin_service import CasbinService
 from schemas import RefundRequest
 from routers.schemas.admin_organization import (
@@ -1174,95 +1173,3 @@ async def get_teacher_by_email(
         phone=teacher.phone,
         email_verified=teacher.email_verified,
     )
-
-
-@router.get(
-    "/debug/quota",
-    summary="Debug: 查詢教師 AI 分析配額狀態",
-)
-async def debug_teacher_quota(
-    email: EmailStr = Query(..., description="Teacher email address"),
-    current_admin: Teacher = Depends(get_current_admin),
-    db: Session = Depends(get_db),
-):
-    """
-    Debug endpoint: 輸入教師 email，查詢其配額狀態與 can_use_ai_analysis 的計算結果。
-    """
-    teacher = db.query(Teacher).filter(Teacher.email == email).first()
-    if not teacher:
-        raise HTTPException(status_code=404, detail=f"Teacher not found: {email}")
-
-    # 1. 查機構
-    teacher_org = (
-        db.query(TeacherOrganization)
-        .filter(
-            TeacherOrganization.teacher_id == teacher.id,
-            TeacherOrganization.is_active.is_(True),
-        )
-        .first()
-    )
-
-    org_info = None
-    if teacher_org:
-        org = (
-            db.query(Organization)
-            .filter(
-                Organization.id == teacher_org.organization_id,
-                Organization.is_active.is_(True),
-            )
-            .first()
-        )
-        if org:
-            org_info = {
-                "org_id": org.id,
-                "org_name": org.name,
-                "total_points": org.total_points,
-                "used_points": org.used_points,
-                "remaining_points": org.total_points - org.used_points,
-            }
-
-    # 2. 個人配額
-    period = teacher.current_period
-    personal_info = None
-    if period:
-        personal_info = {
-            "period_id": period.id,
-            "plan_name": period.plan_name,
-            "status": period.status,
-            "quota_total": period.quota_total,
-            "quota_used": period.quota_used,
-            "quota_remaining": period.quota_total - period.quota_used,
-            "start_date": str(period.start_date),
-            "end_date": str(period.end_date),
-        }
-
-    # 3. 最終計算結果
-    can_use = QuotaService.check_ai_analysis_availability(teacher.id, db)
-
-    # 4. 解釋判斷路徑
-    if org_info:
-        decision_path = (
-            f"走機構分支 → org '{org_info['org_name']}' remaining={org_info['remaining_points']} → {'> 0 ✅' if org_info['remaining_points'] > 0 else '<= 0 ❌'}"
-        )
-    elif teacher_org:
-        decision_path = "有 teacher_org 但 org 不 active → fall through 到個人配額"
-    else:
-        decision_path = "無機構 → 走個人配額分支"
-
-    if not org_info:
-        if personal_info:
-            decision_path += f" → quota_remaining={personal_info['quota_remaining']} → {'> 0 ✅' if personal_info['quota_remaining'] > 0 else '<= 0 ❌'}"
-        else:
-            decision_path += " → 無 active subscription period → quota_remaining=0 ❌"
-
-    return {
-        "teacher_id": teacher.id,
-        "teacher_email": teacher.email,
-        "teacher_name": teacher.name,
-        "belongs_to_org": org_info is not None,
-        "organization": org_info,
-        "has_teacher_org_record": teacher_org is not None,
-        "personal_subscription": personal_info,
-        "can_use_ai_analysis": can_use,
-        "decision_path": decision_path,
-    }
