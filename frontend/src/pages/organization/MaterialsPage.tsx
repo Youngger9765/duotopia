@@ -178,50 +178,12 @@ export default function MaterialsPage() {
         )}
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              總教材數
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{programs.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              啟用中
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {programs.filter((p) => p.is_active).length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              總時數
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {programs.reduce((sum, p) => sum + (p.total_hours || 0), 0)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Programs Table */}
       <Card>
         <CardHeader>
-          <CardTitle>教材列表</CardTitle>
+          <CardTitle>
+            教材列表 {!loading && `(共 ${programs.length} 個教材)`}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
