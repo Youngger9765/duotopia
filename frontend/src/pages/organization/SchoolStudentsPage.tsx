@@ -153,6 +153,7 @@ export default function SchoolStudentsPage() {
 
     try {
       setError(null);
+      setLoading(true);
 
       const params: {
         search?: string;
@@ -177,6 +178,8 @@ export default function SchoolStudentsPage() {
     } catch (error) {
       logError("Failed to fetch students", error, { schoolId });
       setError("載入學生列表失敗");
+    } finally {
+      setLoading(false);
     }
   };
 
