@@ -487,19 +487,14 @@ export default function StudentActivityPageContent({
             return;
           }
 
-          if (!isPreviewMode) {
-            toast.success(t("studentActivityPage.recording.complete"), {
-              description: t("studentActivityPage.recording.duration", {
-                duration: Math.round(validationResult.duration),
-              }),
-            });
-          } else {
+          if (isPreviewMode) {
             toast.success(t("studentActivityPage.recording.completePreview"), {
               description: t("studentActivityPage.recording.duration", {
                 duration: Math.round(validationResult.duration),
               }),
             });
           }
+          // 正常模式：不在此處顯示 toast，等上傳成功後再顯示（與單字朗讀行為一致）
         } catch (error) {
           console.error("⚠️ Recording validation error:", error);
 
@@ -670,6 +665,9 @@ export default function StudentActivityPageContent({
                   return newAnswers;
                 });
 
+                toast.success(
+                  t("wordReading.toast.uploaded") || "Recording uploaded",
+                );
               })
               .catch((error) => {
                 console.error("❌ 錄音上傳失敗:", error);
@@ -880,6 +878,10 @@ export default function StudentActivityPageContent({
                   );
                 }
               }
+
+              toast.success(
+                t("wordReading.toast.uploaded") || "Recording uploaded",
+              );
             })
             .catch((error) => {
               console.error("❌ 錄音上傳失敗:", error);
