@@ -407,7 +407,7 @@ class TestDataIntegrityPostDeployment:
 
         # 嘗試用實際的 seed data 帳號登入
         default_accounts = [
-            {"email": "demo@duotopia.com", "password": "demo123"},
+            {"email": "demo@duotopia.com", "password": os.environ.get("SEED_DEFAULT_PASSWORD", "demo123")},
         ]
 
         any_exists = False

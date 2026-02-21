@@ -7,6 +7,7 @@ Tests that speech assessments for personal students deduct from teacher quota, N
 import io
 import json
 import math
+import os
 import struct
 import time
 import wave
@@ -19,8 +20,9 @@ BASE_URL = "https://duotopia-preview-issue-208-backend-b2ovkkgl6a-de.a.run.app"
 ORG_ID = "21a8a0c7-a5e3-4799-8336-fbb2cf1de91a"
 
 # Test users
-DEMO_TEACHER = {"email": "demo@duotopia.com", "password": "demo123"}
-ORG_OWNER = {"email": "owner@duotopia.com", "password": "demo123"}
+DEMO_PASSWORD = os.environ.get("SEED_DEFAULT_PASSWORD", "demo123")
+DEMO_TEACHER = {"email": "demo@duotopia.com", "password": DEMO_PASSWORD}
+ORG_OWNER = {"email": "owner@duotopia.com", "password": DEMO_PASSWORD}
 
 RATE_LIMIT_WAIT = 22  # seconds between logins
 
@@ -199,7 +201,7 @@ def main():
         resp.raise_for_status()
         student_data = resp.json()
         student_id = student_data["id"]
-        student_password = "20100615"
+        student_password = os.environ.get("SEED_DEFAULT_PASSWORD", "20100615")
         print(f"✅ Created student: {student_id} (password: {student_password})")
     except Exception as e:
         print(f"❌ Create student failed: {e}")
