@@ -1,4 +1,5 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { API_URL } from "@/config/api";
@@ -8,7 +9,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Building2, School as SchoolIcon, Users } from "lucide-react";
+import {
+  Building2,
+  School as SchoolIcon,
+  GraduationCap,
+  UserCheck,
+  Users,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Organization {
@@ -48,8 +57,11 @@ export function OrganizationTree({
   onNodeSelect,
   className,
 }: OrganizationTreeProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const token = useTeacherAuthStore((state) => state.token);
   const user = useTeacherAuthStore((state) => state.user);
+  const [expandedSchools, setExpandedSchools] = useState<Set<string>>(new Set());
   const {
     selectedNode,
     setSelectedNode,
@@ -105,6 +117,18 @@ export function OrganizationTree({
 
     setSelectedNode({ type, id: data.id, data });
     onNodeSelect?.(type, data);
+  };
+
+  const toggleSchool = (schoolId: string) => {
+    setExpandedSchools((prev) => {
+      const next = new Set(prev);
+      if (next.has(schoolId)) {
+        next.delete(schoolId);
+      } else {
+        next.add(schoolId);
+      }
+      return next;
+    });
   };
 
   if (isFetchingOrgs) {
@@ -172,31 +196,92 @@ export function OrganizationTree({
             <AccordionContent className="px-4 pb-3">
               <div className="space-y-1 mt-2">
                 {schools[org.id]?.map((school) => (
-                  <button
-                    key={school.id}
-                    onClick={() => handleNodeClick("school", school)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-green-50 text-left transition-colors border border-transparent",
-                      selectedNode?.type === "school" &&
-                        selectedNode.id === school.id &&
-                        "bg-green-100 border-green-300 text-green-900",
-                    )}
-                  >
-                    <div className="p-1.5 bg-green-100 rounded">
-                      <SchoolIcon className="w-4 h-4 text-green-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">
-                        {school.display_name || school.name}
-                      </div>
-                      {school.description && (
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          {school.description}
+                  <div key={school.id}>
+                    {/* School row */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleNodeClick("school", school)}
+                        className={cn(
+                          "flex-1 flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-green-50 text-left transition-colors border border-transparent",
+                          selectedNode?.type === "school" &&
+                            selectedNode.id === school.id &&
+                            "bg-green-100 border-green-300 text-green-900",
+                        )}
+                      >
+                        <div className="p-1.5 bg-green-100 rounded">
+                          <SchoolIcon className="w-4 h-4 text-green-600" />
                         </div>
-                      )}
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">
+                            {school.display_name || school.name}
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => toggleSchool(school.id)}
+                        className="p-1.5 rounded hover:bg-gray-100 transition-colors text-gray-400"
+                      >
+                        {expandedSchools.has(school.id) ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        )}
+                      </button>
                     </div>
-                    <Users className="w-4 h-4 text-gray-400" />
-                  </button>
+
+                    {/* School sub-items */}
+                    {expandedSchools.has(school.id) && (
+                      <div className="ml-6 mt-1 space-y-0.5">
+                        {[
+                          {
+                            label: "班級管理",
+                            path: `/organization/schools/${school.id}/classrooms`,
+                            icon: GraduationCap,
+                            color: "text-amber-600",
+                          },
+                          {
+                            label: "學生管理",
+                            path: `/organization/schools/${school.id}/students`,
+                            icon: UserCheck,
+                            color: "text-green-600",
+                          },
+                          {
+                            label: "教師管理",
+                            path: `/organization/schools/${school.id}/teachers`,
+                            icon: Users,
+                            color: "text-purple-600",
+                          },
+                        ].map(({ label, path, icon: Icon, color }) => (
+                          <button
+                            key={path}
+                            onClick={() =>
+                              navigate(path, {
+                                state: {
+                                  school: {
+                                    id: school.id,
+                                    name: school.display_name || school.name,
+                                    organization_id: school.organization_id,
+                                  },
+                                  organization: {
+                                    id: org.id,
+                                    name: org.display_name || org.name,
+                                  },
+                                },
+                              })
+                            }
+                            className={cn(
+                              "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors hover:bg-gray-50",
+                              location.pathname === path &&
+                                "bg-gray-100 font-medium",
+                            )}
+                          >
+                            <Icon className={cn("w-3.5 h-3.5", color)} />
+                            <span className="text-gray-700">{label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
 
                 {schools[org.id]?.length === 0 && (

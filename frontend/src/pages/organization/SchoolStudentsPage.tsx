@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { apiClient } from "@/lib/api";
 import { API_URL } from "@/config/api";
@@ -35,11 +35,16 @@ interface Organization {
 
 export default function SchoolStudentsPage() {
   const { schoolId } = useParams<{ schoolId: string }>();
+  const location = useLocation();
   const token = useTeacherAuthStore((state) => state.token);
 
   const [students, setStudents] = useState<Student[]>([]);
-  const [school, setSchool] = useState<School | null>(null);
-  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [school, setSchool] = useState<School | null>(
+    location.state?.school ?? null,
+  );
+  const [organization, setOrganization] = useState<Organization | null>(
+    location.state?.organization ?? null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
