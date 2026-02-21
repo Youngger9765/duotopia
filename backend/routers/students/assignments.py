@@ -22,6 +22,7 @@ from models import (
     StudentItemProgress,
     AssignmentStatus,
     PracticeSession,
+    Teacher,
 )
 from services.quota_service import QuotaService
 from .dependencies import get_current_student
@@ -433,6 +434,31 @@ async def get_assignment_activities(
         else True
     )
 
+    import logging
+    _logger = logging.getLogger(__name__)
+
+    # 🔍 Debug: collect diagnostic info for quota check
+    _debug_info = {}
+    if assignment:
+        _classroom = assignment.classroom
+        _org_id = QuotaService._get_org_id_from_classroom(_classroom) if _classroom else None
+        _teacher = db.query(Teacher).filter(Teacher.id == assignment.teacher_id).first()
+        _debug_info = {
+            "assignment_id_real": assignment.id,
+            "classroom_id": _classroom.id if _classroom else None,
+            "classroom_name": _classroom.name if _classroom else None,
+            "has_classroom_schools": bool(_classroom.classroom_schools) if _classroom else None,
+            "classroom_schools_count": len(_classroom.classroom_schools) if _classroom and _classroom.classroom_schools else 0,
+            "org_id": _org_id,
+            "teacher_id": _teacher.id if _teacher else None,
+            "teacher_quota_remaining": _teacher.quota_remaining if _teacher else None,
+        }
+
+    _logger.info(
+        "🔍 get_assignment_activities: assignment_id=%s, can_use_ai_analysis=%s, debug=%s",
+        assignment_id, can_use_ai_analysis, _debug_info,
+    )
+
     return {
         "assignment_id": assignment_id,
         "title": student_assignment.title,
@@ -443,6 +469,7 @@ async def get_assignment_activities(
         "total_activities": len(activities),
         "activities": activities,
         "can_use_ai_analysis": can_use_ai_analysis,  # 根據工作區判斷的 AI 分析額度
+        "_debug_quota": _debug_info,  # TODO: 調試完成後移除
     }
 
 
@@ -883,6 +910,31 @@ async def get_vocabulary_activities(
         else True
     )
 
+    import logging
+    _logger = logging.getLogger(__name__)
+
+    # 🔍 Debug: collect diagnostic info for quota check
+    _debug_info = {}
+    if assignment:
+        _classroom = assignment.classroom
+        _org_id = QuotaService._get_org_id_from_classroom(_classroom) if _classroom else None
+        _teacher = db.query(Teacher).filter(Teacher.id == assignment.teacher_id).first()
+        _debug_info = {
+            "assignment_id_real": assignment.id,
+            "classroom_id": _classroom.id if _classroom else None,
+            "classroom_name": _classroom.name if _classroom else None,
+            "has_classroom_schools": bool(_classroom.classroom_schools) if _classroom else None,
+            "classroom_schools_count": len(_classroom.classroom_schools) if _classroom and _classroom.classroom_schools else 0,
+            "org_id": _org_id,
+            "teacher_id": _teacher.id if _teacher else None,
+            "teacher_quota_remaining": _teacher.quota_remaining if _teacher else None,
+        }
+
+    _logger.info(
+        "🔍 get_vocabulary_activities: assignment_id=%s, can_use_ai_analysis=%s, debug=%s",
+        assignment_id, can_use_ai_analysis, _debug_info,
+    )
+
     return {
         "assignment_id": assignment_id,
         "title": student_assignment.title,
@@ -893,6 +945,7 @@ async def get_vocabulary_activities(
         "total_items": len(items),
         "items": items,
         "can_use_ai_analysis": can_use_ai_analysis,  # 根據工作區判斷的 AI 分析額度
+        "_debug_quota": _debug_info,  # TODO: 調試完成後移除
     }
 
 

@@ -159,17 +159,25 @@ class QuotaService:
         - 作業屬於個人班級 → 查教師 quota_remaining > 0
         """
         if not assignment:
+            logger.info("check_ai_analysis: no assignment, returning True")
             return True
 
         teacher = (
             db.query(Teacher).filter(Teacher.id == assignment.teacher_id).first()
         )
         if not teacher:
+            logger.info("check_ai_analysis: teacher not found for assignment %s", assignment.id)
             return False
 
         # 透過 classroom → classroom_schools → school → org 判斷
         classroom = assignment.classroom
         org_id = QuotaService._get_org_id_from_classroom(classroom)
+
+        logger.info(
+            "check_ai_analysis: assignment=%s, teacher=%s, classroom=%s, org_id=%s",
+            assignment.id, teacher.id,
+            classroom.id if classroom else None, org_id,
+        )
 
         if org_id:
             # 機構班級 → 查機構點數
@@ -183,11 +191,21 @@ class QuotaService:
             )
             if org:
                 remaining = org.total_points - org.used_points
+                logger.info(
+                    "check_ai_analysis: org path → org=%s, total=%s, used=%s, remaining=%s, result=%s",
+                    org.id, org.total_points, org.used_points, remaining, remaining > 0,
+                )
                 return remaining > 0
             # org 不 active → fall through 到個人配額
+            logger.info("check_ai_analysis: org %s not active, falling through to personal quota", org_id)
 
         # 個人班級 → 查教師配額
-        return teacher.quota_remaining > 0
+        quota_remaining = teacher.quota_remaining
+        logger.info(
+            "check_ai_analysis: personal path → teacher=%s, quota_remaining=%s, result=%s",
+            teacher.id, quota_remaining, quota_remaining > 0,
+        )
+        return quota_remaining > 0
 
     @staticmethod
     def _get_org_id_from_classroom(classroom) -> Optional[str]:
