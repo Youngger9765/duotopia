@@ -149,18 +149,10 @@ class Teacher(Base):
     @property
     def quota_remaining(self) -> int:
         """當前週期的剩餘配額"""
-        import logging
-        _logger = logging.getLogger(__name__)
         period = self.current_period
         if not period:
-            _logger.info("quota_remaining: teacher=%s, no current_period, returning 0", self.id)
             return 0
-        remaining = max(0, period.quota_total - period.quota_used)
-        _logger.info(
-            "quota_remaining: teacher=%s, period=%s (status=%s), total=%s, used=%s, remaining=%s",
-            self.id, period.id, period.status, period.quota_total, period.quota_used, remaining,
-        )
-        return remaining
+        return max(0, period.quota_total - period.quota_used)
 
     @property
     def subscription_status(self):

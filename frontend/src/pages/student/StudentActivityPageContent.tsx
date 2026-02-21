@@ -1393,63 +1393,61 @@ export default function StudentActivityPageContent({
       return;
     }
 
-    // 檢查當前題目是否有錄音但未分析
-    const currentItem = currentActivity.items![currentSubQuestionIndex];
-    const hasRecording =
-      currentItem.recording_url && currentItem.recording_url !== "";
-    const isBlobUrl =
-      hasRecording && currentItem.recording_url!.startsWith("blob:");
-    const hasAssessment = !!currentItem?.ai_assessment;
+    // 🎯 Issue #227: 只有在有 AI 分析額度時才自動分析
+    if (canUseAiAnalysis) {
+      // 檢查當前題目是否有錄音但未分析
+      const currentItem = currentActivity.items![currentSubQuestionIndex];
+      const hasRecording =
+        currentItem.recording_url && currentItem.recording_url !== "";
+      const hasAssessment = !!currentItem?.ai_assessment;
 
-    // 如果有 blob URL 但沒有分析結果，自動分析
-    if (isBlobUrl && !hasAssessment) {
-      const targetText = currentItem.text || "";
-      const progressId = currentItem.progress_id;
-      const contentItemId = currentItem.id;
+      // 如果有錄音但沒有分析結果，自動背景分析（fire-and-forget）
+      if (hasRecording && !hasAssessment) {
+        const targetText = currentItem.text || "";
+        const progressId = currentItem.progress_id;
+        const contentItemId = currentItem.id;
 
-      if (!targetText) {
-        console.warn("缺少參考文本，無法分析");
-        // 即使無法分析，也允許跳轉
-        if (targetActivityIndex !== currentActivityIndex) {
-          handleActivitySelect(targetActivityIndex, targetItemIndex);
-        } else {
-          setCurrentSubQuestionIndex(targetItemIndex);
+        if (targetText) {
+          analyzeAndUpload(
+            currentItem.recording_url!,
+            targetText,
+            progressId,
+            contentItemId,
+          )
+            .then((analysisResult) => {
+              if (analysisResult) {
+                setActivities((prevActivities) => {
+                  const newActivities = [...prevActivities];
+                  const activityIndex = newActivities.findIndex(
+                    (a) => a.id === currentActivity.id,
+                  );
+                  if (
+                    activityIndex !== -1 &&
+                    newActivities[activityIndex].items
+                  ) {
+                    const newItems = [
+                      ...newActivities[activityIndex].items!,
+                    ];
+                    if (newItems[currentSubQuestionIndex]) {
+                      newItems[currentSubQuestionIndex] = {
+                        ...newItems[currentSubQuestionIndex],
+                        ai_assessment: analysisResult,
+                      };
+                    }
+                    newActivities[activityIndex] = {
+                      ...newActivities[activityIndex],
+                      items: newItems,
+                    };
+                  }
+                  return newActivities;
+                });
+              }
+            })
+            .catch((err) =>
+              console.error("Background analysis on jump failed:", err),
+            );
         }
-        return;
       }
-
-      // 觸發自動分析
-      const analysisResult = await analyzeAndUpload(
-        currentItem.recording_url!,
-        targetText,
-        progressId,
-        contentItemId,
-      );
-
-      // 如果分析成功，更新 activities state
-      if (analysisResult) {
-        setActivities((prevActivities) => {
-          const newActivities = [...prevActivities];
-          const activityIndex = newActivities.findIndex(
-            (a) => a.id === currentActivity.id,
-          );
-          if (activityIndex !== -1 && newActivities[activityIndex].items) {
-            const newItems = [...newActivities[activityIndex].items!];
-            if (newItems[currentSubQuestionIndex]) {
-              newItems[currentSubQuestionIndex] = {
-                ...newItems[currentSubQuestionIndex],
-                ai_assessment: analysisResult,
-              };
-            }
-            newActivities[activityIndex] = {
-              ...newActivities[activityIndex],
-              items: newItems,
-            };
-          }
-          return newActivities;
-        });
-      }
-      // 分析失敗時不阻擋跳轉（讓用戶可以繼續）
     }
 
     // 執行跳轉
