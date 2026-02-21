@@ -699,6 +699,27 @@
       "viewResults": "查看結果",
       "resubmit": "開始訂正"
     },
+    "scoreCategory": {
+      "speaking": "口說",
+      "listening": "聽力",
+      "writing": "寫作",
+      "vocabulary": "字彙",
+      "reading": "閱讀"
+    },
+    "practiceMode": {
+      "reading": "例句朗讀",
+      "rearrangement": "例句重組",
+      "word_selection": "單字選擇",
+      "word_reading": "單字朗讀",
+      "all": "全部類型"
+    },
+    "sort": {
+      "label": "排序",
+      "due_date_asc": "到期日（近→遠）",
+      "due_date_desc": "到期日（遠→近）",
+      "assigned_at_desc": "指派日期（新→舊）",
+      "status": "狀態優先"
+    },
     "emptyStates": {
       "todo": {
         "title": "沒有待完成的作業",
@@ -1074,7 +1095,9 @@
       "verified": "已驗證",
       "unverified": "待驗證",
       "profile": "個人資料",
-      "setupTitle": "📧 設定 Email 通知",
+      "setupTitle": "設定 Email 通知",
+      "setupButton": "設定 Email",
+      "reverifyButton": "重新驗證",
       "yourEmail": "你的 Email 地址",
       "emailPlaceholder": "請輸入你的 Email 地址",
       "verifyButton": "驗證我的 Email",
@@ -1083,8 +1106,11 @@
     },
     "stats": {
       "completedAssignments": "完成作業",
+      "completedAssignmentsDesc": "累計完成的作業數",
       "averageScore": "平均分數",
+      "averageScoreDesc": "所有作業的平均成績",
       "practiceTime": "練習時間",
+      "practiceTimeDesc": "累計練習時長",
       "practiceDays": "練習天數",
       "scoreUnit": "分",
       "minutesUnit": "分",

@@ -699,6 +699,27 @@
       "viewResults": "View Results",
       "resubmit": "Resubmit"
     },
+    "scoreCategory": {
+      "speaking": "Speaking",
+      "listening": "Listening",
+      "writing": "Writing",
+      "vocabulary": "Vocabulary",
+      "reading": "Reading"
+    },
+    "practiceMode": {
+      "reading": "Sentence Reading",
+      "rearrangement": "Sentence Rearrangement",
+      "word_selection": "Word Selection",
+      "word_reading": "Word Reading",
+      "all": "All Types"
+    },
+    "sort": {
+      "label": "Sort",
+      "due_date_asc": "Deadline (nearest first)",
+      "due_date_desc": "Deadline (farthest first)",
+      "assigned_at_desc": "Assigned Date (newest first)",
+      "status": "Status Priority"
+    },
     "emptyStates": {
       "todo": {
         "title": "No pending assignments",
@@ -1075,7 +1096,9 @@
       "verified": "Verified",
       "unverified": "Pending",
       "profile": "Profile",
-      "setupTitle": "📧 Set Up Email Notifications",
+      "setupTitle": "Set Up Email Notifications",
+      "setupButton": "Set Up Email",
+      "reverifyButton": "Re-verify",
       "yourEmail": "Your Email Address",
       "emailPlaceholder": "Enter your email address",
       "verifyButton": "Verify My Email",
@@ -1084,8 +1107,11 @@
     },
     "stats": {
       "completedAssignments": "Completed",
+      "completedAssignmentsDesc": "Total assignments finished",
       "averageScore": "Avg Score",
+      "averageScoreDesc": "Average across all assignments",
       "practiceTime": "Practice Time",
+      "practiceTimeDesc": "Total practice duration",
       "practiceDays": "Practice Days",
       "scoreUnit": "pts",
       "minutesUnit": "min",

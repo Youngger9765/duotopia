@@ -8,8 +8,8 @@ from typing import Dict, Any, Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import text, case, func
 
 from database import get_db
 from models import (
@@ -47,49 +47,83 @@ router = APIRouter()
 
 @router.get("/assignments")
 async def get_student_assignments(
+    sort_by: str = "due_date_asc",
+    practice_mode: Optional[str] = None,
     current_student: Dict[str, Any] = Depends(get_current_student),
     db: Session = Depends(get_db),
 ):
     """取得學生作業列表"""
     student_id = current_student.get("sub")
 
-    # Get assignments
-    assignments = (
+    # Base query with joinedload to avoid N+1
+    query = (
         db.query(StudentAssignment)
+        .options(joinedload(StudentAssignment.assignment))
         .filter(StudentAssignment.student_id == int(student_id))
-        .order_by(
-            StudentAssignment.due_date.desc()
-            if StudentAssignment.due_date
-            else StudentAssignment.assigned_at.desc()
-        )
-        .all()
     )
 
+    # Filter by practice_mode (via parent Assignment)
+    if practice_mode:
+        query = query.join(Assignment, StudentAssignment.assignment_id == Assignment.id).filter(
+            Assignment.practice_mode == practice_mode
+        )
+
+    # Sorting
+    if sort_by == "due_date_desc":
+        query = query.order_by(StudentAssignment.due_date.desc().nullslast())
+    elif sort_by == "assigned_at_desc":
+        query = query.order_by(StudentAssignment.assigned_at.desc().nullslast())
+    elif sort_by == "status":
+        # Priority: overdue > in_progress > not_started > submitted > graded
+        status_order = case(
+            (StudentAssignment.status == AssignmentStatus.RETURNED, 0),
+            (StudentAssignment.status == AssignmentStatus.IN_PROGRESS, 1),
+            (StudentAssignment.status == AssignmentStatus.NOT_STARTED, 2),
+            (StudentAssignment.status == AssignmentStatus.SUBMITTED, 3),
+            (StudentAssignment.status == AssignmentStatus.GRADED, 4),
+            else_=5,
+        )
+        query = query.order_by(status_order, StudentAssignment.due_date.asc().nullslast())
+    else:
+        # Default: due_date_asc (nearest deadline first)
+        query = query.order_by(StudentAssignment.due_date.asc().nullslast())
+
+    assignments = query.all()
+
     result = []
-    for assignment in assignments:
+    for sa in assignments:
+        # Get fields from parent Assignment
+        parent = sa.assignment
+        score_category = parent.score_category if parent else None
+        p_mode = parent.practice_mode if parent else None
+        content_type = None
+        content_count = 0
+
+        if parent:
+            # Count content items via AssignmentContent
+            ac_count = (
+                db.query(func.count(ContentItem.id))
+                .join(Content, ContentItem.content_id == Content.id)
+                .join(AssignmentContent, AssignmentContent.content_id == Content.id)
+                .filter(AssignmentContent.assignment_id == parent.id)
+                .scalar()
+            )
+            content_count = ac_count or 0
+
         result.append(
             {
-                "id": assignment.id,
-                "title": assignment.title,
-                "status": (
-                    assignment.status.value if assignment.status else "not_started"
-                ),
-                "due_date": (
-                    assignment.due_date.isoformat() if assignment.due_date else None
-                ),
-                "assigned_at": (
-                    assignment.assigned_at.isoformat()
-                    if assignment.assigned_at
-                    else None
-                ),
-                "submitted_at": (
-                    assignment.submitted_at.isoformat()
-                    if assignment.submitted_at
-                    else None
-                ),
-                "classroom_id": assignment.classroom_id,
-                "score": assignment.score,
-                "feedback": assignment.feedback,
+                "id": sa.id,
+                "title": sa.title,
+                "status": sa.status.value if sa.status else "not_started",
+                "due_date": sa.due_date.isoformat() if sa.due_date else None,
+                "assigned_at": sa.assigned_at.isoformat() if sa.assigned_at else None,
+                "submitted_at": sa.submitted_at.isoformat() if sa.submitted_at else None,
+                "classroom_id": sa.classroom_id,
+                "score": sa.score,
+                "feedback": sa.feedback,
+                "score_category": score_category,
+                "practice_mode": p_mode,
+                "content_count": content_count,
             }
         )
 
