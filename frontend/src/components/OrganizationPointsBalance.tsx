@@ -55,8 +55,8 @@ export const OrganizationPointsBalance: React.FC<Props> = ({
     return null;
   }
 
-  const percentageUsed = (balance.used_points / balance.total_points) * 100;
-  const isLow = balance.remaining_points < balance.total_points * 0.2;
+  const percentageUsed = balance.total_points > 0 ? (balance.used_points / balance.total_points) * 100 : 0;
+  const isLow = balance.total_points > 0 && balance.remaining_points < balance.total_points * 0.2;
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
