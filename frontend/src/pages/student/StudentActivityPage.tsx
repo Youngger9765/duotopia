@@ -101,7 +101,7 @@ export default function StudentActivityPage() {
   const [practiceMode, setPracticeMode] = useState<string | null>(null);
   const [showAnswer, setShowAnswer] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [_isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
 
   // Cleanup toasts on unmount

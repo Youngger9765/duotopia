@@ -38,7 +38,6 @@ import {
   GripVertical,
   X,
   Globe,
-  School,
   Building2,
   Settings,
 } from "lucide-react";

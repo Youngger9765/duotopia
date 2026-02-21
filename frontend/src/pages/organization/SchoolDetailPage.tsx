@@ -13,7 +13,6 @@ import {
   Edit2,
   School as SchoolIcon,
   Users,
-  BookOpen,
   ArrowRight,
   GraduationCap,
   UserCheck,

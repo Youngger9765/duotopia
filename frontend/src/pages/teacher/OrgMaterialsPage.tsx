@@ -16,8 +16,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function OrgMaterialsPage() {
   const { t } = useTranslation();
-  const { selectedOrganization, mode } = useWorkspace();
-  const isOrgMode = mode === "organization";
+  const { selectedOrganization } = useWorkspace();
   const canManage =
     selectedOrganization?.role === "org_owner" ||
     selectedOrganization?.role === "org_admin";

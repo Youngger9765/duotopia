@@ -362,22 +362,6 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
         );
       } catch (error) {
         console.error("Failed to save demo timeout completion:", error);
-        toast.warning(t("rearrangement.messages.saveFailed"));
-      }
-    } else if (isDemoMode) {
-      // Demo 模式：呼叫 demo API
-      try {
-        await apiClient.post(
-          `/api/demo/assignments/${studentAssignmentId}/preview/rearrangement-complete`,
-          {
-            content_item_id: contentItemId,
-            timeout: true,
-            expected_score: actualScore,
-            error_count: errorCount,
-          },
-        );
-      } catch (error) {
-        console.error("Failed to save demo timeout completion:", error);
         // 不影響 UI，靜默失敗
       }
     }
@@ -514,21 +498,6 @@ const RearrangementActivity: React.FC<RearrangementActivityProps> = ({
         } catch (error) {
           console.error("Failed to save demo completion:", error);
           toast.warning(t("rearrangement.messages.saveFailed"));
-        }
-      } else if (isDemoMode) {
-        // Demo 模式：呼叫 demo API
-        try {
-          await apiClient.post(
-            `/api/demo/assignments/${studentAssignmentId}/preview/rearrangement-complete`,
-            {
-              content_item_id: currentQuestion.content_item_id,
-              expected_score: finalScore,
-              error_count: newErrorCount,
-            },
-          );
-        } catch (error) {
-          console.error("Failed to save demo completion:", error);
-          // 不影響 UI，靜默失敗
         }
       }
     } else if (isChallengeFailed) {
