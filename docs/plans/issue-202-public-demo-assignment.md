@@ -553,10 +553,15 @@ export default function DemoAssignmentPage() {
 ## Security Considerations
 
 1. **Rate Limiting**: 使用 slowapi，60 requests/minute per IP
-2. **No Sensitive Data**: Demo API 只返回作業內容，無學生資料
-3. **Demo Account Isolation**: 只允許存取 demo 帳號的作業
-4. **No Recording Storage**: Demo 模式不儲存語音錄音
-5. **CORS**: 確保 demo API 的 CORS 設定正確
+2. **Referer Validation**: Demo Azure Speech Token API 需要 referer 驗證
+   - 設定環境變數 `DEMO_ALLOWED_ORIGINS`（逗號分隔的允許來源）
+   - Production: `DEMO_ALLOWED_ORIGINS=https://duotopia.co,https://www.duotopia.net`
+   - Staging: `DEMO_ALLOWED_ORIGINS=https://staging.duotopia.com`
+   - Development: 預設允許 localhost
+3. **No Sensitive Data**: Demo API 只返回作業內容，無學生資料
+4. **Demo Account Isolation**: 只允許存取 demo 帳號的作業
+5. **No Recording Storage**: Demo 模式不儲存語音錄音
+6. **CORS**: 確保 demo API 的 CORS 設定正確
 
 ---
 

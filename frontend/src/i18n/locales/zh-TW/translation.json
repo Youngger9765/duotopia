@@ -81,7 +81,8 @@
       "tooManyErrors": "錯誤次數過多",
       "tryAgain": "點擊下方按鈕重新挑戰",
       "retryPenalty": "因已看過答案，重試後滿分為 60 分",
-      "allComplete": "全部完成！得 {{score}} 分"
+      "allComplete": "全部完成！得 {{score}} 分",
+      "saveFailed": "進度儲存失敗，完成作業時將再次嘗試"
     },
     "buttons": {
       "retry": "重新挑戰",
@@ -157,20 +158,27 @@
     "hero": {
       "badge": "AI 驅動的英語學習革命",
       "title": "Duotopia",
-      "subtitle": "英文聽說讀寫 AI 智能遊戲作業批改平台",
-      "description": "Duotopia 為 6-18 歲親師生打造個人化的智慧遊戲作業平台，讓每位學生都能自信開口說英文！",
+      "subtitle": "讓你的學生學完就聽得懂、看得懂、說得出",
+      "description": "2030年雙語教育你準備好了嗎?!",
       "freeTrial": "免費試用",
       "watchVideo": "觀看介紹影片",
       "trustedBy": "超過 {{count}}+ 教師信賴",
       "studentsUsing": "{{count}}+ 學生正在使用",
-      "tagline": "AI 英文學習智慧作業批改新選擇",
+      "tagline": "AI賦能英文智能輔助教學親師生平台",
       "brand": "Duotopia",
       "benefit1": "幫助 ESL 老師們通過 AI 備課以及批改作業解放教師時間；",
       "benefit2": "學生們透過各種遊戲化的資源活動有效練習，提升學習成果；",
       "benefit3": "親師通過數據分析建立信任與高效正向溝通。",
       "trustedTeachers": "超過 1,000+ ESL 老師信賴",
       "studentsImproved": "已提升 10,000,000+ 學生口說能力",
-      "freeTrialBtn": "免費體驗"
+      "freeTrialBtn": "免費體驗",
+      "preClass": "教學前",
+      "preClassDesc": "高速備課、",
+      "inClass": "教學中",
+      "inClassDesc": "即時練習、",
+      "postClass": "教學後",
+      "postClassDesc": "派發作業",
+      "eduPlan": "教育機構方案優惠中"
     },
     "stats": {
       "satisfaction": "學生滿意度",
@@ -206,6 +214,20 @@
       "easyToUse": {
         "title": "簡單易用",
         "description": "直覺的介面設計，教師 5 分鐘即可上手，學生無需額外訓練"
+      },
+      "carousel": {
+        "label": "功能特色輪播",
+        "prev": "上一張",
+        "next": "下一張",
+        "goToSlide": "切換到第{{number}}張",
+        "captions": {
+          "orgMaterial": "機構教材管理系統，僅供機構分校使用，教材智慧財產權有保障。",
+          "forgettingCurve": "艾賓浩斯遺忘曲線 x 「聽音辨義」單字選擇\n自動捕捉弱項單字進行智慧推播，讓學生在遊戲刷題中，將短期記憶轉化為長期記憶",
+          "aiGrading": "告別繁瑣的人工批閱，AI一鍵批改，讓老師將心力回歸於教學輔導。",
+          "speakingWriting": "口說、寫作造句雙模式訓練  (Coming Soon...)\n依照學生年齡、程度、作業訓練目標，給予及時反饋，有效模擬母語者學習模式。",
+          "anyMaterial": "不限教材皆可使用，一鍵貼上AI協作轉化，多國學生通用",
+          "moreFeatures": "更多功能，由您許願\n共同打造友善雙語教育環境，讓學生不只是英文考試機器"
+        }
       }
     },
     "howItWorks": {
@@ -300,6 +322,7 @@
       "product": "產品",
       "features": "功能介紹",
       "pricing": "價格方案",
+      "eduPlan": "機構方案",
       "support": "支援",
       "tutorial": "使用教學",
       "faq": "常見問題",
@@ -773,7 +796,8 @@
     },
     "errors": {
       "loadFailed": "無法載入題目，請稍後再試",
-      "submitFailed": "提交失敗，請稍後再試"
+      "submitFailed": "提交失敗，請稍後再試",
+      "submitRetrying": "提交失敗，正在重試（第 {{attempt}}/{{maxRetries}} 次）..."
     },
     "buttons": {
       "back": "返回",
@@ -1211,6 +1235,80 @@
       "taxId": "統編：60619397",
       "contactPrompt": "若對本條款有任何疑問，請透過以下方式聯絡我們：",
       "email": "電子郵件：contact@duotopia.co"
+    }
+  },
+  "privacyPolicy": {
+    "header": {
+      "title": "隱私權政策",
+      "lastUpdated": "最後更新日期：2026年2月14日"
+    },
+    "section1": {
+      "title": "1. 總則",
+      "item1": "1.1 語拓邦數位學習有限公司（以下稱「本公司」）重視您的隱私權，本隱私權政策說明我們如何蒐集、使用、保護及管理您的個人資料。",
+      "item2": "1.2 當您使用 Duotopia 平台（以下稱「本服務」）時，即表示您同意本隱私權政策之內容。"
+    },
+    "section2": {
+      "title": "2. 蒐集的個人資料類型",
+      "item1": "2.1 為提供本服務，我們可能蒐集以下類型的個人資料：",
+      "list": {
+        "item1": "基本資料：姓名、電子郵件地址、學校或機構名稱",
+        "item2": "帳號資料：登入憑證、角色類型（教師、學生、家長）",
+        "item3": "學習紀錄：作業成績、練習紀錄、學習進度",
+        "item4": "語音資料：AI 語音辨識所需之錄音內容",
+        "item5": "付款資訊：訂閱方案、交易紀錄（付款處理由第三方金流服務商 TapPay 處理，本公司不儲存信用卡號碼）"
+      }
+    },
+    "section3": {
+      "title": "3. 個人資料的使用目的",
+      "item1": "3.1 您的個人資料將用於以下目的：",
+      "list": {
+        "item1": "提供、維護及改善本服務功能",
+        "item2": "AI 語音辨識分析與學習成效評估",
+        "item3": "學習進度追蹤與個人化學習體驗",
+        "item4": "訂閱管理與客戶服務"
+      }
+    },
+    "section4": {
+      "title": "4. 教材內容與資料共享",
+      "item1": "4.1 教師創建的教材內容預設僅限本人檢視與使用。",
+      "item2": "4.2 於機構模組中，教材可依機構管理者設定與機構內部成員共享，但不會對外公開。",
+      "item3": "4.3 學生的學習紀錄與作業內容僅供相關教師及學生本人檢視。"
+    },
+    "section5": {
+      "title": "5. 第三方服務",
+      "item1": "5.1 本服務使用以下第三方服務處理資料：雲端基礎設施（Google Cloud Platform）、資料庫服務（Supabase）、金流處理（TapPay）。",
+      "item2": "5.2 上述第三方服務商均有各自的隱私政策，我們僅提供必要的資料以完成相關服務。"
+    },
+    "section6": {
+      "title": "6. 用戶權利",
+      "item1": "6.1 依據台灣個人資料保護法，您擁有以下權利：",
+      "list": {
+        "item1": "查閱您的個人資料",
+        "item2": "請求補充或更正您的個人資料",
+        "item3": "請求停止蒐集、處理或利用您的個人資料",
+        "item4": "請求刪除您的個人資料"
+      }
+    },
+    "section7": {
+      "title": "7. 兒少隱私保護",
+      "item1": "7.1 本服務可能供未滿 18 歲之未成年人使用。未成年用戶須經法定代理人（家長或監護人）同意後方可使用本服務。",
+      "item2": "7.2 法定代理人有權代未成年用戶行使查閱、更正、停止蒐集及刪除個人資料之權利。"
+    },
+    "section8": {
+      "title": "8. 資料安全與保護",
+      "item1": "8.1 本公司採用業界標準的加密技術與安全措施保護您的個人資料。",
+      "item2": "8.2 我們實施存取控制機制，確保僅授權人員可存取個人資料。",
+      "item3": "8.3 您的資料可能儲存於海外伺服器（Google Cloud Platform、Supabase），本公司確保該等服務商提供符合國際標準的資料保護。"
+    },
+    "section9": {
+      "title": "9. Cookie 與追蹤技術",
+      "item1": "9.1 本服務使用 Cookie 及類似技術以維持登入狀態、記錄使用偏好，並改善服務品質。",
+      "item2": "9.2 您可透過瀏覽器設定管理或拒絕 Cookie，但部分功能可能因此受到影響。"
+    },
+    "section10": {
+      "title": "10. 政策變更",
+      "item1": "10.1 本公司保留隨時修改本隱私權政策的權利，修改後將於本頁面公告。",
+      "item2": "10.2 繼續使用本服務即表示您同意修改後的隱私權政策。"
     }
   },
   "dialogs": {
@@ -3195,7 +3293,7 @@
       "template": "從公版複製",
       "classroom": "從其他班級複製",
       "custom": "自建課程",
-      "school": "學校教材",
+      "school": "機構教材",
       "personal": "個人教材"
     },
     "template": {
@@ -3269,15 +3367,15 @@
       "copyFailed": "複製失敗，請稍後再試"
     },
     "school": {
-      "searchPlaceholder": "搜尋學校教材...",
-      "selected": "已選擇 {{count}} / {{total}} 個學校教材",
+      "searchPlaceholder": "搜尋機構教材...",
+      "selected": "已選擇 {{count}} / {{total}} 個機構教材",
       "selectAll": "全選",
       "clear": "清除",
       "loading": "載入中...",
-      "empty": "尚未建立學校教材",
+      "empty": "尚未建立機構教材",
       "duplicate": "⚠️ 已有此課程，重複建立可能造成混淆",
       "nameLabel": "新課程名稱（選填，留空使用原名）",
-      "multipleNote": "已選擇 {{count}} 個學校教材，將使用原始名稱建立課程",
+      "multipleNote": "已選擇 {{count}} 個機構教材，將使用原始名稱建立課程",
       "confirmDuplicate": "以下課程已存在：{{names}}。確定要重複建立嗎？"
     }
   },
@@ -3687,6 +3785,7 @@
       "cancel": "取消",
       "addItem": "新增項目",
       "confirmPaste": "確認貼上",
+      "generating": "生成中...",
       "processing": "處理中...",
       "startRecording": "開始錄音",
       "stopRecording": "停止錄音",
@@ -3775,7 +3874,10 @@
       "itemsAddedAndSaved": "已新增 {{added}} 個項目並儲存（共 {{total}} 個）",
       "itemsAddedSaveToComplete": "已新增 {{added}} 個項目（共 {{total}} 個），請按「儲存」完成創建",
       "updateFailedButAudioGenerated": "更新失敗，但音檔已生成",
-      "items": "個項目"
+      "items": "個項目",
+      "batchLimitError": "一次最多翻譯 {{count}} 個例句，請分批處理",
+      "batchLimitTruncated": "已超過上限，僅前 {{count}} 個項目會被處理",
+      "batchLimitWarning": "超過 {{count}} 個項目上限，僅前 {{count}} 個會被處理"
     },
     "translationLanguages": {
       "chinese": "中文",

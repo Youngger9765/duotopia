@@ -273,7 +273,12 @@ export default function SchoolClassroomsPage() {
         onOpenChange={setShowAssignDialog}
         classroom={assigningClassroom}
         teachers={teachers}
-        onSuccess={fetchClassrooms}
+        organizationId={school?.organization_id || ""}
+        schoolId={schoolId || ""}
+        onSuccess={() => {
+          fetchClassrooms();
+          fetchTeachers();
+        }}
       />
 
       {/* Classroom Students Sidebar */}

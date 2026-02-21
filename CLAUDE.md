@@ -11,6 +11,17 @@
 | Frontend | Node.js (shared) |
 | Deploy | Vercel / GCP Cloud Run |
 
+## GCP Configuration
+
+| Field | Value |
+|-------|-------|
+| gcloud config | `duotopia` |
+| Account | `dev02@careercreator.tw` |
+| GCP Project | `groovy-iris-473015-h3` |
+| Region | `asia-east1` |
+
+> Hook auto-switches. If permission error → `gcloud config configurations activate duotopia`
+
 ## Environments
 
 | Environment | URL | Branch | Database |

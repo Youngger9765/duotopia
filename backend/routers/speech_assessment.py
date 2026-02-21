@@ -28,12 +28,40 @@ from models import (
     ContentItem,
     Assignment,
 )
+from models.classroom import Classroom
+from models.organization import ClassroomSchool
+from models.organization import Organization
+from models.organization import OrganizationPointsLog
+from models.subscription import PointUsageLog
 from services.quota_service import QuotaService
+from services.organization_points_service import OrganizationPointsService
 from services.bigquery_logger import get_bigquery_logger
 from sqlalchemy.orm import joinedload
+from sqlalchemy import cast, String
 
 # 設定 logger
 logger = logging.getLogger(__name__)
+
+
+def get_organization_id_from_classroom(classroom) -> Optional[str]:
+    """
+    從 classroom 透過 classroom_schools 關係取得 organization_id。
+    Classroom 模型沒有直接的 organization_id 欄位，
+    需要透過 classroom → classroom_schools → school → organization_id 路徑取得。
+
+    Returns:
+        organization_id (str) 或 None（如果 classroom 不屬於任何組織）
+    """
+    if not classroom or not classroom.classroom_schools:
+        return None
+
+    # 取得第一個有效的 classroom_school 連結
+    for cs in classroom.classroom_schools:
+        if cs.is_active and cs.school and cs.school.organization_id:
+            return str(cs.school.organization_id)
+
+    return None
+
 
 # 全局 Semaphore - 限制並發 Azure Speech API 呼叫
 # Azure S0 標準層限制：20 TPS（每秒事務數）
@@ -657,11 +685,16 @@ async def assess_pronunciation_endpoint(
 
     if assignment_id:
         print("✅ assignment_id exists, querying StudentAssignment by ID...")
-        # 🔥 優化：使用 joinedload 減少資料庫查詢次數（3次 → 1次）
+        # 🔥 優化：使用 joinedload 減少資料庫查詢次數
+        # 載入完整鏈：assignment → teacher, classroom → classroom_schools → school
         student_assignment = (
             db.query(StudentAssignment)
             .options(
-                joinedload(StudentAssignment.assignment).joinedload(Assignment.teacher)
+                joinedload(StudentAssignment.assignment).joinedload(Assignment.teacher),
+                joinedload(StudentAssignment.assignment)
+                .joinedload(Assignment.classroom)
+                .joinedload(Classroom.classroom_schools)
+                .joinedload(ClassroomSchool.school),
             )
             .filter(
                 StudentAssignment.id == assignment_id,
@@ -697,26 +730,53 @@ async def assess_pronunciation_endpoint(
                 f"❌ StudentAssignment not found for id={assignment_id}, student_id={current_student.id}"
             )
 
-    # 📊 配額檢查（僅記錄狀態，不阻擋學生學習）
+    # 📊 配額/點數檢查（僅記錄狀態，不阻擋學生學習）
     if teacher and assignment:
         # 計算錄音時長
         try:
             audio = AudioSegment.from_file(BytesIO(audio_data))
             duration_seconds = len(audio) / 1000.0  # 毫秒轉秒
+            required_points = OrganizationPointsService.convert_unit_to_points(
+                duration_seconds, "秒"
+            )
 
-            # ⚠️ 業務需求：配額超限不應阻擋學生學習，只記錄使用量
-            if not QuotaService.check_quota(teacher, int(duration_seconds)):
-                quota_info = QuotaService.get_quota_info(teacher)
-                logger.warning(
-                    f"⚠️ Teacher {teacher.id} quota exceeded, but allowing student to continue learning. "
-                    f"Required: {int(duration_seconds)}s, Available: {quota_info['quota_remaining']}s"
-                )
+            # 根據班級類型決定檢查對象
+            classroom = assignment.classroom
+            logger.info(
+                f"🔍 DEBUG: classroom={classroom}, classroom_id={assignment.classroom_id}"
+            )
+            if classroom:
+                logger.info(f"🔍 DEBUG: classroom_schools={classroom.classroom_schools}")
+            org_id = get_organization_id_from_classroom(classroom)
+            logger.info(f"🔍 DEBUG: org_id={org_id}")
+            if org_id:
+                # 🏢 機構班級 → 檢查機構點數
+                org = db.query(Organization).filter(Organization.id == org_id).first()
+                if not OrganizationPointsService.check_points(org, required_points):
+                    points_info = OrganizationPointsService.get_points_info(org)
+                    logger.warning(
+                        f"⚠️ Org {org_id} points exceeded, but allowing student to continue. "
+                        f"Required: {required_points}pts, Remaining: {points_info['remaining']}pts"
+                    )
+                else:
+                    logger.info(
+                        f"✅ Org points check passed: {required_points}pts for org {org_id}"
+                    )
             else:
-                logger.info(
-                    f"✅ Quota check passed: {duration_seconds:.1f}s for teacher {teacher.id}"
-                )
+                # 👤 個人老師班級 → 檢查老師配額
+                # ⚠️ 業務需求：配額超限不應阻擋學生學習，只記錄使用量
+                if not QuotaService.check_quota(teacher, int(duration_seconds)):
+                    quota_info = QuotaService.get_quota_info(teacher)
+                    logger.warning(
+                        f"⚠️ Teacher {teacher.id} quota exceeded, but allowing student to continue learning. "
+                        f"Required: {int(duration_seconds)}s, Available: {quota_info['quota_remaining']}s"
+                    )
+                else:
+                    logger.info(
+                        f"✅ Quota check passed: {duration_seconds:.1f}s for teacher {teacher.id}"
+                    )
         except Exception as e:
-            logger.error(f"❌ Quota check failed: {e}")
+            logger.error(f"❌ Quota/Points check failed: {e}")
             # 計算時長失敗，允許繼續評分
 
     # 進行發音評估（Azure Speech SDK）
@@ -909,53 +969,89 @@ async def assess_pronunciation_endpoint(
             # 重新拋出原始 HTTPException
             raise
 
-    # 📊 評分成功後扣除配額
+    # 📊 評分成功後扣除配額/點數
     if teacher and assignment:
         try:
             audio = AudioSegment.from_file(BytesIO(audio_data))
             duration_seconds = len(audio) / 1000.0
 
-            # 扣除老師的配額並記錄
-            QuotaService.deduct_quota(
-                db=db,
-                teacher=teacher,
-                student_id=current_student.id,
-                assignment_id=assignment.id,
-                feature_type="speech_assessment",
-                unit_count=duration_seconds,
-                unit_type="秒",
-                feature_detail={
-                    "reference_text": reference_text,
-                    "accuracy_score": assessment_result["accuracy_score"],
-                    "audio_size_bytes": len(audio_data),
-                },
-            )
+            # 根據班級類型決定扣點對象
+            classroom = assignment.classroom
             logger.info(
-                f"✅ Deducted {duration_seconds:.1f}s quota from teacher {teacher.id} "
-                f"for student {current_student.id} assignment {assignment.id}"
+                f"🔍 DEDUCT DEBUG: classroom={classroom}, classroom_id={assignment.classroom_id}"
             )
+            if classroom:
+                logger.info(
+                    f"🔍 DEDUCT DEBUG: classroom_schools={classroom.classroom_schools}"
+                )
+            org_id = get_organization_id_from_classroom(classroom)
+            logger.info(f"🔍 DEDUCT DEBUG: org_id={org_id}")
+            if org_id:
+                # 🏢 機構班級 → 扣機構點數
+                OrganizationPointsService.deduct_points(
+                    db=db,
+                    organization_id=org_id,
+                    teacher_id=teacher.id,
+                    student_id=current_student.id,
+                    assignment_id=assignment.id,
+                    feature_type="speech_assessment",
+                    unit_count=duration_seconds,
+                    unit_type="秒",
+                    feature_detail={
+                        "reference_text": reference_text,
+                        "accuracy_score": assessment_result["accuracy_score"],
+                        "audio_size_bytes": len(audio_data),
+                    },
+                )
+                logger.info(
+                    f"✅ Deducted {duration_seconds:.1f}s org points for org {org_id} "
+                    f"teacher {teacher.id} student {current_student.id} assignment {assignment.id}"
+                )
+            else:
+                # 👤 個人老師班級 → 扣老師配額
+                QuotaService.deduct_quota(
+                    db=db,
+                    teacher=teacher,
+                    student_id=current_student.id,
+                    assignment_id=assignment.id,
+                    feature_type="speech_assessment",
+                    unit_count=duration_seconds,
+                    unit_type="秒",
+                    feature_detail={
+                        "reference_text": reference_text,
+                        "accuracy_score": assessment_result["accuracy_score"],
+                        "audio_size_bytes": len(audio_data),
+                    },
+                )
+                logger.info(
+                    f"✅ Deducted {duration_seconds:.1f}s quota from teacher {teacher.id} "
+                    f"for student {current_student.id} assignment {assignment.id}"
+                )
         except HTTPException as e:
-            # 配額扣除失敗（可能是硬限制超額），向學生顯示友善訊息
+            # 配額/點數扣除失敗（可能是硬限制超額），向學生顯示友善訊息
             if e.status_code == 402 and isinstance(e.detail, dict):
                 error_type = e.detail.get("error")
                 if error_type == "QUOTA_HARD_LIMIT_EXCEEDED":
                     # 硬限制超額，學生看到友善訊息
+                    is_org = org_id is not None
                     logger.error(
-                        f"❌ Quota hard limit exceeded for teacher {teacher.id}, "
+                        f"❌ {'Org points' if is_org else 'Quota'} hard limit exceeded, "
                         f"blocking student {current_student.id}"
                     )
                     raise HTTPException(
                         status_code=402,
                         detail={
                             "error": "QUOTA_HARD_LIMIT_EXCEEDED",
-                            "message": "老師的配額已用完（含緩衝額度），請聯繫老師續費後再繼續使用",
-                            "teacher_quota_info": e.detail,
+                            "message": "點數已用完（含緩衝額度），請聯繫管理員續費後再繼續使用"
+                            if is_org
+                            else "老師的配額已用完（含緩衝額度），請聯繫老師續費後再繼續使用",
+                            "quota_info": e.detail,
                         },
                     )
             # 其他 HTTPException 直接拋出
             raise
         except Exception as e:
-            logger.error(f"❌ Quota deduction failed: {e}")
+            logger.error(f"❌ Quota/Points deduction failed: {e}")
             # 其他錯誤只記錄，不影響評分結果
 
     # 儲存結果到資料庫
@@ -1262,6 +1358,7 @@ async def upload_pronunciation_analysis(
     latency_ms: Optional[int] = Form(None),
     progress_id: Optional[int] = Form(None),  # 👈 改为 Optional（允许前端不传）
     upload_status: str = Form("success"),  # 🎯 Issue #118: 上傳狀態 (success/failed)
+    analysis_id: Optional[str] = Form(None),  # 🎯 Issue #208: 扣點冪等性 key
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
@@ -1303,6 +1400,38 @@ async def upload_pronunciation_analysis(
     }
     """
     try:
+        # 🎯 Issue #208: 冪等性檢查 - 防止網路重試重複扣點
+        if analysis_id:
+            # 查詢是否已經處理過此 analysis_id
+            existing_org_log = (
+                db.query(OrganizationPointsLog)
+                .filter(
+                    OrganizationPointsLog.description.contains(
+                        f"analysis_id={analysis_id}"
+                    )
+                )
+                .first()
+            )
+            # PointUsageLog 使用 feature_detail (JSON) 而非 description
+            existing_quota_log = (
+                db.query(PointUsageLog)
+                .filter(
+                    cast(PointUsageLog.feature_detail["analysis_id"], String)
+                    == analysis_id
+                )
+                .first()
+            )
+
+            if existing_org_log or existing_quota_log:
+                logger.info(
+                    f"⚠️ Analysis {analysis_id} already processed, skip deduction"
+                )
+                return {
+                    "status": "success",
+                    "note": "Already processed (network retry detected)",
+                    "progress_id": progress_id,
+                }
+
         # 1. 验证和解析 analysis JSON
         try:
             analysis = json.loads(analysis_json)
@@ -1341,6 +1470,136 @@ async def upload_pronunciation_analysis(
                 )
         elif user_type not in ["student", "teacher"]:
             raise HTTPException(status_code=403, detail="Invalid user type")
+
+        # 🎯 Issue #208: 扣除配額/點數（在上傳音檔之前）
+        if progress and analysis_id:
+            try:
+                # 獲取完整的 assignment 資訊（包含 teacher, classroom）
+                student_assignment = (
+                    db.query(StudentAssignment)
+                    .options(
+                        joinedload(StudentAssignment.assignment).joinedload(
+                            Assignment.teacher
+                        ),
+                        joinedload(StudentAssignment.assignment)
+                        .joinedload(Assignment.classroom)
+                        .joinedload(Classroom.classroom_schools)
+                        .joinedload(ClassroomSchool.school),
+                    )
+                    .filter(StudentAssignment.id == progress.student_assignment_id)
+                    .first()
+                )
+
+                if student_assignment:
+                    assignment = student_assignment.assignment
+                    teacher = assignment.teacher
+                    classroom = assignment.classroom
+
+                    # 計算音檔時長（從前端 analysis 中提取，或從實際音檔計算）
+                    audio_data = await audio_file.read()
+                    await audio_file.seek(0)  # Reset file pointer for later upload
+
+                    try:
+                        from pydub import AudioSegment
+                        from io import BytesIO
+
+                        audio = AudioSegment.from_file(BytesIO(audio_data))
+                        duration_seconds = len(audio) / 1000.0
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to calculate audio duration: {e}, using default 30s"
+                        )
+                        duration_seconds = 30.0
+
+                    required_points = OrganizationPointsService.convert_unit_to_points(
+                        duration_seconds, "秒"
+                    )
+
+                    # 根據班級類型決定扣點對象
+                    org_id = get_organization_id_from_classroom(classroom)
+
+                    if org_id:
+                        # 🏢 機構班級 → 扣機構點數
+                        org = (
+                            db.query(Organization)
+                            .filter(Organization.id == org_id)
+                            .first()
+                        )
+
+                        # 事前檢查（僅 warning，不阻擋）
+                        if not OrganizationPointsService.check_points(
+                            org, required_points
+                        ):
+                            points_info = OrganizationPointsService.get_points_info(org)
+                            logger.warning(
+                                f"⚠️ Org {org_id} points low before upload-analysis: "
+                                f"Required: {required_points}pts, Remaining: {points_info['remaining']}pts"
+                            )
+
+                        # 扣點（可能拋出 402 HTTPException）
+                        OrganizationPointsService.deduct_points(
+                            db=db,
+                            organization_id=org_id,
+                            teacher_id=teacher.id if teacher else None,
+                            student_id=user_id if user_type == "student" else None,
+                            assignment_id=assignment.id,
+                            feature_type="speech_assessment",
+                            unit_count=duration_seconds,
+                            unit_type="秒",
+                            feature_detail={
+                                "source": "frontend_direct",
+                                "analysis_id": analysis_id,
+                                "audio_size_bytes": len(audio_data),
+                            },
+                        )
+                        logger.info(
+                            f"✅ Deducted {duration_seconds:.1f}s org points for analysis {analysis_id}"
+                        )
+
+                    else:
+                        # 👤 個人老師班級 → 扣老師配額
+                        if teacher:
+                            if not QuotaService.check_quota(
+                                teacher, int(duration_seconds)
+                            ):
+                                quota_info = QuotaService.get_quota_info(teacher)
+                                logger.warning(
+                                    f"⚠️ Teacher {teacher.id} quota low before upload-analysis: "
+                                    f"Required: {int(duration_seconds)}s, "
+                                    f"Available: {quota_info['quota_remaining']}s"
+                                )
+
+                            QuotaService.deduct_quota(
+                                db=db,
+                                teacher=teacher,
+                                student_id=user_id if user_type == "student" else None,
+                                assignment_id=assignment.id,
+                                feature_type="speech_assessment",
+                                unit_count=duration_seconds,
+                                unit_type="秒",
+                                feature_detail={
+                                    "source": "frontend_direct",
+                                    "analysis_id": analysis_id,
+                                    "audio_size_bytes": len(audio_data),
+                                },
+                            )
+                            logger.info(
+                                f"✅ Deducted {duration_seconds:.1f}s quota for analysis {analysis_id}"
+                            )
+
+            except HTTPException as e:
+                # 扣點失敗（硬限制超額），回滾並返回錯誤
+                if e.status_code == 402:
+                    db.rollback()
+                    logger.error(
+                        f"❌ Quota/Points hard limit exceeded in upload-analysis"
+                    )
+                    raise
+                # 其他 HTTPException 直接拋出
+                raise
+            except Exception as e:
+                logger.error(f"❌ Quota/Points deduction failed in upload-analysis: {e}")
+                # 扣點失敗不影響上傳（記錄但繼續）
 
         # 3. 上传音档到 GCS（🎯 Issue #118: 若 upload_status="failed" 則跳過上傳）
         audio_url = None

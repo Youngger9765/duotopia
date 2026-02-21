@@ -11,6 +11,7 @@ import { TeacherVerifyEmail } from "./pages/TeacherVerifyEmail";
 import { TeacherEmailVerification } from "./pages/TeacherEmailVerification";
 import TeacherForgotPassword from "./pages/TeacherForgotPassword";
 import TeacherResetPassword from "./pages/TeacherResetPassword";
+import TeacherSetupPassword from "./pages/TeacherSetupPassword";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import TeacherClassrooms from "./pages/teacher/TeacherClassrooms";
 import TeacherStudents from "./pages/teacher/TeacherStudents";
@@ -19,7 +20,7 @@ import TeacherAssignmentDetailPage from "./pages/teacher/TeacherAssignmentDetail
 import TeacherAssignmentPreviewPage from "./pages/teacher/TeacherAssignmentPreviewPage";
 import GradingPage from "./pages/teacher/GradingPage";
 import TeacherTemplatePrograms from "./pages/teacher/TeacherTemplatePrograms";
-import SchoolMaterialsPage from "./pages/teacher/SchoolMaterialsPage";
+import OrgMaterialsPage from "./pages/teacher/OrgMaterialsPage";
 import ResourceMaterialsPage from "./pages/teacher/ResourceMaterialsPage";
 import TeacherSubscription from "./pages/teacher/TeacherSubscription";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
@@ -38,6 +39,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import CreateOrganization from "./pages/admin/CreateOrganization";
 import DebugPage from "./pages/DebugPage";
 import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import PricingPage from "./pages/PricingPage";
 import TestSubscription from "./pages/TestSubscription";
 import DemoAssignmentPage from "./pages/DemoAssignmentPage";
@@ -85,6 +87,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/dashboard" element={<RoleBasedRedirect />} />
         <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/pricing" element={<PricingPage />} />
 
         {/* Demo Route - Public, no authentication required */}
@@ -103,6 +106,10 @@ function App() {
         <Route
           path="/teacher/reset-password"
           element={<TeacherResetPassword />}
+        />
+        <Route
+          path="/teacher/setup-password"
+          element={<TeacherSetupPassword />}
         />
         <Route
           path="/teacher/verify-email"
@@ -202,11 +209,11 @@ function App() {
           }
         />
         <Route
-          path="/teacher/school-materials"
+          path="/teacher/org-materials"
           element={
             <ProtectedRoute>
               <TeacherLayout>
-                <SchoolMaterialsPage />
+                <OrgMaterialsPage />
               </TeacherLayout>
             </ProtectedRoute>
           }

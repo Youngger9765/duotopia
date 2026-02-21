@@ -1,0 +1,63 @@
+// output-training-data.dbml
+
+// 表達訓練（output-training）資料模型
+
+Table Teacher {
+  id int [pk, increment]
+  name string
+  // ...其他屬性
+}
+
+Table Student {
+  id int [pk, increment]
+  name string
+  // ...其他屬性
+}
+
+Table OutputTrainingTopic {
+  id int [pk, increment]
+  teacher_id int [ref: > Teacher.id]
+  name string
+  description string
+  created_at datetime
+}
+
+Table OutputTrainingSentencePattern {
+  id int [pk, increment]
+  topic_id int [ref: > OutputTrainingTopic.id]
+  pattern string
+  ai_generated_example string
+  standard_answer string
+  order int
+}
+
+Table OutputTrainingAssignment {
+  id int [pk, increment]
+  topic_id int [ref: > OutputTrainingTopic.id]
+  type string // 'sentence' or 'dialogue'
+  assigned_by int [ref: > Teacher.id]
+  assigned_to_class string // 或 class_id, 視系統設計
+  assigned_to_student int // 若為個別指派
+  due_date datetime
+  created_at datetime
+}
+
+Table OutputTrainingSubmission {
+  id int [pk, increment]
+  assignment_id int [ref: > OutputTrainingAssignment.id]
+  student_id int [ref: > Student.id]
+  mode string // 'speaking' or 'writing'
+  content string [note: "文字紀錄（若為口說：AI轉譯文字；若為寫作：學生輸入文字），保存所有訂正版本"]
+  submitted_at datetime
+  status string // 'pending', 'corrected', 'completed'
+}
+
+Table OutputTrainingFeedback {
+  id int [pk, increment]
+  submission_id int [ref: > OutputTrainingSubmission.id]
+  ai_feedback string [note: "AI 對學生作答的錯誤回饋（保存所有訂正版本）"]
+  correction_suggestion string [note: "修正建議（保存所有訂正版本）"]
+  corrected_content string [note: "學生訂正後的文字內容"]
+  feedback_at datetime
+  score float
+}

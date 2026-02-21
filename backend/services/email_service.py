@@ -494,6 +494,172 @@ class EmailService:
         # 重新發送
         return self.send_teacher_verification_email(db, teacher)
 
+    # ========== 密碼設定功能（新帳號） ==========
+
+    def send_password_setup_email(
+        self, db: Session, teacher: Teacher, organization_name: str
+    ) -> bool:
+        """發送密碼設定郵件（給機構邀請的新教師）
+
+        Args:
+            db: 資料庫 session
+            teacher: 教師物件
+            organization_name: 邀請的機構名稱
+
+        Returns:
+            是否成功發送
+        """
+        try:
+            # 生成密碼設定 token（重用 password_reset 欄位）
+            setup_token = self.generate_verification_token()
+
+            # 更新教師的設定資訊
+            teacher.password_reset_token = setup_token
+            teacher.password_reset_sent_at = datetime.utcnow()
+            teacher.password_reset_expires_at = datetime.utcnow() + timedelta(
+                hours=48
+            )  # 48小時後過期（新帳號給較長時間）
+            db.commit()
+
+            # 構建密碼設定連結
+            setup_url = (
+                f"{self.frontend_url}/teacher/setup-password?token={setup_token}"
+            )
+
+            # 構建 HTML 內容
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                    .content {{ background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; }}
+                    .button {{ display: inline-block; background: #667eea; color: white;
+                        padding: 14px 32px; text-decoration: none; border-radius: 8px;
+                        font-weight: bold; font-size: 16px; }}
+                    .info-box {{ background: #e0e7ff; padding: 20px; border-radius: 8px; margin: 20px 0;
+                                 border-left: 4px solid #667eea; }}
+                    .footer {{ text-align: center; color: #6b7280; padding: 20px; font-size: 12px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🎉 歡迎加入 {organization_name}！</h1>
+                    </div>
+                    <div class="content">
+                        <h2>您好，{teacher.name}！</h2>
+
+                        <p><strong>{organization_name}</strong> 的管理員已將您加入 Duotopia 英語學習平台。</p>
+
+                        <div class="info-box">
+                            <p style="margin: 0;"><strong>📧 您的帳號：</strong> {teacher.email}</p>
+                        </div>
+
+                        <p>為了開始使用，請點擊下方按鈕設定您的密碼：</p>
+
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{setup_url}" class="button" style="color: white;">設定密碼並開始使用</a>
+                        </div>
+
+                        <div style="background-color: #f0fdf4; border-left: 4px solid #10b981;
+                                    padding: 15px; margin: 20px 0;">
+                            <p style="margin: 0;"><strong>✨ 設定密碼後，您將可以：</strong></p>
+                            <ul style="margin: 10px 0;">
+                                <li>✅ 登入 Duotopia 教學平台</li>
+                                <li>✅ 管理班級和學生</li>
+                                <li>✅ 指派和批改作業</li>
+                                <li>✅ 追蹤學生學習進度</li>
+                            </ul>
+                        </div>
+
+                        <p style="color: #666; font-size: 14px;">
+                            如果按鈕無法點擊，請複製以下連結到瀏覽器：<br>
+                            <code style="background: #e5e7eb; padding: 4px 8px;
+                                         border-radius: 4px; font-size: 12px; word-break: break-all;">
+                                {setup_url}
+                            </code>
+                        </p>
+
+                        <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b;
+                                    padding: 15px; margin: 20px 0;">
+                            <p style="margin: 0;"><strong>⏰ 注意事項：</strong></p>
+                            <ul style="margin: 10px 0;">
+                                <li>此連結將在 48 小時後失效</li>
+                                <li>如有任何問題，請聯繫 {organization_name} 的管理員</li>
+                            </ul>
+                        </div>
+
+                        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+                        <p style="color: #999; font-size: 12px; text-align: center;">
+                            此為系統自動發送的郵件，請勿回覆<br>
+                            © 2025 Duotopia - AI 驅動的英語學習平台
+                        </p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+
+            # 純文字版本
+            text_content = f"""
+            歡迎加入 {organization_name}！
+
+            您好，{teacher.name}！
+
+            {organization_name} 的管理員已將您加入 Duotopia 英語學習平台。
+
+            您的帳號：{teacher.email}
+
+            請使用以下連結設定您的密碼：
+            {setup_url}
+
+            設定密碼後，您將可以登入並開始使用 Duotopia 的所有功能。
+
+            此連結將在 48 小時後失效。
+
+            Duotopia 團隊
+            """
+
+            # 創建 email 訊息
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = f"[Duotopia] 歡迎加入 {organization_name} - 請設定您的密碼"
+            msg["From"] = f"{self.from_name} <{self.from_email}>"
+            msg["To"] = teacher.email
+
+            # 添加內容
+            msg.attach(MIMEText(text_content, "plain", "utf-8"))
+            msg.attach(MIMEText(html_content, "html", "utf-8"))
+
+            # 如果 SMTP 未設定，只記錄日誌（開發模式）
+            if not self.smtp_user or not self.smtp_password:
+                logger.info(f"[開發模式] 密碼設定連結: {setup_url}")
+                print(f"\n📧 [開發模式] 密碼設定 Email 已發送到: {teacher.email}")
+                print(f"👤 教師: {teacher.name}")
+                print(f"🏢 機構: {organization_name}")
+                print(f"🔗 密碼設定連結: {setup_url}\n")
+                return True
+
+            # 發送 email
+            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.smtp_user, self.smtp_password)
+                server.send_message(msg)
+
+            logger.info(f"密碼設定郵件已發送到: {teacher.email} (機構: {organization_name})")
+            return True
+
+        except Exception as e:
+            logger.error(
+                f"發送密碼設定郵件失敗 ({teacher.email}, 機構: {organization_name}): {str(e)}"
+            )
+            return False
+
     # ========== 密碼重設功能 ==========
 
     def send_password_reset_email(self, db: Session, teacher: Teacher) -> bool:

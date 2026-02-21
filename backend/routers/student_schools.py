@@ -368,6 +368,161 @@ async def create_school_student(
 
 
 @router.post(
+    "/api/schools/{school_id}/students/batch-import",
+    status_code=status.HTTP_200_OK,
+    response_model=dict,
+)
+async def batch_import_students(
+    school_id: uuid.UUID,
+    import_data: BatchStudentImport,
+    teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """
+    Batch import students to school.
+
+    Permissions: school_admin, org_admin, org_owner
+    """
+    # Check permission
+    if not check_school_student_permission(teacher.id, school_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
+        )
+
+    # Verify school exists
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="School not found"
+        )
+
+    created_count = 0
+    updated_count = 0
+    skipped_count = 0
+    errors = []
+
+    for idx, student_item in enumerate(import_data.students):
+        try:
+            # Parse birthdate
+            try:
+                birthdate = date.fromisoformat(student_item.birthdate)
+            except ValueError:
+                errors.append(f"Row {idx + 1}: Invalid birthdate format")
+                continue
+
+            default_password = birthdate.strftime("%Y%m%d")
+
+            # Check for duplicates based on duplicate_action
+            existing = None
+            if student_item.student_number:
+                existing = (
+                    db.query(Student)
+                    .join(StudentSchool, Student.id == StudentSchool.student_id)
+                    .filter(
+                        StudentSchool.school_id == school_id,
+                        StudentSchool.is_active.is_(True),
+                        Student.student_number == student_item.student_number,
+                    )
+                    .first()
+                )
+
+            if existing:
+                if import_data.duplicate_action == "skip":
+                    skipped_count += 1
+                    continue
+                elif import_data.duplicate_action == "update":
+                    # Update existing student
+                    existing.name = student_item.name
+                    if student_item.email:
+                        existing.email = student_item.email
+                    existing.birthdate = birthdate
+                    db.commit()
+                    updated_count += 1
+
+                    # Add to classroom if specified
+                    if student_item.classroom_id:
+                        if check_classroom_in_school(
+                            student_item.classroom_id, school_id, db
+                        ):
+                            enrollment = (
+                                db.query(ClassroomStudent)
+                                .filter(
+                                    ClassroomStudent.student_id == existing.id,
+                                    ClassroomStudent.classroom_id
+                                    == student_item.classroom_id,
+                                )
+                                .first()
+                            )
+                            if not enrollment:
+                                enrollment = ClassroomStudent(
+                                    student_id=existing.id,
+                                    classroom_id=student_item.classroom_id,
+                                    is_active=True,
+                                )
+                                db.add(enrollment)
+                                db.commit()
+                    continue
+                elif import_data.duplicate_action == "add_suffix":
+                    # Add suffix to student_number
+                    suffix = 1
+                    while True:
+                        new_number = f"{student_item.student_number}_{suffix}"
+                        check = (
+                            db.query(Student)
+                            .filter(Student.student_number == new_number)
+                            .first()
+                        )
+                        if not check:
+                            student_item.student_number = new_number
+                            break
+                        suffix += 1
+
+            # Create new student
+            student = Student(
+                name=student_item.name,
+                email=student_item.email,
+                student_number=student_item.student_number,
+                birthdate=birthdate,
+                password_hash=get_password_hash(default_password),
+                password_changed=False,
+                is_active=True,
+            )
+            db.add(student)
+            db.flush()
+
+            # Create StudentSchool relationship
+            student_school = StudentSchool(
+                student_id=student.id, school_id=school_id, is_active=True
+            )
+            db.add(student_school)
+
+            # Add to classroom if specified
+            if student_item.classroom_id:
+                if check_classroom_in_school(student_item.classroom_id, school_id, db):
+                    enrollment = ClassroomStudent(
+                        student_id=student.id,
+                        classroom_id=student_item.classroom_id,
+                        is_active=True,
+                    )
+                    db.add(enrollment)
+
+            db.commit()
+            created_count += 1
+
+        except Exception as e:
+            db.rollback()
+            errors.append(f"Row {idx + 1}: {str(e)}")
+
+    return {
+        "message": "Batch import completed",
+        "created": created_count,
+        "updated": updated_count,
+        "skipped": skipped_count,
+        "errors": errors if errors else None,
+    }
+
+
+@router.post(
     "/api/schools/{school_id}/students/{student_id}",
     status_code=status.HTTP_200_OK,
     response_model=dict,
@@ -581,161 +736,6 @@ async def batch_add_students_to_classroom(
         "message": f"Successfully added {added_count} students to classroom",
         "added_count": added_count,
         "total_requested": len(request.student_ids),
-    }
-
-
-@router.post(
-    "/api/schools/{school_id}/students/batch-import",
-    status_code=status.HTTP_200_OK,
-    response_model=dict,
-)
-async def batch_import_students(
-    school_id: uuid.UUID,
-    import_data: BatchStudentImport,
-    teacher: Teacher = Depends(get_current_teacher),
-    db: Session = Depends(get_db),
-):
-    """
-    Batch import students to school.
-
-    Permissions: school_admin, org_admin, org_owner
-    """
-    # Check permission
-    if not check_school_student_permission(teacher.id, school_id, db):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
-        )
-
-    # Verify school exists
-    school = db.query(School).filter(School.id == school_id).first()
-    if not school:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="School not found"
-        )
-
-    created_count = 0
-    updated_count = 0
-    skipped_count = 0
-    errors = []
-
-    for idx, student_item in enumerate(import_data.students):
-        try:
-            # Parse birthdate
-            try:
-                birthdate = date.fromisoformat(student_item.birthdate)
-            except ValueError:
-                errors.append(f"Row {idx + 1}: Invalid birthdate format")
-                continue
-
-            default_password = birthdate.strftime("%Y%m%d")
-
-            # Check for duplicates based on duplicate_action
-            existing = None
-            if student_item.student_number:
-                existing = (
-                    db.query(Student)
-                    .join(StudentSchool, Student.id == StudentSchool.student_id)
-                    .filter(
-                        StudentSchool.school_id == school_id,
-                        StudentSchool.is_active.is_(True),
-                        Student.student_number == student_item.student_number,
-                    )
-                    .first()
-                )
-
-            if existing:
-                if import_data.duplicate_action == "skip":
-                    skipped_count += 1
-                    continue
-                elif import_data.duplicate_action == "update":
-                    # Update existing student
-                    existing.name = student_item.name
-                    if student_item.email:
-                        existing.email = student_item.email
-                    existing.birthdate = birthdate
-                    db.commit()
-                    updated_count += 1
-
-                    # Add to classroom if specified
-                    if student_item.classroom_id:
-                        if check_classroom_in_school(
-                            student_item.classroom_id, school_id, db
-                        ):
-                            enrollment = (
-                                db.query(ClassroomStudent)
-                                .filter(
-                                    ClassroomStudent.student_id == existing.id,
-                                    ClassroomStudent.classroom_id
-                                    == student_item.classroom_id,
-                                )
-                                .first()
-                            )
-                            if not enrollment:
-                                enrollment = ClassroomStudent(
-                                    student_id=existing.id,
-                                    classroom_id=student_item.classroom_id,
-                                    is_active=True,
-                                )
-                                db.add(enrollment)
-                                db.commit()
-                    continue
-                elif import_data.duplicate_action == "add_suffix":
-                    # Add suffix to student_number
-                    suffix = 1
-                    while True:
-                        new_number = f"{student_item.student_number}_{suffix}"
-                        check = (
-                            db.query(Student)
-                            .filter(Student.student_number == new_number)
-                            .first()
-                        )
-                        if not check:
-                            student_item.student_number = new_number
-                            break
-                        suffix += 1
-
-            # Create new student
-            student = Student(
-                name=student_item.name,
-                email=student_item.email,
-                student_number=student_item.student_number,
-                birthdate=birthdate,
-                password_hash=get_password_hash(default_password),
-                password_changed=False,
-                is_active=True,
-            )
-            db.add(student)
-            db.flush()
-
-            # Create StudentSchool relationship
-            student_school = StudentSchool(
-                student_id=student.id, school_id=school_id, is_active=True
-            )
-            db.add(student_school)
-
-            # Add to classroom if specified
-            if student_item.classroom_id:
-                if check_classroom_in_school(student_item.classroom_id, school_id, db):
-                    enrollment = ClassroomStudent(
-                        student_id=student.id,
-                        classroom_id=student_item.classroom_id,
-                        is_active=True,
-                    )
-                    db.add(enrollment)
-
-            db.commit()
-            created_count += 1
-
-        except Exception as e:
-            db.rollback()
-            errors.append(f"Row {idx + 1}: {str(e)}")
-
-    return {
-        "message": "Batch import completed",
-        "created": created_count,
-        "updated": updated_count,
-        "skipped": skipped_count,
-        "errors": errors if errors else None,
     }
 
 

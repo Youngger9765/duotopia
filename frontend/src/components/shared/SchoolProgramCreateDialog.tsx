@@ -134,7 +134,7 @@ export function SchoolProgramCreateDialog({
           targetId: schoolId,
         });
       }
-      toast.success("已複製至學校教材");
+      toast.success("已複製至機構教材");
       onOpenChange(false);
       onSuccess();
     } catch (error) {
@@ -174,7 +174,7 @@ export function SchoolProgramCreateDialog({
         throw new Error(err.detail || "建立失敗");
       }
 
-      toast.success("學校教材建立成功");
+      toast.success("機構教材建立成功");
       onOpenChange(false);
       onSuccess();
     } catch (error) {

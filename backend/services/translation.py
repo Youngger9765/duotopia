@@ -282,7 +282,7 @@ Required: Return format must be ["translation1", "translation2", ...]"""
                 translations = await self.vertex_ai.generate_json(
                     prompt=prompt,
                     model_type="flash",
-                    max_tokens=500,
+                    max_tokens=3500,
                     temperature=0.3,
                     system_instruction=system_instruction,
                 )
@@ -297,7 +297,7 @@ Required: Return format must be ["translation1", "translation2", ...]"""
                         {"role": "user", "content": prompt},
                     ],
                     temperature=0.3,
-                    max_tokens=500,  # 與單元測試預期一致
+                    max_tokens=3500,  # 提高上限以支持更多句子的批次翻译
                 )
 
                 # 解析 JSON 回應
@@ -485,6 +485,8 @@ Only reply with JSON array, no other text."""
     async def generate_sentences(
         self,
         words: List[str],
+        definitions: Optional[List[str]] = None,
+        unit_context: Optional[str] = None,
         level: str = "A1",
         prompt: Optional[str] = None,
         translate_to: Optional[str] = None,
@@ -495,6 +497,8 @@ Only reply with JSON array, no other text."""
 
         Args:
             words: 單字列表
+            definitions: 單字的中文翻譯列表（用於消歧義，如 "put" → "放置"）
+            unit_context: 單元描述（教學目標或主題，來自 Lesson.description）
             level: CEFR 等級 (A1, A2, B1, B2, C1, C2)
             prompt: 使用者自訂 prompt
             translate_to: 翻譯目標語言 (zh-TW, ja, ko)
@@ -511,6 +515,8 @@ Only reply with JSON array, no other text."""
             words_info = []
             for i, word in enumerate(words):
                 info = {"word": word}
+                if definitions and i < len(definitions) and definitions[i]:
+                    info["definition"] = definitions[i]  # 中文翻譯（用於消歧義）
                 if parts_of_speech and i < len(parts_of_speech) and parts_of_speech[i]:
                     info["pos"] = ", ".join(parts_of_speech[i])
                 words_info.append(info)
@@ -525,10 +531,13 @@ The sentences should be natural, educational, and appropriate for the difficulty
 CRITICAL REQUIREMENTS:
 1. Each sentence MUST contain the exact target word (the word being learned). Do NOT use synonyms or derivatives.
 2. If translating to Chinese, you MUST use Traditional Chinese (繁體中文), NOT Simplified Chinese.
-3. **IF USER PROVIDES CUSTOM INSTRUCTIONS, YOU MUST FOLLOW THEM EXACTLY.**
+3. **IF A WORD HAS A "definition" FIELD (Chinese translation), YOU MUST USE THAT SPECIFIC MEANING.**
    - Many English words have multiple meanings (e.g., "like" = 喜歡 or 像是, "change" = 改變 or 零錢)
-   - When user specifies a particular meaning, use ONLY that meaning in the sentence
+   - The "definition" field tells you which meaning the teacher wants
+   - Example: {{"word": "put", "definition": "放置"}} → generate sentence about placing/putting, NOT other meanings
    - This is the HIGHEST PRIORITY requirement
+4. **IF USER PROVIDES CUSTOM INSTRUCTIONS, YOU MUST FOLLOW THEM EXACTLY.**
+   - Custom instructions override the default interpretation
 
 Level guidelines:
 - A1: Simple present/past, basic vocabulary, short sentences (5-8 words)
@@ -540,6 +549,15 @@ Level guidelines:
 
             # 構建 user prompt
             user_prompt = ""
+
+            # 如果有單元上下文，先說明
+            if unit_context:
+                user_prompt += f"""**UNIT CONTEXT**:
+This lesson is about: {unit_context}
+
+Please generate sentences that align with this learning context when appropriate.
+
+"""
 
             # 如果有自訂 prompt，要在最前面強調
             if prompt:
@@ -556,6 +574,8 @@ This instruction OVERRIDES the default interpretation. For example:
 
             user_prompt += f"""Generate example sentences for the following words:
 {words_json}
+
+IMPORTANT: If a word has a "definition" field, you MUST use that specific meaning in the sentence.
 
 """
 
@@ -608,24 +628,38 @@ Translation to Chinese MUST use Traditional Chinese (繁體中文), NOT Simplifi
 
                 sentences = json.loads(content)
 
-            # 確保返回數量正確
+            # 確保返回數量正確並添加 word 欄位以防止陣列錯位
             if len(sentences) != len(words):
                 logger.warning(
                     "Expected %d sentences, got %d.", len(words), len(sentences)
                 )
                 # 補齊或截斷
                 while len(sentences) < len(words):
-                    sentences.append(
-                        {"sentence": f"Example with {words[len(sentences)]}"}
-                    )
+                    word = words[len(sentences)]
+                    sentences.append({"sentence": f"Example with {word}", "word": word})
                 sentences = sentences[: len(words)]
+
+            # 為每個句子添加 word 欄位，確保 1:1 對應關係
+            for i, sentence in enumerate(sentences):
+                if "word" not in sentence:
+                    sentence["word"] = words[i]
 
             return sentences
 
         except Exception as e:
             logger.error("Generate sentences error: %s", e)
-            # Fallback: 返回簡單的預設例句
-            return [{"sentence": f"This is an example with {word}."} for word in words]
+            # Fallback: 返回簡單的預設例句，包含 word 欄位確保對應
+            fallback_sentences = []
+            for word in words:
+                sentence_obj = {
+                    "sentence": f"This is an example with {word}.",
+                    "word": word,
+                }
+                # 如果需要翻譯，添加翻譯欄位
+                if translate_to:
+                    sentence_obj["translation"] = ""
+                fallback_sentences.append(sentence_obj)
+            return fallback_sentences
 
     async def generate_distractors(
         self,

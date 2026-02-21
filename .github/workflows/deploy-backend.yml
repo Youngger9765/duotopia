@@ -363,6 +363,7 @@ jobs:
           ENV_VARS="$ENV_VARS,USE_MOCK_PAYMENT=false"
           ENV_VARS="$ENV_VARS,CRON_SECRET=${{ secrets.PRODUCTION_CRON_SECRET }}"
           ENV_VARS="$ENV_VARS,ENABLE_PAYMENT=${{ secrets.PRODUCTION_ENABLE_PAYMENT }}"
+          ENV_VARS="$ENV_VARS,DEMO_ALLOWED_ORIGINS=https://duotopia.co,https://www.duotopia.net"
 
           # 💰 Production: 資源配置
           MIN_INSTANCES=0      # Scale-to-Zero 節省成本
@@ -375,6 +376,7 @@ jobs:
           ENV_VARS="$ENV_VARS,USE_MOCK_PAYMENT=false"
           ENV_VARS="$ENV_VARS,CRON_SECRET=${{ secrets.DEVELOP_CRON_SECRET }}"
           ENV_VARS="$ENV_VARS,ENABLE_PAYMENT=${{ secrets.DEVELOP_ENABLE_PAYMENT }}"
+          ENV_VARS="$ENV_VARS,DEMO_ALLOWED_ORIGINS=${{ secrets.DEVELOP_FRONTEND_URL }}"
 
           # 💰 Develop: 最小化成本
           MIN_INSTANCES=0      # Scale-to-Zero 最大化節省成本
@@ -387,6 +389,7 @@ jobs:
           ENV_VARS="$ENV_VARS,USE_MOCK_PAYMENT=false"
           ENV_VARS="$ENV_VARS,CRON_SECRET=${{ secrets.STAGING_CRON_SECRET }}"
           ENV_VARS="$ENV_VARS,ENABLE_PAYMENT=${{ secrets.STAGING_ENABLE_PAYMENT }}"
+          ENV_VARS="$ENV_VARS,DEMO_ALLOWED_ORIGINS=${{ secrets.STAGING_FRONTEND_URL }}"
 
           # 💰 Staging: 最小化成本
           MIN_INSTANCES=0      # Scale-to-Zero 最大化節省成本

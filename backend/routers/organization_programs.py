@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel, Field, field_serializer, model_validator
 from typing import List, Optional
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 from database import get_db
@@ -32,8 +32,10 @@ from models import (
     ContentItem,
     Classroom,
 )
+from models.program import ProgramCopyLog
 from auth import verify_token
 from services.casbin_service import get_casbin_service
+from utils.permissions import has_read_org_materials_permission
 
 logger = logging.getLogger(__name__)
 
@@ -246,8 +248,12 @@ def deep_copy_program(
     """
     Deep copy program with lessons, contents, and items.
 
+    Uses the canonical _copy_content_with_items from program_service to ensure
+    all fields (including Phase 2 vocabulary fields) are copied correctly.
     Sets source_metadata to track origin.
     """
+    from services.program_service import _copy_content_with_items
+
     # Create new program
     new_program = Program(
         name=source_program.name,
@@ -273,6 +279,9 @@ def deep_copy_program(
 
     # Deep copy lessons
     for lesson in source_program.lessons:
+        if not lesson.is_active:
+            continue
+
         new_lesson = Lesson(
             program_id=new_program.id,
             name=lesson.name,
@@ -284,35 +293,11 @@ def deep_copy_program(
         db.add(new_lesson)
         db.flush()  # Get new_lesson.id
 
-        # Deep copy contents
+        # Deep copy contents using canonical helper (includes all Phase 2 fields)
         for content in lesson.contents:
-            new_content = Content(
-                lesson_id=new_lesson.id,
-                type=content.type,
-                title=content.title,
-                order_index=content.order_index,
-                is_active=content.is_active,
-                target_wpm=content.target_wpm,
-                target_accuracy=content.target_accuracy,
-                time_limit_seconds=content.time_limit_seconds,
-                level=content.level,
-                tags=content.tags,
-                is_public=content.is_public,
-            )
-            db.add(new_content)
-            db.flush()  # Get new_content.id
-
-            # Deep copy content items
-            for item in content.content_items:
-                new_item = ContentItem(
-                    content_id=new_content.id,
-                    order_index=item.order_index,
-                    text=item.text,
-                    translation=item.translation,
-                    audio_url=item.audio_url,
-                    item_metadata=item.item_metadata,
-                )
-                db.add(new_item)
+            if hasattr(content, "is_active") and not content.is_active:
+                continue
+            _copy_content_with_items(content, new_lesson.id, db)
 
     db.flush()
     return new_program
@@ -332,16 +317,16 @@ async def list_organization_materials(
     """
     List all active organization materials (templates).
 
-    Permission: org_owner or org_admin with manage_materials
+    Permission: any active organization member
 
     Performance: Uses organization_id column (NOT source_metadata JSON)
     for efficient SQL filtering instead of loading all programs.
     """
     # Check permission
-    if not check_manage_materials_permission(current_teacher.id, org_id, db):
+    if not has_read_org_materials_permission(current_teacher.id, org_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="No permission to manage organization materials",
+            detail="Not a member of this organization",
         )
 
     # Query organization materials using SQL filter (NOT Python filter)
@@ -406,14 +391,14 @@ async def get_organization_material_details(
     """
     Get organization material details with full hierarchy.
 
-    Permission: org_owner or org_admin with manage_materials
+    Permission: any active organization member
     Returns: Program with lessons → contents → items
     """
     # Check permission
-    if not check_manage_materials_permission(current_teacher.id, org_id, db):
+    if not has_read_org_materials_permission(current_teacher.id, org_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="No permission to view organization materials",
+            detail="Not a member of this organization",
         )
 
     # Get program with hierarchy
@@ -485,8 +470,12 @@ async def create_organization_material(
             detail="No permission to create organization materials",
         )
 
-    # Verify organization exists
-    organization = db.query(Organization).filter(Organization.id == org_id).first()
+    # Verify organization exists and is active
+    organization = (
+        db.query(Organization)
+        .filter(Organization.id == org_id, Organization.is_active.is_(True))
+        .first()
+    )
     if not organization:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found"
@@ -605,7 +594,7 @@ async def soft_delete_organization_material(
 
     # Soft delete
     program.is_active = False
-    program.deleted_at = datetime.now()
+    program.deleted_at = datetime.now(timezone.utc)
 
     db.commit()
 
@@ -715,6 +704,15 @@ async def copy_material_to_classroom(
             db=db,
         )
 
+        # Record copy log for audit/rate-limiting
+        copy_log = ProgramCopyLog(
+            source_program_id=source_program.id,
+            copied_by_type="organization",
+            copied_by_id=str(org_id),
+            copied_program_id=new_program.id,
+        )
+        db.add(copy_log)
+
         db.commit()
         db.refresh(new_program)
 
@@ -738,7 +736,7 @@ async def copy_material_to_classroom(
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to copy material: {str(e)}",
+            detail="Failed to copy material. Please try again later.",
         )
 
     # Build response
