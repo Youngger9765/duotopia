@@ -39,6 +39,7 @@ interface ReadingAssessmentProps {
   onTimeout?: () => void; // 超時回調
   onRetry?: () => void; // 重試回調
   onSkip?: () => void; // 跳過回調
+  canUseAiAnalysis?: boolean; // 教師/機構是否有 AI 分析額度
 }
 
 export default function ReadingAssessmentTemplate({
@@ -54,6 +55,7 @@ export default function ReadingAssessmentTemplate({
   onTimeout,
   onRetry,
   onSkip,
+  canUseAiAnalysis = true,
 }: ReadingAssessmentProps) {
   const { t } = useTranslation();
   const [audioUrl, setAudioUrl] = useState<string | undefined>(
@@ -346,7 +348,7 @@ export default function ReadingAssessmentTemplate({
 
           {/* Bottom Buttons */}
           <div className="flex space-x-4 pt-6">
-            {audioUrl && !readOnly && (
+            {audioUrl && !readOnly && canUseAiAnalysis && (
               <>
                 {!assessmentResult && (
                   <Button
@@ -362,7 +364,7 @@ export default function ReadingAssessmentTemplate({
                     ) : (
                       <>
                         <Brain className="h-4 w-4 mr-2" />
-                        上傳與評測
+                        {t("studentActivity.aiAnalysis.analyze", { defaultValue: "分析" })}
                       </>
                     )}
                   </Button>

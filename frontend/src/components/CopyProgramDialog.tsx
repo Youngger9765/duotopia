@@ -19,6 +19,7 @@ import {
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { logError } from "@/utils/errorLogger";
 
 export interface TeacherProgram {
   id: number;
@@ -70,7 +71,7 @@ export default function CopyProgramDialog({
       );
       setPrograms(availablePrograms);
     } catch (error) {
-      console.error("Failed to fetch programs:", error);
+      logError("Failed to fetch programs:", error);
       toast.error(t("dialogs.copyProgramDialog.loadError"));
     } finally {
       setLoading(false);
@@ -101,7 +102,7 @@ export default function CopyProgramDialog({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error("Failed to copy programs:", error);
+      logError("Failed to copy programs:", error);
       toast.error(t("dialogs.copyProgramDialog.copyError"));
     } finally {
       setCopying(false);

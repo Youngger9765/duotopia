@@ -158,6 +158,7 @@ interface StudentActivityPageContentProps {
   assignmentStatus?: string;
   practiceMode?: string | null; // 例句重組/朗讀模式
   showAnswer?: boolean; // 例句重組：答題結束後是否顯示正確答案
+  canUseAiAnalysis?: boolean; // 教師/機構是否有 AI 分析額度
 }
 
 // =============================================================================
@@ -197,6 +198,7 @@ export default function StudentActivityPageContent({
   assignmentStatus = "",
   practiceMode = null,
   showAnswer = false,
+  canUseAiAnalysis = true,
 }: StudentActivityPageContentProps) {
   const { t } = useTranslation();
 
@@ -485,19 +487,14 @@ export default function StudentActivityPageContent({
             return;
           }
 
-          if (!isPreviewMode) {
-            toast.success(t("studentActivityPage.recording.complete"), {
-              description: t("studentActivityPage.recording.duration", {
-                duration: Math.round(validationResult.duration),
-              }),
-            });
-          } else {
+          if (isPreviewMode) {
             toast.success(t("studentActivityPage.recording.completePreview"), {
               description: t("studentActivityPage.recording.duration", {
                 duration: Math.round(validationResult.duration),
               }),
             });
           }
+          // 正常模式：不在此處顯示 toast，等上傳成功後再顯示（與單字朗讀行為一致）
         } catch (error) {
           console.error("⚠️ Recording validation error:", error);
 
@@ -578,9 +575,105 @@ export default function StudentActivityPageContent({
 
         isReRecording.current = false;
 
-        // 🎯 Issue #118: 不自動上傳，等待用戶點擊「上傳並分析」按鈕
-        // recording_url 已在 Line 544 設置為 localAudioUrl (blob URL)
-        // GroupedQuestionsTemplate 會顯示「上傳並分析」按鈕
+        // 🎯 Issue #227: 錄音完成後立即上傳到 GCS（與單字朗讀行為一致）
+        // 不論 canUseAiAnalysis 為何，錄音檔案都應保存到伺服器
+        if (currentActivity.items && currentActivity.items.length > 0) {
+          const contentItemId =
+            currentActivity.items[currentSubQuestionIndex]?.id;
+          if (
+            !isPreviewMode &&
+            !isDemoMode &&
+            assignmentId &&
+            contentItemId
+          ) {
+            const uploadFileExtension = audioBlob.type.includes("mp4")
+              ? "recording.mp4"
+              : audioBlob.type.includes("webm")
+                ? "recording.webm"
+                : "recording.audio";
+
+            const formData = new FormData();
+            formData.append("assignment_id", assignmentId.toString());
+            formData.append("content_item_id", contentItemId.toString());
+            formData.append("audio_file", audioBlob, uploadFileExtension);
+
+            const apiUrl = import.meta.env.VITE_API_URL || "";
+            const authToken = useStudentAuthStore.getState().token;
+            const subIdx = currentSubQuestionIndex;
+            const activityId = currentActivity.id;
+
+            retryAudioUpload(
+              async () => {
+                const uploadResponse = await fetch(
+                  `${apiUrl}/api/students/upload-recording`,
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${authToken}`,
+                    },
+                    body: formData,
+                  },
+                );
+
+                if (!uploadResponse.ok) {
+                  throw new Error(`Upload failed: ${uploadResponse.status}`);
+                }
+
+                return await uploadResponse.json();
+              },
+              () => {},
+            )
+              .then((uploadResult) => {
+                // 更新 recording_url 為 GCS URL
+                setActivities((prevActivities) => {
+                  const newActivities = [...prevActivities];
+                  const activityIndex = newActivities.findIndex(
+                    (a) => a.id === activityId,
+                  );
+                  if (
+                    activityIndex !== -1 &&
+                    newActivities[activityIndex].items
+                  ) {
+                    const newItems = [
+                      ...newActivities[activityIndex].items!,
+                    ];
+                    if (newItems[subIdx]) {
+                      newItems[subIdx] = {
+                        ...newItems[subIdx],
+                        recording_url: uploadResult.audio_url,
+                      };
+                    }
+                    newActivities[activityIndex] = {
+                      ...newActivities[activityIndex],
+                      items: newItems,
+                    };
+                  }
+                  return newActivities;
+                });
+
+                // 更新 progressIds
+                setAnswers((prev) => {
+                  const newAnswers = new Map(prev);
+                  const ans = newAnswers.get(activityId);
+                  if (ans) {
+                    if (!ans.progressIds) ans.progressIds = [];
+                    while (ans.progressIds.length <= subIdx) {
+                      ans.progressIds.push(0);
+                    }
+                    ans.progressIds[subIdx] = uploadResult.progress_id;
+                  }
+                  return newAnswers;
+                });
+
+                toast.success(
+                  t("wordReading.toast.uploaded") || "Recording uploaded",
+                );
+              })
+              .catch((error) => {
+                console.error("❌ 錄音上傳失敗:", error);
+              });
+          }
+        }
 
         // 🔧 錄音完成後清理所有錄音狀態
         if (streamRef.current) {
@@ -643,6 +736,7 @@ export default function StudentActivityPageContent({
   const handleRecordingComplete = useCallback(
     (blob: Blob, url: string) => {
       const currentActivity = activities[currentActivityIndex];
+      const subIdx = currentSubQuestionIndex;
 
       setAnswers((prev) => {
         const newAnswers = new Map(prev);
@@ -671,9 +765,9 @@ export default function StudentActivityPageContent({
           );
           if (activityIndex !== -1 && newActivities[activityIndex].items) {
             const newItems = [...newActivities[activityIndex].items!];
-            if (newItems[currentSubQuestionIndex]) {
-              newItems[currentSubQuestionIndex] = {
-                ...newItems[currentSubQuestionIndex],
+            if (newItems[subIdx]) {
+              newItems[subIdx] = {
+                ...newItems[subIdx],
                 recording_url: url,
               };
             }
@@ -684,9 +778,127 @@ export default function StudentActivityPageContent({
           }
           return newActivities;
         });
+
+        // 🎯 Issue #227: 錄音完成後立即上傳到 GCS（與單字朗讀行為一致）
+        // 不論 canUseAiAnalysis 為何，錄音檔案都應保存到伺服器
+        const contentItemId = currentActivity.items[subIdx]?.id;
+        if (!isPreviewMode && !isDemoMode && assignmentId && contentItemId) {
+          const uploadFileExtension = blob.type.includes("mp4")
+            ? "recording.mp4"
+            : blob.type.includes("webm")
+              ? "recording.webm"
+              : "recording.audio";
+
+          const formData = new FormData();
+          formData.append("assignment_id", assignmentId.toString());
+          formData.append("content_item_id", contentItemId.toString());
+          formData.append("audio_file", blob, uploadFileExtension);
+
+          const apiUrl = import.meta.env.VITE_API_URL || "";
+          const authToken = useStudentAuthStore.getState().token;
+
+          retryAudioUpload(
+            async () => {
+              const uploadResponse = await fetch(
+                `${apiUrl}/api/students/upload-recording`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${authToken}`,
+                  },
+                  body: formData,
+                },
+              );
+
+              if (!uploadResponse.ok) {
+                throw new Error(`Upload failed: ${uploadResponse.status}`);
+              }
+
+              return await uploadResponse.json();
+            },
+            () => {},
+          )
+            .then((uploadResult) => {
+              // 更新 recording_url 為 GCS URL
+              setActivities((prevActivities) => {
+                const newActivities = [...prevActivities];
+                const activityIndex = newActivities.findIndex(
+                  (a) => a.id === currentActivity.id,
+                );
+                if (
+                  activityIndex !== -1 &&
+                  newActivities[activityIndex].items
+                ) {
+                  const newItems = [...newActivities[activityIndex].items!];
+                  if (newItems[subIdx]) {
+                    newItems[subIdx] = {
+                      ...newItems[subIdx],
+                      recording_url: uploadResult.audio_url,
+                    };
+                  }
+                  newActivities[activityIndex] = {
+                    ...newActivities[activityIndex],
+                    items: newItems,
+                  };
+                }
+                return newActivities;
+              });
+
+              // 更新 progressIds
+              setAnswers((prev) => {
+                const newAnswers = new Map(prev);
+                const answer = newAnswers.get(currentActivity.id);
+                if (answer) {
+                  if (!answer.progressIds) answer.progressIds = [];
+                  while (answer.progressIds.length <= subIdx) {
+                    answer.progressIds.push(0);
+                  }
+                  answer.progressIds[subIdx] = uploadResult.progress_id;
+                }
+                return newAnswers;
+              });
+
+              // 🎯 Issue #227: 上傳成功後，有額度時自動背景分析
+              if (canUseAiAnalysis) {
+                const targetText =
+                  currentActivity.items![subIdx]?.text ||
+                  currentActivity.target_text ||
+                  "";
+                if (targetText) {
+                  analyzeAndUpload(
+                    uploadResult.audio_url,
+                    targetText,
+                    uploadResult.progress_id,
+                    contentItemId,
+                  ).catch((err) =>
+                    console.error(
+                      "Background analysis after upload failed:",
+                      err,
+                    ),
+                  );
+                }
+              }
+
+              toast.success(
+                t("wordReading.toast.uploaded") || "Recording uploaded",
+              );
+            })
+            .catch((error) => {
+              console.error("❌ 錄音上傳失敗:", error);
+            });
+        }
       }
     },
-    [activities, currentActivityIndex, currentSubQuestionIndex],
+    [
+      activities,
+      currentActivityIndex,
+      currentSubQuestionIndex,
+      assignmentId,
+      isPreviewMode,
+      isDemoMode,
+      canUseAiAnalysis,
+      analyzeAndUpload,
+    ],
   );
 
   const handleFileUpload = async (file: File) => {
@@ -1173,7 +1385,24 @@ export default function StudentActivityPageContent({
   const handleNextActivity = async () => {
     const currentActivity = activities[currentActivityIndex];
 
-    // 🎯 Issue #75: 不再觸發背景分析 - 只切換問題
+    // 🎯 Issue #227: 有 AI 分析額度時，按下一題自動背景分析當前題目（blob + GCS URL）
+    if (canUseAiAnalysis && !isPreviewMode && currentActivity.items) {
+      const currentItem = currentActivity.items[currentSubQuestionIndex];
+      const hasRecording =
+        currentItem?.recording_url && currentItem.recording_url !== "";
+      if (hasRecording && !currentItem?.ai_assessment) {
+        // fire-and-forget：背景分析不阻塞導航
+        analyzeAndUpload(
+          currentItem.recording_url!,
+          currentItem.text || currentActivity.target_text || "",
+          currentItem.progress_id,
+          currentItem.id,
+        ).catch((err) =>
+          console.error("Background analysis on next failed:", err),
+        );
+      }
+    }
+
     if (currentActivity.items && currentActivity.items.length > 0) {
       // 切換到下一題
       if (currentSubQuestionIndex < currentActivity.items.length - 1) {
@@ -1259,63 +1488,61 @@ export default function StudentActivityPageContent({
       return;
     }
 
-    // 檢查當前題目是否有錄音但未分析
-    const currentItem = currentActivity.items![currentSubQuestionIndex];
-    const hasRecording =
-      currentItem.recording_url && currentItem.recording_url !== "";
-    const isBlobUrl =
-      hasRecording && currentItem.recording_url!.startsWith("blob:");
-    const hasAssessment = !!currentItem?.ai_assessment;
+    // 🎯 Issue #227: 只有在有 AI 分析額度時才自動分析
+    if (canUseAiAnalysis) {
+      // 檢查當前題目是否有錄音但未分析
+      const currentItem = currentActivity.items![currentSubQuestionIndex];
+      const hasRecording =
+        currentItem.recording_url && currentItem.recording_url !== "";
+      const hasAssessment = !!currentItem?.ai_assessment;
 
-    // 如果有 blob URL 但沒有分析結果，自動分析
-    if (isBlobUrl && !hasAssessment) {
-      const targetText = currentItem.text || "";
-      const progressId = currentItem.progress_id;
-      const contentItemId = currentItem.id;
+      // 如果有錄音但沒有分析結果，自動背景分析（fire-and-forget）
+      if (hasRecording && !hasAssessment) {
+        const targetText = currentItem.text || "";
+        const progressId = currentItem.progress_id;
+        const contentItemId = currentItem.id;
 
-      if (!targetText) {
-        console.warn("缺少參考文本，無法分析");
-        // 即使無法分析，也允許跳轉
-        if (targetActivityIndex !== currentActivityIndex) {
-          handleActivitySelect(targetActivityIndex, targetItemIndex);
-        } else {
-          setCurrentSubQuestionIndex(targetItemIndex);
+        if (targetText) {
+          analyzeAndUpload(
+            currentItem.recording_url!,
+            targetText,
+            progressId,
+            contentItemId,
+          )
+            .then((analysisResult) => {
+              if (analysisResult) {
+                setActivities((prevActivities) => {
+                  const newActivities = [...prevActivities];
+                  const activityIndex = newActivities.findIndex(
+                    (a) => a.id === currentActivity.id,
+                  );
+                  if (
+                    activityIndex !== -1 &&
+                    newActivities[activityIndex].items
+                  ) {
+                    const newItems = [
+                      ...newActivities[activityIndex].items!,
+                    ];
+                    if (newItems[currentSubQuestionIndex]) {
+                      newItems[currentSubQuestionIndex] = {
+                        ...newItems[currentSubQuestionIndex],
+                        ai_assessment: analysisResult,
+                      };
+                    }
+                    newActivities[activityIndex] = {
+                      ...newActivities[activityIndex],
+                      items: newItems,
+                    };
+                  }
+                  return newActivities;
+                });
+              }
+            })
+            .catch((err) =>
+              console.error("Background analysis on jump failed:", err),
+            );
         }
-        return;
       }
-
-      // 觸發自動分析
-      const analysisResult = await analyzeAndUpload(
-        currentItem.recording_url!,
-        targetText,
-        progressId,
-        contentItemId,
-      );
-
-      // 如果分析成功，更新 activities state
-      if (analysisResult) {
-        setActivities((prevActivities) => {
-          const newActivities = [...prevActivities];
-          const activityIndex = newActivities.findIndex(
-            (a) => a.id === currentActivity.id,
-          );
-          if (activityIndex !== -1 && newActivities[activityIndex].items) {
-            const newItems = [...newActivities[activityIndex].items!];
-            if (newItems[currentSubQuestionIndex]) {
-              newItems[currentSubQuestionIndex] = {
-                ...newItems[currentSubQuestionIndex],
-                ai_assessment: analysisResult,
-              };
-            }
-            newActivities[activityIndex] = {
-              ...newActivities[activityIndex],
-              items: newItems,
-            };
-          }
-          return newActivities;
-        });
-      }
-      // 分析失敗時不阻擋跳轉（讓用戶可以繼續）
     }
 
     // 執行跳轉
@@ -1412,15 +1639,107 @@ export default function StudentActivityPageContent({
       }
     }
 
-    // 🎯 Issue #141: 提交前先分析所有未分析的 blob URL 錄音
+    // 🎯 Issue #227: 提交前確保所有錄音都上傳到 GCS（安全網）
     if (!isPreviewMode) {
+      const pendingBlobItems: {
+        activity: Activity;
+        itemIndex: number;
+        item: Activity["items"] extends (infer T)[] | undefined ? T : never;
+      }[] = [];
+
+      activities.forEach((activity) => {
+        if (activity.items) {
+          activity.items.forEach((item, itemIndex) => {
+            if (item.recording_url?.startsWith("blob:")) {
+              pendingBlobItems.push({ activity, itemIndex, item });
+            }
+          });
+        }
+      });
+
+      if (pendingBlobItems.length > 0) {
+        setSubmitting(true);
+        const apiUrl = import.meta.env.VITE_API_URL || "";
+        const authToken = useStudentAuthStore.getState().token;
+
+        for (const { activity, itemIndex, item } of pendingBlobItems) {
+          try {
+            const contentItemId = item.id;
+            if (!contentItemId || !item.recording_url) continue;
+
+            const resp = await fetch(item.recording_url);
+            const audioBlob = await resp.blob();
+
+            const ext = audioBlob.type.includes("mp4")
+              ? "recording.mp4"
+              : audioBlob.type.includes("webm")
+                ? "recording.webm"
+                : "recording.audio";
+
+            const formData = new FormData();
+            formData.append("assignment_id", assignmentId!.toString());
+            formData.append("content_item_id", contentItemId.toString());
+            formData.append("audio_file", audioBlob, ext);
+
+            const uploadResult = await retryAudioUpload(
+              async () => {
+                const uploadResp = await fetch(
+                  `${apiUrl}/api/students/upload-recording`,
+                  {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${authToken}` },
+                    body: formData,
+                  },
+                );
+                if (!uploadResp.ok)
+                  throw new Error(`Upload failed: ${uploadResp.status}`);
+                return await uploadResp.json();
+              },
+              () => {},
+            );
+
+            // 更新 recording_url 為 GCS URL
+            setActivities((prev) => {
+              const newActivities = [...prev];
+              const actIdx = newActivities.findIndex(
+                (a) => a.id === activity.id,
+              );
+              if (actIdx !== -1 && newActivities[actIdx].items) {
+                const newItems = [...newActivities[actIdx].items!];
+                if (newItems[itemIndex]) {
+                  newItems[itemIndex] = {
+                    ...newItems[itemIndex],
+                    recording_url: uploadResult.audio_url,
+                    progress_id: uploadResult.progress_id,
+                  };
+                }
+                newActivities[actIdx] = {
+                  ...newActivities[actIdx],
+                  items: newItems,
+                };
+              }
+              return newActivities;
+            });
+          } catch (error) {
+            console.error(
+              `Failed to upload blob for item ${itemIndex + 1}:`,
+              error,
+            );
+          }
+        }
+        setSubmitting(false);
+      }
+    }
+
+    // 🎯 Issue #227: 提交前補分析所有有錄音但未分析的題目（blob + GCS URL）
+    if (!isPreviewMode && canUseAiAnalysis) {
       const unanalyzedItems: {
         activity: Activity;
         itemIndex: number;
         item: Activity["items"] extends (infer T)[] | undefined ? T : never;
       }[] = [];
 
-      // 收集所有有 blob URL 但未分析的題目
+      // 收集所有有錄音但未分析的題目（不限 blob URL）
       activities.forEach((activity) => {
         if (
           isExampleSentencesType(activity.type) &&
@@ -1430,11 +1749,9 @@ export default function StudentActivityPageContent({
           activity.items.forEach((item, itemIndex) => {
             const hasRecording =
               item.recording_url && item.recording_url !== "";
-            const isBlobUrl =
-              hasRecording && item.recording_url!.startsWith("blob:");
             const hasAssessment = !!item?.ai_assessment;
 
-            if (isBlobUrl && !hasAssessment) {
+            if (hasRecording && !hasAssessment) {
               unanalyzedItems.push({ activity, itemIndex, item });
             }
           });
@@ -1761,6 +2078,7 @@ export default function StudentActivityPageContent({
             });
           }}
           onAnalyzingStateChange={setIsAnalyzing} // 🔒 接收分析狀態變化
+          canUseAiAnalysis={canUseAiAnalysis}
         />
       );
     }
@@ -1821,6 +2139,7 @@ export default function StudentActivityPageContent({
             readOnly={isReadOnly}
             isDemoMode={isDemoMode}
             timeLimit={activity.duration || 60}
+            canUseAiAnalysis={canUseAiAnalysis}
             onSkip={
               currentActivityIndex < activities.length - 1
                 ? () => handleActivitySelect(currentActivityIndex + 1)
@@ -1842,6 +2161,7 @@ export default function StudentActivityPageContent({
             isPreviewMode={isPreviewMode}
             isDemoMode={isDemoMode}
             authToken={authToken}
+            canUseAiAnalysis={canUseAiAnalysis}
             onComplete={async () => {
               if (onSubmit) {
                 try {
@@ -2459,8 +2779,10 @@ export default function StudentActivityPageContent({
                       isAutoAnalyzing || // 🔒 Issue #141: 自動分析中禁用
                       (isRearrangementMode
                         ? !hasPrevUnanswered
-                        : // 🎯 Issue #141: 例句朗讀模式必須分析後才能上一題（含預覽模式）
-                          (isReadingMode && !isAssessed) ||
+                        : // 🎯 Issue #227: 無 AI 分析額度時不需等待分析即可切換
+                          (isReadingMode &&
+                            canUseAiAnalysis &&
+                            !isAssessed) ||
                           (currentActivityIndex === 0 &&
                             currentSubQuestionIndex === 0))
                     }
@@ -2537,8 +2859,10 @@ export default function StudentActivityPageContent({
                           isAutoAnalyzing || // 🔒 Issue #141: 自動分析中禁用
                           (isRearrangementMode
                             ? !hasNextUnanswered
-                            : // 🎯 Issue #118 & #141: 例句朗讀模式必須分析後才能下一題（含預覽模式）
-                              isReadingMode && !isAssessed)
+                            : // 🎯 Issue #227: 無 AI 分析額度時不需等待分析即可下一題
+                              isReadingMode &&
+                              canUseAiAnalysis &&
+                              !isAssessed)
                         }
                         className="flex-1 sm:flex-none min-w-0"
                       >

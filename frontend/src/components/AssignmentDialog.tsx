@@ -356,13 +356,20 @@ export function AssignmentDialog({
 
   const loadQuotaInfo = async () => {
     try {
+      // 根據工作區 context 決定查哪個配額
+      const params = new URLSearchParams();
+      if (mode === "organization" && selectedOrganization) {
+        params.append("organization_id", selectedOrganization.id);
+      }
+      const url = `/api/teachers/subscription${params.toString() ? `?${params.toString()}` : ""}`;
+
       const response = await apiClient.get<{
         subscription_period: {
           quota_total: number;
           quota_used: number;
           plan_name: string;
         };
-      }>("/api/teachers/subscription");
+      }>(url);
 
       if (response.subscription_period) {
         setQuotaInfo({
@@ -772,19 +779,7 @@ export function AssignmentDialog({
       return;
     }
 
-    // 配額檢查
-    if (quotaInfo && quotaInfo.quota_remaining <= 0) {
-      toast.error(t("dialogs.assignmentDialog.errors.quotaExceeded"), {
-        description: t("dialogs.assignmentDialog.errors.quotaExceededDesc"),
-        action: {
-          label: t("dialogs.assignmentDialog.actions.viewPlans"),
-          onClick: () => {
-            window.location.href = "/teacher/subscription";
-          },
-        },
-      });
-      return;
-    }
+    // #227: 配額不足不阻擋建立作業，配額提示已在 header 顯示
 
     setLoading(true);
     try {
@@ -1084,7 +1079,7 @@ export function AssignmentDialog({
                 className={cn(
                   "h-3 w-3",
                   quotaInfo.quota_remaining <= 0
-                    ? "text-red-500"
+                    ? "text-amber-500"
                     : "text-gray-500",
                 )}
               />
@@ -1112,14 +1107,14 @@ export function AssignmentDialog({
               </span>
               {quotaInfo.quota_remaining <= 0 ? (
                 <Badge
-                  variant="destructive"
-                  className="text-xs py-0 px-1.5 animate-pulse"
+                  variant="outline"
+                  className="text-xs py-0 px-1.5 text-amber-600 border-amber-300"
                 >
-                  {t("dialogs.assignmentDialog.quota.exhausted")}
+                  {t("dialogs.assignmentDialog.quota.noAiAnalysis")}
                 </Badge>
               ) : (
                 quotaInfo.quota_remaining <= 100 && (
-                  <Badge variant="destructive" className="text-xs py-0 px-1.5">
+                  <Badge variant="outline" className="text-xs py-0 px-1.5 text-amber-600 border-amber-300">
                     {t("dialogs.assignmentDialog.quota.low")}
                   </Badge>
                 )
@@ -2893,30 +2888,11 @@ export function AssignmentDialog({
               ) : (
                 <Button
                   onClick={handleSubmit}
-                  disabled={
-                    loading ||
-                    !canProceed() ||
-                    (quotaInfo !== null && quotaInfo.quota_remaining <= 0)
-                  }
-                  className={cn(
-                    "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600",
-                    quotaInfo !== null &&
-                      quotaInfo.quota_remaining <= 0 &&
-                      "opacity-50 cursor-not-allowed",
-                  )}
-                  title={
-                    quotaInfo !== null && quotaInfo.quota_remaining <= 0
-                      ? t("dialogs.assignmentDialog.quota.cannotCreate")
-                      : ""
-                  }
+                  disabled={loading || !canProceed()}
+                  className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
                 >
                   {loading ? (
                     <>{t("dialogs.assignmentDialog.buttons.creating")}</>
-                  ) : quotaInfo !== null && quotaInfo.quota_remaining <= 0 ? (
-                    <>
-                      <Gauge className="h-4 w-4 mr-1" />
-                      {t("dialogs.assignmentDialog.buttons.quotaDepleted")}
-                    </>
                   ) : (
                     <>
                       <Check className="h-4 w-4 mr-1" />

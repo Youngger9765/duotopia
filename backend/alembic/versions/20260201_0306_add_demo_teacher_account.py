@@ -44,8 +44,11 @@ def upgrade():
                 SELECT 1 FROM teachers WHERE email = :email
             );
         """
-        ),
-        {"email": DEMO_EMAIL, "password_hash": password_hash, "name": DEMO_NAME},
+        ).bindparams(
+            email=DEMO_EMAIL,
+            password_hash=password_hash,
+            name=DEMO_NAME,
+        )
     )
 
 

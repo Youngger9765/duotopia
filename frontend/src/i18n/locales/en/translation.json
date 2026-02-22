@@ -150,6 +150,7 @@
     "playing": "Playing",
     "analyzing": "Analyzing",
     "uploadAndAnalyze": "Upload and Analyze",
+    "analyze": "Analyze",
     "reRecord": "Re-record",
     "delete": "Delete Recording",
     "deleteConfirm": "Are you sure you want to delete this recording?"
@@ -1322,6 +1323,7 @@
         "total": "/ {{total}} seconds",
         "depleted": "Quota Depleted",
         "exhausted": "Quota Exhausted",
+        "noAiAnalysis": "Practice only (no AI analysis)",
         "low": "Low Quota",
         "error": "Insufficient quota, cannot assign assignment",
         "errorDesc": "Please upgrade your plan or wait for the next billing cycle",
@@ -1398,6 +1400,10 @@
         "missingAudio": "Selected content is missing audio",
         "missingAudioDesc": "This practice mode requires audio. Please go to content management to generate TTS audio first",
         "mixedContentType": "Only {{type}} can be selected. Please clear selected content before choosing a different type"
+      },
+      "warnings": {
+        "quotaLow": "AI analysis quota insufficient",
+        "quotaLowDesc": "Assignment created, but students cannot use AI analysis at this time. They can still upload audio for practice."
       },
       "success": {
         "created": "Assignment created successfully, assigned to {{count}} students"
@@ -2533,6 +2539,10 @@
       "unassign": "Unassign",
       "grade": "Grade"
     },
+    "noCredits": {
+      "message": "AI credits used up. Please purchase credits or upgrade your plan",
+      "tooltip": "Insufficient AI credits for AI grading"
+    },
     "labels": {
       "contentType": "Content Type",
       "assignedDate": "Assigned Date",
@@ -3589,13 +3599,15 @@
       "passed": "Passed",
       "notPassed": "Not Passed",
       "uploadAndAnalyze": "Upload & Analyze",
+      "analyze": "Analyze",
       "analyzing": "Analyzing...",
       "analyzed": "Analyzed",
       "analysisFailed": "Analysis Failed (Click to Retry)",
       "aiAnalyzing": "AI is analyzing...",
       "pleaseWait": "Please wait a moment",
       "clickToAssess": "Click button above to assess",
-      "pleaseRecordFirst": "Please record first"
+      "pleaseRecordFirst": "Please record first",
+      "recordingComplete": "Recording complete"
     },
     "messages": {
       "recordingRequired": "Please record and ensure reference text exists",
@@ -3668,6 +3680,10 @@
     }
   },
   "studentActivity": {
+    "aiAnalysis": {
+      "analyze": "Analyze",
+      "notAvailable": "AI analysis not available"
+    },
     "toast": {
       "cannotStartRecording": "Cannot start recording, please check microphone permissions",
       "fileTooLarge": "File Too Large",
@@ -3973,6 +3989,7 @@
     "submitting": "Submitting...",
     "analyzing": "AI Analyzing...",
     "uploadAndAssess": "Upload & Assess",
+    "analyze": "Analyze",
     "aiResult": "AI Assessment Result",
     "overallScore": "Overall Score",
     "points": " Points",
@@ -3994,6 +4011,7 @@
     "studentAnswer": "Student Answer",
     "pleaseRecord": "Please record first",
     "clickToAssess": "Click button above to assess",
+    "recordingComplete": "Recording complete",
     "startRecordOrUpload": "Start recording or upload",
     "noTeacherFeedback": "No teacher feedback yet",
     "toast": {
@@ -4070,5 +4088,30 @@
     "personalMode": "Personal Mode",
     "selectOrganization": "Select Organization",
     "noSchoolsInOrg": "No schools in this organization"
+  },
+  "organizationPoints": {
+    "title": "AI Usage Points",
+    "loading": "Loading points balance...",
+    "loadingHistory": "Loading history...",
+    "error": "Error: {{error}}",
+    "total": "total",
+    "used": "Used",
+    "available": "Available",
+    "lastUpdated": "Last updated",
+    "lowWarning": "⚠️ Points running low. Contact admin to add more points.",
+    "history": {
+      "title": "Points Usage History",
+      "empty": "No usage history yet.",
+      "totalEntries": "Total entries: {{count}}",
+      "date": "Date",
+      "user": "User",
+      "feature": "Feature",
+      "description": "Description",
+      "points": "Points",
+      "unknown": "Unknown",
+      "showing": "Showing {{from}} to {{to}} of {{total}} results",
+      "previous": "Previous",
+      "next": "Next"
+    }
   }
 }
