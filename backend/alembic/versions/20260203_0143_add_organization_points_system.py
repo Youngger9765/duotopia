@@ -130,7 +130,16 @@ def upgrade():
     # Enable RLS on organization_points_log table (security requirement)
     op.execute(
         """
-        ALTER TABLE organization_points_log ENABLE ROW LEVEL SECURITY;
+        DO $$ BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_class c
+                JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                WHERE c.relname = 'organization_points_log'
+                AND c.relrowsecurity = true
+            ) THEN
+                ALTER TABLE organization_points_log ENABLE ROW LEVEL SECURITY;
+            END IF;
+        END $$;
     """
     )
 

@@ -258,6 +258,11 @@ class ContentItem(Base):
 
 
 # ============ 資源教材包複製記錄 ============
+
+COPIED_BY_INDIVIDUAL = "individual"
+COPIED_BY_ORGANIZATION = "organization"
+
+
 class ProgramCopyLog(Base):
     """記錄資源教材包的複製歷史，用於每日複製次數限制"""
 

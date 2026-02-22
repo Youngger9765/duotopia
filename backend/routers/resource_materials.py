@@ -99,12 +99,13 @@ async def get_copy_status(
     """Get today's copy status for all resource materials."""
     from sqlalchemy import cast, Date
     from models import ProgramCopyLog
+    from models.program import COPIED_BY_INDIVIDUAL, COPIED_BY_ORGANIZATION
     from datetime import datetime, timezone
 
     today = datetime.now(timezone.utc).date()
 
     if scope == "individual":
-        copied_by_type = "individual"
+        copied_by_type = COPIED_BY_INDIVIDUAL
         copied_by_id = str(teacher.id)
     elif scope == "organization":
         if not organization_id:
@@ -112,7 +113,7 @@ async def get_copy_status(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="organization_id required",
             )
-        copied_by_type = "organization"
+        copied_by_type = COPIED_BY_ORGANIZATION
         copied_by_id = str(organization_id)
     else:
         raise HTTPException(

@@ -20,6 +20,7 @@ from models import (
     Teacher,
     ProgramCopyLog,
 )
+from models.program import COPIED_BY_INDIVIDUAL, COPIED_BY_ORGANIZATION
 from core.config import settings
 from services.program_service import copy_program_tree_to_template
 
@@ -91,10 +92,10 @@ def list_resource_materials(
     today = datetime.now(timezone.utc).date()
     if scope == "individual" and viewer_teacher_id:
         copied_by_id = str(viewer_teacher_id)
-        copied_by_type = "individual"
+        copied_by_type = COPIED_BY_INDIVIDUAL
     elif scope == "organization" and organization_id:
         copied_by_id = str(organization_id)
-        copied_by_type = "organization"
+        copied_by_type = COPIED_BY_ORGANIZATION
     else:
         copied_by_id = None
         copied_by_type = None
@@ -315,12 +316,12 @@ def copy_resource_material(
 
     # Determine copied_by for rate limiting
     if target_type == "individual":
-        copied_by_type = "individual"
+        copied_by_type = COPIED_BY_INDIVIDUAL
         copied_by_id = str(teacher_id)
     elif target_type == "organization":
         if not organization_id:
             raise ValueError("organization_id required for organization copy")
-        copied_by_type = "organization"
+        copied_by_type = COPIED_BY_ORGANIZATION
         copied_by_id = str(organization_id)
     else:
         raise ValueError(f"Invalid target_type: {target_type}")
