@@ -89,7 +89,8 @@ class TranslationService:
                     f"RULES:\n"
                     f'1. NEVER use the word "{text}" (or any of its forms) in the definition.\n'
                     f"2. Each definition MUST be 15 words or fewer.\n"
-                    f"3. Only provide multiple definitions if the word has truly distinct meanings. Simple words with one clear meaning need only 1 definition. Maximum 3.\n"
+                    f"3. Only provide multiple definitions if the word has truly "
+                    f"distinct meanings. Simple words need only 1. Max 3.\n"
                     f"4. Include POS abbreviation and follow this starter by part of speech:\n"
                     f'   - Noun: "(n.) a/an ..."\n'
                     f'   - Verb: "(v.) to ..."\n'
@@ -103,7 +104,6 @@ class TranslationService:
                     f"Only return the numbered definitions, no other text."
                 )
             elif target_lang in ("ja", "ko"):
-                lang_name = "日本語" if target_lang == "ja" else "한국어"
                 lang_label = "日文" if target_lang == "ja" else "韓文"
                 example_single = "りんご" if target_lang == "ja" else "사과"
                 example_multi_1 = "識別する" if target_lang == "ja" else "식별하다"
@@ -207,7 +207,8 @@ det. (限定詞), aux. (助動詞)
 只回覆 JSON，不要其他文字。"""
             else:
                 prompt = f"""Analyze the following English word and provide:
-1. English definition(s) — only provide multiple if the word has truly distinct meanings (max 3), numbered in a single string
+1. English definition(s) — only provide multiple if the word has truly distinct \
+meanings (max 3), numbered in a single string
 2. Parts of speech (MUST list ALL common usages)
 
 Word: {text}
@@ -324,7 +325,8 @@ Return as a JSON array with each definition as one item.
 RULES:
 1. NEVER use the target word (or any of its forms) in its own definition.
 2. Each definition MUST be 15 words or fewer.
-3. For each word, only provide multiple definitions if it has truly distinct meanings (max 3), in a single string, numbered.
+3. For each word, only provide multiple definitions if it has truly distinct \
+meanings (max 3), in a single string, numbered.
 4. Include POS abbreviation and follow the starter by part of speech:
    - Noun: "(n.) a/an ..."
    - Verb: "(v.) to ..."
@@ -483,7 +485,8 @@ det. (限定詞), aux. (助動詞)
 只回覆 JSON 陣列，不要其他文字。"""
             else:
                 prompt = f"""Analyze the following English words and provide for each:
-1. English definition(s) — only provide multiple if the word has truly distinct meanings (max 3), numbered in a single string
+1. English definition(s) — only provide multiple if the word has truly distinct \
+meanings (max 3), numbered in a single string
 2. Parts of speech (MUST list ALL common usages)
 
 Words: {texts_json}
@@ -644,7 +647,11 @@ Level guidelines:
    Do NOT repeat the same tense/structure for every sentence. Use the following grammar points for level {level}:
 {chr(10).join(f'   - {g}' for g in GRAMMAR_BY_LEVEL.get(level, GRAMMAR_BY_LEVEL.get("B1", [])))}
 
-7. **SUBJECT VARIETY**: Do NOT start every sentence with pronouns (He, She, They, I). Vary sentence subjects: use proper names (Tom, Maria), job titles (The teacher, A scientist), concrete nouns (The old building, This recipe), abstract nouns (Happiness, His decision), gerund phrases (Running every day...), or "There/It" structures."""
+7. **SUBJECT VARIETY**: Do NOT start every sentence with pronouns \
+(He, She, They, I). Vary sentence subjects: use proper names (Tom, Maria), \
+job titles (The teacher, A scientist), concrete nouns (The old building, \
+This recipe), abstract nouns (Happiness, His decision), gerund phrases \
+(Running every day...), or "There/It" structures."""
 
             # 構建 user prompt
             user_prompt = ""
