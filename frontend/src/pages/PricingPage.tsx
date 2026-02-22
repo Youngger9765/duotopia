@@ -1,18 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
-  Check,
-  Users,
-  Star,
-  CreditCard,
   Shield,
-  User,
   LogOut,
-  LogIn,
+  Sparkles,
+  CreditCard,
+  Package,
+  HelpCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -22,26 +18,103 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import TapPayPayment from "@/components/payment/TapPayPayment";
-import TeacherLoginModal from "@/components/TeacherLoginModal";
+import TeacherLoginSheet from "@/components/TeacherLoginSheet";
+import TeacherRegisterSheet from "@/components/TeacherRegisterSheet";
+import {
+  SubscriptionPlanCard,
+  type SubscriptionPlan,
+} from "@/components/pricing/SubscriptionPlanCard";
+import {
+  PointPackageCard,
+  type PointPackage,
+} from "@/components/pricing/PointPackageCard";
+import { PricingFAQ } from "@/components/pricing/PricingFAQ";
 import { toast } from "sonner";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
-interface PricingPlan {
-  id: string;
-  name: string;
-  description: string;
-  studentRange: string;
-  monthlyPrice: number;
-  features: string[];
-  popular?: boolean;
+function getSubscriptionPlans(
+  t: (key: string) => string,
+): SubscriptionPlan[] {
+  return [
+    {
+      id: "tutor",
+      name: t("pricing.plans.tutor.name"),
+      description: t("pricing.plans.tutor.description"),
+      monthlyPrice: 299,
+      pointsPerMonth: 2000,
+      studentCapacity: t("pricing.plans.tutor.studentCapacity"),
+      features: [
+        t("pricing.plans.tutor.features.assignments"),
+        t("pricing.plans.tutor.features.aiEvaluation"),
+        t("pricing.plans.tutor.features.workshop"),
+      ],
+    },
+    {
+      id: "school",
+      name: t("pricing.plans.school.name"),
+      description: t("pricing.plans.school.description"),
+      monthlyPrice: 599,
+      pointsPerMonth: 6000,
+      studentCapacity: t("pricing.plans.school.studentCapacity"),
+      features: [
+        t("pricing.plans.school.features.allTutor"),
+        t("pricing.plans.school.features.report"),
+      ],
+      popular: true,
+    },
+  ];
 }
+
+const pointPackages: PointPackage[] = [
+  {
+    id: "pkg-1000",
+    points: 1000,
+    price: 180,
+    bonusPoints: 0,
+    unitCost: 0.18,
+  },
+  {
+    id: "pkg-2000",
+    points: 2000,
+    price: 320,
+    bonusPoints: 0,
+    unitCost: 0.16,
+  },
+  {
+    id: "pkg-5000",
+    points: 5000,
+    price: 700,
+    bonusPoints: 200,
+    unitCost: 0.1346,
+  },
+  {
+    id: "pkg-10000",
+    points: 10000,
+    price: 1200,
+    bonusPoints: 500,
+    unitCost: 0.1143,
+  },
+  {
+    id: "pkg-20000",
+    points: 20000,
+    price: 2000,
+    bonusPoints: 800,
+    unitCost: 0.0962,
+    bestValue: true,
+  },
+];
+
+const BASE_UNIT_COST = 0.18; // highest unit cost for discount calculation
 
 export default function PricingPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
+  const subscriptionPlans = getSubscriptionPlans(t);
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(
+    null,
+  );
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [userInfo, setUserInfo] = useState<{
     isLoggedIn: boolean;
@@ -50,59 +123,20 @@ export default function PricingPage() {
     role?: string;
   } | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [pendingPlan, setPendingPlan] = useState<PricingPlan | null>(null);
-  const pricingPlans: PricingPlan[] = [
-    {
-      id: "tutor",
-      name: "Tutor Teachers",
-      description: "小型家教ESL教師",
-      studentRange: "1-100人",
-      monthlyPrice: 330,
-      features: [
-        "10000 點配額/月（錄音、評分、文字批改）",
-        "支援 1-100 位學生",
-        "無限制派發作業（不扣配額）",
-        "AI 語音評估與批改",
-        "完整功能使用權",
-        "標準客服支援",
-        "學習進度追蹤",
-      ],
-    },
-    {
-      id: "school",
-      name: "School Teachers",
-      description: "校園ESL教師",
-      studentRange: "101-200人",
-      monthlyPrice: 660,
-      features: [
-        "25000 點配額/月（錄音、評分、文字批改）",
-        "支援 101-200 位學生",
-        "無限制派發作業（不扣配額）",
-        "AI 語音評估與批改",
-        "完整功能使用權",
-        "優先客服支援",
-        "進階數據分析",
-        "多班級管理",
-        "批次作業指派",
-      ],
-      popular: true,
-    },
-  ];
+  const [showRegisterSheet, setShowRegisterSheet] = useState(false);
+  const [activeTab, setActiveTab] = useState("subscription");
+  const faqRef = useRef<HTMLDivElement>(null);
 
-  const handleSelectPlan = (plan: PricingPlan) => {
+  const handleSelectPlan = (plan: SubscriptionPlan) => {
     const teacherAuth = useTeacherAuthStore.getState();
     const studentAuth = useStudentAuthStore.getState();
 
-    // User is not logged in
     if (!teacherAuth.isAuthenticated) {
-      // Store the plan and open login modal
-      setPendingPlan(plan);
       setShowLoginModal(true);
       toast.info(t("pricing.actions.loginRequired"));
       return;
     }
 
-    // Check if a student is logged in instead
     if (studentAuth.isAuthenticated) {
       toast.error(t("pricing.actions.studentAccountWarning"));
       return;
@@ -112,15 +146,26 @@ export default function PricingPage() {
     setShowPaymentDialog(true);
   };
 
+  const handleSelectPointPackage = (_pkg: PointPackage) => {
+    const teacherAuth = useTeacherAuthStore.getState();
+
+    if (!teacherAuth.isAuthenticated) {
+      setShowLoginModal(true);
+      toast.info(t("pricing.actions.loginRequired"));
+      return;
+    }
+
+    // Point package payment will be handled by backend engineer later
+    toast.info(t("pricing.pointPackages.comingSoon"));
+  };
+
   const handlePaymentSuccess = async (transactionId: string) => {
     try {
-      // Mock API call - will be replaced with real API
       console.log("Payment successful, transaction ID:", transactionId);
       toast.success(
         t("pricing.payment.success", { planName: selectedPlan?.name }),
       );
       setShowPaymentDialog(false);
-      // Navigate to dashboard after successful payment
       setTimeout(() => {
         navigate("/teacher/dashboard");
       }, 2000);
@@ -131,26 +176,21 @@ export default function PricingPage() {
   };
 
   const handlePaymentError = (error: string) => {
-    // 🎉 檢查是否為免費優惠期間提醒
     if (error.includes("免費優惠期間") || error.includes("未來將會開放儲值")) {
-      toast.info(error, {
-        duration: 6000,
-      });
-      // 關閉付款對話框
+      toast.info(error, { duration: 6000 });
       setShowPaymentDialog(false);
     } else {
       toast.error(t("pricing.payment.failed", { error }));
     }
   };
 
-  // Check user login status and subscription
   useEffect(() => {
+    window.scrollTo(0, 0);
     checkUserStatus();
     checkSubscriptionStatus();
   }, []);
 
   const checkUserStatus = () => {
-    // Use stores instead of localStorage
     const teacherAuth = useTeacherAuthStore.getState();
     const studentAuth = useStudentAuthStore.getState();
 
@@ -160,14 +200,16 @@ export default function PricingPage() {
         name:
           teacherAuth.user.name ||
           teacherAuth.user.email?.split("@")[0] ||
-          "教師",
+          t("pricing.fallback.teacher"),
         email: teacherAuth.user.email,
         role: "teacher",
       });
     } else if (studentAuth.isAuthenticated && studentAuth.user) {
       setUserInfo({
         isLoggedIn: true,
-        name: studentAuth.user.name || `學生 ${studentAuth.user.id}`,
+        name:
+          studentAuth.user.name ||
+          t("pricing.fallback.student", { id: studentAuth.user.id }),
         email: studentAuth.user.email,
         role: "student",
       });
@@ -181,7 +223,6 @@ export default function PricingPage() {
     if (!teacherAuth.isAuthenticated || !teacherAuth.token) return;
 
     try {
-      // Check if user has active subscription
       const apiUrl = import.meta.env.VITE_API_URL;
       const response = await fetch(`${apiUrl}/subscription/status`, {
         headers: {
@@ -192,7 +233,6 @@ export default function PricingPage() {
 
       if (response.ok) {
         const data = await response.json();
-        // If user has active subscription, redirect to subscription management
         if (data.is_active) {
           toast.info(t("pricing.payment.hasSubscription"));
           setTimeout(() => {
@@ -206,34 +246,28 @@ export default function PricingPage() {
   };
 
   const handleLogout = () => {
-    // Use Zustand store logout methods
     const teacherLogout = useTeacherAuthStore.getState().logout;
     const studentLogout = useStudentAuthStore.getState().logout;
 
-    // Call both logout methods to clear all auth state
     teacherLogout();
     studentLogout();
 
-    // Clear any remaining localStorage items
     localStorage.removeItem("selectedPlan");
 
     setUserInfo({ isLoggedIn: false });
     toast.success(t("common.success"));
   };
 
-  // Check if user came back from login with a selected plan
   useEffect(() => {
     const savedPlan = localStorage.getItem("selectedPlan");
 
     if (savedPlan && userInfo?.isLoggedIn && userInfo?.role === "teacher") {
       try {
         const planData = JSON.parse(savedPlan);
-        const plan = pricingPlans.find((p) => p.id === planData.id);
+        const plan = subscriptionPlans.find((p) => p.id === planData.id);
         if (plan) {
-          // Auto-open payment dialog for returning users
           setSelectedPlan(plan);
           setShowPaymentDialog(true);
-          // Clear the saved plan
           localStorage.removeItem("selectedPlan");
           toast.success(t("pricing.payment.redirecting"));
         }
@@ -241,237 +275,305 @@ export default function PricingPage() {
         console.error("Error parsing saved plan:", error);
       }
     }
-  }, [pricingPlans, userInfo]);
+  }, [userInfo]);
+
+  const isStudent = userInfo?.role === "student";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Language Switcher */}
-      <div className="absolute top-4 right-4 z-50">
-        <LanguageSwitcher />
-      </div>
-
-      {/* User Status Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-            {/* Logo Section */}
-            <div className="flex items-center gap-2 sm:gap-4">
-              <Link
-                to="/"
-                className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400"
-              >
-                {t("pricing.header.logo")}
-              </Link>
-              <span className="text-gray-400 dark:text-gray-500 hidden sm:inline">
-                |
-              </span>
-              <span className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
-                {t("pricing.title")}
-              </span>
-            </div>
-
-            {/* User Actions */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-              {userInfo?.isLoggedIn ? (
-                <>
-                  {/* User Info */}
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300" />
-                    <div className="text-left sm:text-right">
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {userInfo.name}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {userInfo.role === "teacher"
-                          ? t("pricing.header.teacherAccount")
-                          : t("pricing.header.studentAccount")}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    {userInfo.role === "teacher" ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate("/teacher/dashboard")}
-                        className="flex-1 sm:flex-none"
-                      >
-                        {t("pricing.header.backToDashboard")}
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate("/student/dashboard")}
-                        className="flex-1 sm:flex-none"
-                      >
-                        {t("pricing.header.backToStudentArea")}
-                      </Button>
-                    )}
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleLogout}
-                      className="flex-1 sm:flex-none"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      {t("nav.logout")}
-                    </Button>
-                  </div>
-                </>
+      {/* Header - same style as Home page, no gap to hero */}
+      <header className="bg-white py-2 px-3 sm:py-3 sm:px-6 flex items-center justify-between">
+        <Link to="/">
+          <img
+            src="https://storage.googleapis.com/duotopia-social-media-videos/website/logo/logo_row_nobg.png"
+            alt="Duotopia"
+            className="h-8 sm:h-10"
+          />
+        </Link>
+        <div className="flex items-center gap-1.5 sm:gap-3">
+          {userInfo?.isLoggedIn ? (
+            <>
+              {userInfo.role === "teacher" ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/teacher/dashboard")}
+                  className="text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
+                >
+                  {t("pricing.header.backToDashboard")}
+                </Button>
               ) : (
-                <>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => setShowLoginModal(true)}
-                    className="w-full sm:w-auto"
-                  >
-                    <LogIn className="w-4 h-4 mr-2" />
-                    {t("pricing.header.teacherLogin")}
-                  </Button>
-                </>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/student/dashboard")}
+                  className="text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
+                >
+                  {t("pricing.header.backToStudentArea")}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
+              >
+                <LogOut className="w-4 h-4 mr-1" />
+                {t("nav.logout")}
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowLoginModal(true)}
+              className="text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
+            >
+              {t("pricing.header.teacherLogin")}
+            </Button>
+          )}
+          <LanguageSwitcher />
+        </div>
+      </header>
+
+      {/* Hero Section - same style as Home page */}
+      {/* Hero Section - same style as Home page */}
+      <section className="bg-gradient-to-b from-[#204dc0] to-[#101f6b] text-white py-8">
+        <div className="container mx-auto px-4 sm:px-8 lg:px-16">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center py-2">
+              <p className="text-yellow-400 mb-1 text-base lg:text-lg font-medium">
+                {t("home.hero.tagline")}
+              </p>
+              <p className="text-yellow-400 text-base lg:text-lg font-medium mb-4">
+                <span className="bg-white/20 text-white font-bold px-1.5 py-0.5 rounded">
+                  {t("home.hero.preClass")}
+                </span>
+                {t("home.hero.preClassDesc")}
+                <span className="bg-white/20 text-white font-bold px-1.5 py-0.5 rounded">
+                  {t("home.hero.inClass")}
+                </span>
+                {t("home.hero.inClassDesc")}
+                <span className="bg-white/20 text-white font-bold px-1.5 py-0.5 rounded">
+                  {t("home.hero.postClass")}
+                </span>
+                {t("home.hero.postClassDesc")}
+              </p>
+
+              <h1 className="text-3xl lg:text-4xl min-[1440px]:text-5xl font-bold mb-3">
+                {t("pricing.subtitle")}
+              </h1>
+
+              {/* Trial Points Highlight */}
+              <div className="flex items-center justify-center gap-2 mb-5">
+                <Sparkles className="w-5 h-5 text-yellow-400" />
+                <p className="text-yellow-400 font-bold text-xl lg:text-2xl">
+                  {t("pricing.trialBanner.title")}
+                </p>
+              </div>
+
+              {/* CTA Buttons */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto">
+                <Button
+                  size="lg"
+                  className="w-full bg-white text-gray-900 hover:bg-gray-100 border-2 border-white py-[22px] text-lg font-semibold shadow-xl"
+                  onClick={() => setShowRegisterSheet(true)}
+                >
+                  {t("home.hero.freeTrialBtn")}
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full border-2 border-white text-white hover:bg-white hover:text-blue-700 py-[22px] text-lg font-semibold transition-colors"
+                  onClick={() => setActiveTab("subscription")}
+                >
+                  <CreditCard className="w-5 h-5 mr-2" />
+                  {t("pricing.tabs.subscription")}
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full border-2 border-white text-white hover:bg-white hover:text-blue-700 py-[22px] text-lg font-semibold transition-colors"
+                  onClick={() => setActiveTab("pointPackages")}
+                >
+                  <Package className="w-5 h-5 mr-2" />
+                  {t("pricing.tabs.pointPackages")}
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full border-2 border-white text-white hover:bg-white hover:text-blue-700 py-[22px] text-lg font-semibold transition-colors"
+                  onClick={() =>
+                    faqRef.current?.scrollIntoView({ behavior: "smooth" })
+                  }
+                >
+                  <HelpCircle className="w-5 h-5 mr-2" />
+                  FAQ
+                </Button>
+              </div>
+
+              {isStudent && (
+                <div className="mt-4 bg-yellow-400/20 border border-yellow-400/40 rounded-lg px-4 py-3 max-w-md mx-auto">
+                  <p className="text-sm text-yellow-100">
+                    {t("pricing.actions.studentAccountWarning")}
+                  </p>
+                </div>
               )}
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <div className="container mx-auto px-4 py-12">
-        {/* Header Section */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            {t("pricing.subtitle")}
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            {t("pricing.description")}
-          </p>
 
-          {userInfo?.isLoggedIn && userInfo.role === "student" && (
-            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 max-w-md mx-auto">
-              <p className="text-sm text-yellow-800">
-                ⚠️ {t("pricing.actions.studentAccountWarning")}
-              </p>
+        {/* Tabs: Monthly Subscription | Point Packages */}
+        <div className="max-w-5xl mx-auto">
+          {activeTab === "subscription" && (
+            <div className="max-w-4xl mx-auto">
+              <div className="grid md:grid-cols-2 gap-8">
+                {subscriptionPlans.map((plan) => (
+                  <SubscriptionPlanCard
+                    key={plan.id}
+                    plan={plan}
+                    onSelect={handleSelectPlan}
+                    disabled={isStudent}
+                    disabledText={
+                      isStudent
+                        ? t("pricing.actions.logoutFirst")
+                        : undefined
+                    }
+                    ctaText={t("pricing.actions.subscribe")}
+                  />
+                ))}
+              </div>
             </div>
+          )}
+
+          {activeTab === "pointPackages" && (
+            <>
+              <div className="text-center mb-6">
+                <p className="text-gray-600">
+                  {t("pricing.pointPackages.description")}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {pointPackages.map((pkg) => (
+                  <PointPackageCard
+                    key={pkg.id}
+                    pkg={pkg}
+                    onSelect={handleSelectPointPackage}
+                    disabled={isStudent}
+                    ctaText={t("pricing.pointPackages.buy")}
+                    baseUnitCost={BASE_UNIT_COST}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </div>
 
-        {/* Pricing Cards */}
-        <div className="max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-8">
-            {pricingPlans.map((plan, index) => {
-              return (
-                <Card
-                  key={index}
-                  className={`relative p-8 hover:shadow-xl transition-all duration-300 ${
-                    plan.popular ? "border-blue-500 border-2 scale-105" : ""
-                  }`}
-                >
-                  {plan.popular && (
-                    <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white">
-                      <Star className="w-3 h-3 mr-1" />
-                      {t("pricing.schoolPlan.popular")}
-                    </Badge>
-                  )}
-
-                  <div className="text-center mb-6">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                      {plan.name}
-                    </h3>
-                    <p className="text-gray-600">{plan.description}</p>
-                    <div className="flex items-center justify-center mt-3 text-gray-500">
-                      <Users className="w-4 h-4 mr-2" />
-                      <span>{plan.studentRange}</span>
-                    </div>
-                  </div>
-
-                  {/* 價格區塊 */}
-                  <div className="mb-8">
-                    <div className="bg-blue-50 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">
-                          {t("pricing.billing.monthly")}
-                        </span>
-                        <div className="text-right">
-                          <span className="text-3xl font-bold text-gray-900">
-                            NT$ {plan.monthlyPrice}
-                          </span>
-                          <span className="text-gray-600 ml-1">
-                            {t("pricing.billing.perMonth")}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <ul className="space-y-3 mb-8">
-                    {plan.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start">
-                        <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                        <span className="text-gray-700">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Button
-                    onClick={() => handleSelectPlan(plan)}
-                    disabled={userInfo?.role === "student"}
-                    className={`w-full ${
-                      userInfo?.role === "student"
-                        ? "bg-gray-300 cursor-not-allowed text-gray-500"
-                        : plan.popular
-                          ? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
-                          : "bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-800 text-white"
-                    }`}
-                  >
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    {userInfo?.role === "student"
-                      ? t("pricing.actions.studentCannotSubscribe")
-                      : t("pricing.actions.subscribe")}
-                  </Button>
-
-                  {userInfo?.role === "student" && (
-                    <p className="text-xs text-red-500 mt-2 text-center">
-                      {t("pricing.actions.logoutFirst")}
-                    </p>
-                  )}
-                </Card>
-              );
-            })}
-          </div>
+        {/* FAQ Section */}
+        <div ref={faqRef} className="max-w-2xl mx-auto mt-16">
+          <PricingFAQ />
         </div>
 
-        {/* Bottom Info */}
-        <div className="mt-16 text-center">
-          <div className="bg-white rounded-lg p-6 max-w-2xl mx-auto shadow-md">
-            <h3 className="font-semibold text-gray-900 mb-3">
-              {t("pricing.billing.monthly")}
-            </h3>
-            <div className="text-sm text-gray-600">
-              <p className="font-medium text-gray-900 mb-1">
-                {t("pricing.billing.monthly")}
-              </p>
-              <p>{t("pricing.billing.description")}</p>
+      </div>
+
+      {/* Footer - same as Home page */}
+      <footer className="bg-gray-900 text-gray-300 py-12">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid md:grid-cols-4 gap-8">
+              <div>
+                <h3 className="text-white text-lg font-bold mb-4">
+                  {t("home.hero.brand")}
+                </h3>
+                <p className="text-sm mb-4">{t("home.footer.description")}</p>
+                <div className="text-sm">
+                  <p className="text-gray-400 mb-1">
+                    {t("home.footer.contact")}
+                  </p>
+                  <a
+                    href="mailto:contact@duotopia.co"
+                    className="text-blue-400 hover:text-blue-300"
+                  >
+                    contact@duotopia.co
+                  </a>
+                </div>
+              </div>
+              <div>
+                <h4 className="text-white font-semibold mb-4">
+                  {t("home.footer.product")}
+                </h4>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <a href="#features" className="hover:text-white">
+                      {t("home.footer.features")}
+                    </a>
+                  </li>
+                  <li>
+                    <Link to="/pricing" className="hover:text-white">
+                      {t("home.footer.pricing")}
+                    </Link>
+                  </li>
+                  <li>
+                    <a
+                      href="https://forms.gle/azFtAQCW13afA8ab6"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-white"
+                    >
+                      {t("home.footer.eduPlan")}
+                    </a>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-white font-semibold mb-4">
+                  {t("home.footer.support")}
+                </h4>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <a
+                      href="https://m.me/duotopia"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-white"
+                    >
+                      {t("home.footer.tutorial")}
+                    </a>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-white font-semibold mb-4">
+                  {t("home.footer.company")}
+                </h4>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <a href="#" className="hover:text-white">
+                      {t("home.footer.about")}
+                    </a>
+                  </li>
+                  <li>
+                    <Link to="/privacy" className="hover:text-white">
+                      {t("home.footer.privacy")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/terms" className="hover:text-white">
+                      {t("home.footer.terms")}
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm">
+              <p>{t("home.footer.copyright")}</p>
             </div>
           </div>
-
-          <div className="mt-8">
-            <p className="text-gray-600 mb-4">{t("pricing.needMore")}</p>
-            <p className="text-gray-900 font-medium">
-              {t("pricing.contactUs")}
-              <a
-                href="mailto:contact@duotopia.co"
-                className="text-blue-600 hover:text-blue-700 underline"
-              >
-                contact@duotopia.co
-              </a>
-            </p>
-          </div>
         </div>
-      </div>
+      </footer>
 
       {/* Payment Dialog */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
@@ -499,29 +601,33 @@ export default function PricingPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Login Modal */}
-      <TeacherLoginModal
-        isOpen={showLoginModal}
-        onClose={() => {
-          setShowLoginModal(false);
-          setPendingPlan(null);
-        }}
-        onLoginSuccess={() => {
-          // Update user status immediately after login
-          checkUserStatus();
-          setShowLoginModal(false);
+      {/* Meta Messenger 浮動按鈕 */}
+      <a
+        href="https://m.me/duotopia"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-[#0084FF] hover:bg-[#0073E6] rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-110"
+        aria-label="Meta Messenger 客服"
+      >
+        <svg viewBox="0 0 36 36" fill="white" className="w-7 h-7">
+          <path d="M18 2.1C9.1 2.1 2 8.6 2 16.6c0 4.6 2.3 8.6 5.8 11.2V34l5.7-3.1c1.5.4 3 .6 4.5.6 8.9 0 16-6.5 16-14.5S26.9 2.1 18 2.1zm1.6 19.5l-4.1-4.3-7.9 4.3 8.7-9.2 4.2 4.3 7.8-4.3-8.7 9.2z" />
+        </svg>
+      </a>
 
-          // Small delay to ensure state is updated
-          setTimeout(() => {
-            // If there was a pending plan, open payment dialog
-            if (pendingPlan) {
-              setSelectedPlan(pendingPlan);
-              setShowPaymentDialog(true);
-              setPendingPlan(null);
-            }
-          }, 100);
+      {/* Login Sheet - slides in from right, same as Home page */}
+      <TeacherLoginSheet
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
+
+      {/* Register Sheet - slides in from right, same style */}
+      <TeacherRegisterSheet
+        isOpen={showRegisterSheet}
+        onClose={() => setShowRegisterSheet(false)}
+        onSwitchToLogin={() => {
+          setShowRegisterSheet(false);
+          setShowLoginModal(true);
         }}
-        selectedPlan={pendingPlan || undefined}
       />
     </div>
   );

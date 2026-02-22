@@ -405,6 +405,16 @@
     "card": {
       "popular": "Popular"
     },
+    "actions": {
+      "subscribe": "Subscribe Now",
+      "freeRegister": "Free Sign Up",
+      "currentPlan": "Current Plan",
+      "upgradePlan": "Upgrade Plan",
+      "studentCannotSubscribe": "Students Cannot Subscribe",
+      "loginRequired": "Please login to subscribe",
+      "studentAccountWarning": "Student accounts cannot subscribe to teacher plans, please use a teacher account",
+      "logoutFirst": "Please logout first and login with a teacher account to subscribe"
+    },
     "tabs": {
       "subscription": "Monthly Plans",
       "pointPackages": "Point Packages"
@@ -422,6 +432,16 @@
       "unitCost": "NTD/pt",
       "discount": "Save {{percent}}%",
       "validity": "Valid for 1 year"
+    },
+    "payment": {
+      "title": "Complete Payment",
+      "securePayment": "Secure Payment Process",
+      "selectedPlan": "You selected {{planName}} plan",
+      "success": "Successfully subscribed to {{planName}} plan!",
+      "error": "Subscription error occurred, please contact support",
+      "failed": "Payment failed: {{error}}",
+      "redirecting": "Payment page opened automatically",
+      "hasSubscription": "You already have a subscription, redirecting to subscription management"
     },
     "plans": {
       "free": {
@@ -477,26 +497,6 @@
       "a7": "Yes, subscriptions auto-renew every 30 days.",
       "q8": "How do I cancel? What happens after cancellation?",
       "a8": "You can cancel anytime in account settings. You won't be charged the following month. Remaining points can be used until they expire."
-    },
-    "actions": {
-      "subscribe": "Subscribe Now",
-      "freeRegister": "Free Sign Up",
-      "currentPlan": "Current Plan",
-      "upgradePlan": "Upgrade Plan",
-      "studentCannotSubscribe": "Students Cannot Subscribe",
-      "loginRequired": "Please login to subscribe",
-      "studentAccountWarning": "Student accounts cannot subscribe to teacher plans, please use a teacher account",
-      "logoutFirst": "Please logout first and login with a teacher account to subscribe"
-    },
-    "payment": {
-      "title": "Complete Payment",
-      "securePayment": "Secure Payment Process",
-      "selectedPlan": "You selected {{planName}} plan",
-      "success": "Successfully subscribed to {{planName}} plan!",
-      "error": "Subscription error occurred, please contact support",
-      "failed": "Payment failed: {{error}}",
-      "redirecting": "Payment page opened automatically",
-      "hasSubscription": "You already have a subscription, redirecting to subscription management"
     }
   },
   "teacherDashboard": {
