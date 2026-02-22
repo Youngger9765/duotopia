@@ -111,6 +111,8 @@ __all__ = [
     "StudentItemProgress",
     "PracticeSession",
     "PracticeAnswer",
+    # Points
+    "OrganizationPointsLog",
     # Demo
     "DemoConfig",
 ]

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { PointsHistory, PointsLogItem } from "../types/points";
-import { API_URL } from "../config/api";
-import { useTeacherAuthStore } from "../stores/teacherAuthStore";
+import { apiClient } from "../lib/api";
 
 interface Props {
   organizationId: string;
@@ -10,7 +9,6 @@ interface Props {
 export const OrganizationPointsHistory: React.FC<Props> = ({
   organizationId,
 }) => {
-  const token = useTeacherAuthStore((state) => state.token);
   const [history, setHistory] = useState<PointsHistory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,20 +21,9 @@ export const OrganizationPointsHistory: React.FC<Props> = ({
         setLoading(true);
         const offset = page * limit;
 
-        const response = await fetch(
-          `${API_URL}/api/organizations/${organizationId}/points/history?limit=${limit}&offset=${offset}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
+        const data = await apiClient.get<PointsHistory>(
+          `/api/organizations/${organizationId}/points/history?limit=${limit}&offset=${offset}`,
         );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch points history");
-        }
-
-        const data = await response.json();
         setHistory(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
@@ -46,7 +33,7 @@ export const OrganizationPointsHistory: React.FC<Props> = ({
     };
 
     fetchHistory();
-  }, [organizationId, page, token]);
+  }, [organizationId, page]);
 
   if (loading) {
     return <div className="animate-pulse">Loading history...</div>;

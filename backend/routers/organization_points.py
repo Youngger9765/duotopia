@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List
 from datetime import datetime, timezone
 from pydantic import BaseModel
+import logging
 import uuid
 
 from database import get_db
@@ -10,6 +11,7 @@ from models import Organization, Teacher, TeacherOrganization, OrganizationPoint
 from routers.teachers import get_current_teacher
 from utils.permissions import has_manage_materials_permission
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/organizations", tags=["organization-points"])
 
@@ -163,20 +165,27 @@ async def deduct_organization_points(
         )
 
     # Deduct points
-    organization.used_points += deduction.points
-    organization.last_points_update = datetime.now(timezone.utc)
+    try:
+        organization.used_points += deduction.points
+        organization.last_points_update = datetime.now(timezone.utc)
 
-    # Create log entry
-    log_entry = OrganizationPointsLog(
-        organization_id=organization_id,
-        teacher_id=current_teacher.id,
-        points_used=deduction.points,
-        feature_type=deduction.feature_type,
-        description=deduction.description,
-    )
-    db.add(log_entry)
-    db.commit()
-    db.refresh(log_entry)
+        # Create log entry
+        log_entry = OrganizationPointsLog(
+            organization_id=organization_id,
+            teacher_id=current_teacher.id,
+            points_used=deduction.points,
+            feature_type=deduction.feature_type,
+            description=deduction.description,
+        )
+        db.add(log_entry)
+        db.commit()
+        db.refresh(log_entry)
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to deduct points for org {organization_id}: {e}")
+        raise HTTPException(
+            status_code=500, detail="Failed to deduct points"
+        )
 
     return PointsDeductionResponse(
         organization_id=organization.id,
