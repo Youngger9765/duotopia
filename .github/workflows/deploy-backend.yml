@@ -399,10 +399,10 @@ jobs:
           MAX_INSTANCES=1      # Staging 流量低，降為 1 節省成本
         fi
 
-        # Use @ as custom delimiter instead of , because env var values contain commas
-        # (e.g. DEMO_ALLOWED_ORIGINS=https://duotopia.co,https://www.duotopia.net)
+        # Use ~ as custom delimiter instead of , because env var values contain
+        # commas (DEMO_ALLOWED_ORIGINS) and @ (DATABASE_URL postgresql://...@host)
         # sed replaces only commas followed by KEY= pattern, preserving commas inside values
-        ENV_VARS_ESCAPED=$(echo "$ENV_VARS" | sed 's/,\([A-Z_][A-Z_0-9]*=\)/@\1/g')
+        ENV_VARS_ESCAPED=$(echo "$ENV_VARS" | sed 's/,\([A-Z_][A-Z_0-9]*=\)/~\1/g')
 
         gcloud run deploy ${{ steps.env_vars.outputs.BACKEND_SERVICE }} \
           --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/${{ steps.env_vars.outputs.BACKEND_SERVICE }}:$GITHUB_SHA \
@@ -417,7 +417,7 @@ jobs:
           --cpu-throttling \
           --concurrency $CONCURRENCY \
           --no-cpu-boost \
-          --set-env-vars="^@^$ENV_VARS_ESCAPED"
+          --set-env-vars="^~^$ENV_VARS_ESCAPED"
 
     - name: 🧹 Cleanup Old Backend Images
       run: |
