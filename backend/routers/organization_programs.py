@@ -282,12 +282,12 @@ async def list_organization_materials(
 
         # Build lessons hierarchy
         program_data.lessons = []
-        for lesson in sorted(program.lessons, key=lambda x: x.order_index):
+        for lesson in program.lessons:
             lesson_data = LessonResponse.model_validate(lesson)
 
             # Build contents hierarchy
             lesson_data.contents = []
-            for content in sorted(lesson.contents, key=lambda x: x.order_index):
+            for content in lesson.contents:
                 content_data = ContentResponse.model_validate(content)
 
                 # Build items
@@ -356,11 +356,11 @@ async def get_organization_material_details(
     program_data = ProgramResponse.model_validate(program)
     program_data.lessons = []
 
-    for lesson in sorted(program.lessons, key=lambda x: x.order_index):
+    for lesson in program.lessons:
         lesson_data = LessonResponse.model_validate(lesson)
         lesson_data.contents = []
 
-        for content in sorted(lesson.contents, key=lambda x: x.order_index):
+        for content in lesson.contents:
             content_data = ContentResponse.model_validate(content)
             content_data.items = [
                 ContentItemResponse.model_validate(item)
@@ -678,11 +678,11 @@ async def copy_material_to_classroom(
     program_data = ProgramResponse.model_validate(new_program)
     program_data.lessons = []
 
-    for lesson in sorted(new_program.lessons, key=lambda x: x.order_index):
+    for lesson in new_program.lessons:
         lesson_data = LessonResponse.model_validate(lesson)
         lesson_data.contents = []
 
-        for content in sorted(lesson.contents, key=lambda x: x.order_index):
+        for content in lesson.contents:
             content_data = ContentResponse.model_validate(content)
             content_data.items = [
                 ContentItemResponse.model_validate(item)
