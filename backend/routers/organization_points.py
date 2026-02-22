@@ -155,12 +155,20 @@ async def deduct_organization_points(
     if not organization:
         raise HTTPException(status_code=404, detail="Organization not found")
 
-    # Check sufficient balance
-    available = organization.total_points - organization.used_points
-    if deduction.points > available:
+    # Check sufficient balance (consistent with OrganizationPointsService.QUOTA_BUFFER_PERCENTAGE)
+    # Allow up to 20% overdraft buffer to stay consistent with internal service logic
+    from services.organization_points_service import OrganizationPointsService
+
+    effective_limit = int(
+        organization.total_points
+        * (1 + OrganizationPointsService.QUOTA_BUFFER_PERCENTAGE)
+    )
+    points_after = organization.used_points + deduction.points
+    if points_after > effective_limit:
+        available = effective_limit - organization.used_points
         raise HTTPException(
             status_code=400,
-            detail=f"Insufficient points. Available: {available}, Requested: {deduction.points}",
+            detail=f"Insufficient points. Available: {max(0, available)}, Requested: {deduction.points}",
         )
 
     # Deduct points

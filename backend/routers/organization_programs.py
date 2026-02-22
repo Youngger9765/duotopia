@@ -30,6 +30,8 @@ from models import (
     Content,
     ContentItem,
     Classroom,
+    School,
+    ClassroomSchool,
 )
 from models.program import ProgramCopyLog
 from routers.teachers import get_current_teacher
@@ -594,6 +596,26 @@ async def copy_material_to_classroom(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Classroom not found"
         )
+
+    # Verify classroom belongs to a school under this organization
+    classroom_in_org = (
+        db.query(ClassroomSchool)
+        .join(School, ClassroomSchool.school_id == School.id)
+        .filter(
+            ClassroomSchool.classroom_id == payload.classroom_id,
+            ClassroomSchool.is_active.is_(True),
+            School.organization_id == org_id,
+            School.is_active.is_(True),
+        )
+        .first()
+    )
+    if not classroom_in_org:
+        # Also allow if teacher directly owns the classroom (individual teacher context)
+        if classroom.teacher_id != current_teacher.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Classroom does not belong to this organization",
+            )
 
     # Verify teacher is member of organization
     if not has_read_org_materials_permission(current_teacher.id, org_id, db):
