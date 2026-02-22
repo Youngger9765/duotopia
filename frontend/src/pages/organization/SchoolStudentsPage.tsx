@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { apiClient } from "@/lib/api";
 import { API_URL } from "@/config/api";
@@ -17,10 +17,24 @@ import { AssignClassroomDialog } from "@/components/organization/AssignClassroom
 import { ImportStudentsDialog } from "@/components/organization/ImportStudentsDialog";
 import { ConfirmDialog } from "@/components/organization/ConfirmDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Users, Plus, Search, Upload } from "lucide-react";
 import { toast } from "sonner";
+
+interface Classroom {
+  id: number;
+  name: string;
+  student_count: number;
+  is_active: boolean;
+}
 
 interface School {
   id: string;
@@ -35,11 +49,18 @@ interface Organization {
 
 export default function SchoolStudentsPage() {
   const { schoolId } = useParams<{ schoolId: string }>();
+  const location = useLocation();
   const token = useTeacherAuthStore((state) => state.token);
 
   const [students, setStudents] = useState<Student[]>([]);
-  const [school, setSchool] = useState<School | null>(null);
-  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+  const [selectedTab, setSelectedTab] = useState("unassigned");
+  const [school, setSchool] = useState<School | null>(
+    location.state?.school ?? null,
+  );
+  const [organization, setOrganization] = useState<Organization | null>(
+    location.state?.organization ?? null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -62,8 +83,9 @@ export default function SchoolStudentsPage() {
   useEffect(() => {
     if (schoolId && token) {
       fetchSchool();
+      fetchClassrooms();
     }
-  }, [schoolId]);
+  }, [schoolId, token]);
 
   const fetchSchool = async () => {
     if (!schoolId) return;
@@ -116,15 +138,46 @@ export default function SchoolStudentsPage() {
     }
   };
 
+  const fetchClassrooms = async () => {
+    if (!schoolId) return;
+    try {
+      const response = await fetch(
+        `${API_URL}/api/schools/${schoolId}/classrooms`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setClassrooms(data.filter((c: Classroom) => c.is_active));
+      }
+    } catch (error) {
+      logError("Failed to fetch classrooms", error, { schoolId });
+    }
+  };
+
   const fetchStudents = async () => {
     if (!schoolId) return;
 
     try {
       setError(null);
+      setLoading(true);
 
-      const params: { search?: string } = {};
+      const params: {
+        search?: string;
+        classroom_id?: number;
+        unassigned?: boolean;
+        limit?: number;
+      } = { limit: 200 };
+
       if (searchTerm) {
+        // 有搜尋詞時跨班搜尋，不帶 classroom 限制
         params.search = searchTerm;
+      } else if (selectedTab === "unassigned") {
+        params.unassigned = true;
+      } else {
+        const id = Number(selectedTab);
+        if (!Number.isNaN(id)) {
+          params.classroom_id = id;
+        }
       }
 
       const data = (await apiClient.getSchoolStudents(
@@ -135,6 +188,8 @@ export default function SchoolStudentsPage() {
     } catch (error) {
       logError("Failed to fetch students", error, { schoolId });
       setError("載入學生列表失敗");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -146,7 +201,7 @@ export default function SchoolStudentsPage() {
 
       return () => clearTimeout(debounceTimer);
     }
-  }, [searchTerm, schoolId]);
+  }, [searchTerm, selectedTab, schoolId]);
 
   const handleCreateSuccess = async () => {
     await fetchStudents();
@@ -280,9 +335,33 @@ export default function SchoolStudentsPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Classroom Selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 whitespace-nowrap">
+              選擇班級
+            </span>
+            <Select
+              value={selectedTab}
+              onValueChange={setSelectedTab}
+              disabled={!!searchTerm}
+            >
+              <SelectTrigger className="w-[240px]">
+                <SelectValue placeholder="選擇班級" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">未分配</SelectItem>
+                {classrooms.map((classroom) => (
+                  <SelectItem key={classroom.id} value={String(classroom.id)}>
+                    {classroom.name}（{classroom.student_count}）
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Search */}
-          <div className="mb-4">
+          <div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -292,13 +371,20 @@ export default function SchoolStudentsPage() {
                 className="pl-10"
               />
             </div>
+            {searchTerm && (
+              <p className="text-xs text-blue-500 mt-1 ml-1">
+                正在搜尋全校學生
+              </p>
+            )}
           </div>
 
           {/* Error Message */}
           {error && <ErrorMessage message={error} />}
 
           {/* Student List */}
-          {!loading && (
+          {loading ? (
+            <LoadingSpinner />
+          ) : (
             <StudentListTable
               students={students}
               onEdit={handleEdit}

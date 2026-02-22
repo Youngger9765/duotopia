@@ -16,9 +16,11 @@ import {
   Save,
   X,
   Lock,
+  Gauge,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { validatePasswordStrength } from "@/utils/passwordValidation";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface TeacherInfo {
   id: number;
@@ -28,6 +30,128 @@ interface TeacherInfo {
   is_demo: boolean;
   is_active: boolean;
   is_admin?: boolean;
+}
+
+interface QuotaInfo {
+  quota_total: number;
+  quota_used: number;
+  quota_remaining: number;
+  plan_name: string;
+  source: "personal" | "organization";
+}
+
+// 配額卡片獨立元件（必須在 TeacherLayout/WorkspaceProvider 內才能使用 useWorkspace）
+function QuotaCard() {
+  const { mode, selectedOrganization } = useWorkspace();
+  const [quotaInfo, setQuotaInfo] = useState<QuotaInfo | null>(null);
+
+  useEffect(() => {
+    loadQuotaInfo();
+  }, [mode, selectedOrganization?.id]);
+
+  const loadQuotaInfo = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (mode === "organization" && selectedOrganization) {
+        params.append("organization_id", selectedOrganization.id);
+      }
+      const url = `/api/teachers/subscription${params.toString() ? `?${params.toString()}` : ""}`;
+
+      const response = await apiClient.get<{
+        subscription_period: {
+          quota_total: number;
+          quota_used: number;
+          plan_name: string;
+        } | null;
+        source?: string;
+      }>(url);
+
+      if (response.subscription_period) {
+        const remaining =
+          response.subscription_period.quota_total -
+          response.subscription_period.quota_used;
+        setQuotaInfo({
+          quota_total: response.subscription_period.quota_total,
+          quota_used: response.subscription_period.quota_used,
+          quota_remaining: Math.max(0, remaining),
+          plan_name: response.subscription_period.plan_name,
+          source:
+            (response.source as "personal" | "organization") || "personal",
+        });
+      } else {
+        setQuotaInfo(null);
+      }
+    } catch (error) {
+      console.error("Failed to load quota info:", error);
+    }
+  };
+
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Gauge className="h-5 w-5" />
+          {quotaInfo?.source === "organization"
+            ? `${quotaInfo.plan_name} 配額`
+            : "個人配額"}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {quotaInfo ? (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-500">
+              目前工作區：
+              <span className="font-medium text-gray-700">
+                {mode === "organization" && selectedOrganization
+                  ? selectedOrganization.name
+                  : "個人模式"}
+              </span>
+            </p>
+
+            <div className="flex items-baseline gap-2">
+              <span
+                className={`text-2xl font-bold ${
+                  quotaInfo.quota_remaining > quotaInfo.quota_total * 0.3
+                    ? "text-green-600"
+                    : quotaInfo.quota_remaining > quotaInfo.quota_total * 0.1
+                      ? "text-orange-600"
+                      : "text-red-600"
+                }`}
+              >
+                {quotaInfo.quota_remaining.toLocaleString()}
+              </span>
+              <span className="text-gray-500">
+                / {quotaInfo.quota_total.toLocaleString()} 秒
+              </span>
+            </div>
+
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div
+                className={`h-2.5 rounded-full transition-all ${
+                  quotaInfo.quota_remaining > quotaInfo.quota_total * 0.3
+                    ? "bg-green-500"
+                    : quotaInfo.quota_remaining > quotaInfo.quota_total * 0.1
+                      ? "bg-orange-500"
+                      : "bg-red-500"
+                }`}
+                style={{
+                  width: `${Math.max(0, Math.min(100, (quotaInfo.quota_remaining / quotaInfo.quota_total) * 100))}%`,
+                }}
+              />
+            </div>
+
+            <p className="text-xs text-gray-400">
+              已使用 {quotaInfo.quota_used.toLocaleString()} 秒
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">
+            {mode === "organization" ? "此機構尚無配額資訊" : "尚無有效訂閱"}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function TeacherProfile() {
@@ -341,6 +465,9 @@ export default function TeacherProfile() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Quota Info Card */}
+        <QuotaCard />
 
         {/* Password Settings Card */}
         <Card className="mb-6">

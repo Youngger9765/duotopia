@@ -5,8 +5,9 @@ Revises:
 Create Date: 2026-02-01 03:06:00.000000
 
 """
+import os
 from alembic import op
-import sqlalchemy as sa
+from sqlalchemy import text
 
 
 # revision identifiers, used by Alembic.
@@ -17,28 +18,37 @@ depends_on = None
 # Demo account configuration
 DEMO_EMAIL = "contact@duotopia.co"
 DEMO_NAME = "Duotopia Demo"
-# Password: DemoPass2026! (bcrypt hash)
-DEMO_PASSWORD_HASH = "$2b$12$pyTz1WOVSBDCNadNuNKnxODOkRluKaC/kUJXZv/bGAuz.ea4LvcNi"
 
 
 def upgrade():
     """Add demo teacher account if not exists (idempotent)"""
-    # Use INSERT ... WHERE NOT EXISTS to ensure idempotency
-    # This allows safe re-running on production where the account may already exist
+    # Password hash is read from environment variable to avoid storing secrets in code
+    password_hash = os.environ.get("DEMO_PASSWORD_HASH", "")
+    if not password_hash:
+        # Skip if env var not set (e.g. in test environments)
+        return
+
+    # Use parameterized query to prevent SQL injection
     op.execute(
-        f"""
-        INSERT INTO teachers (email, password_hash, name, is_active, is_demo, created_at)
-        SELECT
-            '{DEMO_EMAIL}',
-            '{DEMO_PASSWORD_HASH}',
-            '{DEMO_NAME}',
-            true,
-            true,
-            NOW()
-        WHERE NOT EXISTS (
-            SELECT 1 FROM teachers WHERE email = '{DEMO_EMAIL}'
-        );
-    """
+        text(
+            """
+            INSERT INTO teachers (email, password_hash, name, is_active, is_demo, created_at)
+            SELECT
+                :email,
+                :password_hash,
+                :name,
+                true,
+                true,
+                NOW()
+            WHERE NOT EXISTS (
+                SELECT 1 FROM teachers WHERE email = :email
+            );
+        """
+        ).bindparams(
+            email=DEMO_EMAIL,
+            password_hash=password_hash,
+            name=DEMO_NAME,
+        )
     )
 
 

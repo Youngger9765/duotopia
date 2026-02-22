@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { PointsBalance } from "../types/points";
-import { API_URL } from "../config/api";
-import { useTeacherAuthStore } from "../stores/teacherAuthStore";
+import { apiClient } from "../lib/api";
 
 interface Props {
   organizationId: string;
@@ -10,7 +10,7 @@ interface Props {
 export const OrganizationPointsBalance: React.FC<Props> = ({
   organizationId,
 }) => {
-  const token = useTeacherAuthStore((state) => state.token);
+  const { t } = useTranslation();
   const [balance, setBalance] = useState<PointsBalance | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,20 +18,9 @@ export const OrganizationPointsBalance: React.FC<Props> = ({
   useEffect(() => {
     const fetchBalance = async () => {
       try {
-        const response = await fetch(
-          `${API_URL}/api/organizations/${organizationId}/points`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
+        const data = await apiClient.get<PointsBalance>(
+          `/api/organizations/${organizationId}/points`,
         );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch points balance");
-        }
-
-        const data = await response.json();
         setBalance(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
@@ -41,26 +30,39 @@ export const OrganizationPointsBalance: React.FC<Props> = ({
     };
 
     fetchBalance();
-  }, [organizationId, token]);
+  }, [organizationId]);
 
   if (loading) {
-    return <div className="animate-pulse">Loading points balance...</div>;
+    return (
+      <div className="animate-pulse">{t("organizationPoints.loading")}</div>
+    );
   }
 
   if (error) {
-    return <div className="text-red-600">Error: {error}</div>;
+    return (
+      <div className="text-red-600">
+        {t("organizationPoints.error", { error })}
+      </div>
+    );
   }
 
   if (!balance) {
     return null;
   }
 
-  const percentageUsed = (balance.used_points / balance.total_points) * 100;
-  const isLow = balance.remaining_points < balance.total_points * 0.2;
+  const percentageUsed =
+    balance.total_points > 0
+      ? (balance.used_points / balance.total_points) * 100
+      : 0;
+  const isLow =
+    balance.total_points > 0 &&
+    balance.remaining_points < balance.total_points * 0.2;
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">AI Usage Points</h3>
+      <h3 className="text-lg font-semibold mb-4">
+        {t("organizationPoints.title")}
+      </h3>
 
       {/* Balance Display */}
       <div className="mb-4">
@@ -69,7 +71,8 @@ export const OrganizationPointsBalance: React.FC<Props> = ({
             {balance.remaining_points.toLocaleString()}
           </span>
           <span className="text-gray-500">
-            / {balance.total_points.toLocaleString()} total
+            / {balance.total_points.toLocaleString()}{" "}
+            {t("organizationPoints.total")}
           </span>
         </div>
 
@@ -88,7 +91,7 @@ export const OrganizationPointsBalance: React.FC<Props> = ({
       {isLow && (
         <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
           <p className="text-yellow-800 text-sm">
-            ⚠️ Points running low. Contact admin to add more points.
+            {t("organizationPoints.lowWarning")}
           </p>
         </div>
       )}
@@ -96,13 +99,13 @@ export const OrganizationPointsBalance: React.FC<Props> = ({
       {/* Usage Stats */}
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div>
-          <p className="text-gray-500">Used</p>
+          <p className="text-gray-500">{t("organizationPoints.used")}</p>
           <p className="font-semibold">
             {balance.used_points.toLocaleString()}
           </p>
         </div>
         <div>
-          <p className="text-gray-500">Available</p>
+          <p className="text-gray-500">{t("organizationPoints.available")}</p>
           <p className="font-semibold">
             {balance.remaining_points.toLocaleString()}
           </p>
@@ -111,7 +114,8 @@ export const OrganizationPointsBalance: React.FC<Props> = ({
 
       {balance.last_points_update && (
         <p className="text-xs text-gray-400 mt-4">
-          Last updated: {new Date(balance.last_points_update).toLocaleString()}
+          {t("organizationPoints.lastUpdated")}:{" "}
+          {new Date(balance.last_points_update).toLocaleString()}
         </p>
       )}
     </div>

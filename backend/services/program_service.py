@@ -16,7 +16,7 @@ from sqlalchemy import func
 from typing import List, Optional, Dict, Any
 import uuid
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from copy import deepcopy
 
 from models import (
@@ -488,7 +488,7 @@ def delete_program(program_id: int, teacher_id: int, db: Session) -> Dict[str, A
 
     # Soft delete
     program.is_active = False
-    program.deleted_at = datetime.now()
+    program.deleted_at = datetime.now(timezone.utc)
 
     db.commit()
 

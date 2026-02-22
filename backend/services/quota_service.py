@@ -10,6 +10,7 @@
 
 from sqlalchemy.orm import Session
 from models import Teacher, PointUsageLog
+from models.organization import Organization, TeacherOrganization
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
 import logging
@@ -106,6 +107,98 @@ class QuotaService:
             ),
             "status": current_period.status,
         }
+
+    @staticmethod
+    def check_ai_analysis_availability(teacher_id: int, db: Session) -> bool:
+        """
+        檢查教師是否有 AI 分析額度（舊版：基於教師身份判斷）。
+        用於教師端 dashboard 等不需要作業 context 的場景。
+
+        注意：學生端應使用 check_ai_analysis_availability_by_assignment，
+        根據作業所屬班級判斷。
+        """
+        teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+        if not teacher:
+            return False
+
+        teacher_org = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == teacher_id,
+                TeacherOrganization.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if teacher_org:
+            org = (
+                db.query(Organization)
+                .filter(
+                    Organization.id == teacher_org.organization_id,
+                    Organization.is_active.is_(True),
+                )
+                .first()
+            )
+            if org:
+                remaining = org.total_points - org.used_points
+                return remaining > 0
+
+        return teacher.quota_remaining > 0
+
+    @staticmethod
+    def check_ai_analysis_availability_by_assignment(assignment, db: Session) -> bool:
+        """
+        根據作業所屬的班級判斷是否有 AI 分析額度。
+        與 speech_assessment.py 扣點邏輯一致：
+        assignment → classroom → classroom_schools → school → organization
+
+        規則：
+        - 作業屬於機構班級 → 查機構 remaining_points > 0
+        - 作業屬於個人班級 → 查教師 quota_remaining > 0
+        """
+        if not assignment:
+            return True
+
+        teacher = db.query(Teacher).filter(Teacher.id == assignment.teacher_id).first()
+        if not teacher:
+            return False
+
+        # 透過 classroom → classroom_schools → school → org 判斷
+        classroom = assignment.classroom
+        org_id = QuotaService._get_org_id_from_classroom(classroom)
+
+        if org_id:
+            # 機構班級 → 查機構點數
+            org = (
+                db.query(Organization)
+                .filter(
+                    Organization.id == org_id,
+                    Organization.is_active.is_(True),
+                )
+                .first()
+            )
+            if org:
+                remaining = org.total_points - org.used_points
+                return remaining > 0
+            # org 不 active → fall through 到個人配額
+
+        # 個人班級 → 查教師配額
+        return teacher.quota_remaining > 0
+
+    @staticmethod
+    def _get_org_id_from_classroom(classroom) -> Optional[str]:
+        """
+        從 classroom 透過 classroom_schools 關係取得 organization_id。
+        與 speech_assessment.py 的 get_organization_id_from_classroom 邏輯一致。
+        """
+        if not classroom or not classroom.classroom_schools:
+            return None
+
+        for cs in classroom.classroom_schools:
+            if cs.is_active and cs.school and cs.school.organization_id:
+                return str(cs.school.organization_id)
+
+        return None
 
     @staticmethod
     def deduct_quota(

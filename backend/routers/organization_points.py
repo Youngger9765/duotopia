@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import Optional, List
+from typing import Literal, Optional, List
 from datetime import datetime, timezone
 from pydantic import BaseModel
+import logging
 import uuid
 
 from database import get_db
@@ -10,8 +11,46 @@ from models import Organization, Teacher, TeacherOrganization, OrganizationPoint
 from routers.teachers import get_current_teacher
 from utils.permissions import has_manage_materials_permission
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/organizations", tags=["organization-points"])
+
+
+async def verify_org_points_permission(
+    organization_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+) -> tuple[Organization, Teacher]:
+    """
+    Shared dependency: verify org exists, teacher is a member,
+    and has org_owner or manage_materials permission.
+    Returns (organization, current_teacher).
+    """
+    organization = (
+        db.query(Organization)
+        .filter(Organization.id == organization_id, Organization.is_active.is_(True))
+        .first()
+    )
+    if not organization:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    membership = (
+        db.query(TeacherOrganization)
+        .filter(
+            TeacherOrganization.teacher_id == current_teacher.id,
+            TeacherOrganization.organization_id == organization_id,
+            TeacherOrganization.is_active.is_(True),
+        )
+        .first()
+    )
+    if not membership:
+        raise HTTPException(status_code=403, detail="Not a member of this organization")
+
+    if membership.role != "org_owner":
+        if not has_manage_materials_permission(current_teacher.id, organization_id, db):
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    return organization, current_teacher
 
 
 class PointsBalanceResponse(BaseModel):
@@ -24,7 +63,15 @@ class PointsBalanceResponse(BaseModel):
 
 class PointsDeductionRequest(BaseModel):
     points: int
-    feature_type: str  # 'ai_generation', 'translation', etc.
+    feature_type: Literal[
+        "ai_generation",
+        "speech_assessment",
+        "speech_recording",
+        "text_correction",
+        "image_correction",
+        "translation",
+        "manual_deduction",
+    ]
     description: Optional[str] = None
 
 
@@ -59,44 +106,14 @@ class PointsHistoryResponse(BaseModel):
 @router.get("/{organization_id}/points", response_model=PointsBalanceResponse)
 async def get_organization_points(
     organization_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_teacher: Teacher = Depends(get_current_teacher),
+    org_auth: tuple[Organization, Teacher] = Depends(verify_org_points_permission),
 ):
     """
     Query organization points balance.
 
     Permissions: org_owner or org_admin with manage_materials permission
     """
-    # Check organization exists
-    organization = (
-        db.query(Organization)
-        .filter(Organization.id == organization_id, Organization.is_active.is_(True))
-        .first()
-    )
-
-    if not organization:
-        raise HTTPException(status_code=404, detail="Organization not found")
-
-    # Check permission
-    membership = (
-        db.query(TeacherOrganization)
-        .filter(
-            TeacherOrganization.teacher_id == current_teacher.id,
-            TeacherOrganization.organization_id == organization_id,
-            TeacherOrganization.is_active.is_(True),
-        )
-        .first()
-    )
-
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
-
-    # org_owner always has access, org_admin needs manage_materials
-    if membership.role != "org_owner":
-        if not has_manage_materials_permission(current_teacher.id, organization_id, db):
-            raise HTTPException(
-                status_code=403, detail="Insufficient permissions to view points"
-            )
+    organization, _ = org_auth
 
     return PointsBalanceResponse(
         organization_id=organization.id,
@@ -112,18 +129,20 @@ async def deduct_organization_points(
     organization_id: uuid.UUID,
     deduction: PointsDeductionRequest,
     db: Session = Depends(get_db),
-    current_teacher: Teacher = Depends(get_current_teacher),
+    org_auth: tuple[Organization, Teacher] = Depends(verify_org_points_permission),
 ):
     """
     Deduct points for AI feature usage (internal API).
 
     Permissions: org_owner or org_admin with manage_materials permission
     """
+    _, current_teacher = org_auth
+
     # Validation
     if deduction.points <= 0:
         raise HTTPException(status_code=400, detail="Points must be positive")
 
-    # Check organization exists and lock row to prevent concurrent overdraft
+    # Re-query with row lock to prevent concurrent overdraft
     organization = (
         db.query(Organization)
         .filter(Organization.id == organization_id, Organization.is_active.is_(True))
@@ -134,49 +153,42 @@ async def deduct_organization_points(
     if not organization:
         raise HTTPException(status_code=404, detail="Organization not found")
 
-    # Check permission (same as GET points)
-    membership = (
-        db.query(TeacherOrganization)
-        .filter(
-            TeacherOrganization.teacher_id == current_teacher.id,
-            TeacherOrganization.organization_id == organization_id,
-            TeacherOrganization.is_active.is_(True),
-        )
-        .first()
+    # Check sufficient balance (consistent with OrganizationPointsService.QUOTA_BUFFER_PERCENTAGE)
+    # Allow up to 20% overdraft buffer to stay consistent with internal service logic
+    from services.organization_points_service import OrganizationPointsService
+
+    effective_limit = int(
+        organization.total_points
+        * (1 + OrganizationPointsService.QUOTA_BUFFER_PERCENTAGE)
     )
-
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
-
-    if membership.role != "org_owner":
-        if not has_manage_materials_permission(current_teacher.id, organization_id, db):
-            raise HTTPException(
-                status_code=403, detail="Insufficient permissions to deduct points"
-            )
-
-    # Check sufficient balance
-    available = organization.total_points - organization.used_points
-    if deduction.points > available:
+    points_after = organization.used_points + deduction.points
+    if points_after > effective_limit:
+        available = effective_limit - organization.used_points
         raise HTTPException(
             status_code=400,
-            detail=f"Insufficient points. Available: {available}, Requested: {deduction.points}",
+            detail=f"Insufficient points. Available: {max(0, available)}, Requested: {deduction.points}",
         )
 
     # Deduct points
-    organization.used_points += deduction.points
-    organization.last_points_update = datetime.now(timezone.utc)
+    try:
+        organization.used_points += deduction.points
+        organization.last_points_update = datetime.now(timezone.utc)
 
-    # Create log entry
-    log_entry = OrganizationPointsLog(
-        organization_id=organization_id,
-        teacher_id=current_teacher.id,
-        points_used=deduction.points,
-        feature_type=deduction.feature_type,
-        description=deduction.description,
-    )
-    db.add(log_entry)
-    db.commit()
-    db.refresh(log_entry)
+        # Create log entry
+        log_entry = OrganizationPointsLog(
+            organization_id=organization_id,
+            teacher_id=current_teacher.id,
+            points_used=deduction.points,
+            feature_type=deduction.feature_type,
+            description=deduction.description,
+        )
+        db.add(log_entry)
+        db.commit()
+        db.refresh(log_entry)
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to deduct points for org {organization_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to deduct points")
 
     return PointsDeductionResponse(
         organization_id=organization.id,
@@ -192,7 +204,7 @@ async def get_organization_points_history(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
-    current_teacher: Teacher = Depends(get_current_teacher),
+    org_auth: tuple[Organization, Teacher] = Depends(verify_org_points_permission),
 ):
     """
     Get organization points usage history.
@@ -200,37 +212,6 @@ async def get_organization_points_history(
     Permissions: org_owner or org_admin with manage_materials permission
     Returns: Paginated list of points log entries, sorted by created_at DESC
     """
-    # Check organization exists
-    organization = (
-        db.query(Organization)
-        .filter(Organization.id == organization_id, Organization.is_active.is_(True))
-        .first()
-    )
-
-    if not organization:
-        raise HTTPException(status_code=404, detail="Organization not found")
-
-    # Check permission (same as GET points)
-    membership = (
-        db.query(TeacherOrganization)
-        .filter(
-            TeacherOrganization.teacher_id == current_teacher.id,
-            TeacherOrganization.organization_id == organization_id,
-            TeacherOrganization.is_active.is_(True),
-        )
-        .first()
-    )
-
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
-
-    if membership.role != "org_owner":
-        if not has_manage_materials_permission(current_teacher.id, organization_id, db):
-            raise HTTPException(
-                status_code=403,
-                detail="Insufficient permissions to view points history",
-            )
-
     # Get total count
     total = (
         db.query(OrganizationPointsLog)

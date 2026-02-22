@@ -114,6 +114,7 @@ interface GroupedQuestionsTemplateProps {
   ) => void; // AI 評估完成回調
   onAnalyzingStateChange?: (isAnalyzing: boolean) => void; // 🔒 分析狀態變化回調
   timeLimit?: number; // 錄音時間限制（秒）
+  canUseAiAnalysis?: boolean; // 教師/機構是否有 AI 分析額度
 }
 
 const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
@@ -142,6 +143,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
   onAssessmentComplete,
   onAnalyzingStateChange, // 🔒 分析狀態變化回調
   timeLimit = 30, // 錄音時間限制（秒）
+  canUseAiAnalysis = true, // 教師/機構是否有 AI 分析額度
 }: GroupedQuestionsTemplateProps) {
   const { t } = useTranslation();
   const currentQuestion = items[currentQuestionIndex];
@@ -991,7 +993,9 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
           {/* AI 評估結果 */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             {/* 🎯 Issue #118: 有錄音就顯示 Analyze 按鈕（blob URL 或 GCS URL 都可以） */}
-            {items[currentQuestionIndex]?.recording_url &&
+            {/* 🎯 Issue #227: 只有教師/機構有 AI 分析額度時才顯示分析按鈕 */}
+            {canUseAiAnalysis &&
+            items[currentQuestionIndex]?.recording_url &&
             !assessmentResults[currentQuestionIndex] ? (
               <div className="flex justify-center mb-4 py-6">
                 <Button
@@ -1040,7 +1044,7 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                   ) : (
                     <>
                       <Brain className="w-7 h-7 mr-3 animate-pulse" />
-                      {t("groupedQuestionsTemplate.labels.uploadAndAnalyze")}
+                      {t("groupedQuestionsTemplate.labels.analyze")}
                     </>
                   )}
                 </Button>
@@ -1207,7 +1211,9 @@ const GroupedQuestionsTemplate = memo(function GroupedQuestionsTemplate({
                 <Brain className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">
                   {items[currentQuestionIndex]?.recording_url
-                    ? t("groupedQuestionsTemplate.labels.clickToAssess")
+                    ? canUseAiAnalysis
+                      ? t("groupedQuestionsTemplate.labels.clickToAssess")
+                      : t("groupedQuestionsTemplate.labels.recordingComplete")
                     : t("groupedQuestionsTemplate.labels.pleaseRecordFirst")}
                 </p>
               </div>

@@ -1,7 +1,7 @@
 """
 Subscription Ops operations for teachers.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, selectinload, joinedload
 from sqlalchemy import func
 from typing import List, Optional, Dict, Any
@@ -29,8 +29,64 @@ router = APIRouter()
 async def get_teacher_subscription(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
+    organization_id: Optional[str] = Query(None, description="機構工作區的 organization ID"),
 ):
-    """取得教師訂閱資訊（用於顯示配額）"""
+    """取得教師訂閱資訊（用於顯示配額）
+
+    根據工作區 context 決定顯示哪個配額：
+    - 帶 organization_id → 顯示該機構的點數
+    - 不帶 → 顯示教師個人配額
+    """
+    if organization_id:
+        # Convert string to UUID for proper DB comparison
+        import uuid as _uuid
+
+        try:
+            org_uuid = _uuid.UUID(organization_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid organization_id format",
+            )
+
+        # 驗證教師是否為該機構成員
+        membership = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == current_teacher.id,
+                TeacherOrganization.organization_id == org_uuid,
+                TeacherOrganization.is_active.is_(True),
+            )
+            .first()
+        )
+        if not membership:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this organization",
+            )
+
+        # 機構工作區 → 查機構點數
+        org = (
+            db.query(Organization)
+            .filter(
+                Organization.id == org_uuid,
+                Organization.is_active.is_(True),
+            )
+            .first()
+        )
+        if org:
+            return {
+                "subscription_period": {
+                    "quota_total": org.total_points,
+                    "quota_used": org.used_points,
+                    "plan_name": org.name,
+                    "status": "active",
+                    "end_date": None,
+                },
+                "source": "organization",
+            }
+
+    # 個人工作區 → 回傳個人配額
     current_period = current_teacher.current_period
 
     if not current_period:
@@ -46,7 +102,8 @@ async def get_teacher_subscription(
             "plan_name": current_period.plan_name,
             "status": current_period.status,
             "end_date": current_period.end_date.isoformat(),
-        }
+        },
+        "source": "personal",
     }
 
 

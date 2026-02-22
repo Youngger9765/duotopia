@@ -5,12 +5,19 @@ Supports switching between OpenAI and Vertex AI via USE_VERTEX_AI environment va
 """
 
 import os
+import json as json_module
 import asyncio
 import logging
+from pathlib import Path
 from typing import List, Dict, Optional  # noqa: F401
 from openai import OpenAI, AsyncOpenAI
 from dotenv import load_dotenv
 from utils.http_client import get_http_client
+
+# 載入文法規則（按 CEFR 級別）
+_grammar_rules_path = Path(__file__).parent.parent / "config" / "grammar_by_level.json"
+with open(_grammar_rules_path, "r", encoding="utf-8") as _f:
+    GRAMMAR_BY_LEVEL: Dict[str, List[str]] = json_module.load(_f)
 
 load_dotenv()
 
@@ -61,12 +68,59 @@ class TranslationService:
         try:
             # 根據目標語言設定 prompt
             if target_lang == "zh-TW":
-                prompt = f"請將以下英文翻譯成繁體中文，只回覆翻譯結果，不要加任何說明：\n{text}"
+                prompt = (
+                    f"請將以下英文單字翻譯成繁體中文：{text}\n\n"
+                    f"規則：\n"
+                    f"1. 只有當該字有多個明確不同的常見字義時，才提供多個翻譯（最多3個），以編號列出。\n"
+                    f"2. 簡單的字只需要1個翻譯即可。\n"
+                    f"3. 每個翻譯前必須加上詞性縮寫，格式：(詞性.) 翻譯\n"
+                    f"4. 只回覆翻譯結果，不要加任何說明。\n"
+                    f"詞性縮寫：n. v. adj. adv. prep. conj. interj. pron. det. aux.\n"
+                    f"範例（多字義）：\n"
+                    f"1. (v.) 識別\n"
+                    f"2. (v.) 認同\n"
+                    f"範例（單字義）：\n"
+                    f"(n.) 蘋果"
+                )
             elif target_lang == "en":
                 # 英英釋義
                 prompt = (
-                    f"Please provide a simple English definition or explanation for the following word or phrase. "
-                    f"Keep it concise (1-2 sentences) and suitable for language learners:\n{text}"
+                    f"Provide English definitions for the word: {text}\n\n"
+                    f"RULES:\n"
+                    f'1. NEVER use the word "{text}" (or any of its forms) in the definition.\n'
+                    f"2. Each definition MUST be 15 words or fewer.\n"
+                    f"3. Only provide multiple definitions if the word has truly "
+                    f"distinct meanings. Simple words need only 1. Max 3.\n"
+                    f"4. Include POS abbreviation and follow this starter by part of speech:\n"
+                    f'   - Noun: "(n.) a/an ..."\n'
+                    f'   - Verb: "(v.) to ..."\n'
+                    f'   - Adjective: "(adj.) describing ..."\n'
+                    f'   - Adverb: "(adv.) in a way that ..."\n'
+                    f'   - Preposition: "(prep.) indicating ..."\n'
+                    f'   - Conjunction: "(conj.) connecting ..."\n'
+                    f'   - Interjection: "(interj.) expressing ..."\n'
+                    f"5. Start with lowercase after POS abbreviation. Do NOT end with a period.\n"
+                    f"Example for 'apple': 1. (n.) a round fruit with red or green skin\n"
+                    f"Only return the numbered definitions, no other text."
+                )
+            elif target_lang in ("ja", "ko"):
+                lang_label = "日文" if target_lang == "ja" else "韓文"
+                example_single = "りんご" if target_lang == "ja" else "사과"
+                example_multi_1 = "識別する" if target_lang == "ja" else "식별하다"
+                example_multi_2 = "同一視する" if target_lang == "ja" else "동일시하다"
+                prompt = (
+                    f"請將以下英文單字翻譯成{lang_label}：{text}\n\n"
+                    f"規則：\n"
+                    f"1. 只有當該字有多個明確不同的常見字義時，才提供多個翻譯（最多3個），以編號列出。\n"
+                    f"2. 簡單的字只需要1個翻譯即可。\n"
+                    f"3. 每個翻譯前必須加上詞性縮寫，格式：(詞性.) 翻譯\n"
+                    f"4. 只回覆翻譯結果，不要加任何說明。\n"
+                    f"詞性縮寫：n. v. adj. adv. prep. conj. interj. pron. det. aux.\n"
+                    f"範例（多字義）：\n"
+                    f"1. (v.) {example_multi_1}\n"
+                    f"2. (v.) {example_multi_2}\n"
+                    f"範例（單字義）：\n"
+                    f"(n.) {example_single}"
                 )
             else:
                 prompt = (
@@ -81,12 +135,15 @@ class TranslationService:
                 "NOT Simplified Chinese."
             )
 
+            # 英英釋義需要更多 tokens（最多 3 個定義 + 詞性標記）
+            token_limit = 200 if target_lang == "en" else 100
+
             # Use Vertex AI or OpenAI based on configuration
             if self.use_vertex_ai:
                 result = await self.vertex_ai.generate_text(
                     prompt=prompt,
                     model_type="flash",
-                    max_tokens=100,
+                    max_tokens=token_limit,
                     temperature=0.3,
                     system_instruction=system_instruction,
                 )
@@ -99,7 +156,7 @@ class TranslationService:
                         {"role": "user", "content": prompt},
                     ],
                     temperature=0.3,  # 降低隨機性以獲得更一致的翻譯
-                    max_tokens=100,
+                    max_tokens=token_limit,
                 )
                 return response.choices[0].message.content.strip()
 
@@ -150,10 +207,20 @@ det. (限定詞), aux. (助動詞)
 只回覆 JSON，不要其他文字。"""
             else:
                 prompt = f"""Analyze the following English word and provide:
-1. English definition
+1. English definition(s) — only provide multiple if the word has truly distinct \
+meanings (max 3), numbered in a single string
 2. Parts of speech (MUST list ALL common usages)
 
 Word: {text}
+
+DEFINITION RULES:
+- NEVER use the word "{text}" (or any of its forms) in the definition.
+- Each definition MUST be 15 words or fewer.
+- Start with lowercase after POS abbreviation. Do NOT end with a period.
+- Follow this starter by part of speech:
+  Noun: "(n.) a/an ..."  |  Verb: "(v.) to ..."  |  Adjective: "(adj.) describing ..."
+  Adverb: "(adv.) in a way that ..."  |  Preposition: "(prep.) indicating ..."
+- Example for 'apple': "1. (n.) a round fruit with red or green skin"
 
 IMPORTANT:
 - Many English words have multiple parts of speech - list ALL common usages
@@ -163,7 +230,7 @@ IMPORTANT:
 - Do NOT omit any common part of speech
 
 Reply in JSON format:
-{{"translation": "definition", "parts_of_speech": ["n.", "adj."]}}
+{{"translation": "1. (n.) definition here", "parts_of_speech": ["n.", "adj."]}}
 
 POS abbreviations: n. (noun), v. (verb), adj. (adjective), adv. (adverb),
 pron. (pronoun), prep. (preposition), conj. (conjunction), interj. (interjection),
@@ -252,14 +319,29 @@ Only reply with JSON, no other text."""
 
 要求: 返回格式必須是 ["翻譯1", "翻譯2", ...]"""
             elif target_lang == "en":
-                prompt = f"""Please provide simple English definitions for the following JSON array of words/phrases.
+                prompt = f"""Provide English definitions for the following words.
 Return as a JSON array with each definition as one item.
-Keep definitions concise (1-2 sentences) and suitable for language learners.
-Only return the JSON array, no other text.
+
+RULES:
+1. NEVER use the target word (or any of its forms) in its own definition.
+2. Each definition MUST be 15 words or fewer.
+3. For each word, only provide multiple definitions if it has truly distinct \
+meanings (max 3), in a single string, numbered.
+4. Include POS abbreviation and follow the starter by part of speech:
+   - Noun: "(n.) a/an ..."
+   - Verb: "(v.) to ..."
+   - Adjective: "(adj.) describing ..."
+   - Adverb: "(adv.) in a way that ..."
+   - Preposition: "(prep.) indicating ..."
+   - Conjunction: "(conj.) connecting ..."
+   - Interjection: "(interj.) expressing ..."
+5. Start with lowercase after POS abbreviation. Do NOT end with a period.
+6. Example for 'apple': "1. (n.) a round fruit with red or green skin"
 
 Input: {texts_json}
 
-Required: Return format must be ["definition1", "definition2", ...]"""
+Required: Return format must be ["1. (n.) definition...", "1. (v.) definition...", ...]
+Only return the JSON array, no other text."""
             else:
                 prompt = f"""Please translate the following JSON array to {target_lang}.
 Return as a JSON array with each translation as one item.
@@ -403,10 +485,20 @@ det. (限定詞), aux. (助動詞)
 只回覆 JSON 陣列，不要其他文字。"""
             else:
                 prompt = f"""Analyze the following English words and provide for each:
-1. English definition
+1. English definition(s) — only provide multiple if the word has truly distinct \
+meanings (max 3), numbered in a single string
 2. Parts of speech (MUST list ALL common usages)
 
 Words: {texts_json}
+
+DEFINITION RULES:
+- NEVER use the target word (or any of its forms) in its own definition.
+- Each definition MUST be 15 words or fewer.
+- Start with lowercase after POS abbreviation. Do NOT end with a period.
+- Follow this starter by part of speech:
+  Noun: "(n.) a/an ..."  |  Verb: "(v.) to ..."  |  Adjective: "(adj.) describing ..."
+  Adverb: "(adv.) in a way that ..."  |  Preposition: "(prep.) indicating ..."
+- Example for 'apple': "1. (n.) a round fruit with red or green skin"
 
 IMPORTANT:
 - Many English words have multiple parts of speech - list ALL common usages
@@ -416,8 +508,8 @@ IMPORTANT:
 - Do NOT omit any common part of speech
 
 Reply as JSON array:
-[{{"translation": "definition1", "parts_of_speech": ["n.", "adj."]}}, \
-{{"translation": "definition2", "parts_of_speech": ["v.", "n."]}}]
+[{{"translation": "1. (n.) definition here", "parts_of_speech": ["n.", "adj."]}}, \
+{{"translation": "1. (v.) definition here", "parts_of_speech": ["v.", "n."]}}]
 
 POS abbreviations: n. (noun), v. (verb), adj. (adjective), adv. (adverb),
 pron. (pronoun), prep. (preposition), conj. (conjunction), interj. (interjection),
@@ -516,7 +608,7 @@ Only reply with JSON array, no other text."""
             for i, word in enumerate(words):
                 info = {"word": word}
                 if definitions and i < len(definitions) and definitions[i]:
-                    info["definition"] = definitions[i]  # 中文翻譯（用於消歧義）
+                    info["definition"] = definitions[i]  # 翻譯/解釋（用於消歧義，可能是任何語言）
                 if parts_of_speech and i < len(parts_of_speech) and parts_of_speech[i]:
                     info["pos"] = ", ".join(parts_of_speech[i])
                 words_info.append(info)
@@ -531,21 +623,35 @@ The sentences should be natural, educational, and appropriate for the difficulty
 CRITICAL REQUIREMENTS:
 1. Each sentence MUST contain the exact target word (the word being learned). Do NOT use synonyms or derivatives.
 2. If translating to Chinese, you MUST use Traditional Chinese (繁體中文), NOT Simplified Chinese.
-3. **IF A WORD HAS A "definition" FIELD (Chinese translation), YOU MUST USE THAT SPECIFIC MEANING.**
+3. **IF A WORD HAS A "definition" FIELD, YOU MUST USE THAT SPECIFIC MEANING.**
+   - The "definition" field contains the teacher's chosen translation/meaning (may be in any language)
    - Many English words have multiple meanings (e.g., "like" = 喜歡 or 像是, "change" = 改變 or 零錢)
-   - The "definition" field tells you which meaning the teacher wants
    - Example: {{"word": "put", "definition": "放置"}} → generate sentence about placing/putting, NOT other meanings
    - This is the HIGHEST PRIORITY requirement
-4. **IF USER PROVIDES CUSTOM INSTRUCTIONS, YOU MUST FOLLOW THEM EXACTLY.**
+4. **IF A WORD HAS A SINGLE "pos" FIELD (e.g., "n." or "v."), THE SENTENCE MUST USE THE WORD AS THAT PART OF SPEECH.**
+   - Example: {{"word": "run", "pos": "n."}} → "The morning run felt refreshing." (noun usage, NOT verb)
+   - Example: {{"word": "like", "pos": "prep."}} → "She looks like her mother." (preposition, NOT verb)
+   - If "pos" contains multiple values (e.g., "n., v."), use the meaning indicated by the "definition" field instead
+5. **IF USER PROVIDES CUSTOM INSTRUCTIONS, YOU MUST FOLLOW THEM EXACTLY.**
    - Custom instructions override the default interpretation
 
 Level guidelines:
 - A1: Simple present/past, basic vocabulary, short sentences (5-8 words)
 - A2: Simple sentences with common phrases, everyday topics (8-12 words)
-- B1: Compound sentences, wider vocabulary, various tenses (10-15 words)
-- B2: Complex sentences, idiomatic expressions, abstract topics (12-18 words)
-- C1: Sophisticated vocabulary, nuanced meaning, formal/informal register
-- C2: Near-native fluency, literary style, rare vocabulary acceptable"""
+- B1: Compound sentences, wider vocabulary, various tenses (12-20 words)
+- B2: Complex sentences, idiomatic expressions, abstract topics (15-25 words)
+- C1: Sophisticated vocabulary, nuanced meaning, formal/informal register (18-30 words)
+- C2: Near-native fluency, literary style, rare vocabulary acceptable
+
+6. **GRAMMAR VARIETY**: When generating MULTIPLE sentences (batch), distribute grammar patterns across the batch.
+   Do NOT repeat the same tense/structure for every sentence. Use the following grammar points for level {level}:
+{chr(10).join(f'   - {g}' for g in GRAMMAR_BY_LEVEL.get(level, GRAMMAR_BY_LEVEL.get("B1", [])))}
+
+7. **SUBJECT VARIETY**: Do NOT start every sentence with pronouns \
+(He, She, They, I). Vary sentence subjects: use proper names (Tom, Maria), \
+job titles (The teacher, A scientist), concrete nouns (The old building, \
+This recipe), abstract nouns (Happiness, His decision), gerund phrases \
+(Running every day...), or "There/It" structures."""
 
             # 構建 user prompt
             user_prompt = ""

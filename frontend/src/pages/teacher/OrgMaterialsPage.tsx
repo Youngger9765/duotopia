@@ -303,9 +303,7 @@ export default function OrgMaterialsPage() {
         order_index: index,
       }));
 
-      console.log("[Programs Reorder] Calling API with:", orderData);
       await apiClient.reorderPrograms(orderData);
-      console.log("[Programs Reorder] API call succeeded");
 
       toast.success(t("teacherTemplatePrograms.messages.reorderSuccess"));
       setIsReordering(false);
@@ -353,12 +351,7 @@ export default function OrgMaterialsPage() {
         order_index: index,
       }));
 
-      console.log(
-        `[Lessons Reorder] Program ${programId}, Calling API with:`,
-        orderData,
-      );
       await apiClient.reorderLessons(programId, orderData);
-      console.log(`[Lessons Reorder] API call succeeded`);
 
       toast.success(t("teacherTemplatePrograms.messages.reorderSuccess"));
       setIsReordering(false);
@@ -425,12 +418,7 @@ export default function OrgMaterialsPage() {
         order_index: index,
       }));
 
-      console.log(
-        `[Contents Reorder] Lesson ${lessonId}, Calling API with:`,
-        orderData,
-      );
       await apiClient.reorderContents(lessonId, orderData);
-      console.log(`[Contents Reorder] API call succeeded`);
 
       toast.success(t("teacherTemplatePrograms.messages.reorderSuccess"));
       setIsReordering(false);
@@ -656,7 +644,7 @@ export default function OrgMaterialsPage() {
               />
 
               {/* Panel */}
-              <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
+              <div className="fixed top-0 right-0 h-screen w-full md:w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
                   <h2 className="text-lg font-semibold text-gray-900">
                     {t("teacherTemplatePrograms.dialogs.editContentTitle")}
@@ -762,9 +750,7 @@ export default function OrgMaterialsPage() {
                       id: vocabularySetContentId || undefined,
                     }}
                     lessonId={vocabularySetLessonId}
-                    onUpdateContent={(updatedContent) => {
-                      console.log("Content updated:", updatedContent);
-                    }}
+                    onUpdateContent={() => {}}
                     onSave={async () => {
                       setShowVocabularySetEditor(false);
                       setVocabularySetLessonId(null);
@@ -800,7 +786,7 @@ export default function OrgMaterialsPage() {
               />
 
               {/* Panel */}
-              <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
+              <div className="fixed top-0 right-0 h-screen w-full md:w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
                   <h2 className="text-lg font-semibold text-gray-900">
                     {t("vocabularySet.editTitle")}
@@ -823,9 +809,7 @@ export default function OrgMaterialsPage() {
                     content={{ id: vocabularySetContentId }}
                     editingContent={{ id: vocabularySetContentId }}
                     lessonId={vocabularySetLessonId}
-                    onUpdateContent={(updatedContent) => {
-                      console.log("Content updated:", updatedContent);
-                    }}
+                    onUpdateContent={() => {}}
                     onSave={async () => {
                       setShowVocabularySetEditor(false);
                       setVocabularySetLessonId(null);

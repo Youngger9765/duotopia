@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel, Field, model_validator
 from typing import List, Optional
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 from database import get_db
@@ -622,7 +622,7 @@ async def soft_delete_school_material(
 
     # Soft delete
     program.is_active = False
-    program.deleted_at = datetime.now()
+    program.deleted_at = datetime.now(timezone.utc)
 
     db.commit()
 

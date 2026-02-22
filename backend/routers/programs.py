@@ -169,7 +169,7 @@ async def create_template_program(
         source_type=None,  # 原創
         source_metadata={
             "created_by": "manual",
-            "created_at": datetime.now().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         },
     )
 
@@ -295,7 +295,7 @@ async def update_template_program(
     if program_update.tags is not None:
         template.tags = program_update.tags
 
-    template.updated_at = datetime.now()
+    template.updated_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(template)
@@ -356,7 +356,7 @@ async def get_classroom_programs(
                 source_type=program.source_type,
                 source_metadata=program.source_metadata,
                 is_active=program.is_active,
-                created_at=program.created_at or datetime.now(),
+                created_at=program.created_at or datetime.now(timezone.utc),
                 updated_at=program.updated_at,
                 classroom_name=getattr(program, "classroom_name", None),
                 teacher_name=getattr(program, "teacher_name", None),
@@ -377,52 +377,12 @@ def _deep_copy_content_with_items(
 ) -> Content:
     """Deep copy a Content object and all its ContentItems.
 
-    Args:
-        content: Source Content to copy from
-        new_lesson_id: ID of the new lesson to attach content to
-        db: Database session
-
-    Returns:
-        New Content object with all items copied
+    Delegates to the canonical _copy_content_with_items from program_service
+    to ensure all fields (including Phase 2 vocabulary fields) are copied.
     """
-    new_content = Content(
-        lesson_id=new_lesson_id,
-        title=content.title,
-        type=content.type,
-        level=content.level if hasattr(content, "level") else "A1",
-        tags=content.tags.copy() if hasattr(content, "tags") and content.tags else [],
-        is_public=content.is_public if hasattr(content, "is_public") else False,
-        target_wpm=content.target_wpm if hasattr(content, "target_wpm") else None,
-        target_accuracy=content.target_accuracy
-        if hasattr(content, "target_accuracy")
-        else None,
-        time_limit_seconds=content.time_limit_seconds
-        if hasattr(content, "time_limit_seconds")
-        else None,
-        order_index=content.order_index if hasattr(content, "order_index") else 0,
-    )
-    db.add(new_content)
-    db.flush()
+    from services.program_service import _copy_content_with_items
 
-    # Deep copy each ContentItem
-    for original_item in content.content_items:
-        item_copy = ContentItem(
-            content_id=new_content.id,
-            order_index=original_item.order_index,
-            text=original_item.text,
-            translation=original_item.translation
-            if hasattr(original_item, "translation")
-            else None,
-            audio_url=original_item.audio_url
-            if hasattr(original_item, "audio_url")
-            else None,
-            item_metadata=deepcopy(original_item.item_metadata)
-            if hasattr(original_item, "item_metadata") and original_item.item_metadata
-            else {},
-        )
-        db.add(item_copy)
-
-    return new_content
+    return _copy_content_with_items(content, new_lesson_id, db)
 
 
 @router.post("/copy-from-template", response_model=ProgramResponse)
@@ -479,7 +439,7 @@ async def copy_from_template(
         source_metadata={
             "template_id": template.id,
             "template_name": template.name,
-            "copied_at": datetime.now().isoformat(),
+            "copied_at": datetime.now(timezone.utc).isoformat(),
         },
     )
 
@@ -578,7 +538,7 @@ async def copy_from_classroom(
             "source_classroom_name": source_program.classroom.name,
             "source_program_id": source_program.id,
             "source_program_name": source_program.name,
-            "copied_at": datetime.now().isoformat(),
+            "copied_at": datetime.now(timezone.utc).isoformat(),
         },
     )
 
@@ -653,7 +613,7 @@ async def create_custom_program(
         source_type="custom",
         source_metadata={
             "created_by": "manual",
-            "created_at": datetime.now().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         },
     )
 
@@ -864,7 +824,7 @@ async def list_programs(
                 source_type=program.source_type,
                 source_metadata=program.source_metadata,
                 is_active=program.is_active,
-                created_at=program.created_at or datetime.now(),
+                created_at=program.created_at or datetime.now(timezone.utc),
                 updated_at=program.updated_at,
                 classroom_name=getattr(program, "classroom_name", None),
                 teacher_name=getattr(program, "teacher_name", None),
@@ -1150,7 +1110,7 @@ async def copy_program(
             else None,
             "source_program_id": source_program.id,
             "source_program_name": source_program.name,
-            "copied_at": datetime.now().isoformat(),
+            "copied_at": datetime.now(timezone.utc).isoformat(),
         }
     else:
         if source_program.teacher_id != current_teacher.id:
@@ -1171,7 +1131,7 @@ async def copy_program(
             "teacher_id": current_teacher.id,
             "template_id": source_program.id,
             "template_name": source_program.name,
-            "copied_at": datetime.now().isoformat(),
+            "copied_at": datetime.now(timezone.utc).isoformat(),
         }
 
     if payload.name:
@@ -1597,10 +1557,12 @@ async def create_content(
             detail="Database error occurred",
         )
     except Exception as e:
-        import traceback
-
-        traceback.print_exc()
-        logger.error("Unexpected error creating content in lesson %s: %s", lesson_id, e)
+        logger.error(
+            "Unexpected error creating content in lesson %s: %s",
+            lesson_id,
+            e,
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred",

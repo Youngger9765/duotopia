@@ -36,6 +36,7 @@ import {
   Mic,
   Trash2,
   Sparkles,
+  Eye,
 } from "lucide-react";
 import { getContentTypeIcon } from "@/lib/contentTypeIcon";
 import { apiClient, ApiError } from "@/lib/api";
@@ -99,6 +100,7 @@ export default function ClassroomDetail({
 
   // Teacher subscription state
   const [canAssignHomework, setCanAssignHomework] = useState<boolean>(false);
+  const [canUseAiGrading, setCanUseAiGrading] = useState<boolean>(true);
   const [teacherData, setTeacherData] = useState<{
     subscription_status?: string;
     days_remaining?: number;
@@ -360,10 +362,12 @@ export default function ClassroomDetail({
     try {
       const dashboardData = (await apiClient.getTeacherDashboard()) as {
         can_assign_homework?: boolean;
+        can_use_ai_grading?: boolean;
         subscription_status?: string;
         days_remaining?: number;
       };
       setCanAssignHomework(dashboardData.can_assign_homework || false);
+      setCanUseAiGrading(dashboardData.can_use_ai_grading ?? true);
       setTeacherData({
         subscription_status: dashboardData.subscription_status,
         days_remaining: dashboardData.days_remaining,
@@ -1565,25 +1569,47 @@ export default function ClassroomDetail({
                                     "rearrangement" &&
                                     assignment.practice_mode !==
                                       "word_selection" && (
-                                      <Button
-                                        variant="default"
-                                        size="sm"
-                                        className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-3 flex-shrink-0 gap-1.5"
-                                        onClick={() => {
-                                          setBatchGradingModal({
-                                            open: true,
-                                            assignmentId: assignment.id,
-                                            classroomId: Number(id),
-                                          });
-                                        }}
-                                      >
-                                        <Sparkles className="w-5 h-5" />
-                                        <span className="text-sm font-medium">
-                                          {t(
-                                            "assignmentDetail.buttons.batchGrade",
-                                          )}
-                                        </span>
-                                      </Button>
+                                      <div className="flex flex-col items-end flex-shrink-0">
+                                        {canUseAiGrading ? (
+                                          <Button
+                                            variant="default"
+                                            size="sm"
+                                            className="h-11 px-3 gap-1.5 bg-purple-600 hover:bg-purple-700 text-white"
+                                            onClick={() => {
+                                              setBatchGradingModal({
+                                                open: true,
+                                                assignmentId: assignment.id,
+                                                classroomId: Number(id),
+                                              });
+                                            }}
+                                          >
+                                            <Sparkles className="w-5 h-5" />
+                                            <span className="text-sm font-medium">
+                                              {t(
+                                                "assignmentDetail.buttons.batchGrade",
+                                              )}
+                                            </span>
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-11 px-3 gap-1.5"
+                                            onClick={() => {
+                                              navigate(
+                                                `/teacher/classroom/${id}/assignment/${assignment.id}`,
+                                              );
+                                            }}
+                                          >
+                                            <Eye className="w-5 h-5" />
+                                            <span className="text-sm font-medium">
+                                              {t(
+                                                "classroomDetail.buttons.viewDetails",
+                                              )}
+                                            </span>
+                                          </Button>
+                                        )}
+                                      </div>
                                     )}
                                 </div>
 
@@ -1890,11 +1916,12 @@ export default function ClassroomDetail({
                                         {assignment.practice_mode !==
                                           "rearrangement" &&
                                           assignment.practice_mode !==
-                                            "word_selection" && (
+                                            "word_selection" &&
+                                          (canUseAiGrading ? (
                                             <Button
                                               variant="default"
                                               size="sm"
-                                              className="bg-purple-600 hover:bg-purple-700 text-white h-10 min-h-10"
+                                              className="h-10 min-h-10 bg-purple-600 hover:bg-purple-700 text-white"
                                               onClick={() => {
                                                 setBatchGradingModal({
                                                   open: true,
@@ -1908,7 +1935,23 @@ export default function ClassroomDetail({
                                                 "assignmentDetail.buttons.batchGrade",
                                               )}
                                             </Button>
-                                          )}
+                                          ) : (
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="h-10 min-h-10"
+                                              onClick={() => {
+                                                navigate(
+                                                  `/teacher/classroom/${id}/assignment/${assignment.id}`,
+                                                );
+                                              }}
+                                            >
+                                              <Eye className="w-4 h-4 mr-1" />
+                                              {t(
+                                                "classroomDetail.buttons.viewDetails",
+                                              )}
+                                            </Button>
+                                          ))}
                                       </div>
                                     </td>
                                   </tr>
@@ -1932,7 +1975,7 @@ export default function ClassroomDetail({
 
         {/* Right Sliding Panel */}
         <div
-          className={`fixed right-0 top-0 h-full w-1/2 bg-white shadow-xl border-l transform transition-transform duration-300 z-50 ${
+          className={`fixed right-0 top-0 h-full w-full md:w-1/2 bg-white shadow-xl border-l transform transition-transform duration-300 z-50 ${
             isPanelOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >

@@ -181,9 +181,12 @@ class OrganizationPointsService:
             HTTPException(404): 機構不存在
             HTTPException(402): 機構未啟用或點數超過緩衝限制
         """
-        # 1. 查詢機構
+        # 1. 查詢機構（加鎖防止併發超扣）
         organization = (
-            db.query(Organization).filter(Organization.id == organization_id).first()
+            db.query(Organization)
+            .filter(Organization.id == organization_id)
+            .with_for_update()
+            .first()
         )
 
         if not organization:

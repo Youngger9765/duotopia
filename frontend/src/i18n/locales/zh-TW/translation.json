@@ -150,6 +150,7 @@
     "playing": "播放中",
     "analyzing": "分析中",
     "uploadAndAnalyze": "上傳並分析",
+    "analyze": "分析",
     "reRecord": "重新錄音",
     "delete": "刪除錄音",
     "deleteConfirm": "確定要刪除此錄音嗎？"
@@ -1327,6 +1328,7 @@
         "total": "/ {{total}} 秒",
         "depleted": "配額已用完",
         "exhausted": "配額已用完",
+        "noAiAnalysis": "學生僅能練習錄音",
         "low": "配額不足",
         "error": "配額不足，無法派發作業",
         "errorDesc": "請升級方案或等待下個計費週期",
@@ -1403,6 +1405,10 @@
         "missingAudio": "選擇的內容缺少音檔",
         "missingAudioDesc": "此練習模式需要音檔，請先回到內容管理頁面產生 TTS 音檔",
         "mixedContentType": "目前只能選擇{{type}}，請先清除已選擇的內容再選擇其他類型"
+      },
+      "warnings": {
+        "quotaLow": "AI 分析額度不足",
+        "quotaLowDesc": "作業已建立，但學生目前無法使用 AI 分析功能，僅能上傳音檔練習"
       },
       "success": {
         "created": "成功創建作業，已指派給 {{count}} 位學生"
@@ -2533,6 +2539,10 @@
       "unassign": "取消指派",
       "grade": "批改"
     },
+    "noCredits": {
+      "message": "AI 點數已用完，請購買點數或升級方案",
+      "tooltip": "AI 點數不足，無法使用 AI 批改"
+    },
     "labels": {
       "contentType": "內容類型",
       "assignedDate": "指派日期",
@@ -3604,13 +3614,15 @@
       "passed": "通過",
       "notPassed": "未通過",
       "uploadAndAnalyze": "上傳並分析",
+      "analyze": "分析",
       "analyzing": "分析中...",
       "analyzed": "已分析",
       "analysisFailed": "分析失敗（點擊重試）",
       "aiAnalyzing": "AI 正在分析中...",
       "pleaseWait": "請稍候片刻",
       "clickToAssess": "點擊上方按鈕開始評估",
-      "pleaseRecordFirst": "請先錄音"
+      "pleaseRecordFirst": "請先錄音",
+      "recordingComplete": "已錄音完成"
     },
     "messages": {
       "recordingRequired": "請先錄音並確保有參考文本",
@@ -3683,6 +3695,10 @@
     }
   },
   "studentActivity": {
+    "aiAnalysis": {
+      "analyze": "分析",
+      "notAvailable": "AI 分析功能未開啟"
+    },
     "toast": {
       "cannotStartRecording": "無法啟動錄音，請檢查麥克風權限",
       "fileTooLarge": "檔案過大",
@@ -3942,7 +3958,8 @@
       "exampleGenerationFailed": "AI 生成例句失敗，請稍後再試",
       "willRegenerateFor": "將為「{{word}}」重新生成例句",
       "existingWillBeOverwritten": "現有例句將被覆蓋",
-      "wordsWillRegenerate": "將為 {{count}} 個單字重新生成例句",
+      "wordsWillRegenerate": "將為 {{count}} 個單字生成例句",
+      "existingSentencesSkipped": "已有例句的 {{count}} 個單字將被跳過",
       "allExistingExamples": "所有現有例句",
       "andTranslations": "及翻譯",
       "willBeOverwritten": "將被覆蓋",
@@ -3987,6 +4004,7 @@
     "submitting": "提交中...",
     "analyzing": "AI 分析中...",
     "uploadAndAssess": "上傳並分析",
+    "analyze": "分析",
     "aiResult": "AI 評估結果",
     "overallScore": "綜合評分",
     "points": " 分",
@@ -4008,6 +4026,7 @@
     "studentAnswer": "學生作答",
     "pleaseRecord": "請先錄音",
     "clickToAssess": "點擊上方按鈕開始評估",
+    "recordingComplete": "已錄音完成",
     "startRecordOrUpload": "開始錄音或上傳",
     "noTeacherFeedback": "尚無老師評語",
     "toast": {
@@ -4084,5 +4103,30 @@
     "personalMode": "個人模式",
     "selectOrganization": "選擇組織",
     "noSchoolsInOrg": "此組織尚無學校"
+  },
+  "organizationPoints": {
+    "title": "AI 使用點數",
+    "loading": "載入點數餘額中...",
+    "loadingHistory": "載入歷史紀錄中...",
+    "error": "錯誤：{{error}}",
+    "total": "總計",
+    "used": "已使用",
+    "available": "可用",
+    "lastUpdated": "最後更新",
+    "lowWarning": "⚠️ 點數即將用盡，請聯繫管理員加值。",
+    "history": {
+      "title": "點數使用紀錄",
+      "empty": "尚無使用紀錄。",
+      "totalEntries": "共 {{count}} 筆紀錄",
+      "date": "日期",
+      "user": "使用者",
+      "feature": "功能",
+      "description": "說明",
+      "points": "點數",
+      "unknown": "未知",
+      "showing": "顯示第 {{from}} 至 {{to}} 筆，共 {{total}} 筆",
+      "previous": "上一頁",
+      "next": "下一頁"
+    }
   }
 }

@@ -7,41 +7,28 @@ import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
 import { ErrorMessage } from "@/components/organization/ErrorMessage";
 import { OrganizationEditDialog } from "@/components/organization/OrganizationEditDialog";
-import { SchoolCreateDialog } from "@/components/organization/SchoolCreateDialog";
-import { SchoolEditDialog } from "@/components/organization/SchoolEditDialog";
-import { AssignPrincipalDialog } from "@/components/organization/AssignPrincipalDialog";
-import { InviteTeacherDialog } from "@/components/organization/InviteTeacherDialog";
+import { Button } from "@/components/ui/button";
+import { Settings } from "lucide-react";
 import {
-  OrganizationInfoCard,
   Organization,
   School,
   QuickActionsCards,
-  SchoolsSection,
-  StaffSection,
+  SchoolGridSection,
 } from "@/pages/organization/OrganizationEditSections";
 import { StaffMember } from "@/components/organization/StaffTable";
 
 export default function OrganizationEditPage() {
   const { orgId } = useParams<{ orgId: string }>();
   const token = useTeacherAuthStore((state) => state.token);
-  const {
-    setSelectedNode,
-    setExpandedOrgs,
-    refreshSchools,
-    refreshOrganizations,
-  } = useOrganization();
+  const { setSelectedNode, setExpandedOrgs, refreshOrganizations } =
+    useOrganization();
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [schools, setSchools] = useState<School[]>([]);
   const [teachers, setTeachers] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [createSchoolDialogOpen, setCreateSchoolDialogOpen] = useState(false);
-  const [editSchoolDialogOpen, setEditSchoolDialogOpen] = useState(false);
-  const [assignPrincipalDialogOpen, setAssignPrincipalDialogOpen] =
-    useState(false);
-  const [inviteTeacherDialogOpen, setInviteTeacherDialogOpen] = useState(false);
-  const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (orgId) {
@@ -132,46 +119,6 @@ export default function OrganizationEditPage() {
     }
   }, [token, refreshOrganizations]);
 
-  const handleSchoolCreateSuccess = useCallback(() => {
-    fetchSchools();
-    // Sync sidebar schools data in OrganizationContext
-    if (orgId && token) {
-      refreshSchools(token, orgId);
-    }
-  }, [orgId, token, refreshSchools]);
-
-  const handleSchoolEditSuccess = useCallback(() => {
-    fetchSchools();
-    // Sync sidebar schools data in OrganizationContext
-    if (orgId && token) {
-      refreshSchools(token, orgId);
-    }
-  }, [orgId, token, refreshSchools]);
-
-  const handleEditSchool = (school: School) => {
-    setSelectedSchool(school);
-    setEditSchoolDialogOpen(true);
-  };
-
-  const handleAssignPrincipal = (school: School) => {
-    setSelectedSchool(school);
-    setAssignPrincipalDialogOpen(true);
-  };
-
-  const handleAssignPrincipalSuccess = useCallback(() => {
-    fetchSchools();
-    // Sync sidebar schools data in OrganizationContext
-    if (orgId && token) {
-      refreshSchools(token, orgId);
-    }
-  }, [orgId, token, refreshSchools]);
-
-  const handleInviteTeacherSuccess = () => {
-    fetchTeachers();
-  };
-
-  // Role management is now handled by StaffTable component
-
   if (loading) {
     return (
       <div className="space-y-6">
@@ -191,17 +138,34 @@ export default function OrganizationEditPage() {
     );
   }
 
+  // Pagination logic
+  const ITEMS_PER_PAGE = 10;
+  const totalPages = Math.ceil(schools.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const currentSchools = schools.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {/* Breadcrumb */}
-      <Breadcrumb
-        items={[{ label: "組織管理" }, { label: organization.name }]}
-      />
-
-      <OrganizationInfoCard
-        organization={organization}
-        onEdit={() => setEditDialogOpen(true)}
-      />
+      {/* Breadcrumb with Settings Button */}
+      <div className="flex items-center justify-between">
+        <Breadcrumb
+          items={[{ label: "組織管理" }, { label: organization.name }]}
+        />
+        <Button
+          onClick={() => setEditDialogOpen(true)}
+          variant="ghost"
+          size="icon"
+          title="編輯機構"
+        >
+          <Settings className="h-5 w-5" />
+        </Button>
+      </div>
 
       <QuickActionsCards
         orgId={orgId!}
@@ -209,19 +173,11 @@ export default function OrganizationEditPage() {
         teachersCount={teachers.length}
       />
 
-      <SchoolsSection
-        orgId={orgId!}
-        schools={schools}
-        onCreate={() => setCreateSchoolDialogOpen(true)}
-        onEdit={handleEditSchool}
-        onAssignPrincipal={handleAssignPrincipal}
-      />
-
-      <StaffSection
-        orgId={orgId!}
-        teachers={teachers}
-        onInvite={() => setInviteTeacherDialogOpen(true)}
-        onRoleUpdated={fetchTeachers}
+      <SchoolGridSection
+        schools={currentSchools}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
       />
 
       {/* Edit Organization Dialog */}
@@ -230,41 +186,6 @@ export default function OrganizationEditPage() {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onSuccess={handleEditSuccess}
-      />
-
-      {/* Create School Dialog */}
-      <SchoolCreateDialog
-        organizationId={orgId!}
-        open={createSchoolDialogOpen}
-        onOpenChange={setCreateSchoolDialogOpen}
-        onSuccess={handleSchoolCreateSuccess}
-      />
-
-      {/* Edit School Dialog */}
-      <SchoolEditDialog
-        school={selectedSchool}
-        open={editSchoolDialogOpen}
-        onOpenChange={setEditSchoolDialogOpen}
-        onSuccess={handleSchoolEditSuccess}
-      />
-
-      {/* Assign Principal Dialog */}
-      {selectedSchool && organization && (
-        <AssignPrincipalDialog
-          schoolId={selectedSchool.id}
-          organizationId={organization.id}
-          open={assignPrincipalDialogOpen}
-          onOpenChange={setAssignPrincipalDialogOpen}
-          onSuccess={handleAssignPrincipalSuccess}
-        />
-      )}
-
-      {/* Invite Teacher Dialog */}
-      <InviteTeacherDialog
-        organizationId={orgId!}
-        open={inviteTeacherDialogOpen}
-        onOpenChange={setInviteTeacherDialogOpen}
-        onSuccess={handleInviteTeacherSuccess}
       />
     </div>
   );

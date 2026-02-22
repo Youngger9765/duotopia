@@ -41,7 +41,8 @@ export function useProgramCopy() {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to copy program");
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || "Failed to copy program");
     }
 
     return response.json();

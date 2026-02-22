@@ -33,10 +33,10 @@ def upgrade() -> None:
         """
         CREATE TABLE IF NOT EXISTS program_copy_logs (
             id SERIAL PRIMARY KEY,
-            source_program_id INTEGER NOT NULL REFERENCES programs(id),
+            source_program_id INTEGER NOT NULL REFERENCES programs(id) ON DELETE RESTRICT,
             copied_by_type VARCHAR(20) NOT NULL,
             copied_by_id VARCHAR(100) NOT NULL,
-            copied_program_id INTEGER REFERENCES programs(id),
+            copied_program_id INTEGER REFERENCES programs(id) ON DELETE SET NULL,
             copied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     """
