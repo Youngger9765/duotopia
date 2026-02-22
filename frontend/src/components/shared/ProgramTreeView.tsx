@@ -725,7 +725,7 @@ export function ProgramTreeView({
               className="fixed inset-0 bg-black bg-opacity-20 z-40 transition-opacity"
               onClick={closeReadingEditor}
             />
-            <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col">
+            <div className="fixed top-0 right-0 h-screen w-full md:w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
                 <h2 className="text-xl font-semibold text-gray-900">
@@ -843,7 +843,7 @@ export function ProgramTreeView({
               className="fixed inset-0 bg-black bg-opacity-20 z-40 transition-opacity"
               onClick={closeSentenceMakingEditor}
             />
-            <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col">
+            <div className="fixed top-0 right-0 h-screen w-full md:w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
                 <h2 className="text-xl font-semibold text-gray-900">
@@ -931,7 +931,7 @@ export function ProgramTreeView({
               className="fixed inset-0 bg-black bg-opacity-20 z-40 transition-opacity"
               onClick={closeVocabularySetEditor}
             />
-            <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col">
+            <div className="fixed top-0 right-0 h-screen w-full md:w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col">
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
                 <h2 className="text-xl font-semibold text-gray-900">

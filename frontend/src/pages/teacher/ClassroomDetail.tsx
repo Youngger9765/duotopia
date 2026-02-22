@@ -1932,7 +1932,7 @@ export default function ClassroomDetail({
 
         {/* Right Sliding Panel */}
         <div
-          className={`fixed right-0 top-0 h-full w-1/2 bg-white shadow-xl border-l transform transition-transform duration-300 z-50 ${
+          className={`fixed right-0 top-0 h-full w-full md:w-1/2 bg-white shadow-xl border-l transform transition-transform duration-300 z-50 ${
             isPanelOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >

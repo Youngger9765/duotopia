@@ -674,7 +674,7 @@ function TeacherTemplateProgramsInner() {
             />
 
             {/* Panel */}
-            <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
+            <div className="fixed top-0 right-0 h-screen w-full md:w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
                 <h2 className="text-lg font-semibold text-gray-900">
                   {t("teacherTemplatePrograms.dialogs.editContentTitle")}
@@ -824,7 +824,7 @@ function TeacherTemplateProgramsInner() {
             />
 
             {/* Panel */}
-            <div className="fixed top-0 right-0 h-screen w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
+            <div className="fixed top-0 right-0 h-screen w-full md:w-1/2 bg-white shadow-2xl border-l border-gray-200 z-50 overflow-auto animate-in slide-in-from-right duration-300">
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
                 <h2 className="text-lg font-semibold text-gray-900">
                   {t("vocabularySet.editTitle")}
