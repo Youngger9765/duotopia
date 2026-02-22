@@ -2882,134 +2882,134 @@ export default function VocabularySetPanel({
     );
 
     try {
-    // 清除空白 items
-    const nonEmptyRows = rows.filter((row) => row.text && row.text.trim());
+      // 清除空白 items
+      const nonEmptyRows = rows.filter((row) => row.text && row.text.trim());
 
-    // 建立新 items
-    let newItems: ContentRow[] = lines.map((text, index) => ({
-      id: `batch-${Date.now()}-${index}`,
-      text,
-      definition: "",
-      translation: "",
-      selectedWordLanguage: lastSelectedWordLang,
-      example_sentence: "",
-      example_sentence_translation: "",
-    }));
+      // 建立新 items
+      let newItems: ContentRow[] = lines.map((text, index) => ({
+        id: `batch-${Date.now()}-${index}`,
+        text,
+        definition: "",
+        translation: "",
+        selectedWordLanguage: lastSelectedWordLang,
+        example_sentence: "",
+        example_sentence_translation: "",
+      }));
 
-    const batchLang = lastSelectedWordLang;
-    const batchLangCode =
-      WORD_TRANSLATION_LANGUAGES.find((l) => l.value === batchLang)?.code ||
-      "zh-TW";
+      const batchLang = lastSelectedWordLang;
+      const batchLangCode =
+        WORD_TRANSLATION_LANGUAGES.find((l) => l.value === batchLang)?.code ||
+        "zh-TW";
 
-    // 批次處理 TTS 和翻譯
-    if (autoTTS || autoTranslate) {
-      try {
-        if (autoTTS) {
-          // Get voice and rate from selected TTS settings (Issue #121)
-          const { voice, rate } = getVoiceAndRate(
-            batchTTSAccent,
-            batchTTSGender,
-            batchTTSSpeed,
-          );
-          // Save settings for next time
-          saveBatchTTSSettings();
-
-          const ttsResult = await apiClient.batchGenerateTTS(
-            lines,
-            voice,
-            rate,
-            "+0%",
-          );
-          if (
-            ttsResult &&
-            typeof ttsResult === "object" &&
-            "audio_urls" in ttsResult
-          ) {
-            const audioUrls = (ttsResult as { audio_urls: string[] })
-              .audio_urls;
-            newItems = newItems.map((item, i) => ({
-              ...item,
-              audioUrl: audioUrls[i]?.startsWith("http")
-                ? audioUrls[i]
-                : `${import.meta.env.VITE_API_URL}${audioUrls[i]}`,
-              audio_url: audioUrls[i]?.startsWith("http")
-                ? audioUrls[i]
-                : `${import.meta.env.VITE_API_URL}${audioUrls[i]}`,
-            }));
-          }
-        }
-
-        if (autoTranslate) {
-          if (batchLang === "chinese") {
-            // 中文：使用 batchTranslateWithPos 同時取得翻譯和詞性
-            const posResponse = await apiClient.batchTranslateWithPos(
-              lines,
-              batchLangCode,
+      // 批次處理 TTS 和翻譯
+      if (autoTTS || autoTranslate) {
+        try {
+          if (autoTTS) {
+            // Get voice and rate from selected TTS settings (Issue #121)
+            const { voice, rate } = getVoiceAndRate(
+              batchTTSAccent,
+              batchTTSGender,
+              batchTTSSpeed,
             );
-            const results = posResponse.results || [];
-            newItems = newItems.map((item, i) => {
-              const parsed = extractFirstDefinition(
-                results[i]?.translation || "",
-              );
-              return {
+            // Save settings for next time
+            saveBatchTTSSettings();
+
+            const ttsResult = await apiClient.batchGenerateTTS(
+              lines,
+              voice,
+              rate,
+              "+0%",
+            );
+            if (
+              ttsResult &&
+              typeof ttsResult === "object" &&
+              "audio_urls" in ttsResult
+            ) {
+              const audioUrls = (ttsResult as { audio_urls: string[] })
+                .audio_urls;
+              newItems = newItems.map((item, i) => ({
                 ...item,
-                definition: parsed.text,
-                partsOfSpeech:
-                  results[i]?.parts_of_speech?.length > 0
-                    ? convertAbbreviatedPOS(results[i].parts_of_speech)
-                    : parsed.pos
-                      ? convertAbbreviatedPOS([parsed.pos])
-                      : [],
-              };
-            });
-          } else {
-            // 英/日/韓：使用 batchTranslate
-            const translateResponse = await apiClient.batchTranslate(
-              lines,
-              batchLangCode,
-            );
-            const translations =
-              (translateResponse as { translations?: string[] }).translations ||
-              [];
-            newItems = newItems.map((item, i) => {
-              const parsed = extractFirstDefinition(translations[i] || "");
-              const updated: Partial<ContentRow> = {
-                partsOfSpeech: parsed.pos
-                  ? convertAbbreviatedPOS([parsed.pos])
-                  : item.partsOfSpeech,
-              };
-              if (batchLang === "english") updated.translation = parsed.text;
-              else if (batchLang === "japanese")
-                updated.japanese_translation = parsed.text;
-              else if (batchLang === "korean")
-                updated.korean_translation = parsed.text;
-              return { ...item, ...updated };
-            });
+                audioUrl: audioUrls[i]?.startsWith("http")
+                  ? audioUrls[i]
+                  : `${import.meta.env.VITE_API_URL}${audioUrls[i]}`,
+                audio_url: audioUrls[i]?.startsWith("http")
+                  ? audioUrls[i]
+                  : `${import.meta.env.VITE_API_URL}${audioUrls[i]}`,
+              }));
+            }
           }
+
+          if (autoTranslate) {
+            if (batchLang === "chinese") {
+              // 中文：使用 batchTranslateWithPos 同時取得翻譯和詞性
+              const posResponse = await apiClient.batchTranslateWithPos(
+                lines,
+                batchLangCode,
+              );
+              const results = posResponse.results || [];
+              newItems = newItems.map((item, i) => {
+                const parsed = extractFirstDefinition(
+                  results[i]?.translation || "",
+                );
+                return {
+                  ...item,
+                  definition: parsed.text,
+                  partsOfSpeech:
+                    results[i]?.parts_of_speech?.length > 0
+                      ? convertAbbreviatedPOS(results[i].parts_of_speech)
+                      : parsed.pos
+                        ? convertAbbreviatedPOS([parsed.pos])
+                        : [],
+                };
+              });
+            } else {
+              // 英/日/韓：使用 batchTranslate
+              const translateResponse = await apiClient.batchTranslate(
+                lines,
+                batchLangCode,
+              );
+              const translations =
+                (translateResponse as { translations?: string[] })
+                  .translations || [];
+              newItems = newItems.map((item, i) => {
+                const parsed = extractFirstDefinition(translations[i] || "");
+                const updated: Partial<ContentRow> = {
+                  partsOfSpeech: parsed.pos
+                    ? convertAbbreviatedPOS([parsed.pos])
+                    : item.partsOfSpeech,
+                };
+                if (batchLang === "english") updated.translation = parsed.text;
+                else if (batchLang === "japanese")
+                  updated.japanese_translation = parsed.text;
+                else if (batchLang === "korean")
+                  updated.korean_translation = parsed.text;
+                return { ...item, ...updated };
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Batch processing error:", error);
+          toast.error(t("contentEditor.messages.batchProcessingFailed"));
+          return;
         }
-      } catch (error) {
-        console.error("Batch processing error:", error);
-        toast.error(t("contentEditor.messages.batchProcessingFailed"));
-        return;
       }
-    }
 
-    // 合併新舊項目
-    const updatedRows = [...nonEmptyRows, ...newItems];
+      // 合併新舊項目
+      const updatedRows = [...nonEmptyRows, ...newItems];
 
-    // 只更新前端狀態，不直接儲存到資料庫
-    // 使用者需要按最終的「儲存」按鈕才會執行 POST/PUT
-    setRows(updatedRows);
+      // 只更新前端狀態，不直接儲存到資料庫
+      // 使用者需要按最終的「儲存」按鈕才會執行 POST/PUT
+      setRows(updatedRows);
 
-    toast.success(
-      t("vocabularySet.messages.itemsAdded", {
-        added: lines.length,
-        total: updatedRows.length,
-      }),
-    );
+      toast.success(
+        t("vocabularySet.messages.itemsAdded", {
+          added: lines.length,
+          total: updatedRows.length,
+        }),
+      );
 
-    setBatchPasteDialogOpen(false);
-    setBatchPasteText("");
+      setBatchPasteDialogOpen(false);
+      setBatchPasteText("");
     } finally {
       setIsBatchPasting(false);
     }
