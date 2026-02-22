@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { PointsBalance } from "../types/points";
-import { API_URL } from "../config/api";
-import { useTeacherAuthStore } from "../stores/teacherAuthStore";
+import { apiClient } from "../lib/api";
 
 interface Props {
   organizationId: string;
@@ -10,7 +9,6 @@ interface Props {
 export const OrganizationPointsBalance: React.FC<Props> = ({
   organizationId,
 }) => {
-  const token = useTeacherAuthStore((state) => state.token);
   const [balance, setBalance] = useState<PointsBalance | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,20 +16,9 @@ export const OrganizationPointsBalance: React.FC<Props> = ({
   useEffect(() => {
     const fetchBalance = async () => {
       try {
-        const response = await fetch(
-          `${API_URL}/api/organizations/${organizationId}/points`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
+        const data = await apiClient.get<PointsBalance>(
+          `/api/organizations/${organizationId}/points`,
         );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch points balance");
-        }
-
-        const data = await response.json();
         setBalance(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
@@ -41,7 +28,7 @@ export const OrganizationPointsBalance: React.FC<Props> = ({
     };
 
     fetchBalance();
-  }, [organizationId, token]);
+  }, [organizationId]);
 
   if (loading) {
     return <div className="animate-pulse">Loading points balance...</div>;
@@ -55,8 +42,8 @@ export const OrganizationPointsBalance: React.FC<Props> = ({
     return null;
   }
 
-  const percentageUsed = (balance.used_points / balance.total_points) * 100;
-  const isLow = balance.remaining_points < balance.total_points * 0.2;
+  const percentageUsed = balance.total_points > 0 ? (balance.used_points / balance.total_points) * 100 : 0;
+  const isLow = balance.total_points > 0 && balance.remaining_points < balance.total_points * 0.2;
 
   return (
     <div className="bg-white rounded-lg shadow p-6">

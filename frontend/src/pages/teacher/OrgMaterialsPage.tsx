@@ -303,9 +303,7 @@ export default function OrgMaterialsPage() {
         order_index: index,
       }));
 
-      console.log("[Programs Reorder] Calling API with:", orderData);
       await apiClient.reorderPrograms(orderData);
-      console.log("[Programs Reorder] API call succeeded");
 
       toast.success(t("teacherTemplatePrograms.messages.reorderSuccess"));
       setIsReordering(false);
@@ -353,12 +351,7 @@ export default function OrgMaterialsPage() {
         order_index: index,
       }));
 
-      console.log(
-        `[Lessons Reorder] Program ${programId}, Calling API with:`,
-        orderData,
-      );
       await apiClient.reorderLessons(programId, orderData);
-      console.log(`[Lessons Reorder] API call succeeded`);
 
       toast.success(t("teacherTemplatePrograms.messages.reorderSuccess"));
       setIsReordering(false);
@@ -425,12 +418,7 @@ export default function OrgMaterialsPage() {
         order_index: index,
       }));
 
-      console.log(
-        `[Contents Reorder] Lesson ${lessonId}, Calling API with:`,
-        orderData,
-      );
       await apiClient.reorderContents(lessonId, orderData);
-      console.log(`[Contents Reorder] API call succeeded`);
 
       toast.success(t("teacherTemplatePrograms.messages.reorderSuccess"));
       setIsReordering(false);
@@ -762,9 +750,7 @@ export default function OrgMaterialsPage() {
                       id: vocabularySetContentId || undefined,
                     }}
                     lessonId={vocabularySetLessonId}
-                    onUpdateContent={(updatedContent) => {
-                      console.log("Content updated:", updatedContent);
-                    }}
+                    onUpdateContent={() => {}}
                     onSave={async () => {
                       setShowVocabularySetEditor(false);
                       setVocabularySetLessonId(null);
@@ -823,9 +809,7 @@ export default function OrgMaterialsPage() {
                     content={{ id: vocabularySetContentId }}
                     editingContent={{ id: vocabularySetContentId }}
                     lessonId={vocabularySetLessonId}
-                    onUpdateContent={(updatedContent) => {
-                      console.log("Content updated:", updatedContent);
-                    }}
+                    onUpdateContent={() => {}}
                     onSave={async () => {
                       setShowVocabularySetEditor(false);
                       setVocabularySetLessonId(null);

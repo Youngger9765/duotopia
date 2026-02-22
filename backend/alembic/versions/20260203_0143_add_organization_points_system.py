@@ -10,12 +10,10 @@ Adds:
 
 """
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "20260203_0143"
-down_revision = "g2b3c4d5e6f7"
+down_revision = "20260201_0306"
 branch_labels = None
 depends_on = None
 
@@ -113,7 +111,7 @@ def upgrade():
     """
     )
 
-    # Add check constraint to ensure used_points doesn't exceed total_points
+    # Add check constraint — allow 20% overdraft buffer (matches OrganizationPointsService.QUOTA_BUFFER_PERCENTAGE)
     op.execute(
         """
         DO $$ BEGIN
@@ -123,7 +121,7 @@ def upgrade():
             ) THEN
                 ALTER TABLE organizations
                 ADD CONSTRAINT chk_organizations_points_valid
-                CHECK (used_points <= total_points AND used_points >= 0 AND total_points >= 0);
+                CHECK (used_points <= (total_points * 1.20)::int AND used_points >= 0 AND total_points >= 0);
             END IF;
         END $$;
     """
@@ -132,7 +130,16 @@ def upgrade():
     # Enable RLS on organization_points_log table (security requirement)
     op.execute(
         """
-        ALTER TABLE organization_points_log ENABLE ROW LEVEL SECURITY;
+        DO $$ BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_class c
+                JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                WHERE c.relname = 'organization_points_log'
+                AND c.relrowsecurity = true
+            ) THEN
+                ALTER TABLE organization_points_log ENABLE ROW LEVEL SECURITY;
+            END IF;
+        END $$;
     """
     )
 

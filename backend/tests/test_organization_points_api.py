@@ -146,7 +146,6 @@ class TestGetPointsBalance:
         assert data["remaining_points"] == 7500
         assert "last_points_update" in data
 
-    @pytest.mark.skip(reason="Casbin permission methods need updating")
     def test_org_admin_with_permission_can_query_points(
         self,
         test_client: TestClient,
@@ -156,7 +155,7 @@ class TestGetPointsBalance:
         admin_headers: dict,
     ):
         """Test that org_admin with manage_materials permission can query points"""
-        # Add org_admin to org with manage_materials permission
+        # Add org_admin to org
         admin_rel = TeacherOrganization(
             teacher_id=org_admin.id,
             organization_id=test_org.id,
@@ -166,16 +165,10 @@ class TestGetPointsBalance:
         shared_test_session.add(admin_rel)
         shared_test_session.commit()
 
-        # Grant manage_materials permission
+        # Grant org_admin role via Casbin (manage_materials permission is in casbin_policy.csv)
         casbin_service = get_casbin_service()
         casbin_service.add_role_for_user(
             org_admin.id, "org_admin", f"org-{test_org.id}"
-        )
-        casbin_service.add_permission_for_user(
-            org_admin.id,
-            f"org-{test_org.id}",
-            "materials",
-            "manage",
         )
 
         response = test_client.get(

@@ -13,7 +13,6 @@ Endpoints:
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel, Field, field_serializer, model_validator
 from typing import List, Optional
@@ -32,46 +31,15 @@ from models import (
     ContentItem,
     Classroom,
 )
-from models.program import ProgramCopyLog
-from auth import verify_token
+from models.program import ProgramCopyLog, COPIED_BY_ORGANIZATION
 from services.casbin_service import get_casbin_service
 from utils.permissions import has_read_org_materials_permission
+from routers.teachers import get_current_teacher
 
 logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/api/organizations", tags=["organization-programs"])
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/teacher/login")
-
-
-# ============ Dependencies ============
-
-
-async def get_current_teacher(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
-) -> Teacher:
-    """Get current authenticated teacher"""
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-        )
-
-    teacher_id = payload.get("sub")
-    teacher_type = payload.get("type")
-
-    if teacher_type != "teacher":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not a teacher"
-        )
-
-    teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
-    if not teacher:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
-        )
-
-    return teacher
 
 
 # ============ Request/Response Models ============
@@ -352,21 +320,21 @@ async def list_organization_materials(
     # Convert to response models
     result = []
     for program in programs:
-        program_data = ProgramResponse.from_orm(program)
+        program_data = ProgramResponse.model_validate(program)
 
         # Build lessons hierarchy
         program_data.lessons = []
         for lesson in sorted(program.lessons, key=lambda x: x.order_index):
-            lesson_data = LessonResponse.from_orm(lesson)
+            lesson_data = LessonResponse.model_validate(lesson)
 
             # Build contents hierarchy
             lesson_data.contents = []
             for content in sorted(lesson.contents, key=lambda x: x.order_index):
-                content_data = ContentResponse.from_orm(content)
+                content_data = ContentResponse.model_validate(content)
 
                 # Build items
                 content_data.items = [
-                    ContentItemResponse.from_orm(item)
+                    ContentItemResponse.model_validate(item)
                     for item in sorted(
                         content.content_items, key=lambda x: x.order_index
                     )
@@ -427,17 +395,17 @@ async def get_organization_material_details(
         )
 
     # Build response with hierarchy
-    program_data = ProgramResponse.from_orm(program)
+    program_data = ProgramResponse.model_validate(program)
     program_data.lessons = []
 
     for lesson in sorted(program.lessons, key=lambda x: x.order_index):
-        lesson_data = LessonResponse.from_orm(lesson)
+        lesson_data = LessonResponse.model_validate(lesson)
         lesson_data.contents = []
 
         for content in sorted(lesson.contents, key=lambda x: x.order_index):
-            content_data = ContentResponse.from_orm(content)
+            content_data = ContentResponse.model_validate(content)
             content_data.items = [
-                ContentItemResponse.from_orm(item)
+                ContentItemResponse.model_validate(item)
                 for item in sorted(content.content_items, key=lambda x: x.order_index)
             ]
             lesson_data.contents.append(content_data)
@@ -499,7 +467,7 @@ async def create_organization_material(
     db.commit()
     db.refresh(program)
 
-    return ProgramResponse.from_orm(program)
+    return ProgramResponse.model_validate(program)
 
 
 @router.put("/{org_id}/programs/{program_id}", response_model=ProgramResponse)
@@ -553,7 +521,7 @@ async def update_organization_material(
     db.commit()
     db.refresh(program)
 
-    return ProgramResponse.from_orm(program)
+    return ProgramResponse.model_validate(program)
 
 
 @router.delete("/{org_id}/programs/{program_id}")
@@ -707,7 +675,7 @@ async def copy_material_to_classroom(
         # Record copy log for audit/rate-limiting
         copy_log = ProgramCopyLog(
             source_program_id=source_program.id,
-            copied_by_type="organization",
+            copied_by_type=COPIED_BY_ORGANIZATION,
             copied_by_id=str(org_id),
             copied_program_id=new_program.id,
         )
@@ -740,17 +708,17 @@ async def copy_material_to_classroom(
         )
 
     # Build response
-    program_data = ProgramResponse.from_orm(new_program)
+    program_data = ProgramResponse.model_validate(new_program)
     program_data.lessons = []
 
     for lesson in sorted(new_program.lessons, key=lambda x: x.order_index):
-        lesson_data = LessonResponse.from_orm(lesson)
+        lesson_data = LessonResponse.model_validate(lesson)
         lesson_data.contents = []
 
         for content in sorted(lesson.contents, key=lambda x: x.order_index):
-            content_data = ContentResponse.from_orm(content)
+            content_data = ContentResponse.model_validate(content)
             content_data.items = [
-                ContentItemResponse.from_orm(item)
+                ContentItemResponse.model_validate(item)
                 for item in sorted(content.content_items, key=lambda x: x.order_index)
             ]
             lesson_data.contents.append(content_data)

@@ -13,12 +13,15 @@ Includes:
 import logging
 import os
 import random
+from typing import Optional
+from pydantic import BaseModel
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
     status,
     Request,
+    Header,
     UploadFile,
     File,
     Form,
@@ -44,6 +47,27 @@ from models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# Request Models
+# ============================================================================
+
+
+class WordSelectionAnswerRequest(BaseModel):
+    item_id: int
+    selected_translation: str
+
+
+class RearrangementAnswerRequest(BaseModel):
+    item_id: int
+    user_answer: str
+
+
+class RearrangementCompleteRequest(BaseModel):
+    total_score: int = 0
+    total_questions: int = 0
+
 
 router = APIRouter(prefix="/api/demo", tags=["demo"])
 
@@ -208,7 +232,7 @@ async def get_demo_speech_token(request: Request):
 async def reset_demo_quota_endpoint(
     request: Request,
     ip: str = None,
-    admin_secret: str = None,
+    admin_secret: Optional[str] = Header(default=None, alias="X-Admin-Secret"),
 ):
     """
     Reset demo token quota (development/staging only).
@@ -674,7 +698,7 @@ async def demo_word_selection_start(
         # Step 3: Fallback to ensure 3 distractors
         fallback_options = ["選項A", "選項B", "選項C", "選項D", "選項E"]
         fallback_idx = 0
-        while len(final_distractors) < 3:
+        while len(final_distractors) < 3 and fallback_idx < len(fallback_options):
             fallback = fallback_options[fallback_idx]
             if fallback.lower() not in seen:
                 final_distractors.append(fallback)
@@ -717,7 +741,7 @@ async def demo_word_selection_start(
 async def demo_word_selection_answer(
     request: Request,
     assignment_id: int,
-    data: dict,
+    data: WordSelectionAnswerRequest,
     db: Session = Depends(get_db),
 ):
     """
@@ -737,13 +761,8 @@ async def demo_word_selection_answer(
     # Validate assignment belongs to demo account
     get_demo_assignment(assignment_id, db)
 
-    item_id = data.get("item_id")
-    selected_translation = data.get("selected_translation")
-
-    if not item_id or not selected_translation:
-        raise HTTPException(
-            status_code=400, detail="Missing item_id or selected_translation"
-        )
+    item_id = data.item_id
+    selected_translation = data.selected_translation
 
     # Get the content item
     item = db.query(ContentItem).filter(ContentItem.id == item_id).first()
@@ -850,7 +869,7 @@ async def demo_rearrangement_questions(
 async def demo_rearrangement_answer(
     request: Request,
     assignment_id: int,
-    data: dict,
+    data: RearrangementAnswerRequest,
     db: Session = Depends(get_db),
 ):
     """
@@ -870,11 +889,8 @@ async def demo_rearrangement_answer(
     # Validate assignment belongs to demo account
     get_demo_assignment(assignment_id, db)
 
-    item_id = data.get("item_id")
-    user_answer = data.get("user_answer")
-
-    if not item_id or not user_answer:
-        raise HTTPException(status_code=400, detail="Missing item_id or user_answer")
+    item_id = data.item_id
+    user_answer = data.user_answer
 
     # Get the content item
     item = db.query(ContentItem).filter(ContentItem.id == item_id).first()
@@ -907,7 +923,6 @@ async def demo_rearrangement_answer(
 async def demo_rearrangement_retry(
     request: Request,
     assignment_id: int,
-    data: dict,
     db: Session = Depends(get_db),
 ):
     """
@@ -936,7 +951,7 @@ async def demo_rearrangement_retry(
 async def demo_rearrangement_complete(
     request: Request,
     assignment_id: int,
-    data: dict,
+    data: RearrangementCompleteRequest,
     db: Session = Depends(get_db),
 ):
     """
@@ -952,8 +967,8 @@ async def demo_rearrangement_complete(
     # Validate assignment belongs to demo account
     get_demo_assignment(assignment_id, db)
 
-    total_score = data.get("total_score", 0)
-    total_questions = data.get("total_questions", 0)
+    total_score = data.total_score
+    total_questions = data.total_questions
 
     return {
         "success": True,
