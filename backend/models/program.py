@@ -270,7 +270,7 @@ class ProgramCopyLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     source_program_id = Column(
-        Integer, ForeignKey("programs.id"), nullable=False, index=True
+        Integer, ForeignKey("programs.id", ondelete="RESTRICT"), nullable=False, index=True
     )
     copied_by_type = Column(
         String(20), nullable=False
@@ -279,7 +279,7 @@ class ProgramCopyLog(Base):
         String(100), nullable=False, index=True
     )  # teacher_id (as str) or organization_id (uuid str)
     copied_program_id = Column(
-        Integer, ForeignKey("programs.id"), nullable=True
+        Integer, ForeignKey("programs.id", ondelete="SET NULL"), nullable=True
     )  # 複製後產生的新課程 ID
     copied_at = Column(DateTime(timezone=True), server_default=func.now())
 

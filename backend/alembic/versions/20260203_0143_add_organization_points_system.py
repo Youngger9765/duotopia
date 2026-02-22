@@ -111,7 +111,7 @@ def upgrade():
     """
     )
 
-    # Add check constraint to ensure used_points doesn't exceed total_points
+    # Add check constraint — allow 20% overdraft buffer (matches OrganizationPointsService.QUOTA_BUFFER_PERCENTAGE)
     op.execute(
         """
         DO $$ BEGIN
@@ -121,7 +121,7 @@ def upgrade():
             ) THEN
                 ALTER TABLE organizations
                 ADD CONSTRAINT chk_organizations_points_valid
-                CHECK (used_points <= total_points AND used_points >= 0 AND total_points >= 0);
+                CHECK (used_points <= (total_points * 1.20)::int AND used_points >= 0 AND total_points >= 0);
             END IF;
         END $$;
     """

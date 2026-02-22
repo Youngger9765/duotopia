@@ -19,6 +19,7 @@ export const OrganizationPointsHistory: React.FC<Props> = ({
     const fetchHistory = async () => {
       try {
         setLoading(true);
+        setError(null);
         const offset = page * limit;
 
         const data = await apiClient.get<PointsHistory>(

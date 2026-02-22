@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import Optional, List
+from typing import Literal, Optional, List
 from datetime import datetime, timezone
 from pydantic import BaseModel
 import logging
@@ -26,7 +26,15 @@ class PointsBalanceResponse(BaseModel):
 
 class PointsDeductionRequest(BaseModel):
     points: int
-    feature_type: str  # 'ai_generation', 'translation', etc.
+    feature_type: Literal[
+        "ai_generation",
+        "speech_assessment",
+        "speech_recording",
+        "text_correction",
+        "image_correction",
+        "translation",
+        "manual_deduction",
+    ]
     description: Optional[str] = None
 
 

@@ -14,7 +14,7 @@ Endpoints:
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Literal, Optional, List
 import logging
 import uuid
 
@@ -44,7 +44,7 @@ class CopyRequest(BaseModel):
 
 
 class VisibilityUpdateRequest(BaseModel):
-    visibility: str  # 'private', 'public', 'organization_only', 'individual_only'
+    visibility: Literal["private", "public", "organization_only", "individual_only"]
 
 
 # ============ Endpoints ============
