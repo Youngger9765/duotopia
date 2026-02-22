@@ -1461,6 +1461,7 @@ export default function VocabularySetPanel({
   const [batchPasteText, setBatchPasteText] = useState("");
   const [batchPasteAutoTTS, setBatchPasteAutoTTS] = useState(true);
   const [batchPasteAutoTranslate, setBatchPasteAutoTranslate] = useState(true);
+  const [isBatchPasting, setIsBatchPasting] = useState(false);
 
   // TTS settings for batch paste (Issue #121)
   const [batchTTSAccent, setBatchTTSAccent] = useState("American English");
@@ -2874,10 +2875,13 @@ export default function VocabularySetPanel({
       return;
     }
 
+    setIsBatchPasting(true);
+
     toast.info(
       t("contentEditor.messages.processingItems", { count: lines.length }),
     );
 
+    try {
     // 清除空白 items
     const nonEmptyRows = rows.filter((row) => row.text && row.text.trim());
 
@@ -3006,6 +3010,9 @@ export default function VocabularySetPanel({
 
     setBatchPasteDialogOpen(false);
     setBatchPasteText("");
+    } finally {
+      setIsBatchPasting(false);
+    }
   };
 
   if (isLoading) {
@@ -3340,6 +3347,7 @@ export default function VocabularySetPanel({
             <Button
               variant="outline"
               onClick={() => setBatchPasteDialogOpen(false)}
+              disabled={isBatchPasting}
               className="px-6 py-2 text-base"
             >
               {t("contentEditor.buttons.cancel")}
@@ -3348,9 +3356,12 @@ export default function VocabularySetPanel({
               onClick={() =>
                 handleBatchPaste(batchPasteAutoTTS, batchPasteAutoTranslate)
               }
+              disabled={isBatchPasting}
               className="px-6 py-2 text-base bg-blue-600 hover:bg-blue-700"
             >
-              {t("contentEditor.buttons.confirmPaste")}
+              {isBatchPasting
+                ? "Working... 工作中"
+                : t("contentEditor.buttons.confirmPaste")}
             </Button>
           </DialogFooter>
         </DialogContent>
