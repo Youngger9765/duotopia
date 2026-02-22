@@ -399,10 +399,90 @@
     "billing": {
       "monthly": "月付方案",
       "perMonth": "/月",
+      "pointsPerMonth": "點/月",
       "description": "按月計費，彈性調整，隨時升級或調整您的方案"
+    },
+    "card": {
+      "popular": "熱門選擇"
+    },
+    "tabs": {
+      "subscription": "月訂閱方案",
+      "pointPackages": "點數包加購"
+    },
+    "trialBanner": {
+      "title": "註冊即享 2,000 免費 AI 點數"
+    },
+    "pointPackages": {
+      "description": "依需求彈性加購點數，購買越多越划算（點數效期 1 年）",
+      "buy": "購買",
+      "comingSoon": "點數包購買功能即將開放，敬請期待",
+      "bestValue": "最划算",
+      "points": "點",
+      "bonusPoints": "+{{count, number}} 點贈送",
+      "unitCost": "元/點",
+      "discount": "省 {{percent}}%",
+      "validity": "有效期限：1 年"
+    },
+    "plans": {
+      "free": {
+        "name": "免費方案",
+        "description": "免費體驗 AI 教學功能",
+        "studentCapacity": "不限學生人數",
+        "pointsLabel": "2,000 點（效期 1 年，用完為止）",
+        "features": {
+          "assignments": "無限制派發作業",
+          "aiUntilDepleted": "AI 批改功能用到點數用完為止",
+          "semiAutoGrading": "朗讀作業半自動批改（免點數）"
+        }
+      },
+      "tutor": {
+        "name": "Tutor Teachers",
+        "description": "小型家教 ESL 教師",
+        "studentCapacity": "適合約 10 位學生",
+        "features": {
+          "assignments": "免費方案全功能",
+          "aiEvaluation": "AI 備課與批改",
+          "workshop": "免費線上研習"
+        }
+      },
+      "school": {
+        "name": "School Teachers",
+        "description": "校園 ESL 教師",
+        "studentCapacity": "適合約 30 位學生",
+        "features": {
+          "allTutor": "Tutor 教師全功能",
+          "report": "學生學習報表（即將推出）"
+        }
+      }
+    },
+    "fallback": {
+      "teacher": "教師",
+      "student": "學生 {{id}}"
+    },
+    "faq": {
+      "title": "常見問題",
+      "q1": "我適合 Tutor Teachers 或 School Teachers 方案？",
+      "a1": "Tutor Teachers (NT$299/月) 適合學生人數在 30 人以內的家教教師；School Teachers (NT$599/月) 適合學生 100 人左右或任職於學校的教師。School Teachers 方案點數更多，點數成本平均優惠 33%，建議學生人數達 30 人以上時升級。",
+      "q2": "新用戶如何開始使用？",
+      "a2": "新用戶可享不限期免費試用，並獲得 AI 點數 2,000 點，期限為一年；升級後 2,000 點額度會保留在帳號中，直到到期。",
+      "q3": "點數是什麼？用途是什麼？",
+      "a3": "點數用於 AI 功能計費，包含：(1) 學生口說錄音作業 AI 分析，(2) 全自動 AI 作業批改，(3) AI 協作教材轉換，(4) 學生學習數據分析。",
+      "q4": "點數會過期嗎？",
+      "a4": "訂閱方案點數有效期限為一個月，每個月開始時重新計算。點數包購買點數使用期限為一年。",
+      "q5": "訂閱方案內的點數用完了怎麼辦？",
+      "a5": "點數用完後無法使用 AI 功能，可加購點數包補充或升級方案。",
+      "q6": "如何購買額外的點數？",
+      "a6": "點數價格依購買量級而定：1,000 點 = 180 元、2,000 點 = 320 元、5,000 點 = 700 元（+200 贈送）、10,000 點 = 1,200 元（+500 贈送）、20,000 點 = 2,000 元（+800 贈送）。購買量越多單價越便宜。",
+      "q7": "訂閱會自動續費嗎？",
+      "a7": "是的，訂閱自動續費。每 30 天扣款一次。",
+      "q8": "如何取消訂閱？取消後會怎樣？",
+      "a8": "可隨時透過帳戶設定取消訂閱，下個月將不再扣款。未使用完的點數於點數期限內可使用，直到到期歸零。"
     },
     "actions": {
       "subscribe": "立即訂閱",
+      "freeRegister": "免費註冊",
+      "currentPlan": "目前方案",
+      "upgradePlan": "升級方案",
       "studentCannotSubscribe": "學生無法訂閱",
       "loginRequired": "請先登入才能訂閱方案",
       "studentAccountWarning": "學生帳號無法訂閱教師方案，請使用教師帳號登入",
@@ -2818,7 +2898,10 @@
     "tabs": {
       "overview": "訂閱總覽",
       "analytics": "使用統計",
-      "paymentHistory": "付款歷史"
+      "paymentHistory": "付款歷史",
+      "plans": "方案",
+      "pointPackages": "點數包",
+      "management": "訂閱管理"
     },
     "status": {
       "success": "成功",
@@ -2854,7 +2937,8 @@
       "enableRenewal": "啟用續訂",
       "goBack": "返回",
       "confirmCancel": "確認取消",
-      "selectPlan": "選擇此方案"
+      "selectPlan": "選擇此方案",
+      "viewUsageDetail": "查看使用明細"
     },
     "messages": {
       "pleaseLogin": "請先登入教師帳號",
@@ -2868,7 +2952,8 @@
       "reactivateSuccess": "已重新啟用自動續訂",
       "reactivateFailed": "啟用失敗",
       "pleaseBindCard": "請先在下方「付款方式管理」綁定信用卡",
-      "pleaseBindCardIcon": "💳 請先在下方「付款方式管理」綁定信用卡"
+      "pleaseBindCardIcon": "💳 請先在下方「付款方式管理」綁定信用卡",
+      "usageDetailComingSoon": "點數使用明細功能即將開放"
     },
     "warnings": {
       "renewalCancelled": "⚠️ 您已取消自動續訂，訂閱將於 {{date}} 到期後失效",
@@ -2899,6 +2984,22 @@
       "remainsValidUntil": "訂閱繼續有效至 {{date}}",
       "loseAccess": "到期後將無法使用進階功能",
       "canReactivate": "您可以隨時重新啟用自動續訂"
+    },
+    "usageDetail": {
+      "title": "點數使用明細",
+      "description": "查看您的點數消耗紀錄",
+      "tabs": {
+        "summary": "摘要",
+        "students": "學生排行",
+        "assignments": "作業排行"
+      },
+      "totalQuota": "總配額",
+      "used": "已使用",
+      "usageRate": "使用率",
+      "remaining": "剩餘 {{points}} 點",
+      "dailyTrend": "每日使用趨勢",
+      "pointsUsed": "使用點數",
+      "noData": "暫無使用資料"
     },
     "plans": {
       "title": "選擇訂閱方案",

@@ -60,10 +60,10 @@ def seed_users_and_organizations(db: Session):
     print("   - trial@duotopia.com (30天試用期)")
 
     # ============ 1.4 創建對應的 subscription_periods ============
-    # Demo 老師的訂閱週期（300天，大配額）
+    # Demo 老師的訂閱週期（300天，大配額）— 模擬 School 方案
     demo_period = SubscriptionPeriod(
         teacher_id=demo_teacher.id,
-        plan_name="Demo Unlimited Plan",
+        plan_name="School Teachers",
         amount_paid=0,
         quota_total=999999999,  # 無限配額
         quota_used=0,
