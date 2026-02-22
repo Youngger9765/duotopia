@@ -73,9 +73,7 @@ export function ProgramVisibilitySelector({
     try {
       await onVisibilityChange(programId, visibility);
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "更新公開設定失敗",
-      );
+      toast.error(err instanceof Error ? err.message : "更新公開設定失敗");
     } finally {
       setUpdating(false);
     }

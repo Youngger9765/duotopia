@@ -382,7 +382,9 @@ def copy_resource_material(
         db.commit()
     except Exception as e:
         db.rollback()
-        logger.error(f"Failed to copy resource material {program_id}: {e}", exc_info=True)
+        logger.error(
+            f"Failed to copy resource material {program_id}: {e}", exc_info=True
+        )
         raise
 
     return {

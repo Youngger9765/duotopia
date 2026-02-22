@@ -30,7 +30,8 @@ def upgrade():
 
     # Use parameterized query to prevent SQL injection
     op.execute(
-        text("""
+        text(
+            """
             INSERT INTO teachers (email, password_hash, name, is_active, is_demo, created_at)
             SELECT
                 :email,
@@ -42,7 +43,8 @@ def upgrade():
             WHERE NOT EXISTS (
                 SELECT 1 FROM teachers WHERE email = :email
             );
-        """),
+        """
+        ),
         {"email": DEMO_EMAIL, "password_hash": password_hash, "name": DEMO_NAME},
     )
 

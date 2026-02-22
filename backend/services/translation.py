@@ -99,7 +99,7 @@ class TranslationService:
                     f'   - Conjunction: "(conj.) connecting ..."\n'
                     f'   - Interjection: "(interj.) expressing ..."\n'
                     f"5. Start with lowercase after POS abbreviation. Do NOT end with a period.\n"
-                    f'Example for \'apple\': 1. (n.) a round fruit with red or green skin\n'
+                    f"Example for 'apple': 1. (n.) a round fruit with red or green skin\n"
                     f"Only return the numbered definitions, no other text."
                 )
             elif target_lang in ("ja", "ko"):

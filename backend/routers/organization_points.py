@@ -191,9 +191,7 @@ async def deduct_organization_points(
     except Exception as e:
         db.rollback()
         logger.error(f"Failed to deduct points for org {organization_id}: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to deduct points"
-        )
+        raise HTTPException(status_code=500, detail="Failed to deduct points")
 
     return PointsDeductionResponse(
         organization_id=organization.id,

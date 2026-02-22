@@ -2126,9 +2126,7 @@ export default function VocabularySetPanel({
           const results = posResponse.results || [];
           needsPOS.forEach((item, idx) => {
             if (results[idx]) {
-              const parsed = extractFirstDefinition(
-                results[idx].translation,
-              );
+              const parsed = extractFirstDefinition(results[idx].translation);
               newRows[item.index].definition = parsed.text;
               if (
                 results[idx].parts_of_speech &&
@@ -2459,9 +2457,7 @@ export default function VocabularySetPanel({
         // 單個定義：去掉編號前綴，提取詞性
         const parsed = extractPosFromTranslation(response.translation);
         if (parsed.pos) {
-          newRows[index].partsOfSpeech = convertAbbreviatedPOS([
-            parsed.pos,
-          ]);
+          newRows[index].partsOfSpeech = convertAbbreviatedPOS([parsed.pos]);
         }
         newRows[index].definition = parsed.text;
       } else {
@@ -2489,13 +2485,9 @@ export default function VocabularySetPanel({
 
         // 根據目標語言寫入對應欄位
         {
-          const parsed = extractPosFromTranslation(
-            response.translation,
-          );
+          const parsed = extractPosFromTranslation(response.translation);
           if (parsed.pos) {
-            newRows[index].partsOfSpeech = convertAbbreviatedPOS([
-              parsed.pos,
-            ]);
+            newRows[index].partsOfSpeech = convertAbbreviatedPOS([parsed.pos]);
           }
           if (targetLang === "chinese") {
             newRows[index].definition = parsed.text;
@@ -2578,9 +2570,7 @@ export default function VocabularySetPanel({
           const results = posResponse.results || [];
           needsPOS.forEach((item, idx) => {
             if (results[idx]) {
-              const parsed = extractFirstDefinition(
-                results[idx].translation,
-              );
+              const parsed = extractFirstDefinition(results[idx].translation);
               newRows[item.index].definition = parsed.text;
               if (
                 results[idx].parts_of_speech &&
@@ -2727,9 +2717,7 @@ export default function VocabularySetPanel({
       korean: "韓文",
       english: "中文",
     };
-    setAiGenerateTranslateLang(
-      langMap[lastSelectedWordLang] || "中文",
-    );
+    setAiGenerateTranslateLang(langMap[lastSelectedWordLang] || "中文");
     setAiGenerateModalOpen(true);
   };
 
@@ -2746,11 +2734,7 @@ export default function VocabularySetPanel({
       } else {
         // 批次生成：只處理有單字且尚無例句的項目（跳過已有例句的）
         rows.forEach((row, index) => {
-          if (
-            row.text &&
-            row.text.trim() &&
-            !row.example_sentence?.trim()
-          ) {
+          if (row.text && row.text.trim() && !row.example_sentence?.trim()) {
             targetIndices.push(index);
           }
         });
@@ -2981,19 +2965,16 @@ export default function VocabularySetPanel({
               batchLangCode,
             );
             const translations =
-              (translateResponse as { translations?: string[] })
-                .translations || [];
+              (translateResponse as { translations?: string[] }).translations ||
+              [];
             newItems = newItems.map((item, i) => {
-              const parsed = extractFirstDefinition(
-                translations[i] || "",
-              );
+              const parsed = extractFirstDefinition(translations[i] || "");
               const updated: Partial<ContentRow> = {
                 partsOfSpeech: parsed.pos
                   ? convertAbbreviatedPOS([parsed.pos])
                   : item.partsOfSpeech,
               };
-              if (batchLang === "english")
-                updated.translation = parsed.text;
+              if (batchLang === "english") updated.translation = parsed.text;
               else if (batchLang === "japanese")
                 updated.japanese_translation = parsed.text;
               else if (batchLang === "korean")
@@ -3211,8 +3192,9 @@ export default function VocabularySetPanel({
                   const newRows = [...rows];
                   const ri = definitionPicker.rowIndex;
                   if (parsed.pos) {
-                    newRows[ri].partsOfSpeech =
-                      convertAbbreviatedPOS([parsed.pos]);
+                    newRows[ri].partsOfSpeech = convertAbbreviatedPOS([
+                      parsed.pos,
+                    ]);
                   }
                   const tLang = definitionPicker.targetLang;
                   if (tLang === "chinese") {
@@ -3476,9 +3458,7 @@ export default function VocabularySetPanel({
                     ).length;
                     const skipped = rows.filter(
                       (r) =>
-                        r.text &&
-                        r.text.trim() &&
-                        r.example_sentence?.trim(),
+                        r.text && r.text.trim() && r.example_sentence?.trim(),
                     ).length;
                     const toGenerate = total - skipped;
                     return (

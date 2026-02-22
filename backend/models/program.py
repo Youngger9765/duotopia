@@ -270,7 +270,10 @@ class ProgramCopyLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     source_program_id = Column(
-        Integer, ForeignKey("programs.id", ondelete="RESTRICT"), nullable=False, index=True
+        Integer,
+        ForeignKey("programs.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
     )
     copied_by_type = Column(
         String(20), nullable=False
