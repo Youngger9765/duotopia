@@ -38,6 +38,22 @@ async def get_teacher_subscription(
     - 不帶 → 顯示教師個人配額
     """
     if organization_id:
+        # 驗證教師是否為該機構成員
+        membership = (
+            db.query(TeacherOrganization)
+            .filter(
+                TeacherOrganization.teacher_id == current_teacher.id,
+                TeacherOrganization.organization_id == organization_id,
+                TeacherOrganization.is_active.is_(True),
+            )
+            .first()
+        )
+        if not membership:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this organization",
+            )
+
         # 機構工作區 → 查機構點數
         org = (
             db.query(Organization)
