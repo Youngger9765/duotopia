@@ -1114,7 +1114,10 @@ export function AssignmentDialog({
                 </Badge>
               ) : (
                 quotaInfo.quota_remaining <= 100 && (
-                  <Badge variant="outline" className="text-xs py-0 px-1.5 text-amber-600 border-amber-300">
+                  <Badge
+                    variant="outline"
+                    className="text-xs py-0 px-1.5 text-amber-600 border-amber-300"
+                  >
                     {t("dialogs.assignmentDialog.quota.low")}
                   </Badge>
                 )

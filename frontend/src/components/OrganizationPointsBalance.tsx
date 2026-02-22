@@ -33,11 +33,17 @@ export const OrganizationPointsBalance: React.FC<Props> = ({
   }, [organizationId]);
 
   if (loading) {
-    return <div className="animate-pulse">{t("organizationPoints.loading")}</div>;
+    return (
+      <div className="animate-pulse">{t("organizationPoints.loading")}</div>
+    );
   }
 
   if (error) {
-    return <div className="text-red-600">{t("organizationPoints.error", { error })}</div>;
+    return (
+      <div className="text-red-600">
+        {t("organizationPoints.error", { error })}
+      </div>
+    );
   }
 
   if (!balance) {
@@ -54,7 +60,9 @@ export const OrganizationPointsBalance: React.FC<Props> = ({
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">{t("organizationPoints.title")}</h3>
+      <h3 className="text-lg font-semibold mb-4">
+        {t("organizationPoints.title")}
+      </h3>
 
       {/* Balance Display */}
       <div className="mb-4">
@@ -63,7 +71,8 @@ export const OrganizationPointsBalance: React.FC<Props> = ({
             {balance.remaining_points.toLocaleString()}
           </span>
           <span className="text-gray-500">
-            / {balance.total_points.toLocaleString()} {t("organizationPoints.total")}
+            / {balance.total_points.toLocaleString()}{" "}
+            {t("organizationPoints.total")}
           </span>
         </div>
 
@@ -105,7 +114,8 @@ export const OrganizationPointsBalance: React.FC<Props> = ({
 
       {balance.last_points_update && (
         <p className="text-xs text-gray-400 mt-4">
-          {t("organizationPoints.lastUpdated")}: {new Date(balance.last_points_update).toLocaleString()}
+          {t("organizationPoints.lastUpdated")}:{" "}
+          {new Date(balance.last_points_update).toLocaleString()}
         </p>
       )}
     </div>

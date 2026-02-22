@@ -146,9 +146,7 @@ class QuotaService:
         return teacher.quota_remaining > 0
 
     @staticmethod
-    def check_ai_analysis_availability_by_assignment(
-        assignment, db: Session
-    ) -> bool:
+    def check_ai_analysis_availability_by_assignment(assignment, db: Session) -> bool:
         """
         根據作業所屬的班級判斷是否有 AI 分析額度。
         與 speech_assessment.py 扣點邏輯一致：
@@ -161,9 +159,7 @@ class QuotaService:
         if not assignment:
             return True
 
-        teacher = (
-            db.query(Teacher).filter(Teacher.id == assignment.teacher_id).first()
-        )
+        teacher = db.query(Teacher).filter(Teacher.id == assignment.teacher_id).first()
         if not teacher:
             return False
 

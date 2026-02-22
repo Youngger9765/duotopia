@@ -75,7 +75,8 @@ function QuotaCard() {
           quota_used: response.subscription_period.quota_used,
           quota_remaining: Math.max(0, remaining),
           plan_name: response.subscription_period.plan_name,
-          source: (response.source as "personal" | "organization") || "personal",
+          source:
+            (response.source as "personal" | "organization") || "personal",
         });
       } else {
         setQuotaInfo(null);
@@ -145,9 +146,7 @@ function QuotaCard() {
           </div>
         ) : (
           <p className="text-sm text-gray-500">
-            {mode === "organization"
-              ? "此機構尚無配額資訊"
-              : "尚無有效訂閱"}
+            {mode === "organization" ? "此機構尚無配額資訊" : "尚無有效訂閱"}
           </p>
         )}
       </CardContent>

@@ -48,9 +48,7 @@ async def verify_org_points_permission(
 
     if membership.role != "org_owner":
         if not has_manage_materials_permission(current_teacher.id, organization_id, db):
-            raise HTTPException(
-                status_code=403, detail="Insufficient permissions"
-            )
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     return organization, current_teacher
 

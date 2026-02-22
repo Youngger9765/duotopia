@@ -580,12 +580,7 @@ export default function StudentActivityPageContent({
         if (currentActivity.items && currentActivity.items.length > 0) {
           const contentItemId =
             currentActivity.items[currentSubQuestionIndex]?.id;
-          if (
-            !isPreviewMode &&
-            !isDemoMode &&
-            assignmentId &&
-            contentItemId
-          ) {
+          if (!isPreviewMode && !isDemoMode && assignmentId && contentItemId) {
             const uploadFileExtension = audioBlob.type.includes("mp4")
               ? "recording.mp4"
               : audioBlob.type.includes("webm")
@@ -634,9 +629,7 @@ export default function StudentActivityPageContent({
                     activityIndex !== -1 &&
                     newActivities[activityIndex].items
                   ) {
-                    const newItems = [
-                      ...newActivities[activityIndex].items!,
-                    ];
+                    const newItems = [...newActivities[activityIndex].items!];
                     if (newItems[subIdx]) {
                       newItems[subIdx] = {
                         ...newItems[subIdx],
@@ -1520,9 +1513,7 @@ export default function StudentActivityPageContent({
                     activityIndex !== -1 &&
                     newActivities[activityIndex].items
                   ) {
-                    const newItems = [
-                      ...newActivities[activityIndex].items!,
-                    ];
+                    const newItems = [...newActivities[activityIndex].items!];
                     if (newItems[currentSubQuestionIndex]) {
                       newItems[currentSubQuestionIndex] = {
                         ...newItems[currentSubQuestionIndex],
@@ -2780,9 +2771,7 @@ export default function StudentActivityPageContent({
                       (isRearrangementMode
                         ? !hasPrevUnanswered
                         : // 🎯 Issue #227: 無 AI 分析額度時不需等待分析即可切換
-                          (isReadingMode &&
-                            canUseAiAnalysis &&
-                            !isAssessed) ||
+                          (isReadingMode && canUseAiAnalysis && !isAssessed) ||
                           (currentActivityIndex === 0 &&
                             currentSubQuestionIndex === 0))
                     }
@@ -2860,9 +2849,7 @@ export default function StudentActivityPageContent({
                           (isRearrangementMode
                             ? !hasNextUnanswered
                             : // 🎯 Issue #227: 無 AI 分析額度時不需等待分析即可下一題
-                              isReadingMode &&
-                              canUseAiAnalysis &&
-                              !isAssessed)
+                              isReadingMode && canUseAiAnalysis && !isAssessed)
                         }
                         className="flex-1 sm:flex-none min-w-0"
                       >

@@ -1085,7 +1085,8 @@ export default function WordReadingTemplate({
                   <p className="text-sm">
                     {audioUrl
                       ? canUseAiAnalysis
-                        ? t("wordReading.clickToAssess") || "點擊上方按鈕開始評估"
+                        ? t("wordReading.clickToAssess") ||
+                          "點擊上方按鈕開始評估"
                         : t("wordReading.recordingComplete") || "已錄音完成"
                       : t("wordReading.pleaseRecord") || "請先錄音"}
                   </p>

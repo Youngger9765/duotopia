@@ -35,7 +35,10 @@ from models import (
 )
 from models.program import ProgramCopyLog
 from routers.teachers import get_current_teacher
-from utils.permissions import has_read_org_materials_permission, has_manage_materials_permission
+from utils.permissions import (
+    has_read_org_materials_permission,
+    has_manage_materials_permission,
+)
 
 logger = logging.getLogger(__name__)
 

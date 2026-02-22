@@ -252,9 +252,7 @@ export default function WordReadingActivity({
                     ai_assessment: assessment,
                   }),
                 },
-              ).catch((err) =>
-                console.error("Save assessment failed:", err),
-              );
+              ).catch((err) => console.error("Save assessment failed:", err));
 
               // 上傳分析結果（含配額扣除）
               const analysisForm = new FormData();
@@ -269,19 +267,14 @@ export default function WordReadingActivity({
                   overall_score: azureResult.pronunciationScore,
                 }),
               );
-              analysisForm.append(
-                "progress_id",
-                result.progress_id.toString(),
-              );
+              analysisForm.append("progress_id", result.progress_id.toString());
               analysisForm.append("analysis_id", crypto.randomUUID());
 
               fetch(`${apiUrl}/api/speech/upload-analysis`, {
                 method: "POST",
                 headers: { Authorization: `Bearer ${token}` },
                 body: analysisForm,
-              }).catch((err) =>
-                console.error("Upload analysis failed:", err),
-              );
+              }).catch((err) => console.error("Upload analysis failed:", err));
             }
           } catch (err) {
             console.error("Background analysis after upload failed:", err);
@@ -402,9 +395,7 @@ export default function WordReadingActivity({
                     ai_assessment: assessment,
                   }),
                 },
-              ).catch((err) =>
-                console.error("Save assessment failed:", err),
-              );
+              ).catch((err) => console.error("Save assessment failed:", err));
 
               // 上傳分析結果（含配額扣除）
               const ext = audioBlob.type.includes("mp4")
@@ -434,9 +425,7 @@ export default function WordReadingActivity({
                 method: "POST",
                 headers: { Authorization: `Bearer ${token}` },
                 body: analysisForm,
-              }).catch((err) =>
-                console.error("Upload analysis failed:", err),
-              );
+              }).catch((err) => console.error("Upload analysis failed:", err));
             }
           } catch (err) {
             console.error("Background analysis on next failed:", err);
@@ -534,7 +523,10 @@ export default function WordReadingActivity({
               return updated;
             });
           } catch (error) {
-            console.error(`Failed to upload blob for item ${index + 1}:`, error);
+            console.error(
+              `Failed to upload blob for item ${index + 1}:`,
+              error,
+            );
           }
         }
       }
@@ -594,9 +586,7 @@ export default function WordReadingActivity({
                       ai_assessment: assessment,
                     }),
                   },
-                ).catch((err) =>
-                  console.error("Save assessment failed:", err),
-                );
+                ).catch((err) => console.error("Save assessment failed:", err));
 
                 // 上傳分析結果（含配額扣除）
                 const ext = audioBlob.type.includes("mp4")
@@ -617,10 +607,7 @@ export default function WordReadingActivity({
                     overall_score: azureResult.pronunciationScore,
                   }),
                 );
-                analysisForm.append(
-                  "progress_id",
-                  item.progress_id.toString(),
-                );
+                analysisForm.append("progress_id", item.progress_id.toString());
                 analysisForm.append("analysis_id", crypto.randomUUID());
 
                 fetch(`${apiUrl}/api/speech/upload-analysis`, {
@@ -632,10 +619,7 @@ export default function WordReadingActivity({
                 );
               }
             } catch (error) {
-              console.error(
-                `Failed to analyze item ${index + 1}:`,
-                error,
-              );
+              console.error(`Failed to analyze item ${index + 1}:`, error);
             }
           }
         }

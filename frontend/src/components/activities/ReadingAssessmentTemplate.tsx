@@ -364,7 +364,9 @@ export default function ReadingAssessmentTemplate({
                     ) : (
                       <>
                         <Brain className="h-4 w-4 mr-2" />
-                        {t("studentActivity.aiAnalysis.analyze", { defaultValue: "分析" })}
+                        {t("studentActivity.aiAnalysis.analyze", {
+                          defaultValue: "分析",
+                        })}
                       </>
                     )}
                   </Button>

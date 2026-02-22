@@ -39,17 +39,27 @@ export const OrganizationPointsHistory: React.FC<Props> = ({
   }, [organizationId, page]);
 
   if (loading) {
-    return <div className="animate-pulse">{t("organizationPoints.loadingHistory")}</div>;
+    return (
+      <div className="animate-pulse">
+        {t("organizationPoints.loadingHistory")}
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="text-red-600">{t("organizationPoints.error", { error })}</div>;
+    return (
+      <div className="text-red-600">
+        {t("organizationPoints.error", { error })}
+      </div>
+    );
   }
 
   if (!history || history.items.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">{t("organizationPoints.history.title")}</h3>
+        <h3 className="text-lg font-semibold mb-4">
+          {t("organizationPoints.history.title")}
+        </h3>
         <p className="text-gray-500">{t("organizationPoints.history.empty")}</p>
       </div>
     );
@@ -70,8 +80,14 @@ export const OrganizationPointsHistory: React.FC<Props> = ({
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-6 border-b">
-        <h3 className="text-lg font-semibold">{t("organizationPoints.history.title")}</h3>
-        <p className="text-sm text-gray-500">{t("organizationPoints.history.totalEntries", { count: history.total })}</p>
+        <h3 className="text-lg font-semibold">
+          {t("organizationPoints.history.title")}
+        </h3>
+        <p className="text-sm text-gray-500">
+          {t("organizationPoints.history.totalEntries", {
+            count: history.total,
+          })}
+        </p>
       </div>
 
       {/* History Table */}
