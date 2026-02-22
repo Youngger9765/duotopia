@@ -6,6 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Globe, Lock, Building2, User } from "lucide-react";
+import { toast } from "sonner";
 
 type ProgramVisibility =
   | "private"
@@ -71,6 +72,10 @@ export function ProgramVisibilitySelector({
     setUpdating(true);
     try {
       await onVisibilityChange(programId, visibility);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "更新公開設定失敗",
+      );
     } finally {
       setUpdating(false);
     }

@@ -19,7 +19,8 @@ interface DemoConfig {
   demo_reading_assignment_id?: string;
   demo_rearrangement_assignment_id?: string;
   demo_vocabulary_assignment_id?: string;
-  demo_word_selection_assignment_id?: string;
+  demo_word_selection_listening_assignment_id?: string;
+  demo_word_selection_writing_assignment_id?: string;
 }
 
 interface AssessmentRequest {
@@ -145,7 +146,7 @@ class DemoApiClient {
     data: RearrangementSubmitRequest,
   ): Promise<unknown> {
     const response = await fetch(
-      `${this.baseUrl}/api/demo/assignments/${assignmentId}/preview/rearrangement-submit`,
+      `${this.baseUrl}/api/demo/assignments/${assignmentId}/preview/rearrangement-answer`,
       {
         method: "POST",
         headers: {
@@ -207,7 +208,7 @@ class DemoApiClient {
    */
   async getVocabularyActivities(assignmentId: number): Promise<unknown> {
     const response = await fetch(
-      `${this.baseUrl}/api/demo/assignments/${assignmentId}/preview/vocabulary-activities`,
+      `${this.baseUrl}/api/demo/assignments/${assignmentId}/preview/vocabulary/activities`,
     );
 
     if (!response.ok) {
@@ -226,9 +227,6 @@ class DemoApiClient {
   async startWordSelection(assignmentId: number): Promise<unknown> {
     const response = await fetch(
       `${this.baseUrl}/api/demo/assignments/${assignmentId}/preview/word-selection-start`,
-      {
-        method: "POST",
-      },
     );
 
     if (!response.ok) {
@@ -246,7 +244,7 @@ class DemoApiClient {
     data: WordSelectionSubmitRequest,
   ): Promise<unknown> {
     const response = await fetch(
-      `${this.baseUrl}/api/demo/assignments/${assignmentId}/preview/word-selection-submit`,
+      `${this.baseUrl}/api/demo/assignments/${assignmentId}/preview/word-selection-answer`,
       {
         method: "POST",
         headers: {
