@@ -286,14 +286,18 @@ async def list_organization_materials(
     for program in programs:
         program_data = ProgramResponse.model_validate(program)
 
-        # Build lessons hierarchy
+        # Build lessons hierarchy (filter inactive)
         program_data.lessons = []
         for lesson in program.lessons:
+            if hasattr(lesson, "is_active") and not lesson.is_active:
+                continue
             lesson_data = LessonResponse.model_validate(lesson)
 
-            # Build contents hierarchy
+            # Build contents hierarchy (filter inactive)
             lesson_data.contents = []
             for content in lesson.contents:
+                if hasattr(content, "is_active") and not content.is_active:
+                    continue
                 content_data = ContentResponse.model_validate(content)
 
                 # Build items
@@ -363,10 +367,14 @@ async def get_organization_material_details(
     program_data.lessons = []
 
     for lesson in program.lessons:
+        if hasattr(lesson, "is_active") and not lesson.is_active:
+            continue
         lesson_data = LessonResponse.model_validate(lesson)
         lesson_data.contents = []
 
         for content in lesson.contents:
+            if hasattr(content, "is_active") and not content.is_active:
+                continue
             content_data = ContentResponse.model_validate(content)
             content_data.items = [
                 ContentItemResponse.model_validate(item)
@@ -637,10 +645,10 @@ async def copy_material_to_classroom(
                 detail="You are not the teacher of this classroom and do not have materials management permission",
             )
 
-    # Check daily copy limit per teacher
+    # Check daily copy limit per organization
     from services.resource_materials_service import check_copy_limit
 
-    if not check_copy_limit(db, program_id, "individual", str(current_teacher.id)):
+    if not check_copy_limit(db, program_id, "organization", str(org_id)):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Daily copy limit reached for this material. Please try again tomorrow.",
@@ -659,8 +667,8 @@ async def copy_material_to_classroom(
         # Record copy log for audit/rate-limiting
         copy_log = ProgramCopyLog(
             source_program_id=source_program.id,
-            copied_by_type="individual",
-            copied_by_id=str(current_teacher.id),
+            copied_by_type="organization",
+            copied_by_id=str(org_id),
             copied_program_id=new_program.id,
         )
         db.add(copy_log)
@@ -696,10 +704,14 @@ async def copy_material_to_classroom(
     program_data.lessons = []
 
     for lesson in new_program.lessons:
+        if hasattr(lesson, "is_active") and not lesson.is_active:
+            continue
         lesson_data = LessonResponse.model_validate(lesson)
         lesson_data.contents = []
 
         for content in lesson.contents:
+            if hasattr(content, "is_active") and not content.is_active:
+                continue
             content_data = ContentResponse.model_validate(content)
             content_data.items = [
                 ContentItemResponse.model_validate(item)
