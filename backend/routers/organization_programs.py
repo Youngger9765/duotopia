@@ -119,6 +119,7 @@ class ProgramResponse(BaseModel):
     classroom_id: Optional[int]
     teacher_id: int
     organization_id: Optional[str]  # UUID as string
+    visibility: Optional[str] = "private"
     source_metadata: Optional[dict]
     lessons: List[LessonResponse] = []
 
@@ -177,6 +178,9 @@ def deep_copy_program(
     Uses the canonical _copy_content_with_items from program_service to ensure
     all fields (including Phase 2 vocabulary fields) are copied correctly.
     Sets source_metadata to track origin.
+
+    IMPORTANT: This function calls db.flush() but does NOT commit.
+    Caller must wrap in try/except with db.rollback() on failure.
     """
     from services.program_service import _copy_content_with_items
 
@@ -591,34 +595,25 @@ async def copy_material_to_classroom(
             status_code=status.HTTP_404_NOT_FOUND, detail="Classroom not found"
         )
 
-    # Verify teacher is member of classroom (owns it or is assigned)
+    # Verify teacher is member of organization
+    if not has_read_org_materials_permission(current_teacher.id, org_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this organization",
+        )
+
+    # Verify teacher can access classroom (owns it or has org manage_materials permission)
     if classroom.teacher_id is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Classroom has no assigned teacher",
         )
     if classroom.teacher_id != current_teacher.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not the teacher of this classroom",
-        )
-
-    # Verify teacher is member of organization
-    membership = (
-        db.query(TeacherOrganization)
-        .filter(
-            TeacherOrganization.teacher_id == current_teacher.id,
-            TeacherOrganization.organization_id == org_id,
-            TeacherOrganization.is_active.is_(True),
-        )
-        .first()
-    )
-
-    if not membership:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not a member of this organization",
-        )
+        if not has_manage_materials_permission(current_teacher.id, org_id, db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not the teacher of this classroom and do not have materials management permission",
+            )
 
     # Check daily copy limit per teacher
     from services.resource_materials_service import check_copy_limit
