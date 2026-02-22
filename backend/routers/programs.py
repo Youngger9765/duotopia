@@ -1597,10 +1597,7 @@ async def create_content(
             detail="Database error occurred",
         )
     except Exception as e:
-        import traceback
-
-        traceback.print_exc()
-        logger.error("Unexpected error creating content in lesson %s: %s", lesson_id, e)
+        logger.error("Unexpected error creating content in lesson %s: %s", lesson_id, e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred",
