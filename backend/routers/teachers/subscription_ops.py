@@ -38,12 +38,23 @@ async def get_teacher_subscription(
     - 不帶 → 顯示教師個人配額
     """
     if organization_id:
+        # Convert string to UUID for proper DB comparison
+        import uuid as _uuid
+
+        try:
+            org_uuid = _uuid.UUID(organization_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid organization_id format",
+            )
+
         # 驗證教師是否為該機構成員
         membership = (
             db.query(TeacherOrganization)
             .filter(
                 TeacherOrganization.teacher_id == current_teacher.id,
-                TeacherOrganization.organization_id == organization_id,
+                TeacherOrganization.organization_id == org_uuid,
                 TeacherOrganization.is_active.is_(True),
             )
             .first()
@@ -58,7 +69,7 @@ async def get_teacher_subscription(
         org = (
             db.query(Organization)
             .filter(
-                Organization.id == organization_id,
+                Organization.id == org_uuid,
                 Organization.is_active.is_(True),
             )
             .first()
