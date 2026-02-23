@@ -2061,6 +2061,30 @@
       }
     }
   },
+  "stickyNote": {
+    "submissionStatus": "繳交狀態",
+    "noStudents": "此作業尚無指派學生",
+    "display": "顯示",
+    "seatNumber": "座號",
+    "studentName": "姓名",
+    "score": "成績",
+    "sortByNumber": "座號排序",
+    "sortByName": "姓名排序",
+    "sortByScore": "成績排序",
+    "downloadImage": "下載圖片",
+    "print": "列印",
+    "batchPrint": "批次列印",
+    "batchPrintError": "批次列印失敗",
+    "copyright": "由 Duotopia 產生 \u00a9 duotopia.com",
+    "status": {
+      "notStarted": "未開始",
+      "inProgress": "待完成",
+      "submitted": "已提交",
+      "returned": "待訂正",
+      "resubmitted": "已訂正",
+      "graded": "已完成"
+    }
+  },
   "studentCompletionDashboard": {
     "summary": {
       "total": "總人數",
@@ -2433,6 +2457,17 @@
       "viewSubmissionsInDevelopment": "查看學生提交功能尚在開發中",
       "contentSaved": "內容已成功儲存",
       "noAssignments": "尚未指派任何作業"
+    },
+    "pagination": {
+      "page": "第 {{current}} 頁 / 共 {{total}} 頁"
+    },
+    "filters": {
+      "searchPlaceholder": "搜尋作業名稱...",
+      "allTypes": "所有類型",
+      "startDate": "開始日期",
+      "endDate": "結束日期",
+      "overdueOnly": "已逾期",
+      "clearAll": "清除"
     },
     "buttons": {
       "backToList": "返回班級列表",
