@@ -135,32 +135,21 @@ jobs:
         echo "📧 報告會發送到 myduotopia@gmail.com"
         echo "🤖 包含 OpenAI AI 分析摘要"
 
-    - name: Setup Test Notification Job (Staging Only)
-      if: github.event.inputs.environment == 'staging'
-      run: |
-        JOB_NAME="test-notification-staging"
-
-        echo "🗑️  刪除舊的 test notification job（如果存在）..."
-        gcloud scheduler jobs delete $JOB_NAME \
-          --location=${{ env.REGION }} \
-          --quiet || echo "No existing job to delete"
-
-        echo "✨ 創建測試通知 job..."
-        gcloud scheduler jobs create http $JOB_NAME \
-          --location=${{ env.REGION }} \
-          --schedule="0 9 * * *" \
-          --time-zone="Asia/Taipei" \
-          --uri="${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/test-notification" \
-          --http-method=POST \
-          --headers="X-Cron-Secret=${{ steps.env_vars.outputs.CRON_SECRET }},Content-Type=application/json" \
-          --attempt-deadline=300s \
-          --max-retry-attempts=3 \
-          --description="每天早上 9:00 (台北時間) 發送測試通知到 myduotopia@gmail.com - staging only"
-
-        echo "✅ Test notification job 創建成功"
-        echo ""
-        echo "📧 此 job 每天早上 9:00 會發送測試郵件到 myduotopia@gmail.com"
-        echo "💡 可以透過這個測試確認 Cloud Scheduler 是否正常運作"
+    # 已關閉 test-notification staging job (2026-02-23)
+    # 如需重新啟用，取消下方註解
+    # - name: Setup Test Notification Job (Staging Only)
+    #   if: github.event.inputs.environment == 'staging'
+    #   run: |
+    #     JOB_NAME="test-notification-staging"
+    #     gcloud scheduler jobs create http $JOB_NAME \
+    #       --location=${{ env.REGION }} \
+    #       --schedule="0 9 * * *" \
+    #       --time-zone="Asia/Taipei" \
+    #       --uri="${{ steps.env_vars.outputs.BACKEND_URL }}/api/cron/test-notification" \
+    #       --http-method=POST \
+    #       --headers="X-Cron-Secret=${{ steps.env_vars.outputs.CRON_SECRET }},Content-Type=application/json" \
+    #       --attempt-deadline=300s \
+    #       --max-retry-attempts=3
 
     - name: List all Cloud Scheduler jobs
       run: |

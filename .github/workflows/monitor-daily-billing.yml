@@ -1,9 +1,9 @@
 name: Daily Billing Report
 
 on:
-  # 每天早上 9:00 (UTC+8) 執行，即 UTC 1:00
-  schedule:
-    - cron: '0 1 * * *'
+  # 已關閉每日排程 (2026-02-23)，需要時手動觸發
+  # schedule:
+  #   - cron: '0 1 * * *'
 
   # 允許手動觸發
   workflow_dispatch:
