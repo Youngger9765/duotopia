@@ -120,11 +120,11 @@ jobs:
         echo "Running Flake8 linting..."
         flake8 . --max-line-length=120 --ignore=E203,W503 --exclude=alembic,__pycache__,.venv
 
-    - name: Run pytest (Unit tests only)
+    - name: Run unit tests
       working-directory: ./backend
       run: |
-        echo "🧪 Running unit tests..."
-        pytest tests/unit/ -v --tb=short || echo "Tests completed with some failures"
+        echo "🧪 Running unit tests (no external dependencies)..."
+        pytest tests/unit/ -v --tb=short
 
   # 🧪 Test frontend before deployment
   test-frontend:

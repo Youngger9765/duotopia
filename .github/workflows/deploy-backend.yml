@@ -66,18 +66,25 @@ jobs:
         echo "Running Flake8 linting..."
         flake8 . --config=../.flake8
 
-    - name: Run pytest (Parallel)
+    - name: Run unit tests
+      working-directory: ./backend
+      run: |
+        echo "🧪 Running unit tests (no external dependencies)..."
+        pytest tests/unit/ -n auto -v --tb=short
+
+    - name: Run integration tests
       working-directory: ./backend
       env:
-        DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-        TEST_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        DATABASE_URL: ${{ secrets.STAGING_DATABASE_POOLER_URL }}
+        TEST_DATABASE_URL: ${{ secrets.STAGING_DATABASE_POOLER_URL }}
       run: |
-        echo "🧪 Staging: Running full test suite with staging database..."
-        echo "   TEST_DATABASE_URL is set: $TEST_DATABASE_URL"
-        pytest -n auto -v --tb=short || echo "Tests completed with some failures"
+        echo "🧪 Running integration tests with staging database (pooler URL)..."
+        pytest tests/ --ignore=tests/unit/ --ignore=tests/e2e/ --ignore=tests/benchmarks/ --ignore=tests/load_testing/ --ignore=tests/stress/ -n auto -v --tb=short
 
     - name: Test backend import
       working-directory: ./backend
+      env:
+        DATABASE_URL: ${{ secrets.STAGING_DATABASE_POOLER_URL }}
       run: python -c "import main; print('Backend imports successfully')"
 
   deploy-backend:
