@@ -96,9 +96,7 @@ export default function SubscriptionProgressBanner({
                   <div className="w-0.5 h-5 bg-gray-300 rounded">
                     <div
                       className={`w-full rounded transition-all duration-500 ${
-                        status === "completed"
-                          ? "bg-green-500 h-full"
-                          : "h-0"
+                        status === "completed" ? "bg-green-500 h-full" : "h-0"
                       }`}
                     />
                   </div>

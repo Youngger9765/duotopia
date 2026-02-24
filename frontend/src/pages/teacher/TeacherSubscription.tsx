@@ -1,11 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -102,9 +97,7 @@ interface QuotaUsageAnalytics {
   feature_breakdown: Record<string, number>;
 }
 
-function getSubscriptionPlans(
-  t: (key: string) => string,
-): SubscriptionPlan[] {
+function getSubscriptionPlans(t: (key: string) => string): SubscriptionPlan[] {
   return [
     {
       id: "free",
@@ -885,24 +878,15 @@ export default function TeacherSubscription() {
           ) : analytics ? (
             <Tabs defaultValue="summary" className="w-full">
               <TabsList className="grid w-full grid-cols-3 h-auto p-1">
-                <TabsTrigger
-                  value="summary"
-                  className="text-sm py-2"
-                >
+                <TabsTrigger value="summary" className="text-sm py-2">
                   <Gauge className="w-4 h-4 mr-1.5" />
                   {t("teacherSubscription.usageDetail.tabs.summary")}
                 </TabsTrigger>
-                <TabsTrigger
-                  value="students"
-                  className="text-sm py-2"
-                >
+                <TabsTrigger value="students" className="text-sm py-2">
                   <Users className="w-4 h-4 mr-1.5" />
                   {t("teacherSubscription.usageDetail.tabs.students")}
                 </TabsTrigger>
-                <TabsTrigger
-                  value="assignments"
-                  className="text-sm py-2"
-                >
+                <TabsTrigger value="assignments" className="text-sm py-2">
                   <FileText className="w-4 h-4 mr-1.5" />
                   {t("teacherSubscription.usageDetail.tabs.assignments")}
                 </TabsTrigger>

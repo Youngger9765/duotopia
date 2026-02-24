@@ -979,15 +979,12 @@ export function AssignmentDialog({
           0,
         );
         if (totalWords < 20) {
-          toast.error(
-            t("dialogs.assignmentDialog.errors.insufficientWords"),
-            {
-              description: t(
-                "dialogs.assignmentDialog.errors.insufficientWordsDesc",
-                { count: totalWords },
-              ),
-            },
-          );
+          toast.error(t("dialogs.assignmentDialog.errors.insufficientWords"), {
+            description: t(
+              "dialogs.assignmentDialog.errors.insufficientWordsDesc",
+              { count: totalWords },
+            ),
+          });
           return;
         }
       }

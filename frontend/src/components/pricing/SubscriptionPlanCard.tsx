@@ -97,16 +97,21 @@ export function SubscriptionPlanCard({
       <div className="mb-5">
         <div className="bg-blue-50 rounded-lg p-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">{t("pricing.billing.monthly")}</span>
+            <span className="text-sm text-gray-600">
+              {t("pricing.billing.monthly")}
+            </span>
             <div className="text-right">
               <span className="text-2xl font-bold text-gray-900">
                 NT$ {plan.monthlyPrice}
               </span>
-              <span className="text-gray-600 ml-1">{t("pricing.billing.perMonth")}</span>
+              <span className="text-gray-600 ml-1">
+                {t("pricing.billing.perMonth")}
+              </span>
             </div>
           </div>
           <div className="mt-1 text-sm text-blue-700 font-medium">
-            {plan.pointsLabel || `${plan.pointsPerMonth.toLocaleString()} ${t("pricing.billing.pointsPerMonth")}`}
+            {plan.pointsLabel ||
+              `${plan.pointsPerMonth.toLocaleString()} ${t("pricing.billing.pointsPerMonth")}`}
           </div>
         </div>
       </div>

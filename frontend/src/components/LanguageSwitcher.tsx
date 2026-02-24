@@ -43,7 +43,11 @@ export function LanguageSwitcher() {
       </SelectTrigger>
       <SelectContent>
         {languages.map((lang) => (
-          <SelectItem key={lang.code} value={lang.code} disabled={lang.disabled}>
+          <SelectItem
+            key={lang.code}
+            value={lang.code}
+            disabled={lang.disabled}
+          >
             <span className={lang.disabled ? "text-muted-foreground" : ""}>
               {lang.name}
             </span>

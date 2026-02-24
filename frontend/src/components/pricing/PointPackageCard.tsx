@@ -69,7 +69,11 @@ export function PointPackageCard({
         {pkg.bonusPoints > 0 && (
           <div className="flex items-center justify-center gap-1 text-green-600 text-sm font-medium mb-3">
             <Gift className="w-4 h-4" />
-            <span>{t("pricing.pointPackages.bonusPoints", { count: pkg.bonusPoints })}</span>
+            <span>
+              {t("pricing.pointPackages.bonusPoints", {
+                count: pkg.bonusPoints,
+              })}
+            </span>
           </div>
         )}
         {pkg.bonusPoints === 0 && (
@@ -96,7 +100,9 @@ export function PointPackageCard({
               variant="outline"
               className="text-orange-600 border-orange-300"
             >
-              {t("pricing.pointPackages.discount", { percent: discountPercent })}
+              {t("pricing.pointPackages.discount", {
+                percent: discountPercent,
+              })}
             </Badge>
           </div>
         )}
@@ -105,16 +111,16 @@ export function PointPackageCard({
         <div className="flex-1" />
 
         {/* Validity */}
-        <p className="text-xs text-gray-400 mb-4">{t("pricing.pointPackages.validity")}</p>
+        <p className="text-xs text-gray-400 mb-4">
+          {t("pricing.pointPackages.validity")}
+        </p>
 
         <Button
           onClick={() => onSelect?.(pkg)}
           disabled={disabled}
           variant={pkg.bestValue ? "default" : "outline"}
           className={`w-full ${
-            pkg.bestValue
-              ? "bg-green-600 hover:bg-green-700 text-white"
-              : ""
+            pkg.bestValue ? "bg-green-600 hover:bg-green-700 text-white" : ""
           }`}
         >
           <ShoppingCart className="mr-2 h-4 w-4" />

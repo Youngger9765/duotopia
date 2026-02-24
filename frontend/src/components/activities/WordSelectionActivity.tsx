@@ -682,7 +682,10 @@ export default function WordSelectionActivity({
         )}
 
         {/* Answer Options - grid-rows-2 + 1fr ensures all 4 buttons are equal height */}
-        <div className="grid grid-cols-2 grid-rows-2 gap-3 sm:gap-4" style={{ gridAutoRows: "1fr" }}>
+        <div
+          className="grid grid-cols-2 grid-rows-2 gap-3 sm:gap-4"
+          style={{ gridAutoRows: "1fr" }}
+        >
           {currentWord.options.map((option, index) => {
             const isSelected = selectedAnswer === option;
             const isCorrectAnswer = option === currentWord.translation;

@@ -46,18 +46,78 @@ export default function StudentDashboard() {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const proverbs = [
-    { en: "Practice makes perfect.", "zh-TW": "熟能生巧。", ja: "習うより慣れよ。", ko: "연습이 완벽을 만든다." },
-    { en: "A journey of a thousand miles begins with a single step.", "zh-TW": "千里之行，始於足下。", ja: "千里の道も一歩から。", ko: "천 리 길도 한 걸음부터." },
-    { en: "Where there is a will, there is a way.", "zh-TW": "有志者事竟成。", ja: "意志あるところに道は開ける。", ko: "뜻이 있는 곳에 길이 있다." },
-    { en: "Knowledge is power.", "zh-TW": "知識就是力量。", ja: "知識は力なり。", ko: "아는 것이 힘이다." },
-    { en: "The early bird catches the worm.", "zh-TW": "早起的鳥兒有蟲吃。", ja: "早起きは三文の徳。", ko: "일찍 일어나는 새가 벌레를 잡는다." },
-    { en: "Actions speak louder than words.", "zh-TW": "坐而言不如起而行。", ja: "行動は言葉よりも雄弁。", ko: "행동이 말보다 중요하다." },
-    { en: "Every expert was once a beginner.", "zh-TW": "每個專家都曾是初學者。", ja: "誰でも最初は初心者。", ko: "모든 전문가도 처음엔 초보였다." },
-    { en: "Rome was not built in a day.", "zh-TW": "羅馬不是一天造成的。", ja: "ローマは一日にして成らず。", ko: "로마는 하루아침에 이루어지지 않았다." },
-    { en: "Learning never exhausts the mind.", "zh-TW": "學習永遠不會使心智疲憊。", ja: "学びは心を疲れさせない。", ko: "배움은 마음을 지치게 하지 않는다." },
-    { en: "The more you learn, the more you earn.", "zh-TW": "學得越多，收穫越多。", ja: "学べば学ぶほど得るものがある。", ko: "배우면 배울수록 더 많이 얻는다." },
-    { en: "Mistakes are proof that you are trying.", "zh-TW": "犯錯是你正在努力的證明。", ja: "失敗は挑戦している証拠。", ko: "실수는 노력하고 있다는 증거다." },
-    { en: "Believe you can and you're halfway there.", "zh-TW": "相信你能，你就成功了一半。", ja: "できると信じれば半分は達成したも同然。", ko: "할 수 있다고 믿으면 반은 이룬 것이다." },
+    {
+      en: "Practice makes perfect.",
+      "zh-TW": "熟能生巧。",
+      ja: "習うより慣れよ。",
+      ko: "연습이 완벽을 만든다.",
+    },
+    {
+      en: "A journey of a thousand miles begins with a single step.",
+      "zh-TW": "千里之行，始於足下。",
+      ja: "千里の道も一歩から。",
+      ko: "천 리 길도 한 걸음부터.",
+    },
+    {
+      en: "Where there is a will, there is a way.",
+      "zh-TW": "有志者事竟成。",
+      ja: "意志あるところに道は開ける。",
+      ko: "뜻이 있는 곳에 길이 있다.",
+    },
+    {
+      en: "Knowledge is power.",
+      "zh-TW": "知識就是力量。",
+      ja: "知識は力なり。",
+      ko: "아는 것이 힘이다.",
+    },
+    {
+      en: "The early bird catches the worm.",
+      "zh-TW": "早起的鳥兒有蟲吃。",
+      ja: "早起きは三文の徳。",
+      ko: "일찍 일어나는 새가 벌레를 잡는다.",
+    },
+    {
+      en: "Actions speak louder than words.",
+      "zh-TW": "坐而言不如起而行。",
+      ja: "行動は言葉よりも雄弁。",
+      ko: "행동이 말보다 중요하다.",
+    },
+    {
+      en: "Every expert was once a beginner.",
+      "zh-TW": "每個專家都曾是初學者。",
+      ja: "誰でも最初は初心者。",
+      ko: "모든 전문가도 처음엔 초보였다.",
+    },
+    {
+      en: "Rome was not built in a day.",
+      "zh-TW": "羅馬不是一天造成的。",
+      ja: "ローマは一日にして成らず。",
+      ko: "로마는 하루아침에 이루어지지 않았다.",
+    },
+    {
+      en: "Learning never exhausts the mind.",
+      "zh-TW": "學習永遠不會使心智疲憊。",
+      ja: "学びは心を疲れさせない。",
+      ko: "배움은 마음을 지치게 하지 않는다.",
+    },
+    {
+      en: "The more you learn, the more you earn.",
+      "zh-TW": "學得越多，收穫越多。",
+      ja: "学べば学ぶほど得るものがある。",
+      ko: "배우면 배울수록 더 많이 얻는다.",
+    },
+    {
+      en: "Mistakes are proof that you are trying.",
+      "zh-TW": "犯錯是你正在努力的證明。",
+      ja: "失敗は挑戦している証拠。",
+      ko: "실수는 노력하고 있다는 증거다.",
+    },
+    {
+      en: "Believe you can and you're halfway there.",
+      "zh-TW": "相信你能，你就成功了一半。",
+      ja: "できると信じれば半分は達成したも同然。",
+      ko: "할 수 있다고 믿으면 반은 이룬 것이다.",
+    },
   ];
 
   const [proverbIndex, setProverbIndex] = useState(() =>
@@ -253,8 +313,9 @@ export default function StudentDashboard() {
             <p
               className={`text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-2 transition-opacity duration-300 ${showTranslation ? "opacity-100" : "opacity-0"}`}
             >
-              {proverbs[proverbIndex][getI18n().language as keyof (typeof proverbs)[0]] ||
-                proverbs[proverbIndex]["zh-TW"]}
+              {proverbs[proverbIndex][
+                getI18n().language as keyof (typeof proverbs)[0]
+              ] || proverbs[proverbIndex]["zh-TW"]}
             </p>
           )}
         </div>
@@ -263,7 +324,9 @@ export default function StudentDashboard() {
         <Dialog open={showEmailSetup} onOpenChange={setShowEmailSetup}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>{t("studentDashboard.email.setupTitle")}</DialogTitle>
+              <DialogTitle>
+                {t("studentDashboard.email.setupTitle")}
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -282,7 +345,9 @@ export default function StudentDashboard() {
               </p>
               <Button
                 onClick={handleEmailUpdate}
-                disabled={isSendingEmail || !newEmail || !newEmail.includes("@")}
+                disabled={
+                  isSendingEmail || !newEmail || !newEmail.includes("@")
+                }
                 className="w-full"
               >
                 {isSendingEmail ? (
@@ -434,7 +499,6 @@ export default function StudentDashboard() {
               {assignmentStats.resubmitted}
             </p>
           </button>
-
         </div>
       </div>
     </div>

@@ -51,10 +51,14 @@ const SCORE_CATEGORY_COLORS: Record<string, string> = {
 
 // Practice mode background colors for left icon area (crayon style)
 const PRACTICE_MODE_BG: Record<string, string> = {
-  reading: "crayon-texture bg-gradient-to-b from-orange-100 to-orange-200 text-orange-600",
-  rearrangement: "crayon-texture bg-gradient-to-b from-blue-100 to-blue-200 text-blue-600",
-  word_selection: "crayon-texture bg-gradient-to-b from-emerald-100 to-emerald-200 text-emerald-600",
-  word_reading: "crayon-texture bg-gradient-to-b from-purple-100 to-purple-200 text-purple-600",
+  reading:
+    "crayon-texture bg-gradient-to-b from-orange-100 to-orange-200 text-orange-600",
+  rearrangement:
+    "crayon-texture bg-gradient-to-b from-blue-100 to-blue-200 text-blue-600",
+  word_selection:
+    "crayon-texture bg-gradient-to-b from-emerald-100 to-emerald-200 text-emerald-600",
+  word_reading:
+    "crayon-texture bg-gradient-to-b from-purple-100 to-purple-200 text-purple-600",
 };
 
 export default function StudentAssignmentList() {
@@ -65,9 +69,7 @@ export default function StudentAssignmentList() {
 
   const [assignments, setAssignments] = useState<StudentAssignmentCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(
-    searchParams.get("tab") || "todo",
-  );
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "todo");
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     setCurrentPage(1);
@@ -362,9 +364,7 @@ export default function StudentAssignmentList() {
                     variant="outline"
                     className={`${categoryColor} text-[10px] sm:text-xs px-1.5 sm:px-2 py-0 sm:py-0.5 border`}
                   >
-                    {t(
-                      `studentAssignmentList.scoreCategory.${scoreCategory}`,
-                    )}
+                    {t(`studentAssignmentList.scoreCategory.${scoreCategory}`)}
                   </Badge>
                 )}
               </div>
@@ -386,9 +386,7 @@ export default function StudentAssignmentList() {
                   {dueDateInfo && (
                     <span
                       className={`flex items-center gap-1 text-[10px] sm:text-xs font-medium whitespace-nowrap ${
-                        dueDateInfo.isOverdue
-                          ? "text-red-600"
-                          : "text-gray-500"
+                        dueDateInfo.isOverdue ? "text-red-600" : "text-gray-500"
                       }`}
                     >
                       <Calendar className="h-3 w-3 flex-shrink-0" />
@@ -397,18 +395,19 @@ export default function StudentAssignmentList() {
                   )}
 
                   {/* Score */}
-                  {assignment.score != null && assignment.status === "GRADED" && (
-                    <span className="flex items-center gap-1 text-[10px] sm:text-xs font-medium text-green-600 whitespace-nowrap">
-                      <BarChart3 className="h-3 w-3 flex-shrink-0" />
-                      {assignment.practice_mode === "word_selection"
-                        ? t("studentAssignmentList.proficiency.label", {
-                            proficiency: assignment.score.toFixed(1),
-                          })
-                        : t("studentAssignmentList.score.label", {
-                            score: assignment.score,
-                          })}
-                    </span>
-                  )}
+                  {assignment.score != null &&
+                    assignment.status === "GRADED" && (
+                      <span className="flex items-center gap-1 text-[10px] sm:text-xs font-medium text-green-600 whitespace-nowrap">
+                        <BarChart3 className="h-3 w-3 flex-shrink-0" />
+                        {assignment.practice_mode === "word_selection"
+                          ? t("studentAssignmentList.proficiency.label", {
+                              proficiency: assignment.score.toFixed(1),
+                            })
+                          : t("studentAssignmentList.score.label", {
+                              score: assignment.score,
+                            })}
+                      </span>
+                    )}
                 </div>
 
                 {/* Action button */}
@@ -488,7 +487,10 @@ export default function StudentAssignmentList() {
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={safeCurrentPage <= 1}
               className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              aria-label={t("studentAssignmentList.pagination.previous", "Previous page")}
+              aria-label={t(
+                "studentAssignmentList.pagination.previous",
+                "Previous page",
+              )}
             >
               <ChevronLeft className="h-5 w-5 text-gray-600" />
             </button>
@@ -502,7 +504,10 @@ export default function StudentAssignmentList() {
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={safeCurrentPage >= totalPages}
               className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              aria-label={t("studentAssignmentList.pagination.next", "Next page")}
+              aria-label={t(
+                "studentAssignmentList.pagination.next",
+                "Next page",
+              )}
             >
               <ChevronRight className="h-5 w-5 text-gray-600" />
             </button>
@@ -525,7 +530,12 @@ export default function StudentAssignmentList() {
     );
   }
 
-  const practiceModes = ["reading", "rearrangement", "word_selection", "word_reading"];
+  const practiceModes = [
+    "reading",
+    "rearrangement",
+    "word_selection",
+    "word_reading",
+  ];
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -539,7 +549,9 @@ export default function StudentAssignmentList() {
                 [
                   {
                     key: "todo",
-                    icon: <Clock className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />,
+                    icon: (
+                      <Clock className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+                    ),
                     count: stats.todo,
                     activeColor: "bg-blue-600 border-blue-600 text-white",
                     inactiveColor: "bg-white border-gray-300 text-blue-600",
@@ -547,7 +559,9 @@ export default function StudentAssignmentList() {
                   },
                   {
                     key: "submitted",
-                    icon: <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />,
+                    icon: (
+                      <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+                    ),
                     count: stats.submitted,
                     activeColor: "bg-yellow-600 border-yellow-600 text-white",
                     inactiveColor: "bg-white border-gray-300 text-yellow-600",
@@ -555,7 +569,9 @@ export default function StudentAssignmentList() {
                   },
                   {
                     key: "returned",
-                    icon: <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />,
+                    icon: (
+                      <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+                    ),
                     count: stats.returned,
                     activeColor: "bg-orange-600 border-orange-600 text-white",
                     inactiveColor: "bg-white border-gray-300 text-orange-600",
@@ -563,7 +579,9 @@ export default function StudentAssignmentList() {
                   },
                   {
                     key: "resubmitted",
-                    icon: <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />,
+                    icon: (
+                      <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+                    ),
                     count: stats.resubmitted,
                     activeColor: "bg-purple-600 border-purple-600 text-white",
                     inactiveColor: "bg-white border-gray-300 text-purple-600",
@@ -571,7 +589,9 @@ export default function StudentAssignmentList() {
                   },
                   {
                     key: "graded",
-                    icon: <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />,
+                    icon: (
+                      <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+                    ),
                     count: stats.graded,
                     activeColor: "bg-green-600 border-green-600 text-white",
                     inactiveColor: "bg-white border-gray-300 text-green-600",
@@ -633,7 +653,13 @@ export default function StudentAssignmentList() {
           {/* Sort dropdown */}
           <div className="flex items-center gap-2">
             <ArrowUpDown className="h-4 w-4 text-gray-500" />
-            <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setCurrentPage(1); }}>
+            <Select
+              value={sortBy}
+              onValueChange={(v) => {
+                setSortBy(v);
+                setCurrentPage(1);
+              }}
+            >
               <SelectTrigger className="w-[200px] h-8 text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
@@ -660,7 +686,10 @@ export default function StudentAssignmentList() {
               variant={filterMode === null ? "default" : "outline"}
               size="sm"
               className="h-7 text-xs px-2.5"
-              onClick={() => { setFilterMode(null); setCurrentPage(1); }}
+              onClick={() => {
+                setFilterMode(null);
+                setCurrentPage(1);
+              }}
             >
               {t("studentAssignmentList.practiceMode.all")}
             </Button>
@@ -670,7 +699,10 @@ export default function StudentAssignmentList() {
                 variant={filterMode === mode ? "default" : "outline"}
                 size="sm"
                 className="h-7 text-xs px-2.5"
-                onClick={() => { setFilterMode(filterMode === mode ? null : mode); setCurrentPage(1); }}
+                onClick={() => {
+                  setFilterMode(filterMode === mode ? null : mode);
+                  setCurrentPage(1);
+                }}
               >
                 {t(`studentAssignmentList.practiceMode.${mode}`)}
               </Button>
@@ -702,9 +734,7 @@ export default function StudentAssignmentList() {
           <TabsContent value="resubmitted">
             {renderTabContent("resubmitted")}
           </TabsContent>
-          <TabsContent value="graded">
-            {renderTabContent("graded")}
-          </TabsContent>
+          <TabsContent value="graded">{renderTabContent("graded")}</TabsContent>
         </Tabs>
       </div>
     </div>

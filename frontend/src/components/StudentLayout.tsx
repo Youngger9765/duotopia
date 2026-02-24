@@ -131,7 +131,10 @@ export default function StudentLayout() {
         {/* Logo Section */}
         <div className="p-6 border-b">
           <div className="flex items-center justify-between">
-            <Link to="/student/dashboard" className="flex-1 flex justify-center">
+            <Link
+              to="/student/dashboard"
+              className="flex-1 flex justify-center"
+            >
               <img
                 src="https://storage.googleapis.com/duotopia-social-media-videos/website/logo/logo_row_nobg.png"
                 alt="Duotopia"
@@ -147,7 +150,6 @@ export default function StudentLayout() {
               <X className="h-5 w-5" />
             </Button>
           </div>
-
 
           {/* User Info */}
           <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -189,7 +191,9 @@ export default function StudentLayout() {
                 `}
                 onClick={() => setSidebarOpen(false)}
               >
-                <Icon className={`h-5 w-5 ${active ? item.activeColor : item.color}`} />
+                <Icon
+                  className={`h-5 w-5 ${active ? item.activeColor : item.color}`}
+                />
                 <span>{item.label}</span>
               </Link>
             );
@@ -217,7 +221,9 @@ export default function StudentLayout() {
                 `}
                 onClick={() => setSidebarOpen(false)}
               >
-                <Icon className={`h-5 w-5 ${active ? item.activeColor : item.color}`} />
+                <Icon
+                  className={`h-5 w-5 ${active ? item.activeColor : item.color}`}
+                />
                 <span>{item.label}</span>
               </Link>
             );

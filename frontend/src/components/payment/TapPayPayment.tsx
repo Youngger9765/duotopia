@@ -486,7 +486,6 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
               className="h-8"
             />
           </div>
-
         </CardContent>
       </Card>
     </div>
