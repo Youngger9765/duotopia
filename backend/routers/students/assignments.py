@@ -4,9 +4,9 @@ import json
 import logging
 import random
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import text, case, func
@@ -47,8 +47,12 @@ router = APIRouter()
 
 @router.get("/assignments")
 async def get_student_assignments(
-    sort_by: str = "due_date_asc",
-    practice_mode: Optional[str] = None,
+    sort_by: Literal[
+        "due_date_asc", "due_date_desc", "assigned_at_desc", "status"
+    ] = Query("due_date_asc"),
+    practice_mode: Optional[
+        Literal["reading", "rearrangement", "word_selection", "word_reading"]
+    ] = None,
     current_student: Dict[str, Any] = Depends(get_current_student),
     db: Session = Depends(get_db),
 ):
@@ -74,14 +78,15 @@ async def get_student_assignments(
     elif sort_by == "assigned_at_desc":
         query = query.order_by(StudentAssignment.assigned_at.desc().nullslast())
     elif sort_by == "status":
-        # Priority: overdue > in_progress > not_started > submitted > graded
+        # Priority: returned > in_progress > not_started > submitted > resubmitted > graded
         status_order = case(
             (StudentAssignment.status == AssignmentStatus.RETURNED, 0),
             (StudentAssignment.status == AssignmentStatus.IN_PROGRESS, 1),
             (StudentAssignment.status == AssignmentStatus.NOT_STARTED, 2),
             (StudentAssignment.status == AssignmentStatus.SUBMITTED, 3),
-            (StudentAssignment.status == AssignmentStatus.GRADED, 4),
-            else_=5,
+            (StudentAssignment.status == AssignmentStatus.RESUBMITTED, 4),
+            (StudentAssignment.status == AssignmentStatus.GRADED, 5),
+            else_=6,
         )
         query = query.order_by(
             status_order, StudentAssignment.due_date.asc().nullslast()
@@ -92,25 +97,30 @@ async def get_student_assignments(
 
     assignments = query.all()
 
+    # Batch query: count content items per assignment to avoid N+1
+    parent_ids = [sa.assignment_id for sa in assignments if sa.assignment_id]
+    count_map: Dict[int, int] = {}
+    if parent_ids:
+        count_rows = (
+            db.query(
+                AssignmentContent.assignment_id,
+                func.count(ContentItem.id),
+            )
+            .join(Content, AssignmentContent.content_id == Content.id)
+            .join(ContentItem, ContentItem.content_id == Content.id)
+            .filter(AssignmentContent.assignment_id.in_(parent_ids))
+            .group_by(AssignmentContent.assignment_id)
+            .all()
+        )
+        count_map = {row[0]: row[1] for row in count_rows}
+
     result = []
     for sa in assignments:
         # Get fields from parent Assignment
         parent = sa.assignment
         score_category = parent.score_category if parent else None
         p_mode = parent.practice_mode if parent else None
-        content_type = None
-        content_count = 0
-
-        if parent:
-            # Count content items via AssignmentContent
-            ac_count = (
-                db.query(func.count(ContentItem.id))
-                .join(Content, ContentItem.content_id == Content.id)
-                .join(AssignmentContent, AssignmentContent.content_id == Content.id)
-                .filter(AssignmentContent.assignment_id == parent.id)
-                .scalar()
-            )
-            content_count = ac_count or 0
+        content_count = count_map.get(parent.id, 0) if parent else 0
 
         result.append(
             {
