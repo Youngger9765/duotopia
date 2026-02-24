@@ -1062,9 +1062,9 @@ async def start_word_selection_practice(
     Start a new word selection practice session.
 
     Returns 10 words selected by the intelligent get_words_for_practice function,
-    each with 3 AI-generated distractors plus the correct answer.
+    each with 3 distractors from the word set plus the correct answer.
     """
-    from services.translation import translation_service
+    # from services.translation import translation_service  # disabled (#303)
 
     student_id = int(current_student.get("sub"))
 
@@ -1199,62 +1199,48 @@ async def start_word_selection_practice(
                 }
             )
 
-    # Check for pre-generated distractors
-    content_item_ids = [w["content_item_id"] for w in words_data]
-    items_with_distractors = (
-        db.query(ContentItem).filter(ContentItem.id.in_(content_item_ids)).all()
-    )
-    distractors_map = {item.id: item.distractors for item in items_with_distractors}
-
-    # Check how many items need generation
-    items_needing_generation = [
-        w for w in words_data if not distractors_map.get(w["content_item_id"])
-    ]
-
-    if not items_needing_generation:
-        # All items have pre-generated distractors
-        all_distractors = [
-            distractors_map.get(w["content_item_id"], []) for w in words_data
-        ]
-        logger.info(
-            f"Using pre-generated distractors for {len(words_data)} items "
-            f"in assignment {assignment_id}"
-        )
-    else:
-        # Some items need real-time generation
-        logger.info(
-            f"Generating distractors for {len(items_needing_generation)} items "
-            f"({len(words_data) - len(items_needing_generation)} pre-generated) "
-            f"in assignment {assignment_id}"
-        )
-
-        words_for_distractors = [
-            {"word": w["text"], "translation": w["translation"]}
-            for w in items_needing_generation
-        ]
-
-        try:
-            generated_distractors = (
-                await translation_service.batch_generate_distractors(
-                    words_for_distractors, count=3
-                )
-            )
-        except Exception as e:
-            logger.error(f"Failed to generate distractors: {e}")
-            # Fallback: use generic distractors
-            generated_distractors = [
-                ["選項A", "選項B", "選項C"] for _ in items_needing_generation
-            ]
-
-        # Merge pre-generated and generated distractors
-        generated_idx = 0
-        all_distractors = []
-        for w in words_data:
-            if distractors_map.get(w["content_item_id"]):
-                all_distractors.append(distractors_map[w["content_item_id"]])
-            else:
-                all_distractors.append(generated_distractors[generated_idx])
-                generated_idx += 1
+    # NOTE: AI distractor generation is temporarily disabled (#303).
+    # All distractors now come from other words in the assignment.
+    # Original AI generation code is preserved below for future reactivation.
+    #
+    # --- AI distractor generation (disabled) ---
+    # content_item_ids = [w["content_item_id"] for w in words_data]
+    # items_with_distractors = (
+    #     db.query(ContentItem).filter(ContentItem.id.in_(content_item_ids)).all()
+    # )
+    # distractors_map = {item.id: item.distractors for item in items_with_distractors}
+    # items_needing_generation = [
+    #     w for w in words_data if not distractors_map.get(w["content_item_id"])
+    # ]
+    # if not items_needing_generation:
+    #     all_distractors = [
+    #         distractors_map.get(w["content_item_id"], []) for w in words_data
+    #     ]
+    # else:
+    #     words_for_distractors = [
+    #         {"word": w["text"], "translation": w["translation"]}
+    #         for w in items_needing_generation
+    #     ]
+    #     try:
+    #         generated_distractors = (
+    #             await translation_service.batch_generate_distractors(
+    #                 words_for_distractors, count=3
+    #             )
+    #         )
+    #     except Exception as e:
+    #         logger.error(f"Failed to generate distractors: {e}")
+    #         generated_distractors = [
+    #             ["選項A", "選項B", "選項C"] for _ in items_needing_generation
+    #         ]
+    #     generated_idx = 0
+    #     all_distractors = []
+    #     for w in words_data:
+    #         if distractors_map.get(w["content_item_id"]):
+    #             all_distractors.append(distractors_map[w["content_item_id"]])
+    #         else:
+    #             all_distractors.append(generated_distractors[generated_idx])
+    #             generated_idx += 1
+    # --- end AI distractor generation ---
 
     # Create practice session
     practice_session = PracticeSession(
@@ -1272,53 +1258,30 @@ async def start_word_selection_practice(
     # Build response with words and their options
     words_with_options = []
 
-    # Collect all translations for cross-distraction
+    # Collect all unique translations for picking distractors from the word set
     all_translations = {
         w["translation"].lower().strip(): w["translation"] for w in words_data
     }
 
     for i, word in enumerate(words_data):
-        ai_distractors = all_distractors[i] if i < len(all_distractors) else []
         correct_answer = word["translation"]
 
-        # Dedup set
-        seen = {correct_answer.lower().strip()}
-        final_distractors = []
-
-        # Step 1: Add 1 distractor from other words in assignment
+        # Pick 3 random distractors from other words' translations (#303)
         other_translations = [
             t
             for key, t in all_translations.items()
             if key != correct_answer.lower().strip()
         ]
-        if other_translations:
-            sibling_distractor = random.choice(other_translations)
-            if sibling_distractor.lower().strip() not in seen:
-                final_distractors.append(sibling_distractor)
-                seen.add(sibling_distractor.lower().strip())
+        random.shuffle(other_translations)
+        final_distractors = other_translations[:3]
 
-        # Step 2: Add AI-generated distractors (up to 2)
-        for d in ai_distractors:
-            d_normalized = d.lower().strip()
-            if d_normalized not in seen and d.strip():
-                seen.add(d_normalized)
-                final_distractors.append(d)
-            if len(final_distractors) >= 3:
-                break
+        # Fallback for legacy assignments with small word sets
+        num_needed = 3 - len(final_distractors)
+        for i in range(num_needed):
+            final_distractors.append(f"選項{chr(65 + i)}")
 
-        # Step 3: Fallback to ensure 3 distractors
-        fallback_options = ["選項A", "選項B", "選項C", "選項D", "選項E"]
-        fallback_idx = 0
-        while len(final_distractors) < 3:
-            fallback = fallback_options[fallback_idx]
-            if fallback.lower() not in seen:
-                final_distractors.append(fallback)
-                seen.add(fallback.lower())
-            fallback_idx += 1
-
-        # Create options array with correct answer and exactly 3 distractors = 4 total
-        options = [correct_answer] + final_distractors[:3]
-        # Shuffle options
+        # Create options array with correct answer and 3 distractors = 4 total
+        options = [correct_answer] + final_distractors
         random.shuffle(options)
 
         words_with_options.append(

@@ -1479,6 +1479,8 @@
         "quotaExceededDesc": "Please upgrade your plan or wait for the next billing cycle",
         "missingAudio": "Selected content is missing audio",
         "missingAudioDesc": "This practice mode requires audio. Please go to content management to generate TTS audio first",
+        "insufficientWords": "Not enough vocabulary words",
+        "insufficientWordsDesc": "Word selection mode requires at least 20 words, currently only {{count}}",
         "mixedContentType": "Only {{type}} can be selected. Please clear selected content before choosing a different type"
       },
       "warnings": {

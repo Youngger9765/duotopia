@@ -681,8 +681,8 @@ export default function WordSelectionActivity({
           </div>
         )}
 
-        {/* Answer Options */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Answer Options - grid-rows-2 + 1fr ensures all 4 buttons are equal height */}
+        <div className="grid grid-cols-2 grid-rows-2 gap-3 sm:gap-4" style={{ gridAutoRows: "1fr" }}>
           {currentWord.options.map((option, index) => {
             const isSelected = selectedAnswer === option;
             const isCorrectAnswer = option === currentWord.translation;
@@ -696,7 +696,7 @@ export default function WordSelectionActivity({
                 key={index}
                 variant="outline"
                 className={cn(
-                  "h-16 text-lg font-medium transition-all",
+                  "h-full min-h-16 py-3 px-4 text-base sm:text-lg font-medium transition-all whitespace-normal text-center break-words",
                   !showResult && "hover:bg-blue-50 hover:border-blue-400",
                   showCorrect && "bg-green-100 border-green-500 text-green-800",
                   showIncorrect && "bg-red-100 border-red-500 text-red-800",
@@ -706,10 +706,10 @@ export default function WordSelectionActivity({
                 disabled={showResult || submitting}
               >
                 {showCorrect && (
-                  <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
+                  <CheckCircle className="h-5 w-5 mr-2 shrink-0 text-green-600" />
                 )}
                 {showIncorrect && (
-                  <XCircle className="h-5 w-5 mr-2 text-red-600" />
+                  <XCircle className="h-5 w-5 mr-2 shrink-0 text-red-600" />
                 )}
                 {option}
               </Button>
