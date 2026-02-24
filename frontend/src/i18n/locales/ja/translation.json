@@ -1,0 +1,102 @@
+{
+  "studentAssignmentList": {
+    "loading": "読み込み中...",
+    "errors": {
+      "loadFailed": "課題一覧の読み込みに失敗しました"
+    },
+    "flowStatus": {
+      "title": "課題の進捗フロー",
+      "todo": "未完了",
+      "submitted": "提出済み",
+      "returned": "再提出",
+      "resubmitted": "再提出済み",
+      "graded": "完了"
+    },
+    "status": {
+      "notStarted": "未開始",
+      "inProgress": "進行中",
+      "submitted": "提出済み",
+      "graded": "採点済み",
+      "returned": "差し戻し",
+      "resubmitted": "再提出済み"
+    },
+    "progress": {
+      "title": "完了進捗",
+      "activities": "{{completed}} / {{total}} アクティビティ"
+    },
+    "contentType": {
+      "default": "練習"
+    },
+    "contentTypes": {
+      "VOCABULARY_SET": "単語セット",
+      "SPEAKING": "例文読み上げ",
+      "REARRANGEMENT": "例文並べ替え"
+    },
+    "dueDate": {
+      "overdue": "{{days}}日超過",
+      "today": "本日締切",
+      "remaining": "あと{{days}}日"
+    },
+    "score": {
+      "label": "スコア: {{score}}"
+    },
+    "proficiency": {
+      "label": "習熟度：{{proficiency}}%"
+    },
+    "buttons": {
+      "start": "課題を開始",
+      "continue": "課題を続ける",
+      "view": "課題を見る",
+      "viewResults": "結果を見る",
+      "resubmit": "再提出する"
+    },
+    "scoreCategory": {
+      "speaking": "スピーキング",
+      "listening": "リスニング",
+      "writing": "ライティング",
+      "vocabulary": "語彙",
+      "reading": "リーディング"
+    },
+    "practiceMode": {
+      "reading": "例文読み上げ",
+      "rearrangement": "例文並べ替え",
+      "word_selection": "単語選択",
+      "word_reading": "単語読み上げ",
+      "all": "すべてのタイプ"
+    },
+    "sort": {
+      "label": "並べ替え",
+      "due_date_asc": "締切日（近い順）",
+      "due_date_desc": "締切日（遠い順）",
+      "assigned_at_desc": "配布日（新しい順）",
+      "status": "ステータス優先"
+    },
+    "emptyStates": {
+      "todo": {
+        "title": "未完了の課題はありません",
+        "description": "すべての課題が完了または提出済みです！"
+      },
+      "submitted": {
+        "title": "採点待ちの課題はありません",
+        "description": "提出した課題がここに表示されます。"
+      },
+      "graded": {
+        "title": "完了した課題はありません",
+        "description": "完了・採点済みの課題がここに表示されます。詳細なスコアを確認できます。"
+      },
+      "returned": {
+        "title": "再提出が必要な課題はありません",
+        "description": "やり直しが必要な課題がここに表示されます。"
+      },
+      "resubmitted": {
+        "title": "再提出済みの課題はありません",
+        "description": "再提出した課題がここに表示されます。"
+      }
+    },
+    "pagination": {
+      "label": "{{current}} / {{total}} ページ",
+      "previous": "前のページ",
+      "next": "次のページ"
+    }
+  }
+}

@@ -293,10 +293,10 @@ export default function StudentProfile() {
         </div>
 
         {/* Basic Info Card */}
-        <Card className="mb-6">
-          <CardHeader>
+        <Card className="mb-6 border-l-4 border-l-violet-400 overflow-hidden">
+          <CardHeader className="crayon-texture bg-gradient-to-r from-violet-50 to-purple-50">
             <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
+              <User className="h-5 w-5 text-violet-500" />
               {t("studentProfile.basicInfo.title")}
             </CardTitle>
           </CardHeader>
@@ -389,10 +389,10 @@ export default function StudentProfile() {
         </Card>
 
         {/* Email Settings Card */}
-        <Card className="mb-6">
-          <CardHeader>
+        <Card className="mb-6 border-l-4 border-l-blue-400 overflow-hidden">
+          <CardHeader className="crayon-texture bg-gradient-to-r from-blue-50 to-sky-50">
             <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
+              <Mail className="h-5 w-5 text-blue-500" />
               {t("studentProfile.email.title")}
             </CardTitle>
           </CardHeader>
@@ -553,10 +553,10 @@ export default function StudentProfile() {
         </Card>
 
         {/* Password Settings Card */}
-        <Card className="mb-6">
-          <CardHeader>
+        <Card className="mb-6 border-l-4 border-l-amber-400 overflow-hidden">
+          <CardHeader className="crayon-texture bg-gradient-to-r from-amber-50 to-yellow-50">
             <CardTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
+              <Lock className="h-5 w-5 text-amber-500" />
               {t("studentProfile.password.title")}
             </CardTitle>
           </CardHeader>

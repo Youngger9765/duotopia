@@ -1,0 +1,102 @@
+{
+  "studentAssignmentList": {
+    "loading": "로딩 중...",
+    "errors": {
+      "loadFailed": "과제 목록을 불러올 수 없습니다"
+    },
+    "flowStatus": {
+      "title": "과제 진행 흐름",
+      "todo": "미완료",
+      "submitted": "제출됨",
+      "returned": "수정 필요",
+      "resubmitted": "재제출됨",
+      "graded": "완료"
+    },
+    "status": {
+      "notStarted": "시작 전",
+      "inProgress": "진행 중",
+      "submitted": "제출됨",
+      "graded": "채점됨",
+      "returned": "반려됨",
+      "resubmitted": "재제출됨"
+    },
+    "progress": {
+      "title": "완료 진행률",
+      "activities": "{{completed}} / {{total}} 활동"
+    },
+    "contentType": {
+      "default": "연습"
+    },
+    "contentTypes": {
+      "VOCABULARY_SET": "단어 세트",
+      "SPEAKING": "문장 읽기",
+      "REARRANGEMENT": "문장 재배열"
+    },
+    "dueDate": {
+      "overdue": "{{days}}일 초과",
+      "today": "오늘 마감",
+      "remaining": "{{days}}일 남음"
+    },
+    "score": {
+      "label": "점수: {{score}}"
+    },
+    "proficiency": {
+      "label": "숙련도: {{proficiency}}%"
+    },
+    "buttons": {
+      "start": "과제 시작",
+      "continue": "과제 계속",
+      "view": "과제 보기",
+      "viewResults": "결과 보기",
+      "resubmit": "재제출"
+    },
+    "scoreCategory": {
+      "speaking": "말하기",
+      "listening": "듣기",
+      "writing": "쓰기",
+      "vocabulary": "어휘",
+      "reading": "읽기"
+    },
+    "practiceMode": {
+      "reading": "문장 읽기",
+      "rearrangement": "문장 재배열",
+      "word_selection": "단어 선택",
+      "word_reading": "단어 읽기",
+      "all": "모든 유형"
+    },
+    "sort": {
+      "label": "정렬",
+      "due_date_asc": "마감일 (가까운 순)",
+      "due_date_desc": "마감일 (먼 순)",
+      "assigned_at_desc": "배정일 (최신 순)",
+      "status": "상태 우선"
+    },
+    "emptyStates": {
+      "todo": {
+        "title": "미완료 과제가 없습니다",
+        "description": "모든 과제가 완료되었거나 제출되었습니다!"
+      },
+      "submitted": {
+        "title": "채점 대기 중인 과제가 없습니다",
+        "description": "제출한 과제가 여기에 표시됩니다."
+      },
+      "graded": {
+        "title": "완료된 과제가 없습니다",
+        "description": "완료 및 채점된 과제가 여기에 표시됩니다. 상세 점수를 확인할 수 있습니다."
+      },
+      "returned": {
+        "title": "수정이 필요한 과제가 없습니다",
+        "description": "다시 해야 할 과제가 여기에 표시됩니다."
+      },
+      "resubmitted": {
+        "title": "재제출된 과제가 없습니다",
+        "description": "재제출된 과제가 여기에 표시됩니다."
+      }
+    },
+    "pagination": {
+      "label": "{{current}} / {{total}} 페이지",
+      "previous": "이전 페이지",
+      "next": "다음 페이지"
+    }
+  }
+}

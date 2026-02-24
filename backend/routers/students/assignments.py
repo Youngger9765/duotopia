@@ -4,12 +4,12 @@ import json
 import logging
 import random
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy.orm import Session, joinedload, contains_eager
+from sqlalchemy import text, case, func
 
 from database import get_db
 from models import (
@@ -47,49 +47,100 @@ router = APIRouter()
 
 @router.get("/assignments")
 async def get_student_assignments(
+    sort_by: Literal[
+        "due_date_asc", "due_date_desc", "assigned_at_desc", "status"
+    ] = Query("due_date_asc"),
+    practice_mode: Optional[
+        Literal["reading", "rearrangement", "word_selection", "word_reading"]
+    ] = None,
     current_student: Dict[str, Any] = Depends(get_current_student),
     db: Session = Depends(get_db),
 ):
     """取得學生作業列表"""
     student_id = current_student.get("sub")
 
-    # Get assignments
-    assignments = (
-        db.query(StudentAssignment)
-        .filter(StudentAssignment.student_id == int(student_id))
-        .order_by(
-            StudentAssignment.due_date.desc()
-            if StudentAssignment.due_date
-            else StudentAssignment.assigned_at.desc()
-        )
-        .all()
+    # Base query
+    query = db.query(StudentAssignment).filter(
+        StudentAssignment.student_id == int(student_id)
     )
 
+    # Filter by practice_mode: use explicit join + contains_eager to reuse the
+    # JOIN for both filtering and eager-loading.  Otherwise use joinedload.
+    if practice_mode:
+        query = (
+            query.join(Assignment, StudentAssignment.assignment_id == Assignment.id)
+            .options(contains_eager(StudentAssignment.assignment))
+            .filter(Assignment.practice_mode == practice_mode)
+        )
+    else:
+        query = query.options(joinedload(StudentAssignment.assignment))
+
+    # Sorting
+    if sort_by == "due_date_desc":
+        query = query.order_by(StudentAssignment.due_date.desc().nullslast())
+    elif sort_by == "assigned_at_desc":
+        query = query.order_by(StudentAssignment.assigned_at.desc().nullslast())
+    elif sort_by == "status":
+        # Priority: returned > in_progress > not_started > submitted > resubmitted > graded
+        status_order = case(
+            (StudentAssignment.status == AssignmentStatus.RETURNED, 0),
+            (StudentAssignment.status == AssignmentStatus.IN_PROGRESS, 1),
+            (StudentAssignment.status == AssignmentStatus.NOT_STARTED, 2),
+            (StudentAssignment.status == AssignmentStatus.SUBMITTED, 3),
+            (StudentAssignment.status == AssignmentStatus.RESUBMITTED, 4),
+            (StudentAssignment.status == AssignmentStatus.GRADED, 5),
+            else_=6,
+        )
+        query = query.order_by(
+            status_order, StudentAssignment.due_date.asc().nullslast()
+        )
+    else:
+        # Default: due_date_asc (nearest deadline first)
+        query = query.order_by(StudentAssignment.due_date.asc().nullslast())
+
+    assignments = query.all()
+
+    # Batch query: count content items per assignment to avoid N+1
+    parent_ids = [sa.assignment_id for sa in assignments if sa.assignment_id]
+    count_map: Dict[int, int] = {}
+    if parent_ids:
+        count_rows = (
+            db.query(
+                AssignmentContent.assignment_id,
+                func.count(ContentItem.id),
+            )
+            .join(Content, AssignmentContent.content_id == Content.id)
+            .join(ContentItem, ContentItem.content_id == Content.id)
+            .filter(AssignmentContent.assignment_id.in_(parent_ids))
+            .group_by(AssignmentContent.assignment_id)
+            .all()
+        )
+        count_map = {row[0]: row[1] for row in count_rows}
+
     result = []
-    for assignment in assignments:
+    for sa in assignments:
+        # Get fields from parent Assignment
+        parent = sa.assignment
+        score_category = parent.score_category if parent else None
+        p_mode = parent.practice_mode if parent else None
+        content_count = count_map.get(parent.id, 0) if parent else 0
+
         result.append(
             {
-                "id": assignment.id,
-                "title": assignment.title,
-                "status": (
-                    assignment.status.value if assignment.status else "not_started"
-                ),
-                "due_date": (
-                    assignment.due_date.isoformat() if assignment.due_date else None
-                ),
-                "assigned_at": (
-                    assignment.assigned_at.isoformat()
-                    if assignment.assigned_at
-                    else None
-                ),
-                "submitted_at": (
-                    assignment.submitted_at.isoformat()
-                    if assignment.submitted_at
-                    else None
-                ),
-                "classroom_id": assignment.classroom_id,
-                "score": assignment.score,
-                "feedback": assignment.feedback,
+                "id": sa.id,
+                "title": sa.title,
+                "status": sa.status.value if sa.status else "not_started",
+                "due_date": sa.due_date.isoformat() if sa.due_date else None,
+                "assigned_at": sa.assigned_at.isoformat() if sa.assigned_at else None,
+                "submitted_at": sa.submitted_at.isoformat()
+                if sa.submitted_at
+                else None,
+                "classroom_id": sa.classroom_id,
+                "score": sa.score,
+                "feedback": sa.feedback,
+                "score_category": score_category,
+                "practice_mode": p_mode,
+                "content_count": content_count,
             }
         )
 
