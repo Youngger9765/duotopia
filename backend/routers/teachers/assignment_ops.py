@@ -389,6 +389,10 @@ async def preview_word_selection_start(
         random.shuffle(other_translations)
         final_distractors = other_translations[:3]
 
+        # Fallback for small word sets
+        while len(final_distractors) < 3:
+            final_distractors.append(f"選項{chr(65 + len(final_distractors))}")
+
         # Build options array and shuffle
         options = [correct_answer] + final_distractors
         random.shuffle(options)

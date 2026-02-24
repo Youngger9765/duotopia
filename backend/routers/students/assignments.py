@@ -1062,7 +1062,7 @@ async def start_word_selection_practice(
     Start a new word selection practice session.
 
     Returns 10 words selected by the intelligent get_words_for_practice function,
-    each with 3 AI-generated distractors plus the correct answer.
+    each with 3 distractors from the word set plus the correct answer.
     """
     # from services.translation import translation_service  # disabled (#303)
 
@@ -1274,6 +1274,10 @@ async def start_word_selection_practice(
         ]
         random.shuffle(other_translations)
         final_distractors = other_translations[:3]
+
+        # Fallback for legacy assignments with small word sets
+        while len(final_distractors) < 3:
+            final_distractors.append(f"選項{chr(65 + len(final_distractors))}")
 
         # Create options array with correct answer and 3 distractors = 4 total
         options = [correct_answer] + final_distractors
