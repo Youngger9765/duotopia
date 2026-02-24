@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, selectinload, joinedload
 from sqlalchemy import func
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
+import logging
 
 from database import get_db
 from models import Teacher, Classroom, Student, Program, Lesson, Content, ContentItem
@@ -21,6 +22,8 @@ from .dependencies import get_current_teacher
 from .validators import *
 from .utils import TEST_SUBSCRIPTION_WHITELIST, parse_birthdate
 from services.quota_analytics_service import QuotaAnalyticsService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -119,10 +122,6 @@ async def cancel_subscription(
     - 到期後不會自動續訂
     - 可以隨時重新啟用自動續訂
     """
-    import logging
-
-    logger = logging.getLogger(__name__)
-
     try:
         logger.info(f"Cancel subscription request for teacher: {current_teacher.email}")
         logger.info(f"  subscription_end_date: {current_teacher.subscription_end_date}")
@@ -154,7 +153,7 @@ async def cancel_subscription(
             return {
                 "success": True,
                 "message": "您已經取消過續訂",
-                "subscription_end_date": current_teacher.subscription_end_date.isoformat(),
+                "subscription_end_date": end_date.isoformat(),
                 "auto_renew": False,
             }
 
@@ -174,15 +173,20 @@ async def cancel_subscription(
         db.commit()
         db.refresh(current_teacher)
 
+        # Re-normalize after refresh for consistent timezone-aware serialization
+        end_date = current_teacher.subscription_end_date
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+
         logger.info(
             f"Teacher {current_teacher.email} cancelled auto-renewal. "
-            f"Subscription valid until {current_teacher.subscription_end_date}"
+            f"Subscription valid until {end_date}"
         )
 
         return {
             "success": True,
             "message": "已成功取消自動續訂",
-            "subscription_end_date": current_teacher.subscription_end_date.isoformat(),
+            "subscription_end_date": end_date.isoformat(),
             "auto_renew": False,
         }
 
@@ -202,10 +206,6 @@ async def reactivate_subscription(
     """
     重新啟用自動續訂
     """
-    import logging
-
-    logger = logging.getLogger(__name__)
-
     try:
         # 檢查是否有有效訂閱
         if not current_teacher.subscription_end_date:

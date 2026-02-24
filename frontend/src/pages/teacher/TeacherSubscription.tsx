@@ -189,6 +189,7 @@ const pointPackages: PointPackage[] = [
 ];
 
 const BASE_UNIT_COST = 0.18;
+const PLAN_RANK: Record<string, number> = { free: 0, tutor: 1, school: 2 };
 
 export default function TeacherSubscription() {
   const { t } = useTranslation();
@@ -437,12 +438,10 @@ export default function TeacherSubscription() {
               <div className="grid md:grid-cols-3 gap-6">
                 {subscriptionPlans.map((plan) => {
                   const isCurrentPlan = currentPlanId === plan.id;
-                  const planRank = { free: 0, tutor: 1, school: 2 };
                   const currentRank = currentPlanId
-                    ? (planRank[currentPlanId as keyof typeof planRank] ?? -1)
+                    ? (PLAN_RANK[currentPlanId] ?? -1)
                     : -1;
-                  const thisRank =
-                    planRank[plan.id as keyof typeof planRank] ?? 0;
+                  const thisRank = PLAN_RANK[plan.id] ?? 0;
 
                   let ctaText: string;
                   let disabled = false;
