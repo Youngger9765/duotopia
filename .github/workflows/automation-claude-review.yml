@@ -31,7 +31,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0  # Full history for accurate PR diff
 
       - name: Run Claude Code Review
         id: claude-review
@@ -42,17 +42,25 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            Please review this pull request and provide feedback on:
+            ## CRITICAL: Scope your review to THIS PR only
+
+            1. First, run `gh pr diff ${{ github.event.pull_request.number }}` to get the exact changes in this PR.
+            2. ONLY review files and lines that appear in the diff output above.
+            3. Do NOT read, review, or comment on any files outside the PR diff.
+            4. If a file is not in the diff, ignore it completely — even if it has issues.
+
+            ## Review criteria (apply ONLY to changed files)
+
             - Code quality and best practices
             - Potential bugs or issues
             - Performance considerations
             - Security concerns
-            - Test coverage
-            
+            - Test coverage for the changed code
+
             Use the repository's CLAUDE.md for guidance on style and conventions. Be constructive and helpful in your feedback.
 
             Use `gh pr comment` with your Bash tool to leave your review as a comment on the PR.
-          
+
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://docs.claude.com/en/docs/claude-code/sdk#command-line for available options
           claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'

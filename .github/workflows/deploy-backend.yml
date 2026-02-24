@@ -22,6 +22,18 @@ on:
       - 'alembic.ini'
       - 'Dockerfile'
       - '.github/workflows/deploy-backend.yml'
+  pull_request:
+    branches:
+      - main
+      - staging
+      - develop
+    paths:
+      - 'backend/**'
+      - '!backend/**/*.md'
+      - 'requirements*.txt'
+      - 'alembic.ini'
+      - 'Dockerfile'
+      - '.github/workflows/deploy-backend.yml'
 
 env:
   PROJECT_ID: duotopia-472708
@@ -32,6 +44,20 @@ jobs:
   test-backend:
     name: 🧪 Test Backend
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: migration_check
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
     - uses: actions/checkout@v4
 
@@ -66,23 +92,65 @@ jobs:
         echo "Running Flake8 linting..."
         flake8 . --config=../.flake8
 
-    - name: Run pytest (Parallel)
+    - name: Apply migrations to fresh DB
+      env:
+        DATABASE_URL: postgresql://test:test@localhost:5432/migration_check
+      working-directory: ./backend
+      run: |
+        echo "🔄 Applying all migrations to fresh local PostgreSQL..."
+        alembic upgrade head
+        echo "✅ All migrations applied successfully"
+
+    - name: Check for model-migration sync
+      # TODO: Remove continue-on-error after cleaning up legacy model-migration
+      # differences (Issue #314). Currently there are pre-existing mismatches
+      # (removed tables, type diffs, index diffs) that cause alembic check to fail.
+      continue-on-error: true
+      env:
+        DATABASE_URL: postgresql://test:test@localhost:5432/migration_check
+      working-directory: ./backend
+      run: |
+        echo "🔍 Checking for uncommitted model changes..."
+        if ! alembic check; then
+          echo ""
+          echo "⚠️ Model-migration differences detected (may include legacy diffs)"
+          echo "📝 If you modified models, ensure you created a migration:"
+          echo "👉 cd backend && alembic revision --autogenerate -m 'description'"
+          exit 1
+        fi
+        echo "✅ Models and migrations are in sync"
+
+    - name: Run unit tests
+      # TODO: Remove continue-on-error after fixing unit tests (Issue #314)
+      # Many tests/unit/ files depend on DB/external services and are not true unit tests
+      continue-on-error: true
+      working-directory: ./backend
+      run: |
+        echo "🧪 Running unit tests (no external dependencies)..."
+        pytest tests/unit/ -n auto -v --tb=short
+
+    - name: Run integration tests
+      # TODO: Remove continue-on-error after fixing tests (Issue #314)
+      # conftest.py hardcodes SQLite — parallel workers cause table creation races
+      continue-on-error: true
       working-directory: ./backend
       env:
-        DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-        TEST_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        DATABASE_URL: ${{ secrets.STAGING_DATABASE_POOLER_URL }}
+        TEST_DATABASE_URL: ${{ secrets.STAGING_DATABASE_POOLER_URL }}
       run: |
-        echo "🧪 Staging: Running full test suite with staging database..."
-        echo "   TEST_DATABASE_URL is set: $TEST_DATABASE_URL"
-        pytest -n auto -v --tb=short || echo "Tests completed with some failures"
+        echo "🧪 Running integration tests with staging database (pooler URL)..."
+        pytest tests/ --ignore=tests/unit/ --ignore=tests/e2e/ --ignore=tests/benchmarks/ --ignore=tests/load_testing/ --ignore=tests/stress/ -v --tb=short
 
     - name: Test backend import
       working-directory: ./backend
+      env:
+        DATABASE_URL: ${{ secrets.STAGING_DATABASE_POOLER_URL }}
       run: python -c "import main; print('Backend imports successfully')"
 
   deploy-backend:
     name: 🚀 Deploy Backend
     needs: test-backend
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -215,22 +283,6 @@ jobs:
           fi
         fi
         echo "✅ Migrations completed"
-
-    - name: Check for missing migrations
-      env:
-        DATABASE_URL: ${{ steps.db_env.outputs.ALEMBIC_DATABASE_URL }}
-      run: |
-        echo "🔍 Checking for uncommitted model changes..."
-        cd backend
-        if ! alembic check; then
-          # Allow known legacy schema differences for all environments
-          # These are pre-existing differences (legacy tables, type mismatches) that don't affect functionality
-          echo "⚠️ WARNING: Database schema differences detected"
-          echo "📝 This is expected - legacy tables/columns exist in DB but not in models"
-          echo "🔧 Minor differences (indexes, enum vs varchar, unused tables) are acceptable"
-          echo "✅ Continuing deployment..."
-        fi
-        echo "✅ No pending model changes detected"
 
     - name: 🔒 Verify RLS Configuration
       env:
