@@ -159,9 +159,8 @@ export default function PricingPage() {
     toast.info(t("pricing.pointPackages.comingSoon"));
   };
 
-  const handlePaymentSuccess = async (transactionId: string) => {
+  const handlePaymentSuccess = (_transactionId: string) => {
     try {
-      void transactionId;
       toast.success(
         t("pricing.payment.success", { planName: selectedPlan?.name }),
       );
