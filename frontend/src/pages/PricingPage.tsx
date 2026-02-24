@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { apiClient } from "@/lib/api";
 
 function getSubscriptionPlans(
   t: (key: string) => string,
@@ -111,7 +112,7 @@ const BASE_UNIT_COST = 0.18; // highest unit cost for discount calculation
 export default function PricingPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const subscriptionPlans = getSubscriptionPlans(t);
+  const subscriptionPlans = useMemo(() => getSubscriptionPlans(t), [t]);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(
     null,
   );
@@ -222,22 +223,14 @@ export default function PricingPage() {
     if (!teacherAuth.isAuthenticated || !teacherAuth.token) return;
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${apiUrl}/subscription/status`, {
-        headers: {
-          Authorization: `Bearer ${teacherAuth.token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.is_active) {
-          toast.info(t("pricing.payment.hasSubscription"));
-          setTimeout(() => {
-            navigate("/teacher/subscription");
-          }, 1000);
-        }
+      const data = await apiClient.get<{ is_active: boolean }>(
+        "/api/subscription/status",
+      );
+      if (data.is_active) {
+        toast.info(t("pricing.payment.hasSubscription"));
+        setTimeout(() => {
+          navigate("/teacher/subscription");
+        }, 1000);
       }
     } catch (error) {
       console.error("Error checking subscription:", error);
@@ -274,7 +267,7 @@ export default function PricingPage() {
         console.error("Error parsing saved plan:", error);
       }
     }
-  }, [userInfo]);
+  }, [userInfo, subscriptionPlans, t]);
 
   const isStudent = userInfo?.role === "student";
 

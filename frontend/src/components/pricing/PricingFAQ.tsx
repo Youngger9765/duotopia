@@ -7,7 +7,7 @@ import {
 import { HelpCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-const FAQ_KEYS = ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8"] as const;
+const FAQ_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8"] as const;
 
 export function PricingFAQ() {
   const { t } = useTranslation();
@@ -19,13 +19,13 @@ export function PricingFAQ() {
         {t("pricing.faq.title")}
       </h3>
       <Accordion type="single" collapsible className="w-full">
-        {FAQ_KEYS.map((key, index) => (
-          <AccordionItem key={key} value={`faq-${index}`}>
+        {FAQ_KEYS.map((key) => (
+          <AccordionItem key={key} value={`faq-${key}`}>
             <AccordionTrigger className="text-left text-sm font-medium text-gray-800 hover:no-underline">
-              {t(`pricing.faq.${key}`)}
+              {t(`pricing.faq.q${key}`)}
             </AccordionTrigger>
             <AccordionContent className="text-sm text-gray-600 leading-relaxed">
-              {t(`pricing.faq.a${index + 1}`)}
+              {t(`pricing.faq.a${key}`)}
             </AccordionContent>
           </AccordionItem>
         ))}
