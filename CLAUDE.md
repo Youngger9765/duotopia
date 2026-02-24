@@ -65,6 +65,7 @@
 | Skill | Purpose |
 |-------|---------|
 | `/worktree <issues \| description>` | 使用 git worktree 隔離開發。支援 GitHub issue（如 `#42 #43`）或任意任務描述。自動觸發：「開 worktree」、「用 worktree 處理」 |
+| `/fix-review <PR-number>` | 自動分析 Claude Code Review 回饋並反覆修正，直到 PR 可以 merge。遇到需要人為判斷的項目才會提問 |
 
 ### Commands (`.claude/commands/`)
 
