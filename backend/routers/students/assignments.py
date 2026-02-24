@@ -64,9 +64,9 @@ async def get_student_assignments(
 
     # Filter by practice_mode (via parent Assignment)
     if practice_mode:
-        query = query.join(Assignment, StudentAssignment.assignment_id == Assignment.id).filter(
-            Assignment.practice_mode == practice_mode
-        )
+        query = query.join(
+            Assignment, StudentAssignment.assignment_id == Assignment.id
+        ).filter(Assignment.practice_mode == practice_mode)
 
     # Sorting
     if sort_by == "due_date_desc":
@@ -83,7 +83,9 @@ async def get_student_assignments(
             (StudentAssignment.status == AssignmentStatus.GRADED, 4),
             else_=5,
         )
-        query = query.order_by(status_order, StudentAssignment.due_date.asc().nullslast())
+        query = query.order_by(
+            status_order, StudentAssignment.due_date.asc().nullslast()
+        )
     else:
         # Default: due_date_asc (nearest deadline first)
         query = query.order_by(StudentAssignment.due_date.asc().nullslast())
@@ -117,7 +119,9 @@ async def get_student_assignments(
                 "status": sa.status.value if sa.status else "not_started",
                 "due_date": sa.due_date.isoformat() if sa.due_date else None,
                 "assigned_at": sa.assigned_at.isoformat() if sa.assigned_at else None,
-                "submitted_at": sa.submitted_at.isoformat() if sa.submitted_at else None,
+                "submitted_at": sa.submitted_at.isoformat()
+                if sa.submitted_at
+                else None,
                 "classroom_id": sa.classroom_id,
                 "score": sa.score,
                 "feedback": sa.feedback,
