@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -182,6 +182,7 @@ const pointPackages: PointPackage[] = [
 ];
 
 const BASE_UNIT_COST = 0.18;
+const PLAN_RANK: Record<string, number> = { free: 0, tutor: 1, school: 2 };
 
 export default function TeacherSubscription() {
   const { t } = useTranslation();
@@ -203,7 +204,7 @@ export default function TeacherSubscription() {
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const { isAuthenticated } = useTeacherAuthStore();
-  const subscriptionPlans = getSubscriptionPlans(t);
+  const subscriptionPlans = useMemo(() => getSubscriptionPlans(t), [t]);
 
   // Determine current plan ID from subscription data
   const getCurrentPlanId = (): string | null => {
@@ -339,11 +340,14 @@ export default function TeacherSubscription() {
       setShowCancelDialog(false);
       await fetchSubscriptionData();
     } catch (error) {
-      const err = error as { response?: { data?: { detail?: string } } };
-      toast.error(
-        err.response?.data?.detail ||
-          t("teacherSubscription.messages.cancelFailed"),
-      );
+      if (error && typeof error === "object" && "detail" in error) {
+        toast.error(
+          (error as { detail: string }).detail ||
+            t("teacherSubscription.messages.cancelFailed"),
+        );
+      } else {
+        toast.error(t("teacherSubscription.messages.cancelFailed"));
+      }
     }
   };
 
@@ -353,11 +357,14 @@ export default function TeacherSubscription() {
       toast.success(t("teacherSubscription.messages.reactivateSuccess"));
       await fetchSubscriptionData();
     } catch (error) {
-      const err = error as { response?: { data?: { detail?: string } } };
-      toast.error(
-        err.response?.data?.detail ||
-          t("teacherSubscription.messages.reactivateFailed"),
-      );
+      if (error && typeof error === "object" && "detail" in error) {
+        toast.error(
+          (error as { detail: string }).detail ||
+            t("teacherSubscription.messages.reactivateFailed"),
+        );
+      } else {
+        toast.error(t("teacherSubscription.messages.reactivateFailed"));
+      }
     }
   };
 
@@ -424,12 +431,10 @@ export default function TeacherSubscription() {
               <div className="grid md:grid-cols-3 gap-6">
                 {subscriptionPlans.map((plan) => {
                   const isCurrentPlan = currentPlanId === plan.id;
-                  const planRank = { free: 0, tutor: 1, school: 2 };
                   const currentRank = currentPlanId
-                    ? (planRank[currentPlanId as keyof typeof planRank] ?? -1)
+                    ? (PLAN_RANK[currentPlanId] ?? -1)
                     : -1;
-                  const thisRank =
-                    planRank[plan.id as keyof typeof planRank] ?? 0;
+                  const thisRank = PLAN_RANK[plan.id] ?? 0;
 
                   let ctaText: string;
                   let disabled = false;

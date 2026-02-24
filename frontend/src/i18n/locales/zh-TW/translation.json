@@ -405,6 +405,16 @@
     "card": {
       "popular": "熱門選擇"
     },
+    "actions": {
+      "subscribe": "立即訂閱",
+      "freeRegister": "免費註冊",
+      "currentPlan": "目前方案",
+      "upgradePlan": "升級方案",
+      "studentCannotSubscribe": "學生無法訂閱",
+      "loginRequired": "請先登入才能訂閱方案",
+      "studentAccountWarning": "學生帳號無法訂閱教師方案，請使用教師帳號登入",
+      "logoutFirst": "請先登出，使用教師帳號登入才能訂閱"
+    },
     "tabs": {
       "subscription": "月訂閱方案",
       "pointPackages": "點數包加購"
@@ -422,6 +432,16 @@
       "unitCost": "元/點",
       "discount": "省 {{percent}}%",
       "validity": "有效期限：1 年"
+    },
+    "payment": {
+      "title": "完成付款",
+      "securePayment": "安全的付款流程",
+      "selectedPlan": "您選擇了 {{planName}} 方案",
+      "success": "成功訂閱 {{planName}} 方案！",
+      "error": "訂閱處理發生錯誤，請聯繫客服",
+      "failed": "付款失敗: {{error}}",
+      "redirecting": "已為您自動開啟付款頁面",
+      "hasSubscription": "您已有訂閱方案，導向訂閱管理頁面"
     },
     "plans": {
       "free": {
@@ -477,26 +497,6 @@
       "a7": "是的，訂閱自動續費。每 30 天扣款一次。",
       "q8": "如何取消訂閱？取消後會怎樣？",
       "a8": "可隨時透過帳戶設定取消訂閱，下個月將不再扣款。未使用完的點數於點數期限內可使用，直到到期歸零。"
-    },
-    "actions": {
-      "subscribe": "立即訂閱",
-      "freeRegister": "免費註冊",
-      "currentPlan": "目前方案",
-      "upgradePlan": "升級方案",
-      "studentCannotSubscribe": "學生無法訂閱",
-      "loginRequired": "請先登入才能訂閱方案",
-      "studentAccountWarning": "學生帳號無法訂閱教師方案，請使用教師帳號登入",
-      "logoutFirst": "請先登出，使用教師帳號登入才能訂閱"
-    },
-    "payment": {
-      "title": "完成付款",
-      "securePayment": "安全的付款流程",
-      "selectedPlan": "您選擇了 {{planName}} 方案",
-      "success": "成功訂閱 {{planName}} 方案！",
-      "error": "訂閱處理發生錯誤，請聯繫客服",
-      "failed": "付款失敗: {{error}}",
-      "redirecting": "已為您自動開啟付款頁面",
-      "hasSubscription": "您已有訂閱方案，導向訂閱管理頁面"
     }
   },
   "teacherDashboard": {
@@ -1259,7 +1259,8 @@
       "missingLowercase": "密碼必須包含至少一個小寫字母",
       "missingNumber": "密碼必須包含至少一個數字",
       "missingSpecialChar": "密碼必須包含至少一個特殊字元（!@#$%^&* 等）",
-      "registerFailed": "註冊失敗，請稍後再試"
+      "registerFailed": "註冊失敗，請稍後再試",
+      "successMessage": "註冊成功！請檢查您的 Email 信箱並點擊驗證連結。"
     },
     "footer": {
       "hasAccount": "已有帳號？",
