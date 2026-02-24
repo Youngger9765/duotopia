@@ -77,7 +77,7 @@ export default function TeacherRegisterSheet({
             email: formData.email,
             message:
               response.message ||
-              "註冊成功！請檢查您的 Email 信箱並點擊驗證連結。",
+              t("teacherRegister.successMessage"),
           },
         });
       } else {

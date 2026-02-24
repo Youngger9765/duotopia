@@ -1228,7 +1228,8 @@
       "missingLowercase": "密碼必須包含至少一個小寫字母",
       "missingNumber": "密碼必須包含至少一個數字",
       "missingSpecialChar": "密碼必須包含至少一個特殊字元（!@#$%^&* 等）",
-      "registerFailed": "註冊失敗，請稍後再試"
+      "registerFailed": "註冊失敗，請稍後再試",
+      "successMessage": "註冊成功！請檢查您的 Email 信箱並點擊驗證連結。"
     },
     "footer": {
       "hasAccount": "已有帳號？",

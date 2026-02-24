@@ -161,7 +161,7 @@ export default function PricingPage() {
 
   const handlePaymentSuccess = async (transactionId: string) => {
     try {
-      console.log("Payment successful, transaction ID:", transactionId);
+      void transactionId;
       toast.success(
         t("pricing.payment.success", { planName: selectedPlan?.name }),
       );
@@ -336,7 +336,6 @@ export default function PricingPage() {
         </div>
       </header>
 
-      {/* Hero Section - same style as Home page */}
       {/* Hero Section - same style as Home page */}
       <section className="bg-gradient-to-b from-[#204dc0] to-[#101f6b] text-white py-8">
         <div className="container mx-auto px-4 sm:px-8 lg:px-16">

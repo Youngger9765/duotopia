@@ -1229,7 +1229,8 @@
       "missingLowercase": "Password must contain at least one lowercase letter",
       "missingNumber": "Password must contain at least one number",
       "missingSpecialChar": "Password must contain at least one special character (!@#$%^&* etc.)",
-      "registerFailed": "Registration failed, please try again later"
+      "registerFailed": "Registration failed, please try again later",
+      "successMessage": "Registration successful! Please check your email and click the verification link."
     },
     "footer": {
       "hasAccount": "Already have an account?",
