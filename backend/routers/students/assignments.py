@@ -1276,8 +1276,9 @@ async def start_word_selection_practice(
         final_distractors = other_translations[:3]
 
         # Fallback for legacy assignments with small word sets
-        while len(final_distractors) < 3:
-            final_distractors.append(f"選項{chr(65 + len(final_distractors))}")
+        num_needed = 3 - len(final_distractors)
+        for i in range(num_needed):
+            final_distractors.append(f"選項{chr(65 + i)}")
 
         # Create options array with correct answer and 3 distractors = 4 total
         options = [correct_answer] + final_distractors
