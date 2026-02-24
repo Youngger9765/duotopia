@@ -92,7 +92,16 @@ jobs:
         echo "Running Flake8 linting..."
         flake8 . --config=../.flake8
 
-    - name: Check for missing migrations
+    - name: Apply migrations to fresh DB
+      env:
+        DATABASE_URL: postgresql://test:test@localhost:5432/migration_check
+      working-directory: ./backend
+      run: |
+        echo "🔄 Applying all migrations to fresh local PostgreSQL..."
+        alembic upgrade head
+        echo "✅ All migrations applied successfully"
+
+    - name: Check for model-migration sync
       # TODO: Remove continue-on-error after cleaning up legacy model-migration
       # differences (Issue #314). Currently there are pre-existing mismatches
       # (removed tables, type diffs, index diffs) that cause alembic check to fail.
@@ -101,21 +110,15 @@ jobs:
         DATABASE_URL: postgresql://test:test@localhost:5432/migration_check
       working-directory: ./backend
       run: |
-        echo "🔄 Applying all migrations to fresh local PostgreSQL..."
-        if alembic upgrade head; then
-          echo "🔍 Checking for uncommitted model changes..."
-          if ! alembic check; then
-            echo ""
-            echo "⚠️ Model-migration differences detected (may include legacy diffs)"
-            echo "📝 If you modified models, ensure you created a migration:"
-            echo "👉 cd backend && alembic revision --autogenerate -m 'description'"
-            exit 1
-          fi
-          echo "✅ Models and migrations are in sync"
-        else
-          echo "⚠️ Migration chain has issues on fresh DB (pre-existing)"
-          echo "📝 Skipping model-migration sync check"
+        echo "🔍 Checking for uncommitted model changes..."
+        if ! alembic check; then
+          echo ""
+          echo "⚠️ Model-migration differences detected (may include legacy diffs)"
+          echo "📝 If you modified models, ensure you created a migration:"
+          echo "👉 cd backend && alembic revision --autogenerate -m 'description'"
+          exit 1
         fi
+        echo "✅ Models and migrations are in sync"
 
     - name: Run unit tests
       # TODO: Remove continue-on-error after fixing unit tests (Issue #314)
