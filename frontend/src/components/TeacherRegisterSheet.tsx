@@ -75,9 +75,7 @@ export default function TeacherRegisterSheet({
         navigate("/teacher/verify-email-prompt", {
           state: {
             email: formData.email,
-            message:
-              response.message ||
-              t("teacherRegister.successMessage"),
+            message: response.message || t("teacherRegister.successMessage"),
           },
         });
       } else {

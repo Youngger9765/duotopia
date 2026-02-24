@@ -35,9 +35,7 @@ import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { apiClient } from "@/lib/api";
 
-function getSubscriptionPlans(
-  t: (key: string) => string,
-): SubscriptionPlan[] {
+function getSubscriptionPlans(t: (key: string) => string): SubscriptionPlan[] {
   return [
     {
       id: "tutor",
@@ -416,7 +414,6 @@ export default function PricingPage() {
       </section>
 
       <div className="container mx-auto px-4 py-12">
-
         {/* Tabs: Monthly Subscription | Point Packages */}
         <div className="max-w-5xl mx-auto">
           {activeTab === "subscription" && (
@@ -429,9 +426,7 @@ export default function PricingPage() {
                     onSelect={handleSelectPlan}
                     disabled={isStudent}
                     disabledText={
-                      isStudent
-                        ? t("pricing.actions.logoutFirst")
-                        : undefined
+                      isStudent ? t("pricing.actions.logoutFirst") : undefined
                     }
                     ctaText={t("pricing.actions.subscribe")}
                   />
@@ -467,7 +462,6 @@ export default function PricingPage() {
         <div ref={faqRef} className="max-w-2xl mx-auto mt-16">
           <PricingFAQ />
         </div>
-
       </div>
 
       {/* Footer - same as Home page */}
