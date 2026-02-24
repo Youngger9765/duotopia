@@ -39,26 +39,27 @@ def upgrade() -> None:
     # ========================================
 
     # Drop tax_id unique constraints if they exist
+    # Wrapped in column check for fresh DB compatibility (tax_id may not exist yet
+    # if migration f8a7c3d2e1b0 ran before the organizations table was created)
     op.execute(
         """
-        ALTER TABLE organizations
-        DROP CONSTRAINT IF EXISTS uq_organizations_tax_id
-    """
-    )
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'organizations' AND column_name = 'tax_id'
+            ) THEN
+                ALTER TABLE organizations
+                DROP CONSTRAINT IF EXISTS uq_organizations_tax_id;
 
-    op.execute(
-        """
-        ALTER TABLE organizations
-        DROP CONSTRAINT IF EXISTS organizations_tax_id_key
-    """
-    )
+                ALTER TABLE organizations
+                DROP CONSTRAINT IF EXISTS organizations_tax_id_key;
 
-    # Create partial unique index for tax_id (active only)
-    op.execute(
-        """
-        CREATE UNIQUE INDEX IF NOT EXISTS uq_organizations_tax_id_active
-        ON organizations (tax_id)
-        WHERE is_active = true AND tax_id IS NOT NULL
+                EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS uq_organizations_tax_id_active
+                ON organizations (tax_id)
+                WHERE is_active = true AND tax_id IS NOT NULL';
+            END IF;
+        END $$;
     """
     )
 
