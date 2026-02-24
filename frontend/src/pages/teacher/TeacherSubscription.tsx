@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Card,
@@ -210,7 +210,7 @@ export default function TeacherSubscription() {
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const { isAuthenticated } = useTeacherAuthStore();
-  const subscriptionPlans = getSubscriptionPlans(t);
+  const subscriptionPlans = useMemo(() => getSubscriptionPlans(t), [t]);
 
   // Determine current plan ID from subscription data
   const getCurrentPlanId = (): string | null => {
@@ -346,11 +346,14 @@ export default function TeacherSubscription() {
       setShowCancelDialog(false);
       await fetchSubscriptionData();
     } catch (error) {
-      const err = error as { response?: { data?: { detail?: string } } };
-      toast.error(
-        err.response?.data?.detail ||
-          t("teacherSubscription.messages.cancelFailed"),
-      );
+      if (error && typeof error === "object" && "detail" in error) {
+        toast.error(
+          (error as { detail: string }).detail ||
+            t("teacherSubscription.messages.cancelFailed"),
+        );
+      } else {
+        toast.error(t("teacherSubscription.messages.cancelFailed"));
+      }
     }
   };
 
@@ -360,11 +363,14 @@ export default function TeacherSubscription() {
       toast.success(t("teacherSubscription.messages.reactivateSuccess"));
       await fetchSubscriptionData();
     } catch (error) {
-      const err = error as { response?: { data?: { detail?: string } } };
-      toast.error(
-        err.response?.data?.detail ||
-          t("teacherSubscription.messages.reactivateFailed"),
-      );
+      if (error && typeof error === "object" && "detail" in error) {
+        toast.error(
+          (error as { detail: string }).detail ||
+            t("teacherSubscription.messages.reactivateFailed"),
+        );
+      } else {
+        toast.error(t("teacherSubscription.messages.reactivateFailed"));
+      }
     }
   };
 
