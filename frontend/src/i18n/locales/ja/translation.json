@@ -94,7 +94,9 @@
       }
     },
     "pagination": {
-      "label": "{{current}} / {{total}} ページ"
+      "label": "{{current}} / {{total}} ページ",
+      "previous": "前のページ",
+      "next": "次のページ"
     }
   }
 }

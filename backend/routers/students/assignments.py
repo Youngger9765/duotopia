@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional, List, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, contains_eager
 from sqlalchemy import text, case, func
 
 from database import get_db
@@ -59,18 +59,21 @@ async def get_student_assignments(
     """取得學生作業列表"""
     student_id = current_student.get("sub")
 
-    # Base query with joinedload to avoid N+1
-    query = (
-        db.query(StudentAssignment)
-        .options(joinedload(StudentAssignment.assignment))
-        .filter(StudentAssignment.student_id == int(student_id))
+    # Base query
+    query = db.query(StudentAssignment).filter(
+        StudentAssignment.student_id == int(student_id)
     )
 
-    # Filter by practice_mode (via parent Assignment)
+    # Filter by practice_mode: use explicit join + contains_eager to reuse the
+    # JOIN for both filtering and eager-loading.  Otherwise use joinedload.
     if practice_mode:
-        query = query.join(
-            Assignment, StudentAssignment.assignment_id == Assignment.id
-        ).filter(Assignment.practice_mode == practice_mode)
+        query = (
+            query.join(Assignment, StudentAssignment.assignment_id == Assignment.id)
+            .options(contains_eager(StudentAssignment.assignment))
+            .filter(Assignment.practice_mode == practice_mode)
+        )
+    else:
+        query = query.options(joinedload(StudentAssignment.assignment))
 
     # Sorting
     if sort_by == "due_date_desc":

@@ -94,7 +94,9 @@
       }
     },
     "pagination": {
-      "label": "{{current}} / {{total}} 페이지"
+      "label": "{{current}} / {{total}} 페이지",
+      "previous": "이전 페이지",
+      "next": "다음 페이지"
     }
   }
 }

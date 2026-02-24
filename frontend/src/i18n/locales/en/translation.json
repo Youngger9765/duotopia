@@ -743,7 +743,9 @@
       }
     },
     "pagination": {
-      "label": "Page {{current}} / {{total}}"
+      "label": "Page {{current}} / {{total}}",
+      "previous": "Previous page",
+      "next": "Next page"
     }
   },
   "studentAssignmentDetail": {

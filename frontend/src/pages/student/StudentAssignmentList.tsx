@@ -482,28 +482,32 @@ export default function StudentAssignmentList() {
         <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3 sm:gap-4">
           {paged.map(renderAssignmentCard)}
         </div>
-        <div className="flex items-center justify-center gap-3 mt-6">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={safeCurrentPage <= 1}
-            className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronLeft className="h-5 w-5 text-gray-600" />
-          </button>
-          <span className="text-sm text-gray-700 font-medium">
-            {t("studentAssignmentList.pagination.label", {
-              current: safeCurrentPage,
-              total: totalPages,
-            })}
-          </span>
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={safeCurrentPage >= totalPages}
-            className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronRight className="h-5 w-5 text-gray-600" />
-          </button>
-        </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3 mt-6">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={safeCurrentPage <= 1}
+              className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label={t("studentAssignmentList.pagination.previous", "Previous page")}
+            >
+              <ChevronLeft className="h-5 w-5 text-gray-600" />
+            </button>
+            <span className="text-sm text-gray-700 font-medium">
+              {t("studentAssignmentList.pagination.label", {
+                current: safeCurrentPage,
+                total: totalPages,
+              })}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safeCurrentPage >= totalPages}
+              className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label={t("studentAssignmentList.pagination.next", "Next page")}
+            >
+              <ChevronRight className="h-5 w-5 text-gray-600" />
+            </button>
+          </div>
+        )}
       </>
     );
   };
