@@ -18,7 +18,7 @@
    backend/.env.staging
 
    # GitHub Secrets
-   https://github.com/Youngger9765/duotopia/settings/secrets/actions
+   https://github.com/myduotopia/duotopia/settings/secrets/actions
    ```
 
 3. **Verify no active breaches**

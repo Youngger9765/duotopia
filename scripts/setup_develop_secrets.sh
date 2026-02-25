@@ -4,7 +4,7 @@
 
 set -e  # Exit on error
 
-REPO="Youngger9765/duotopia"
+REPO="myduotopia/duotopia"
 
 echo "=========================================="
 echo "🔧 Develop Environment Secrets Setup"

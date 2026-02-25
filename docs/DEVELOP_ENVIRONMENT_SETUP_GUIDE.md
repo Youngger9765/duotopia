@@ -79,7 +79,7 @@ git push origin develop
 監控部署狀態：
 ```bash
 # 在瀏覽器中查看
-open https://github.com/Youngger9765/duotopia/actions
+open https://github.com/myduotopia/duotopia/actions
 
 # 或使用 CLI
 gh run list --branch develop
@@ -106,8 +106,8 @@ echo "Backend URL:  $BACKEND_URL"
 echo "Frontend URL: $FRONTEND_URL"
 
 # 更新 GitHub Secrets
-gh secret set DEVELOP_BACKEND_URL --body "$BACKEND_URL" --repo Youngger9765/duotopia
-gh secret set DEVELOP_FRONTEND_URL --body "$FRONTEND_URL" --repo Youngger9765/duotopia
+gh secret set DEVELOP_BACKEND_URL --body "$BACKEND_URL" --repo myduotopia/duotopia
+gh secret set DEVELOP_FRONTEND_URL --body "$FRONTEND_URL" --repo myduotopia/duotopia
 ```
 
 ### 步驟 6: 驗證部署
@@ -237,13 +237,13 @@ gcloud artifacts docker images list \
   --quiet
 
 # 3. 刪除 GitHub Secrets（可選）
-gh secret delete DEVELOP_BACKEND_SERVICE --repo Youngger9765/duotopia
-gh secret delete DEVELOP_FRONTEND_SERVICE --repo Youngger9765/duotopia
-gh secret delete DEVELOP_BACKEND_URL --repo Youngger9765/duotopia
-gh secret delete DEVELOP_FRONTEND_URL --repo Youngger9765/duotopia
-gh secret delete DEVELOP_JWT_SECRET --repo Youngger9765/duotopia
-gh secret delete DEVELOP_CRON_SECRET --repo Youngger9765/duotopia
-gh secret delete DEVELOP_ENABLE_PAYMENT --repo Youngger9765/duotopia
+gh secret delete DEVELOP_BACKEND_SERVICE --repo myduotopia/duotopia
+gh secret delete DEVELOP_FRONTEND_SERVICE --repo myduotopia/duotopia
+gh secret delete DEVELOP_BACKEND_URL --repo myduotopia/duotopia
+gh secret delete DEVELOP_FRONTEND_URL --repo myduotopia/duotopia
+gh secret delete DEVELOP_JWT_SECRET --repo myduotopia/duotopia
+gh secret delete DEVELOP_CRON_SECRET --repo myduotopia/duotopia
+gh secret delete DEVELOP_ENABLE_PAYMENT --repo myduotopia/duotopia
 
 # 4. 刪除 develop branch（可選）
 git branch -d develop

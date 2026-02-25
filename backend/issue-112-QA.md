@@ -1108,7 +1108,7 @@ organization_info = OrganizationInfo(
 
 **Branch:** `feat/issue-112-org-hierarchy`
 **Deployment:** In progress
-**GitHub Actions:** https://github.com/Youngger9765/duotopia/actions/runs/20621774420
+**GitHub Actions:** https://github.com/myduotopia/duotopia/actions/runs/20621774420
 
 #### Verification Plan
 

@@ -4,7 +4,7 @@
 
 set -e
 
-REPO="Youngger9765/duotopia"
+REPO="myduotopia/duotopia"
 REGION="asia-east1"
 
 echo "=========================================="
