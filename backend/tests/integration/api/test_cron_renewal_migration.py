@@ -33,8 +33,8 @@ def teacher_with_subscription(db_session: Session):
     period = SubscriptionPeriod(
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
-        amount_paid=330,
-        quota_total=10000,
+        amount_paid=299,
+        quota_total=2000,
         quota_used=0,
         start_date=datetime.now(timezone.utc) - timedelta(days=29),
         end_date=datetime.now(timezone.utc) + timedelta(days=1),
@@ -94,8 +94,8 @@ class TestCronRenewalSystem:
         new_period = SubscriptionPeriod(
             teacher_id=teacher_with_subscription.id,
             plan_name="Tutor Teachers",
-            amount_paid=330,
-            quota_total=10000,
+            amount_paid=299,
+            quota_total=2000,
             quota_used=0,
             start_date=old_period.end_date,
             end_date=old_period.end_date + timedelta(days=30),

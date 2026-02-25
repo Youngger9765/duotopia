@@ -521,7 +521,7 @@
       "subtitle": "管理您的班級、課程與學生學習進度"
     },
     "subscription": {
-      "trialTitle": "🎉 30天免費試用期",
+      "trialTitle": "🎉 免費試用",
       "trialDescription": "您的免費試用將在 {{days}} 天後到期",
       "expiryDate": "到期日:",
       "days": "天",
@@ -689,7 +689,7 @@
         "planNoChange": "— No change —",
         "planSelect": "Select a plan",
         "plans": {
-          "trial": "30-Day Trial",
+          "trial": "Free Trial",
           "tutor": "Tutor Teachers",
           "school": "School Teachers",
           "demo": "Demo Unlimited Plan",
@@ -1077,13 +1077,13 @@
       "separator": "測試帳號快速登入",
       "demoTeacher": "Demo 教師（已充值300天）",
       "demoEmail": "demo@duotopia.com",
-      "trialTeacher": "試用教師（30天試用期）",
+      "trialTeacher": "試用教師（免費試用）",
       "trialEmail": "trial@duotopia.com",
       "expiredTeacher": "過期教師（未訂閱）",
       "expiredEmail": "expired@duotopia.com",
       "passwordHint": "🔐 測試帳號密碼均為：demo123",
       "demoDescription": "demo@duotopia.com - 已充值300天",
-      "trialDescription": "trial@duotopia.com - 30天試用期",
+      "trialDescription": "trial@duotopia.com - 免費試用",
       "expiredDescription": "expired@duotopia.com - 未訂閱/已過期"
     },
     "footer": {
@@ -2947,11 +2947,11 @@
       "unknownPlan": "未知方案",
       "trial": "試用中",
       "active": "有效",
-      "trialDescription": "試用期間，剩餘點數可帶入付費方案",
+      "trialDescription": "免費試用期間，剩餘點數可帶入付費方案",
       "statusGood": "訂閱狀態良好",
-      "quotaSchool": "25000 點 AI 評估配額/月 (約 416 分鐘口說評估)",
-      "quotaTrial": "10000 點 AI 評估配額 (試用期 30 天)",
-      "quotaTutor": "10000 點 AI 評估配額/月 (約 166 分鐘口說評估)",
+      "quotaSchool": "6000 點 AI 配額/月",
+      "quotaTrial": "2000 點 AI 配額（免費試用，效期一年）",
+      "quotaTutor": "2000 點 AI 配額/月",
       "noSubscription": "尚未訂閱",
       "choosePlan": "選擇適合您的訂閱方案"
     },

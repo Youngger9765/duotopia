@@ -35,7 +35,7 @@ class CreateSubscriptionRequest(BaseModel):
     """創建訂閱請求"""
 
     teacher_email: EmailStr
-    # "30-Day Trial" | "Tutor Teachers" | "School Teachers" |
+    # "Free Trial" | "Tutor Teachers" | "School Teachers" |
     # "Demo Unlimited Plan" | "VIP"
     plan_name: str
     end_date: str  # YYYY-MM-DD (月底日期)
@@ -74,14 +74,9 @@ class SubscriptionResponse(BaseModel):
 # ============ Helper Functions ============
 def get_plan_quota(plan_name: str) -> int:
     """根據方案名稱獲取對應的 quota"""
-    plan_quotas = {
-        "30-Day Trial": 4000,
-        "Tutor Teachers": 10000,
-        "School Teachers": 25000,
-        "Demo Unlimited Plan": 999999,
-        "VIP": 0,  # VIP 方案的 quota 由 Admin 自訂
-    }
-    return plan_quotas.get(plan_name, 0)
+    from config.plans import PLAN_QUOTAS
+
+    return PLAN_QUOTAS.get(plan_name, 0)
 
 
 def parse_end_date(date_str: str) -> datetime:

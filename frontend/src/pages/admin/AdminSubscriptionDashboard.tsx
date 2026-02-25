@@ -1946,7 +1946,7 @@ export default function AdminSubscriptionDashboard() {
                         {t("adminSubscription.modal.noChange")}
                       </SelectItem>
                     )}
-                    <SelectItem value="30-Day Trial">30-Day Trial</SelectItem>
+                    <SelectItem value="Free Trial">Free Trial</SelectItem>
                     <SelectItem value="Tutor Teachers">
                       Tutor Teachers
                     </SelectItem>

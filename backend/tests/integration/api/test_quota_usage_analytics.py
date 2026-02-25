@@ -40,7 +40,7 @@ def setup_test_data():
     period = SubscriptionPeriod(
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
-        amount_paid=330,
+        amount_paid=299,
         quota_total=1800,
         quota_used=800,  # 已使用 800 秒
         start_date=now - timedelta(days=15),

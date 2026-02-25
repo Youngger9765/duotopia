@@ -437,17 +437,19 @@ class EmailService:
             teacher.email_verification_token = None
             teacher.is_active = True
 
-            # 🎯 重要：啟動 30 天訂閱！創建 SubscriptionPeriod
+            # 🎯 重要：啟動免費試用訂閱！創建 SubscriptionPeriod
+            from config.plans import PLAN_FREE_TRIAL, TRIAL_QUOTA, TRIAL_DAYS
+
             now = datetime.utcnow()
 
             new_period = SubscriptionPeriod(
                 teacher_id=teacher.id,
-                plan_name="30-Day Trial",
+                plan_name=PLAN_FREE_TRIAL,
                 amount_paid=0,
-                quota_total=10000,
+                quota_total=TRIAL_QUOTA,
                 quota_used=0,
                 start_date=now,
-                end_date=now + timedelta(days=30),
+                end_date=now + timedelta(days=TRIAL_DAYS),
                 payment_method="trial",
                 payment_status="completed",
                 status="active",
@@ -456,7 +458,7 @@ class EmailService:
 
             db.commit()
 
-            logger.info(f"教師 email 驗證成功並啟動 30 天訂閱: {teacher.email}")
+            logger.info(f"教師 email 驗證成功並啟動免費試用訂閱: {teacher.email}")
             return teacher
 
         except Exception as e:

@@ -75,7 +75,7 @@ def teacher_with_subscription(db_session: Session):
         teacher_id=teacher.id,
         plan_name="School Teachers",
         amount_paid=0,
-        quota_total=25000,
+        quota_total=6000,
         quota_used=5000,
         start_date=now,
         end_date=datetime(2025, 12, 31, 23, 59, 59, 999999, tzinfo=timezone.utc),
@@ -140,7 +140,7 @@ class TestThreeLayerArchitecture:
         assert subscribed is not None
         assert subscribed["current_subscription"] is not None
         assert subscribed["current_subscription"]["plan_name"] == "School Teachers"
-        assert subscribed["current_subscription"]["quota_total"] == 25000
+        assert subscribed["current_subscription"]["quota_total"] == 6000
 
         # 找到沒訂閱的教師
         no_sub = next(
@@ -172,7 +172,7 @@ class TestThreeLayerArchitecture:
         assert len(data["periods"]) >= 1
         period = data["periods"][0]
         assert period["plan_name"] == "School Teachers"
-        assert period["quota_total"] == 25000
+        assert period["quota_total"] == 6000
         assert period["status"] == "active"
 
     def test_layer3_period_history_empty(
@@ -245,7 +245,7 @@ class TestCreateSubscriptionHistory:
         assert record["reason"] == "Test create history"
         assert "changes" in record
         assert record["changes"]["plan_name"] == "Tutor Teachers"
-        assert record["changes"]["quota_total"] == 10000
+        assert record["changes"]["quota_total"] == 2000
         assert record["changes"]["status"] == "active"
         assert "timestamp" in record
 
