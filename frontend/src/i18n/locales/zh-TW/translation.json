@@ -2432,7 +2432,13 @@
       "resetPasswordFailed": "重設密碼失敗，請稍後再試",
       "viewSubmissionsInDevelopment": "查看學生提交功能尚在開發中",
       "contentSaved": "內容已成功儲存",
-      "noAssignments": "尚未指派任何作業"
+      "noAssignments": "尚未指派任何作業",
+      "confirmArchiveAssignment": "確定要封存作業「{{title}}」嗎？封存後，所有學生成績將結算為當下成績，作業將移至封存區。",
+      "assignmentArchived": "作業「{{title}}」已封存",
+      "archiveAssignmentFailed": "封存作業失敗，請稍後再試",
+      "assignmentUnarchived": "作業「{{title}}」已解除封存",
+      "unarchiveAssignmentFailed": "解除封存失敗，請稍後再試",
+      "noArchivedAssignments": "尚無封存作業"
     },
     "buttons": {
       "backToList": "返回班級列表",
@@ -2446,6 +2452,8 @@
       "viewSubmissions": "查看學生提交",
       "editAssignment": "編輯作業",
       "deleteAssignment": "刪除作業",
+      "archiveAssignment": "封存",
+      "unarchiveAssignment": "解除封存",
       "cancel": "取消",
       "saveChanges": "儲存變更",
       "addItem": "新增項目",
@@ -2466,7 +2474,9 @@
       "programs": "課程",
       "programList": "班級教材",
       "assignments": "作業",
-      "assignmentManagement": "作業管理"
+      "assignmentManagement": "作業管理",
+      "activeAssignments": "進行中",
+      "archivedAssignments": "封存區"
     },
     "sections": {
       "classStudents": "班級學生",

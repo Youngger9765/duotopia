@@ -2433,7 +2433,13 @@
       "resetPasswordFailed": "Failed to reset password. Please try again later.",
       "viewSubmissionsInDevelopment": "View student submissions feature is under development",
       "contentSaved": "Content saved successfully",
-      "noAssignments": "No assignments assigned yet"
+      "noAssignments": "No assignments assigned yet",
+      "confirmArchiveAssignment": "Are you sure you want to archive assignment \"{{title}}\"? All student scores will be finalized at their current state and the assignment will be moved to the archive.",
+      "assignmentArchived": "Assignment \"{{title}}\" has been archived",
+      "archiveAssignmentFailed": "Failed to archive assignment. Please try again later.",
+      "assignmentUnarchived": "Assignment \"{{title}}\" has been unarchived",
+      "unarchiveAssignmentFailed": "Failed to unarchive assignment. Please try again later.",
+      "noArchivedAssignments": "No archived assignments"
     },
     "buttons": {
       "backToList": "Back to Classroom List",
@@ -2446,6 +2452,8 @@
       "viewSubmissions": "View Student Submissions",
       "editAssignment": "Edit Assignment",
       "deleteAssignment": "Delete Assignment",
+      "archiveAssignment": "Archive",
+      "unarchiveAssignment": "Unarchive",
       "cancel": "Cancel",
       "saveChanges": "Save Changes",
       "addItem": "Add Item",
@@ -2466,7 +2474,9 @@
       "programs": "Programs",
       "programList": "Class Materials",
       "assignments": "Assignments",
-      "assignmentManagement": "Assignment Management"
+      "assignmentManagement": "Assignment Management",
+      "activeAssignments": "Active",
+      "archivedAssignments": "Archived"
     },
     "sections": {
       "classStudents": "Class Students",

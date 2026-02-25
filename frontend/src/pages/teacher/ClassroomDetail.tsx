@@ -37,6 +37,8 @@ import {
   Trash2,
   Sparkles,
   Eye,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { getContentTypeIcon } from "@/lib/contentTypeIcon";
 import { apiClient, ApiError } from "@/lib/api";
@@ -159,6 +161,11 @@ export default function ClassroomDetail({
   const [assignmentsLoaded, setAssignmentsLoaded] = useState(false);
   const [selectedAssignment] = useState<Assignment | null>(null);
   const [showAssignmentDetails, setShowAssignmentDetails] = useState(false);
+  // Archive states
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivedAssignments, setArchivedAssignments] = useState<Assignment[]>(
+    [],
+  );
   const [batchGradingModal, setBatchGradingModal] = useState({
     open: false,
     assignmentId: 0,
@@ -346,13 +353,20 @@ export default function ClassroomDetail({
 
   const fetchAssignments = async () => {
     try {
-      const response = await apiClient.get(
-        `/api/teachers/assignments/?classroom_id=${id}`,
+      const [activeResponse, archivedResponse] = await Promise.all([
+        apiClient.get(`/api/teachers/assignments/?classroom_id=${id}`),
+        apiClient.get(
+          `/api/teachers/assignments/?classroom_id=${id}&is_archived=true`,
+        ),
+      ]);
+      setAssignments(Array.isArray(activeResponse) ? activeResponse : []);
+      setArchivedAssignments(
+        Array.isArray(archivedResponse) ? archivedResponse : [],
       );
-      setAssignments(Array.isArray(response) ? response : []);
     } catch (err) {
       console.error("Failed to fetch assignments:", err);
       setAssignments([]);
+      setArchivedAssignments([]);
     } finally {
       setAssignmentsLoaded(true);
     }
@@ -412,6 +426,48 @@ export default function ClassroomDetail({
         console.error("Failed to delete assignment:", error);
         toast.error(t("classroomDetail.messages.deleteAssignmentFailed"));
       }
+    }
+  };
+
+  const handleArchiveAssignment = async (assignment: Assignment) => {
+    if (
+      confirm(
+        t("classroomDetail.messages.confirmArchiveAssignment", {
+          title: assignment.title,
+        }),
+      )
+    ) {
+      try {
+        await apiClient.patch(
+          `/api/teachers/assignments/${assignment.id}/archive`,
+        );
+        toast.success(
+          t("classroomDetail.messages.assignmentArchived", {
+            title: assignment.title,
+          }),
+        );
+        fetchAssignments();
+      } catch (error) {
+        console.error("Failed to archive assignment:", error);
+        toast.error(t("classroomDetail.messages.archiveAssignmentFailed"));
+      }
+    }
+  };
+
+  const handleUnarchiveAssignment = async (assignment: Assignment) => {
+    try {
+      await apiClient.patch(
+        `/api/teachers/assignments/${assignment.id}/unarchive`,
+      );
+      toast.success(
+        t("classroomDetail.messages.assignmentUnarchived", {
+          title: assignment.title,
+        }),
+      );
+      fetchAssignments();
+    } catch (error) {
+      console.error("Failed to unarchive assignment:", error);
+      toast.error(t("classroomDetail.messages.unarchiveAssignmentFailed"));
     }
   };
 
@@ -1349,29 +1405,33 @@ export default function ClassroomDetail({
               {!isTemplateMode && (
                 <TabsContent value="assignments" className="p-3 sm:p-6">
                   <div className="space-y-4 sm:space-y-6">
-                    {/* Header with Create Button */}
+                    {/* Header with Create Button and Archive Toggle */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                      <Button
-                        onClick={() => {
-                          if (!canAssignHomework) {
-                            toast.error(
-                              t("classroomDetail.messages.subscriptionExpired"),
-                            );
-                            return;
-                          }
-                          setShowAssignmentDialog(true);
-                        }}
-                        disabled={!canAssignHomework}
-                        className={`h-10 ${
-                          canAssignHomework
-                            ? "bg-blue-500 hover:bg-blue-600 text-white"
-                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        }`}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        {t("classroomDetail.buttons.assignNewHomework")}
-                      </Button>
-                      {!canAssignHomework && teacherData && (
+                      {!showArchived && (
+                        <Button
+                          onClick={() => {
+                            if (!canAssignHomework) {
+                              toast.error(
+                                t(
+                                  "classroomDetail.messages.subscriptionExpired",
+                                ),
+                              );
+                              return;
+                            }
+                            setShowAssignmentDialog(true);
+                          }}
+                          disabled={!canAssignHomework}
+                          className={`h-10 ${
+                            canAssignHomework
+                              ? "bg-blue-500 hover:bg-blue-600 text-white"
+                              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          }`}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          {t("classroomDetail.buttons.assignNewHomework")}
+                        </Button>
+                      )}
+                      {!canAssignHomework && !showArchived && teacherData && (
                         <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded-lg border border-yellow-200 dark:border-yellow-800">
                           <span className="font-medium">
                             {t(
@@ -1389,9 +1449,43 @@ export default function ClassroomDetail({
                           </span>
                         </div>
                       )}
+                      <div className="sm:ml-auto flex">
+                        <button
+                          onClick={() => setShowArchived(false)}
+                          className={`px-4 py-2 text-sm font-medium rounded-l-lg border ${
+                            !showArchived
+                              ? "bg-blue-500 text-white border-blue-500"
+                              : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          {t("classroomDetail.tabs.activeAssignments")}
+                          {assignments.length > 0 && (
+                            <span className="ml-1.5 text-xs">
+                              ({assignments.length})
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setShowArchived(true)}
+                          className={`px-4 py-2 text-sm font-medium rounded-r-lg border-t border-r border-b ${
+                            showArchived
+                              ? "bg-blue-500 text-white border-blue-500"
+                              : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          <Archive className="inline-block w-4 h-4 mr-1 -mt-0.5" />
+                          {t("classroomDetail.tabs.archivedAssignments")}
+                          {archivedAssignments.length > 0 && (
+                            <span className="ml-1.5 text-xs">
+                              ({archivedAssignments.length})
+                            </span>
+                          )}
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Assignment Stats - Using Real Data */}
+                    {/* Assignment Stats - Using Real Data (only for active view) */}
+                    {!showArchived && (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                       <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 sm:p-4 border dark:border-blue-800">
                         <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
@@ -1438,13 +1532,14 @@ export default function ClassroomDetail({
                         </div>
                       </div>
                     </div>
+                    )}
 
                     {/* Assignment List */}
-                    {assignments.length > 0 ? (
+                    {(showArchived ? archivedAssignments : assignments).length > 0 ? (
                       <>
                         {/* Mobile: Card Layout */}
                         <div className="md:hidden space-y-3">
-                          {assignments.map((assignment) => {
+                          {(showArchived ? archivedAssignments : assignments).map((assignment) => {
                             const completionRate =
                               assignment.completion_rate || 0;
                             // 🎯 Issue #118: 根據 content_type + practice_mode 決定顯示標籤
@@ -1693,6 +1788,35 @@ export default function ClassroomDetail({
                                   >
                                     {t("classroomDetail.buttons.previewDemo")}
                                   </Button>
+                                  {showArchived ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-12 min-h-12 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                      onClick={() =>
+                                        handleUnarchiveAssignment(assignment)
+                                      }
+                                    >
+                                      <ArchiveRestore className="w-4 h-4 mr-1" />
+                                      {t(
+                                        "classroomDetail.buttons.unarchiveAssignment",
+                                      )}
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-12 min-h-12 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                      onClick={() =>
+                                        handleArchiveAssignment(assignment)
+                                      }
+                                    >
+                                      <Archive className="w-4 h-4 mr-1" />
+                                      {t(
+                                        "classroomDetail.buttons.archiveAssignment",
+                                      )}
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -1727,7 +1851,7 @@ export default function ClassroomDetail({
                               </tr>
                             </thead>
                             <tbody>
-                              {assignments.map((assignment) => {
+                              {(showArchived ? archivedAssignments : assignments).map((assignment) => {
                                 const completionRate =
                                   assignment.completion_rate || 0;
                                 // 🎯 Issue #118: 根據 content_type + practice_mode 決定顯示標籤
@@ -1952,6 +2076,39 @@ export default function ClassroomDetail({
                                               )}
                                             </Button>
                                           ))}
+                                        {showArchived ? (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-orange-600 hover:text-orange-700 dark:text-orange-400 h-10 min-h-10"
+                                            onClick={() =>
+                                              handleUnarchiveAssignment(
+                                                assignment,
+                                              )
+                                            }
+                                          >
+                                            <ArchiveRestore className="w-4 h-4 mr-1" />
+                                            {t(
+                                              "classroomDetail.buttons.unarchiveAssignment",
+                                            )}
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 h-10 min-h-10"
+                                            onClick={() =>
+                                              handleArchiveAssignment(
+                                                assignment,
+                                              )
+                                            }
+                                          >
+                                            <Archive className="w-4 h-4 mr-1" />
+                                            {t(
+                                              "classroomDetail.buttons.archiveAssignment",
+                                            )}
+                                          </Button>
+                                        )}
                                       </div>
                                     </td>
                                   </tr>
@@ -1963,7 +2120,9 @@ export default function ClassroomDetail({
                       </>
                     ) : (
                       <div className="border dark:border-gray-700 rounded-lg p-8 text-center text-gray-500 dark:text-gray-400">
-                        {t("classroomDetail.messages.noAssignments")}
+                        {showArchived
+                          ? t("classroomDetail.messages.noArchivedAssignments")
+                          : t("classroomDetail.messages.noAssignments")}
                       </div>
                     )}
                   </div>

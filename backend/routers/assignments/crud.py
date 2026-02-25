@@ -289,6 +289,7 @@ async def create_assignment(
 async def get_assignments(
     classroom_id: Optional[int] = Query(None, description="Filter by classroom"),
     status: Optional[str] = Query(None, description="Filter by status"),
+    is_archived: Optional[bool] = Query(False, description="Filter by archive status"),
     db: Session = Depends(get_db),
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
@@ -296,11 +297,18 @@ async def get_assignments(
     取得作業列表（新架構）
     - 教師看到自己建立的作業
     - 可依班級和狀態篩選
+    - 預設只顯示未封存作業，is_archived=true 顯示封存作業
     """
     # 建立查詢
     query = db.query(Assignment).filter(
         Assignment.teacher_id == current_teacher.id, Assignment.is_active.is_(True)
     )
+
+    # 封存篩選
+    if is_archived:
+        query = query.filter(Assignment.is_archived.is_(True))
+    else:
+        query = query.filter(Assignment.is_archived.is_(False))
 
     # 套用篩選
     if classroom_id:
@@ -403,6 +411,13 @@ async def get_assignments(
                 "content_type": content_type,
                 "practice_mode": assignment.practice_mode,
                 "answer_mode": assignment.answer_mode,
+                # 封存狀態
+                "is_archived": assignment.is_archived or False,
+                "archived_at": (
+                    assignment.archived_at.isoformat()
+                    if assignment.archived_at
+                    else None
+                ),
             }
         )
 
@@ -668,6 +683,87 @@ async def delete_assignment(
     db.commit()
 
     return {"success": True, "message": "Assignment deleted successfully"}
+
+
+@router.patch("/{assignment_id}/archive")
+async def archive_assignment(
+    assignment_id: int,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    封存作業
+    - 將作業標記為已封存
+    - 所有學生成績結算為當下成績（狀態不變）
+    - 封存後不會顯示在作業管理列表中
+    """
+    assignment = (
+        db.query(Assignment)
+        .filter(
+            Assignment.id == assignment_id,
+            Assignment.teacher_id == current_teacher.id,
+            Assignment.is_active.is_(True),
+            Assignment.is_archived.is_(False),
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(
+            status_code=404,
+            detail="Assignment not found, already archived, or you don't have permission",
+        )
+
+    assignment.is_archived = True
+    assignment.archived_at = datetime.now(timezone.utc)
+
+    db.commit()
+
+    return {
+        "success": True,
+        "assignment_id": assignment_id,
+        "archived_at": assignment.archived_at.isoformat(),
+        "message": "Assignment archived successfully",
+    }
+
+
+@router.patch("/{assignment_id}/unarchive")
+async def unarchive_assignment(
+    assignment_id: int,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    解除封存作業
+    - 將作業從封存區恢復到作業管理列表
+    """
+    assignment = (
+        db.query(Assignment)
+        .filter(
+            Assignment.id == assignment_id,
+            Assignment.teacher_id == current_teacher.id,
+            Assignment.is_active.is_(True),
+            Assignment.is_archived.is_(True),
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(
+            status_code=404,
+            detail="Assignment not found, not archived, or you don't have permission",
+        )
+
+    assignment.is_archived = False
+    assignment.archived_at = None
+
+    db.commit()
+
+    return {
+        "success": True,
+        "assignment_id": assignment_id,
+        "message": "Assignment unarchived successfully",
+    }
 
 
 @router.get("/classrooms/{classroom_id}/students", response_model=List[StudentResponse])
