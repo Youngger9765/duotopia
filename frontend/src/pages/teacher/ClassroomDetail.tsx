@@ -1528,52 +1528,53 @@ export default function ClassroomDetail({
 
                     {/* Assignment Stats - Using Real Data (only for active view) */}
                     {!showArchived && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 sm:p-4 border dark:border-blue-800">
-                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          {t("classroomDetail.stats.totalAssignments")}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 sm:p-4 border dark:border-blue-800">
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            {t("classroomDetail.stats.totalAssignments")}
+                          </div>
+                          <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                            {assignments.length}
+                          </div>
                         </div>
-                        <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
-                          {assignments.length}
+                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 sm:p-4 border dark:border-green-800">
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            {t("classroomDetail.stats.completedAssignments")}
+                          </div>
+                          <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
+                            {
+                              assignments.filter(
+                                (a) => a.status === "completed",
+                              ).length
+                            }
+                          </div>
+                        </div>
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 sm:p-4 border dark:border-yellow-800">
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            {t("classroomDetail.stats.inProgressAssignments")}
+                          </div>
+                          <div className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                            {
+                              assignments.filter(
+                                (a) =>
+                                  a.status === "in_progress" ||
+                                  a.status === "not_started",
+                              ).length
+                            }
+                          </div>
+                        </div>
+                        <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 sm:p-4 border dark:border-red-800">
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            {t("classroomDetail.stats.overdueAssignments")}
+                          </div>
+                          <div className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
+                            {
+                              assignments.filter((a) => a.status === "overdue")
+                                .length
+                            }
+                          </div>
                         </div>
                       </div>
-                      <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 sm:p-4 border dark:border-green-800">
-                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          {t("classroomDetail.stats.completedAssignments")}
-                        </div>
-                        <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
-                          {
-                            assignments.filter((a) => a.status === "completed")
-                              .length
-                          }
-                        </div>
-                      </div>
-                      <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 sm:p-4 border dark:border-yellow-800">
-                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          {t("classroomDetail.stats.inProgressAssignments")}
-                        </div>
-                        <div className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                          {
-                            assignments.filter(
-                              (a) =>
-                                a.status === "in_progress" ||
-                                a.status === "not_started",
-                            ).length
-                          }
-                        </div>
-                      </div>
-                      <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 sm:p-4 border dark:border-red-800">
-                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          {t("classroomDetail.stats.overdueAssignments")}
-                        </div>
-                        <div className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
-                          {
-                            assignments.filter((a) => a.status === "overdue")
-                              .length
-                          }
-                        </div>
-                      </div>
-                    </div>
                     )}
 
                     {/* Filter Bar */}
