@@ -117,7 +117,7 @@ repos:
 
       # Flake8 Linting（Python）
       # TODO: Fix pre-existing F401,E402,F821,E722,F403,F405 errors and remove from ignore list
-      # See: https://github.com/Youngger9765/duotopia/issues/112#issuecomment-sync-migration
+      # See: https://github.com/myduotopia/duotopia/issues/112#issuecomment-sync-migration
       - id: flake8-check
         name: Flake8 linting
         entry: bash -c 'cd backend && flake8 . --max-line-length=120 --ignore=E203,W503,F401,E402,F821,E722,F403,F405,E501 --exclude=alembic,__pycache__,.venv,scripts,seed_data || exit 1'

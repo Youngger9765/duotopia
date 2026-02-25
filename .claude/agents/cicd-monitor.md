@@ -362,7 +362,7 @@ Final Results (285s total):
   ✅ Backend Tests - PASSED (180s)
   ✅ Frontend Build - PASSED (220s)
 
-🚀 PR is ready for review: https://github.com/Youngger9765/duotopia/pull/55
+🚀 PR is ready for review: https://github.com/myduotopia/duotopia/pull/55
 ```
 
 ### Example 2: Handling Failures (Checkpoint 2)

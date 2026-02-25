@@ -19,7 +19,7 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 if [[ "$BRANCH" == "staging" ]] || [[ "$BRANCH" == "main" ]]; then
     echo "🚀 Deployment triggered for $BRANCH"
     echo "📊 Monitor with: npm run monitor:$BRANCH"
-    echo "🔗 View at: https://github.com/Youngger9765/duotopia/actions"
+    echo "🔗 View at: https://github.com/myduotopia/duotopia/actions"
 
     # Optional: Auto-start monitor (uncomment if desired)
     # (sleep 5 && npm run monitor:$BRANCH 2>/dev/null) &

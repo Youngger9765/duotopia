@@ -591,7 +591,7 @@ async def demo_word_selection_start(
     Returns:
         Same format as teacher preview API for word selection practice.
     """
-    from services.translation import translation_service
+    # from services.translation import translation_service  # disabled (#303)
 
     # Validate assignment belongs to demo account
     assignment = get_demo_assignment(assignment_id, db)
@@ -627,32 +627,33 @@ async def demo_word_selection_start(
     # Limit to 10 words (consistent with student API)
     content_items = content_items[:10]
 
-    # Collect items needing distractor generation
-    items_needing_generation = [item for item in content_items if not item.distractors]
-
-    # Batch generate distractors if needed
-    if items_needing_generation:
-        words_for_distractors = [
-            {"word": item.text, "translation": item.translation or ""}
-            for item in items_needing_generation
-        ]
-        try:
-            # Generate 2 AI distractors, 1 from other words in assignment
-            generated = await translation_service.batch_generate_distractors(
-                words_for_distractors, count=2
-            )
-            for i, item in enumerate(items_needing_generation):
-                if i < len(generated):
-                    item._generated_distractors = generated[i]
-        except Exception as e:
-            logger.error(f"Failed to generate distractors for demo preview: {e}")
-            for item in items_needing_generation:
-                item._generated_distractors = ["選項A", "選項B", "選項C"]
+    # NOTE: AI distractor generation is temporarily disabled (#303).
+    # All distractors now come from other words in the assignment.
+    #
+    # --- AI distractor generation (disabled) ---
+    # items_needing_generation = [item for item in content_items if not item.distractors]
+    # if items_needing_generation:
+    #     words_for_distractors = [
+    #         {"word": item.text, "translation": item.translation or ""}
+    #         for item in items_needing_generation
+    #     ]
+    #     try:
+    #         generated = await translation_service.batch_generate_distractors(
+    #             words_for_distractors, count=2
+    #         )
+    #         for i, item in enumerate(items_needing_generation):
+    #             if i < len(generated):
+    #                 item._generated_distractors = generated[i]
+    #     except Exception as e:
+    #         logger.error(f"Failed to generate distractors for demo preview: {e}")
+    #         for item in items_needing_generation:
+    #             item._generated_distractors = ["選項A", "選項B", "選項C"]
+    # --- end AI distractor generation ---
 
     # Build response data
     words_with_options = []
 
-    # Collect all translations for cross-contamination (from other words in assignment)
+    # Collect all unique translations for picking distractors from the word set
     all_translations = {
         item.translation.lower().strip(): item.translation
         for item in content_items
@@ -662,51 +663,22 @@ async def demo_word_selection_start(
     for item in content_items:
         correct_answer = item.translation or ""
 
-        # Use pre-generated or just-generated distractors
-        if item.distractors:
-            ai_distractors = item.distractors
-        elif hasattr(item, "_generated_distractors"):
-            ai_distractors = item._generated_distractors
-        else:
-            ai_distractors = []
-
-        # Set for deduplication
-        seen = {correct_answer.lower().strip()}
-        final_distractors = []
-
-        # Step 1: Pick 1 translation from other words in assignment as distractor
+        # Pick 3 random distractors from other words' translations (#303)
         other_translations = [
             t
             for key, t in all_translations.items()
             if key != correct_answer.lower().strip()
         ]
-        if other_translations:
-            sibling_distractor = random.choice(other_translations)
-            if sibling_distractor.lower().strip() not in seen:
-                final_distractors.append(sibling_distractor)
-                seen.add(sibling_distractor.lower().strip())
+        random.shuffle(other_translations)
+        final_distractors = other_translations[:3]
 
-        # Step 2: Add AI-generated distractors (max 2)
-        for d in ai_distractors:
-            d_normalized = d.lower().strip()
-            if d_normalized not in seen and d.strip():
-                seen.add(d_normalized)
-                final_distractors.append(d)
-            if len(final_distractors) >= 3:
-                break
-
-        # Step 3: Fallback to ensure 3 distractors
-        fallback_options = ["選項A", "選項B", "選項C", "選項D", "選項E"]
-        fallback_idx = 0
-        while len(final_distractors) < 3 and fallback_idx < len(fallback_options):
-            fallback = fallback_options[fallback_idx]
-            if fallback.lower() not in seen:
-                final_distractors.append(fallback)
-                seen.add(fallback.lower())
-            fallback_idx += 1
+        # Fallback for small word sets
+        num_needed = 3 - len(final_distractors)
+        for i in range(num_needed):
+            final_distractors.append(f"選項{chr(65 + i)}")
 
         # Build options array and shuffle
-        options = [correct_answer] + final_distractors[:3]
+        options = [correct_answer] + final_distractors
         random.shuffle(options)
 
         words_with_options.append(

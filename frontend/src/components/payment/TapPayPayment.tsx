@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CreditCard, Shield } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Loader2, Shield } from "lucide-react";
 import { toast } from "sonner";
 import SubscriptionProgressBanner from "../SubscriptionProgressBanner";
 import { analyticsService } from "@/services/analyticsService";
@@ -366,31 +366,23 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      <SubscriptionProgressBanner
-        currentStep="payment"
-        selectedPlan={planName}
-      />
+    <div className="flex gap-4 p-2 sm:p-4">
+      {/* Vertical stepper sidebar — hidden on mobile */}
+      <div className="hidden sm:block flex-shrink-0 pr-4">
+        <SubscriptionProgressBanner
+          currentStep="payment"
+          selectedPlan={planName}
+          vertical
+        />
+      </div>
 
-      <Card className="w-full max-w-lg mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            信用卡付款
-          </CardTitle>
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-sm text-gray-600">方案: {planName}</span>
-            <span className="text-lg font-semibold">
-              NT$ {amount.toLocaleString()}
-            </span>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
+      {/* Payment form */}
+      <Card className="w-full">
+        <CardContent className="space-y-3 pt-5">
           {/* Security Badge */}
-          <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
-            <Shield className="h-4 w-4 text-green-600" />
-            <span className="text-sm text-green-800">
+          <div className="flex items-center gap-2">
+            <Shield className="h-4 w-4 text-green-600 flex-shrink-0" />
+            <span className="text-sm text-green-700">
               使用 TapPay 安全加密技術保護您的付款資訊
             </span>
           </div>
@@ -494,19 +486,6 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
               className="h-8"
             />
           </div>
-
-          {/* Prorated Payment Notice - 移至底部 */}
-          {!isCardUpdate && (
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 mt-4">
-              <p className="text-sm text-blue-800 font-medium mb-1">
-                💡 首月比例計費
-              </p>
-              <p className="text-xs text-blue-700">
-                本次付款按本月剩餘天數比例計算。下個月 1 號起，將以全額 (NT${" "}
-                {planName === "Tutor Teachers" ? "230" : "330"}) 自動續訂。
-              </p>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

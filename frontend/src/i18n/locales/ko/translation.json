@@ -1,0 +1,156 @@
+{
+  "studentAssignmentList": {
+    "loading": "로딩 중...",
+    "errors": {
+      "loadFailed": "과제 목록을 불러올 수 없습니다"
+    },
+    "flowStatus": {
+      "title": "과제 진행 흐름",
+      "todo": "미완료",
+      "submitted": "제출됨",
+      "returned": "수정 필요",
+      "resubmitted": "재제출됨",
+      "graded": "완료"
+    },
+    "status": {
+      "notStarted": "시작 전",
+      "inProgress": "진행 중",
+      "submitted": "제출됨",
+      "graded": "채점됨",
+      "returned": "반려됨",
+      "resubmitted": "재제출됨"
+    },
+    "progress": {
+      "title": "완료 진행률",
+      "activities": "{{completed}} / {{total}} 활동"
+    },
+    "contentType": {
+      "default": "연습"
+    },
+    "contentTypes": {
+      "VOCABULARY_SET": "단어 세트",
+      "SPEAKING": "문장 읽기",
+      "REARRANGEMENT": "문장 재배열"
+    },
+    "dueDate": {
+      "overdue": "{{days}}일 초과",
+      "today": "오늘 마감",
+      "remaining": "{{days}}일 남음"
+    },
+    "score": {
+      "label": "점수: {{score}}"
+    },
+    "proficiency": {
+      "label": "숙련도: {{proficiency}}%"
+    },
+    "buttons": {
+      "start": "과제 시작",
+      "continue": "과제 계속",
+      "view": "과제 보기",
+      "viewResults": "결과 보기",
+      "resubmit": "재제출"
+    },
+    "scoreCategory": {
+      "speaking": "말하기",
+      "listening": "듣기",
+      "writing": "쓰기",
+      "vocabulary": "어휘",
+      "reading": "읽기"
+    },
+    "practiceMode": {
+      "reading": "문장 읽기",
+      "rearrangement": "문장 재배열",
+      "word_selection": "단어 선택",
+      "word_reading": "단어 읽기",
+      "all": "모든 유형"
+    },
+    "sort": {
+      "label": "정렬",
+      "due_date_asc": "마감일 (가까운 순)",
+      "due_date_desc": "마감일 (먼 순)",
+      "assigned_at_desc": "배정일 (최신 순)",
+      "status": "상태 우선"
+    },
+    "emptyStates": {
+      "todo": {
+        "title": "미완료 과제가 없습니다",
+        "description": "모든 과제가 완료되었거나 제출되었습니다!"
+      },
+      "submitted": {
+        "title": "채점 대기 중인 과제가 없습니다",
+        "description": "제출한 과제가 여기에 표시됩니다."
+      },
+      "graded": {
+        "title": "완료된 과제가 없습니다",
+        "description": "완료 및 채점된 과제가 여기에 표시됩니다. 상세 점수를 확인할 수 있습니다."
+      },
+      "returned": {
+        "title": "수정이 필요한 과제가 없습니다",
+        "description": "다시 해야 할 과제가 여기에 표시됩니다."
+      },
+      "resubmitted": {
+        "title": "재제출된 과제가 없습니다",
+        "description": "재제출된 과제가 여기에 표시됩니다."
+      }
+    },
+    "pagination": {
+      "label": "{{current}} / {{total}} 페이지",
+      "previous": "이전 페이지",
+      "next": "다음 페이지"
+    }
+  },
+  "teacherSetupPassword": {
+    "verifying": "링크 확인 중...",
+    "errors": {
+      "invalidLink": "유효하지 않은 링크",
+      "linkExpired": "링크가 만료되었거나 유효하지 않습니다",
+      "passwordMismatch": "비밀번호가 일치하지 않습니다",
+      "setupFailed": "비밀번호 설정에 실패했습니다",
+      "passwordTooShort": "비밀번호는 8자 이상이어야 합니다",
+      "missingUppercase": "비밀번호에 대문자를 1자 이상 포함해야 합니다",
+      "missingLowercase": "비밀번호에 소문자를 1자 이상 포함해야 합니다",
+      "missingNumber": "비밀번호에 숫자를 1자 이상 포함해야 합니다",
+      "missingSpecialChar": "비밀번호에 특수문자를 1자 이상 포함해야 합니다 (!@#$%^&* 등)"
+    },
+    "success": {
+      "title": "비밀번호 설정 완료!",
+      "canLoginNow": "이제 Duotopia에 로그인할 수 있습니다",
+      "accountActivated": "Duotopia 계정이 활성화되어 모든 기능을 사용할 수 있습니다!",
+      "youCanNow": "이용 가능한 기능:",
+      "loginPlatform": "Duotopia 교육 플랫폼에 로그인",
+      "manageClasses": "학급 및 학생 관리",
+      "assignHomework": "과제 출제 및 채점",
+      "trackProgress": "학생 학습 진행 상황 추적",
+      "goToLogin": "로그인 페이지로 이동"
+    },
+    "invalid": {
+      "title": "유효하지 않거나 만료된 링크",
+      "description": "이 비밀번호 설정 링크는 더 이상 유효하지 않습니다",
+      "defaultError": "링크가 만료(48시간 유효)되었거나 이미 사용되었을 수 있습니다",
+      "notes": "참고 사항:",
+      "validFor48h": "비밀번호 설정 링크는 48시간 동안 유효합니다",
+      "singleUse": "각 링크는 한 번만 사용할 수 있습니다",
+      "contactAdmin": "도움이 필요하시면 소속 기관 관리자에게 문의하세요",
+      "backToLogin": "로그인 페이지로 돌아가기"
+    },
+    "form": {
+      "pageSubtitle": "비밀번호 설정",
+      "title": "비밀번호 설정",
+      "organization": "소속 기관:",
+      "account": "계정:",
+      "name": "이름:",
+      "newPassword": "새 비밀번호",
+      "newPasswordPlaceholder": "비밀번호를 입력하세요",
+      "confirmPassword": "비밀번호 확인",
+      "confirmPasswordPlaceholder": "비밀번호를 다시 입력하세요",
+      "requirements": "비밀번호 요구 사항:",
+      "requirementHint": "8자 이상, 대문자·소문자·숫자·특수문자 포함",
+      "submitting": "설정 중...",
+      "submit": "비밀번호 설정 및 계정 활성화"
+    },
+    "footer": {
+      "willActivate": "비밀번호 설정 후 계정이 즉시 활성화됩니다",
+      "useAllFeatures": "Duotopia의 모든 기능을 사용할 수 있습니다"
+    }
+  }
+}

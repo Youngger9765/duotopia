@@ -4,12 +4,12 @@ import json
 import logging
 import random
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy.orm import Session, joinedload, contains_eager
+from sqlalchemy import text, case, func
 
 from database import get_db
 from models import (
@@ -47,49 +47,100 @@ router = APIRouter()
 
 @router.get("/assignments")
 async def get_student_assignments(
+    sort_by: Literal[
+        "due_date_asc", "due_date_desc", "assigned_at_desc", "status"
+    ] = Query("due_date_asc"),
+    practice_mode: Optional[
+        Literal["reading", "rearrangement", "word_selection", "word_reading"]
+    ] = None,
     current_student: Dict[str, Any] = Depends(get_current_student),
     db: Session = Depends(get_db),
 ):
     """取得學生作業列表"""
     student_id = current_student.get("sub")
 
-    # Get assignments
-    assignments = (
-        db.query(StudentAssignment)
-        .filter(StudentAssignment.student_id == int(student_id))
-        .order_by(
-            StudentAssignment.due_date.desc()
-            if StudentAssignment.due_date
-            else StudentAssignment.assigned_at.desc()
-        )
-        .all()
+    # Base query
+    query = db.query(StudentAssignment).filter(
+        StudentAssignment.student_id == int(student_id)
     )
 
+    # Filter by practice_mode: use explicit join + contains_eager to reuse the
+    # JOIN for both filtering and eager-loading.  Otherwise use joinedload.
+    if practice_mode:
+        query = (
+            query.join(Assignment, StudentAssignment.assignment_id == Assignment.id)
+            .options(contains_eager(StudentAssignment.assignment))
+            .filter(Assignment.practice_mode == practice_mode)
+        )
+    else:
+        query = query.options(joinedload(StudentAssignment.assignment))
+
+    # Sorting
+    if sort_by == "due_date_desc":
+        query = query.order_by(StudentAssignment.due_date.desc().nullslast())
+    elif sort_by == "assigned_at_desc":
+        query = query.order_by(StudentAssignment.assigned_at.desc().nullslast())
+    elif sort_by == "status":
+        # Priority: returned > in_progress > not_started > submitted > resubmitted > graded
+        status_order = case(
+            (StudentAssignment.status == AssignmentStatus.RETURNED, 0),
+            (StudentAssignment.status == AssignmentStatus.IN_PROGRESS, 1),
+            (StudentAssignment.status == AssignmentStatus.NOT_STARTED, 2),
+            (StudentAssignment.status == AssignmentStatus.SUBMITTED, 3),
+            (StudentAssignment.status == AssignmentStatus.RESUBMITTED, 4),
+            (StudentAssignment.status == AssignmentStatus.GRADED, 5),
+            else_=6,
+        )
+        query = query.order_by(
+            status_order, StudentAssignment.due_date.asc().nullslast()
+        )
+    else:
+        # Default: due_date_asc (nearest deadline first)
+        query = query.order_by(StudentAssignment.due_date.asc().nullslast())
+
+    assignments = query.all()
+
+    # Batch query: count content items per assignment to avoid N+1
+    parent_ids = [sa.assignment_id for sa in assignments if sa.assignment_id]
+    count_map: Dict[int, int] = {}
+    if parent_ids:
+        count_rows = (
+            db.query(
+                AssignmentContent.assignment_id,
+                func.count(ContentItem.id),
+            )
+            .join(Content, AssignmentContent.content_id == Content.id)
+            .join(ContentItem, ContentItem.content_id == Content.id)
+            .filter(AssignmentContent.assignment_id.in_(parent_ids))
+            .group_by(AssignmentContent.assignment_id)
+            .all()
+        )
+        count_map = {row[0]: row[1] for row in count_rows}
+
     result = []
-    for assignment in assignments:
+    for sa in assignments:
+        # Get fields from parent Assignment
+        parent = sa.assignment
+        score_category = parent.score_category if parent else None
+        p_mode = parent.practice_mode if parent else None
+        content_count = count_map.get(parent.id, 0) if parent else 0
+
         result.append(
             {
-                "id": assignment.id,
-                "title": assignment.title,
-                "status": (
-                    assignment.status.value if assignment.status else "not_started"
-                ),
-                "due_date": (
-                    assignment.due_date.isoformat() if assignment.due_date else None
-                ),
-                "assigned_at": (
-                    assignment.assigned_at.isoformat()
-                    if assignment.assigned_at
-                    else None
-                ),
-                "submitted_at": (
-                    assignment.submitted_at.isoformat()
-                    if assignment.submitted_at
-                    else None
-                ),
-                "classroom_id": assignment.classroom_id,
-                "score": assignment.score,
-                "feedback": assignment.feedback,
+                "id": sa.id,
+                "title": sa.title,
+                "status": sa.status.value if sa.status else "not_started",
+                "due_date": sa.due_date.isoformat() if sa.due_date else None,
+                "assigned_at": sa.assigned_at.isoformat() if sa.assigned_at else None,
+                "submitted_at": sa.submitted_at.isoformat()
+                if sa.submitted_at
+                else None,
+                "classroom_id": sa.classroom_id,
+                "score": sa.score,
+                "feedback": sa.feedback,
+                "score_category": score_category,
+                "practice_mode": p_mode,
+                "content_count": content_count,
             }
         )
 
@@ -1062,9 +1113,9 @@ async def start_word_selection_practice(
     Start a new word selection practice session.
 
     Returns 10 words selected by the intelligent get_words_for_practice function,
-    each with 3 AI-generated distractors plus the correct answer.
+    each with 3 distractors from the word set plus the correct answer.
     """
-    from services.translation import translation_service
+    # from services.translation import translation_service  # disabled (#303)
 
     student_id = int(current_student.get("sub"))
 
@@ -1199,62 +1250,48 @@ async def start_word_selection_practice(
                 }
             )
 
-    # Check for pre-generated distractors
-    content_item_ids = [w["content_item_id"] for w in words_data]
-    items_with_distractors = (
-        db.query(ContentItem).filter(ContentItem.id.in_(content_item_ids)).all()
-    )
-    distractors_map = {item.id: item.distractors for item in items_with_distractors}
-
-    # Check how many items need generation
-    items_needing_generation = [
-        w for w in words_data if not distractors_map.get(w["content_item_id"])
-    ]
-
-    if not items_needing_generation:
-        # All items have pre-generated distractors
-        all_distractors = [
-            distractors_map.get(w["content_item_id"], []) for w in words_data
-        ]
-        logger.info(
-            f"Using pre-generated distractors for {len(words_data)} items "
-            f"in assignment {assignment_id}"
-        )
-    else:
-        # Some items need real-time generation
-        logger.info(
-            f"Generating distractors for {len(items_needing_generation)} items "
-            f"({len(words_data) - len(items_needing_generation)} pre-generated) "
-            f"in assignment {assignment_id}"
-        )
-
-        words_for_distractors = [
-            {"word": w["text"], "translation": w["translation"]}
-            for w in items_needing_generation
-        ]
-
-        try:
-            generated_distractors = (
-                await translation_service.batch_generate_distractors(
-                    words_for_distractors, count=3
-                )
-            )
-        except Exception as e:
-            logger.error(f"Failed to generate distractors: {e}")
-            # Fallback: use generic distractors
-            generated_distractors = [
-                ["選項A", "選項B", "選項C"] for _ in items_needing_generation
-            ]
-
-        # Merge pre-generated and generated distractors
-        generated_idx = 0
-        all_distractors = []
-        for w in words_data:
-            if distractors_map.get(w["content_item_id"]):
-                all_distractors.append(distractors_map[w["content_item_id"]])
-            else:
-                all_distractors.append(generated_distractors[generated_idx])
-                generated_idx += 1
+    # NOTE: AI distractor generation is temporarily disabled (#303).
+    # All distractors now come from other words in the assignment.
+    # Original AI generation code is preserved below for future reactivation.
+    #
+    # --- AI distractor generation (disabled) ---
+    # content_item_ids = [w["content_item_id"] for w in words_data]
+    # items_with_distractors = (
+    #     db.query(ContentItem).filter(ContentItem.id.in_(content_item_ids)).all()
+    # )
+    # distractors_map = {item.id: item.distractors for item in items_with_distractors}
+    # items_needing_generation = [
+    #     w for w in words_data if not distractors_map.get(w["content_item_id"])
+    # ]
+    # if not items_needing_generation:
+    #     all_distractors = [
+    #         distractors_map.get(w["content_item_id"], []) for w in words_data
+    #     ]
+    # else:
+    #     words_for_distractors = [
+    #         {"word": w["text"], "translation": w["translation"]}
+    #         for w in items_needing_generation
+    #     ]
+    #     try:
+    #         generated_distractors = (
+    #             await translation_service.batch_generate_distractors(
+    #                 words_for_distractors, count=3
+    #             )
+    #         )
+    #     except Exception as e:
+    #         logger.error(f"Failed to generate distractors: {e}")
+    #         generated_distractors = [
+    #             ["選項A", "選項B", "選項C"] for _ in items_needing_generation
+    #         ]
+    #     generated_idx = 0
+    #     all_distractors = []
+    #     for w in words_data:
+    #         if distractors_map.get(w["content_item_id"]):
+    #             all_distractors.append(distractors_map[w["content_item_id"]])
+    #         else:
+    #             all_distractors.append(generated_distractors[generated_idx])
+    #             generated_idx += 1
+    # --- end AI distractor generation ---
 
     # Create practice session
     practice_session = PracticeSession(
@@ -1272,53 +1309,30 @@ async def start_word_selection_practice(
     # Build response with words and their options
     words_with_options = []
 
-    # Collect all translations for cross-distraction
+    # Collect all unique translations for picking distractors from the word set
     all_translations = {
         w["translation"].lower().strip(): w["translation"] for w in words_data
     }
 
     for i, word in enumerate(words_data):
-        ai_distractors = all_distractors[i] if i < len(all_distractors) else []
         correct_answer = word["translation"]
 
-        # Dedup set
-        seen = {correct_answer.lower().strip()}
-        final_distractors = []
-
-        # Step 1: Add 1 distractor from other words in assignment
+        # Pick 3 random distractors from other words' translations (#303)
         other_translations = [
             t
             for key, t in all_translations.items()
             if key != correct_answer.lower().strip()
         ]
-        if other_translations:
-            sibling_distractor = random.choice(other_translations)
-            if sibling_distractor.lower().strip() not in seen:
-                final_distractors.append(sibling_distractor)
-                seen.add(sibling_distractor.lower().strip())
+        random.shuffle(other_translations)
+        final_distractors = other_translations[:3]
 
-        # Step 2: Add AI-generated distractors (up to 2)
-        for d in ai_distractors:
-            d_normalized = d.lower().strip()
-            if d_normalized not in seen and d.strip():
-                seen.add(d_normalized)
-                final_distractors.append(d)
-            if len(final_distractors) >= 3:
-                break
+        # Fallback for legacy assignments with small word sets
+        num_needed = 3 - len(final_distractors)
+        for i in range(num_needed):
+            final_distractors.append(f"選項{chr(65 + i)}")
 
-        # Step 3: Fallback to ensure 3 distractors
-        fallback_options = ["選項A", "選項B", "選項C", "選項D", "選項E"]
-        fallback_idx = 0
-        while len(final_distractors) < 3:
-            fallback = fallback_options[fallback_idx]
-            if fallback.lower() not in seen:
-                final_distractors.append(fallback)
-                seen.add(fallback.lower())
-            fallback_idx += 1
-
-        # Create options array with correct answer and exactly 3 distractors = 4 total
-        options = [correct_answer] + final_distractors[:3]
-        # Shuffle options
+        # Create options array with correct answer and 3 distractors = 4 total
+        options = [correct_answer] + final_distractors
         random.shuffle(options)
 
         words_with_options.append(

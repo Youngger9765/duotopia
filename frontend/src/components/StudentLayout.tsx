@@ -7,19 +7,13 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   BookOpen,
   Home,
-  Trophy,
   User,
-  Settings,
   LogOut,
   Menu,
   X,
-  Calendar,
-  BarChart3,
-  MessageSquare,
   ChevronRight,
   Building2,
   School,
-  Users,
 } from "lucide-react";
 
 export default function StudentLayout() {
@@ -39,37 +33,19 @@ export default function StudentLayout() {
       path: "/student/dashboard",
       label: t("studentLayout.nav.home"),
       icon: Home,
-      disabled: false,
+      color: "text-blue-500",
+      activeColor: "text-blue-600",
+      borderColor: "border-blue-500",
+      bgColor: "bg-blue-50/80",
     },
     {
       path: "/student/assignments",
       label: t("studentLayout.nav.assignments"),
       icon: BookOpen,
-      disabled: false,
-    },
-    {
-      path: "/student/progress",
-      label: t("studentLayout.nav.progress"),
-      icon: BarChart3,
-      disabled: true,
-    },
-    {
-      path: "/student/achievements",
-      label: t("studentLayout.nav.achievements"),
-      icon: Trophy,
-      disabled: true,
-    },
-    {
-      path: "/student/calendar",
-      label: t("studentLayout.nav.calendar"),
-      icon: Calendar,
-      disabled: true,
-    },
-    {
-      path: "/student/messages",
-      label: t("studentLayout.nav.messages"),
-      icon: MessageSquare,
-      disabled: true,
+      color: "text-emerald-500",
+      activeColor: "text-emerald-600",
+      borderColor: "border-emerald-500",
+      bgColor: "bg-emerald-50/80",
     },
   ];
 
@@ -78,13 +54,10 @@ export default function StudentLayout() {
       path: "/student/profile",
       label: t("studentLayout.nav.profile"),
       icon: User,
-      disabled: false,
-    },
-    {
-      path: "/student/settings",
-      label: t("studentLayout.nav.settings"),
-      icon: Settings,
-      disabled: true,
+      color: "text-violet-500",
+      activeColor: "text-violet-600",
+      borderColor: "border-violet-500",
+      bgColor: "bg-violet-50/80",
     },
   ];
 
@@ -101,11 +74,6 @@ export default function StudentLayout() {
       icon: School,
       label: user.school_name,
       isFinal: false,
-    },
-    {
-      icon: Users,
-      label: user?.classroom_name || "班級",
-      isFinal: true,
     },
   ].filter(Boolean) as Array<{
     icon: typeof Building2;
@@ -157,15 +125,21 @@ export default function StudentLayout() {
         fixed lg:static inset-y-0 left-0 z-50
         transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0 transition-transform duration-300 ease-in-out
-        w-64 bg-white shadow-lg flex flex-col
+        w-64 bg-white bg-notebook-lines shadow-lg flex flex-col
       `}
       >
         {/* Logo Section */}
         <div className="p-6 border-b">
           <div className="flex items-center justify-between">
-            <Link to="/student/dashboard" className="flex items-center gap-2">
-              <span className="text-2xl">🚀</span>
-              <span className="text-xl font-bold text-blue-600">Duotopia</span>
+            <Link
+              to="/student/dashboard"
+              className="flex-1 flex justify-center"
+            >
+              <img
+                src="https://storage.googleapis.com/duotopia-social-media-videos/website/logo/logo_row_nobg.png"
+                alt="Duotopia"
+                className="h-11"
+              />
             </Link>
             <Button
               variant="ghost"
@@ -175,16 +149,6 @@ export default function StudentLayout() {
             >
               <X className="h-5 w-5" />
             </Button>
-          </div>
-
-          {/* Language Switcher */}
-          <div className="mt-4">
-            <LanguageSwitcher />
-          </div>
-
-          {/* Organization Breadcrumb */}
-          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            <Breadcrumb />
           </div>
 
           {/* User Info */}
@@ -211,46 +175,26 @@ export default function StudentLayout() {
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
-            const disabled = item.disabled;
-
-            if (disabled) {
-              return (
-                <div
-                  key={item.path}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
-                >
-                  <Icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                  {item.path === "/student/messages" && (
-                    <span className="ml-auto bg-gray-300 text-gray-600 text-xs px-2 py-0.5 rounded-full">
-                      2
-                    </span>
-                  )}
-                </div>
-              );
-            }
 
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={`
-                  flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
+                  flex items-center gap-3 px-4 py-3 rounded-r-xl transition-all
+                  border-l-4
                   ${
                     active
-                      ? "bg-blue-50 text-blue-600 font-medium dark:bg-blue-900/30 dark:text-blue-400"
-                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                      ? `${item.borderColor} ${item.bgColor} ${item.activeColor} font-medium translate-x-1`
+                      : `border-transparent text-gray-600 hover:bg-gray-100/60 hover:translate-x-0.5 dark:text-gray-300 dark:hover:bg-gray-700`
                   }
                 `}
                 onClick={() => setSidebarOpen(false)}
               >
-                <Icon className="h-5 w-5" />
+                <Icon
+                  className={`h-5 w-5 ${active ? item.activeColor : item.color}`}
+                />
                 <span>{item.label}</span>
-                {item.path === "/student/messages" && (
-                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    2
-                  </span>
-                )}
               </Link>
             );
           })}
@@ -261,35 +205,25 @@ export default function StudentLayout() {
           {bottomNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
-            const disabled = item.disabled;
-
-            if (disabled) {
-              return (
-                <div
-                  key={item.path}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
-                >
-                  <Icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                </div>
-              );
-            }
 
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={`
-                  flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
+                  flex items-center gap-3 px-4 py-3 rounded-r-xl transition-all
+                  border-l-4
                   ${
                     active
-                      ? "bg-blue-50 text-blue-600 font-medium dark:bg-blue-900/30 dark:text-blue-400"
-                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                      ? `${item.borderColor} ${item.bgColor} ${item.activeColor} font-medium translate-x-1`
+                      : `border-transparent text-gray-600 hover:bg-gray-100/60 hover:translate-x-0.5 dark:text-gray-300 dark:hover:bg-gray-700`
                   }
                 `}
                 onClick={() => setSidebarOpen(false)}
               >
-                <Icon className="h-5 w-5" />
+                <Icon
+                  className={`h-5 w-5 ${active ? item.activeColor : item.color}`}
+                />
                 <span>{item.label}</span>
               </Link>
             );
@@ -327,45 +261,21 @@ export default function StudentLayout() {
                     {navItems.find((item) => isActive(item.path))?.label ||
                       t("studentLayout.header.defaultTitle")}
                   </h1>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {t("studentLayout.header.welcome", { name: user?.name })}
-                  </p>
                   {/* Breadcrumb in header for desktop */}
-                  <div className="mt-2 hidden sm:block">
+                  <div className="mt-1 hidden sm:block">
                     <Breadcrumb />
                   </div>
                 </div>
               </div>
 
-              {/* Quick Stats and Language Switcher */}
-              <div className="flex items-center gap-4">
-                <div className="hidden sm:flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">
-                      {t("studentLayout.stats.streak")}
-                    </p>
-                    <p className="text-lg font-semibold text-green-600">
-                      {t("studentLayout.stats.days", { count: 7 })}
-                    </p>
-                  </div>
-                  <div className="h-10 w-px bg-gray-200" />
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">
-                      {t("studentLayout.stats.weekProgress")}
-                    </p>
-                    <p className="text-lg font-semibold text-blue-600">85%</p>
-                  </div>
-                </div>
-                <div className="lg:hidden">
-                  <LanguageSwitcher />
-                </div>
-              </div>
+              {/* Language Switcher */}
+              <LanguageSwitcher />
             </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto relative">
+        <main className="flex-1 overflow-auto relative bg-notebook">
           <Outlet />
         </main>
       </div>

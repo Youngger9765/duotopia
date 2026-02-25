@@ -27,6 +27,24 @@ on:
       - '.eslintrc*'
       - '.prettierrc*'
       - '.github/workflows/deploy-frontend.yml'
+  pull_request:
+    branches:
+      - main
+      - staging
+      - develop
+    paths:
+      - 'frontend/**'
+      - '!frontend/**/*.md'
+      - '!frontend/tests/**'
+      - '!frontend/**/*.test.ts'
+      - '!frontend/**/*.test.tsx'
+      - '!frontend/**/*.spec.ts'
+      - '!frontend/**/*.spec.tsx'
+      - 'package*.json'
+      - 'tsconfig*.json'
+      - '.eslintrc*'
+      - '.prettierrc*'
+      - '.github/workflows/deploy-frontend.yml'
 
 env:
   PROJECT_ID: duotopia-472708
@@ -71,7 +89,7 @@ jobs:
       working-directory: ./frontend
       run: |
         echo "Running TypeScript type check..."
-        npx tsc --noEmit || echo "TypeScript check completed with warnings"
+        npx tsc --noEmit
 
     - name: Run ESLint check
       working-directory: ./frontend
@@ -94,6 +112,7 @@ jobs:
   deploy-frontend:
     name: 🚀 Deploy Frontend
     needs: test-frontend
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4

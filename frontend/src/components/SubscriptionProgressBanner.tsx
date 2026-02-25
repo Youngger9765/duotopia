@@ -5,11 +5,13 @@ import { useTranslation } from "react-i18next";
 interface SubscriptionProgressBannerProps {
   currentStep: "select-plan" | "login" | "payment" | "complete";
   selectedPlan?: string;
+  vertical?: boolean;
 }
 
 export default function SubscriptionProgressBanner({
   currentStep,
   selectedPlan,
+  vertical = false,
 }: SubscriptionProgressBannerProps) {
   const { t } = useTranslation();
 
@@ -44,6 +46,68 @@ export default function SubscriptionProgressBanner({
     if (stepIndex === currentIndex) return "active";
     return "pending";
   };
+
+  if (vertical) {
+    return (
+      <div className="flex flex-col py-2">
+        {steps.map((step, index) => {
+          const status = getStepStatus(step.id);
+          const isLast = index === steps.length - 1;
+
+          return (
+            <React.Fragment key={step.id}>
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={`
+                    w-7 h-7 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0
+                    ${
+                      status === "completed"
+                        ? "bg-green-500 text-white"
+                        : status === "active"
+                          ? "bg-blue-600 text-white ring-3 ring-blue-200"
+                          : "bg-gray-300 text-gray-600"
+                    }
+                  `}
+                >
+                  {status === "completed" ? (
+                    <Check className="w-3.5 h-3.5" />
+                  ) : (
+                    <span>{step.icon}</span>
+                  )}
+                </div>
+                <span
+                  className={`
+                    text-xs font-medium whitespace-nowrap
+                    ${
+                      status === "active"
+                        ? "text-blue-700"
+                        : status === "completed"
+                          ? "text-green-700"
+                          : "text-gray-500"
+                    }
+                  `}
+                >
+                  {step.label}
+                </span>
+              </div>
+
+              {!isLast && (
+                <div className="ml-3.5 my-1">
+                  <div className="w-0.5 h-5 bg-gray-300 rounded">
+                    <div
+                      className={`w-full rounded transition-all duration-500 ${
+                        status === "completed" ? "bg-green-500 h-full" : "h-0"
+                      }`}
+                    />
+                  </div>
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">

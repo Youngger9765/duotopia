@@ -1,0 +1,156 @@
+{
+  "studentAssignmentList": {
+    "loading": "読み込み中...",
+    "errors": {
+      "loadFailed": "課題一覧の読み込みに失敗しました"
+    },
+    "flowStatus": {
+      "title": "課題の進捗フロー",
+      "todo": "未完了",
+      "submitted": "提出済み",
+      "returned": "再提出",
+      "resubmitted": "再提出済み",
+      "graded": "完了"
+    },
+    "status": {
+      "notStarted": "未開始",
+      "inProgress": "進行中",
+      "submitted": "提出済み",
+      "graded": "採点済み",
+      "returned": "差し戻し",
+      "resubmitted": "再提出済み"
+    },
+    "progress": {
+      "title": "完了進捗",
+      "activities": "{{completed}} / {{total}} アクティビティ"
+    },
+    "contentType": {
+      "default": "練習"
+    },
+    "contentTypes": {
+      "VOCABULARY_SET": "単語セット",
+      "SPEAKING": "例文読み上げ",
+      "REARRANGEMENT": "例文並べ替え"
+    },
+    "dueDate": {
+      "overdue": "{{days}}日超過",
+      "today": "本日締切",
+      "remaining": "あと{{days}}日"
+    },
+    "score": {
+      "label": "スコア: {{score}}"
+    },
+    "proficiency": {
+      "label": "習熟度：{{proficiency}}%"
+    },
+    "buttons": {
+      "start": "課題を開始",
+      "continue": "課題を続ける",
+      "view": "課題を見る",
+      "viewResults": "結果を見る",
+      "resubmit": "再提出する"
+    },
+    "scoreCategory": {
+      "speaking": "スピーキング",
+      "listening": "リスニング",
+      "writing": "ライティング",
+      "vocabulary": "語彙",
+      "reading": "リーディング"
+    },
+    "practiceMode": {
+      "reading": "例文読み上げ",
+      "rearrangement": "例文並べ替え",
+      "word_selection": "単語選択",
+      "word_reading": "単語読み上げ",
+      "all": "すべてのタイプ"
+    },
+    "sort": {
+      "label": "並べ替え",
+      "due_date_asc": "締切日（近い順）",
+      "due_date_desc": "締切日（遠い順）",
+      "assigned_at_desc": "配布日（新しい順）",
+      "status": "ステータス優先"
+    },
+    "emptyStates": {
+      "todo": {
+        "title": "未完了の課題はありません",
+        "description": "すべての課題が完了または提出済みです！"
+      },
+      "submitted": {
+        "title": "採点待ちの課題はありません",
+        "description": "提出した課題がここに表示されます。"
+      },
+      "graded": {
+        "title": "完了した課題はありません",
+        "description": "完了・採点済みの課題がここに表示されます。詳細なスコアを確認できます。"
+      },
+      "returned": {
+        "title": "再提出が必要な課題はありません",
+        "description": "やり直しが必要な課題がここに表示されます。"
+      },
+      "resubmitted": {
+        "title": "再提出済みの課題はありません",
+        "description": "再提出した課題がここに表示されます。"
+      }
+    },
+    "pagination": {
+      "label": "{{current}} / {{total}} ページ",
+      "previous": "前のページ",
+      "next": "次のページ"
+    }
+  },
+  "teacherSetupPassword": {
+    "verifying": "リンクを確認中...",
+    "errors": {
+      "invalidLink": "無効なリンク",
+      "linkExpired": "リンクの有効期限が切れたか、無効です",
+      "passwordMismatch": "パスワードが一致しません",
+      "setupFailed": "パスワードの設定に失敗しました",
+      "passwordTooShort": "パスワードは8文字以上必要です",
+      "missingUppercase": "パスワードには大文字を1文字以上含めてください",
+      "missingLowercase": "パスワードには小文字を1文字以上含めてください",
+      "missingNumber": "パスワードには数字を1文字以上含めてください",
+      "missingSpecialChar": "パスワードには特殊文字を1文字以上含めてください（!@#$%^&* など）"
+    },
+    "success": {
+      "title": "パスワード設定完了！",
+      "canLoginNow": "Duotopiaにログインできるようになりました",
+      "accountActivated": "Duotopiaアカウントが有効化され、すべての機能を利用できます！",
+      "youCanNow": "利用可能な機能：",
+      "loginPlatform": "Duotopia教育プラットフォームにログイン",
+      "manageClasses": "クラスと生徒を管理",
+      "assignHomework": "課題の配布と採点",
+      "trackProgress": "生徒の学習進捗を追跡",
+      "goToLogin": "ログインページへ"
+    },
+    "invalid": {
+      "title": "無効または期限切れのリンク",
+      "description": "このパスワード設定リンクは無効です",
+      "defaultError": "リンクの有効期限（48時間）が切れたか、すでに使用されている可能性があります",
+      "notes": "注意事項：",
+      "validFor48h": "パスワード設定リンクの有効期限は48時間です",
+      "singleUse": "各リンクは1回のみ使用可能です",
+      "contactAdmin": "お困りの場合は、所属機関の管理者にお問い合わせください",
+      "backToLogin": "ログインページに戻る"
+    },
+    "form": {
+      "pageSubtitle": "パスワードを設定",
+      "title": "パスワードを設定",
+      "organization": "所属機関：",
+      "account": "アカウント：",
+      "name": "氏名：",
+      "newPassword": "新しいパスワード",
+      "newPasswordPlaceholder": "パスワードを入力",
+      "confirmPassword": "パスワード確認",
+      "confirmPasswordPlaceholder": "パスワードを再入力",
+      "requirements": "パスワード要件：",
+      "requirementHint": "8文字以上、大文字・小文字・数字・特殊文字を含む",
+      "submitting": "設定中...",
+      "submit": "パスワードを設定してアカウントを有効化"
+    },
+    "footer": {
+      "willActivate": "パスワード設定後、アカウントがすぐに有効化されます",
+      "useAllFeatures": "Duotopiaのすべての機能を利用開始できます"
+    }
+  }
+}

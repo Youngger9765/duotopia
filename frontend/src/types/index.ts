@@ -224,7 +224,8 @@ export interface StudentAssignmentCard {
   completed_count: number;
   estimated_time?: string;
   content_type?: string;
-  practice_mode?: string; // 'reading' | 'rearrangement'
+  practice_mode?: string; // 'reading' | 'rearrangement' | 'word_selection' | 'word_reading'
+  score_category?: string; // 'speaking' | 'listening' | 'writing' | 'vocabulary' | 'reading'
   classroom_name?: string;
   teacher_name?: string;
   score?: number;

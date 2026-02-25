@@ -9,8 +9,10 @@ import {
 import { Globe } from "lucide-react";
 
 const languages = [
-  { code: "zh-TW", name: "繁體中文" },
-  { code: "en", name: "English" },
+  { code: "zh-TW", name: "繁體中文", disabled: false },
+  { code: "en", name: "English", disabled: false },
+  { code: "ja", name: "日本語 (coming soon)", disabled: true },
+  { code: "ko", name: "한국어 (coming soon)", disabled: true },
 ];
 
 export function LanguageSwitcher() {
@@ -21,7 +23,14 @@ export function LanguageSwitcher() {
   };
 
   // Normalize language code (e.g., "zh-TW-TW" -> "zh-TW", "en-US" -> "en")
-  const normalizedLanguage = i18n.language.startsWith("zh") ? "zh-TW" : "en";
+  const lang = i18n.language;
+  const normalizedLanguage = lang.startsWith("zh")
+    ? "zh-TW"
+    : lang.startsWith("ja")
+      ? "ja"
+      : lang.startsWith("ko")
+        ? "ko"
+        : "en";
 
   return (
     <Select value={normalizedLanguage} onValueChange={handleLanguageChange}>
@@ -34,8 +43,14 @@ export function LanguageSwitcher() {
       </SelectTrigger>
       <SelectContent>
         {languages.map((lang) => (
-          <SelectItem key={lang.code} value={lang.code}>
-            {lang.name}
+          <SelectItem
+            key={lang.code}
+            value={lang.code}
+            disabled={lang.disabled}
+          >
+            <span className={lang.disabled ? "text-muted-foreground" : ""}>
+              {lang.name}
+            </span>
           </SelectItem>
         ))}
       </SelectContent>

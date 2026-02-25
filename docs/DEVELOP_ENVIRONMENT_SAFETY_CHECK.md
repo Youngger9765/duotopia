@@ -158,13 +158,13 @@ TAPPAY_*                      # ✅ 付款服務（staging/develop 都用 produc
 ### 測試 1: 驗證服務名稱
 ```bash
 # 預期結果：三個環境的服務完全獨立
-gh secret get PRODUCTION_BACKEND_SERVICE --repo Youngger9765/duotopia
+gh secret get PRODUCTION_BACKEND_SERVICE --repo myduotopia/duotopia
 # → duotopia-backend
 
-gh secret get STAGING_BACKEND_SERVICE --repo Youngger9765/duotopia
+gh secret get STAGING_BACKEND_SERVICE --repo myduotopia/duotopia
 # → duotopia-backend-staging
 
-gh secret get DEVELOP_BACKEND_SERVICE --repo Youngger9765/duotopia
+gh secret get DEVELOP_BACKEND_SERVICE --repo myduotopia/duotopia
 # → duotopia-backend-develop
 ```
 

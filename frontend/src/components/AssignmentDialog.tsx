@@ -136,7 +136,7 @@ const isVocabularySetType = (type: string): boolean => {
 
 // Content type labels - using i18n
 // Map READING_ASSESSMENT and EXAMPLE_SENTENCES both to "例句集"
-const useContentTypeLabel = (type: string, t: (key: string) => string) => {
+const getContentTypeLabel = (type: string, t: (key: string) => string) => {
   // Normalize type for display - both READING_ASSESSMENT and EXAMPLE_SENTENCES show as "例句集"
   if (isExampleSentencesType(type)) {
     return t(`dialogs.assignmentDialog.contentTypes.EXAMPLE_SENTENCES`);
@@ -221,7 +221,7 @@ function SortableCartItem({ item, index, onRemove, t }: SortableCartItemProps) {
           </div>
           <div className="flex items-center gap-1 mt-1">
             <Badge variant="outline" className="px-1 py-0 text-xs">
-              {useContentTypeLabel(item.contentType, t)}
+              {getContentTypeLabel(item.contentType, t)}
             </Badge>
             {item.itemsCount && (
               <span className="text-xs text-gray-500">
@@ -970,8 +970,24 @@ export function AssignmentDialog({
       }
     }
 
-    // 從 step 2 移動到 step 3 時，檢查音檔需求
+    // 從 step 2 移動到 step 3 時，檢查驗證
     if (currentStep === 2) {
+      // 單字選擇模式需要至少 20 個單字 (#303)
+      if (formData.practice_mode === "word_selection") {
+        const totalWords = cartItems.reduce(
+          (sum, item) => sum + (item.itemsCount || 0),
+          0,
+        );
+        if (totalWords < 20) {
+          toast.error(t("dialogs.assignmentDialog.errors.insufficientWords"), {
+            description: t(
+              "dialogs.assignmentDialog.errors.insufficientWordsDesc",
+              { count: totalWords },
+            ),
+          });
+          return;
+        }
+      }
       if (!checkAudioRequirement()) {
         return; // 驗證失敗，不繼續
       }
@@ -1442,7 +1458,7 @@ export function AssignmentDialog({
                                                             variant="outline"
                                                             className="px-1 py-0"
                                                           >
-                                                            {useContentTypeLabel(
+                                                            {getContentTypeLabel(
                                                               content.type,
                                                               t,
                                                             )}
@@ -1852,7 +1868,7 @@ export function AssignmentDialog({
                                                             variant="outline"
                                                             className="px-1 py-0"
                                                           >
-                                                            {useContentTypeLabel(
+                                                            {getContentTypeLabel(
                                                               content.type,
                                                               t,
                                                             )}
@@ -2833,7 +2849,7 @@ export function AssignmentDialog({
                           <Layers className="h-3 w-3 text-blue-600" />
                           <span className="text-gray-700">作業類型：</span>
                           <span className="font-medium text-blue-900">
-                            {useContentTypeLabel(cartItems[0].contentType, t)}
+                            {getContentTypeLabel(cartItems[0].contentType, t)}
                           </span>
                         </div>
                       )}

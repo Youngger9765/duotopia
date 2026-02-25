@@ -4515,7 +4515,7 @@ async def preview_word_selection_start(
     - 不需要 StudentAssignment，直接從 Assignment 讀取
     - 使用預生成的干擾選項（如果有的話）
     """
-    from services.translation import translation_service
+    # from services.translation import translation_service  # disabled (#303)
 
     # 取得作業（確認老師有權限）
     assignment = (
@@ -4562,32 +4562,33 @@ async def preview_word_selection_start(
     # 限制為 10 個單字（與學生端一致）
     content_items = content_items[:10]
 
-    # 收集需要生成干擾選項的項目
-    items_needing_generation = [item for item in content_items if not item.distractors]
-
-    # 如果有需要生成的，批量生成
-    if items_needing_generation:
-        words_for_distractors = [
-            {"word": item.text, "translation": item.translation or ""}
-            for item in items_needing_generation
-        ]
-        try:
-            # 2個AI生成，1個從同作業其他單字取
-            generated = await translation_service.batch_generate_distractors(
-                words_for_distractors, count=2
-            )
-            for i, item in enumerate(items_needing_generation):
-                if i < len(generated):
-                    item._generated_distractors = generated[i]
-        except Exception as e:
-            logger.error(f"Failed to generate distractors for preview: {e}")
-            for item in items_needing_generation:
-                item._generated_distractors = ["選項A", "選項B", "選項C"]
+    # NOTE: AI distractor generation is temporarily disabled (#303).
+    # All distractors now come from other words in the assignment.
+    #
+    # --- AI distractor generation (disabled) ---
+    # items_needing_generation = [item for item in content_items if not item.distractors]
+    # if items_needing_generation:
+    #     words_for_distractors = [
+    #         {"word": item.text, "translation": item.translation or ""}
+    #         for item in items_needing_generation
+    #     ]
+    #     try:
+    #         generated = await translation_service.batch_generate_distractors(
+    #             words_for_distractors, count=2
+    #         )
+    #         for i, item in enumerate(items_needing_generation):
+    #             if i < len(generated):
+    #                 item._generated_distractors = generated[i]
+    #     except Exception as e:
+    #         logger.error(f"Failed to generate distractors for preview: {e}")
+    #         for item in items_needing_generation:
+    #             item._generated_distractors = ["選項A", "選項B", "選項C"]
+    # --- end AI distractor generation ---
 
     # 建立回應資料
     words_with_options = []
 
-    # 收集所有單字的翻譯，用於交叉干擾（從同作業其他單字取翻譯）
+    # 收集所有單字的翻譯，用於從單字集隨機挑選干擾項
     all_translations = {
         item.translation.lower().strip(): item.translation
         for item in content_items
@@ -4597,51 +4598,22 @@ async def preview_word_selection_start(
     for item in content_items:
         correct_answer = item.translation or ""
 
-        # 使用預生成的或剛生成的干擾選項
-        if item.distractors:
-            ai_distractors = item.distractors
-        elif hasattr(item, "_generated_distractors"):
-            ai_distractors = item._generated_distractors
-        else:
-            ai_distractors = []
-
-        # 用於去重的集合
-        seen = {correct_answer.lower().strip()}
-        final_distractors = []
-
-        # Step 1: 從同作業其他單字隨機抽取 1 個翻譯作為干擾項
+        # 從同集內其他單字的翻譯隨機挑 3 個作為錯誤選項 (#303)
         other_translations = [
             t
             for key, t in all_translations.items()
             if key != correct_answer.lower().strip()
         ]
-        if other_translations:
-            sibling_distractor = random.choice(other_translations)
-            if sibling_distractor.lower().strip() not in seen:
-                final_distractors.append(sibling_distractor)
-                seen.add(sibling_distractor.lower().strip())
+        random.shuffle(other_translations)
+        final_distractors = other_translations[:3]
 
-        # Step 2: 加入 AI 生成的干擾項（最多 2 個）
-        for d in ai_distractors:
-            d_normalized = d.lower().strip()
-            if d_normalized not in seen and d.strip():
-                seen.add(d_normalized)
-                final_distractors.append(d)
-            if len(final_distractors) >= 3:
-                break
-
-        # Step 3: Fallback 確保有 3 個干擾選項
-        fallback_options = ["選項A", "選項B", "選項C", "選項D", "選項E"]
-        fallback_idx = 0
-        while len(final_distractors) < 3:
-            fallback = fallback_options[fallback_idx]
-            if fallback.lower() not in seen:
-                final_distractors.append(fallback)
-                seen.add(fallback.lower())
-            fallback_idx += 1
+        # Fallback for small word sets
+        num_needed = 3 - len(final_distractors)
+        for i in range(num_needed):
+            final_distractors.append(f"選項{chr(65 + i)}")
 
         # 建立選項陣列並打亂
-        options = [correct_answer] + final_distractors[:3]
+        options = [correct_answer] + final_distractors
         random.shuffle(options)
 
         words_with_options.append(

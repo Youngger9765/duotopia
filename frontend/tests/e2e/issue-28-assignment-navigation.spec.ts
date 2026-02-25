@@ -6,7 +6,7 @@
  * 2. Submit button in assignment work page → Navigate to assignment list
  * 3. No navigation to assignment detail/confirmation page
  *
- * @see https://github.com/Youngger9765/duotopia/issues/28
+ * @see https://github.com/myduotopia/duotopia/issues/28
  */
 
 import { test, expect } from '@playwright/test';

@@ -399,14 +399,39 @@
     "billing": {
       "monthly": "Monthly Plan",
       "perMonth": "/month",
+      "pointsPerMonth": "pts/mo",
       "description": "Monthly billing, flexible adjustments, upgrade or change your plan anytime"
+    },
+    "card": {
+      "popular": "Popular"
     },
     "actions": {
       "subscribe": "Subscribe Now",
+      "freeRegister": "Free Sign Up",
+      "currentPlan": "Current Plan",
+      "upgradePlan": "Upgrade Plan",
       "studentCannotSubscribe": "Students Cannot Subscribe",
       "loginRequired": "Please login to subscribe",
       "studentAccountWarning": "Student accounts cannot subscribe to teacher plans, please use a teacher account",
       "logoutFirst": "Please logout first and login with a teacher account to subscribe"
+    },
+    "tabs": {
+      "subscription": "Monthly Plans",
+      "pointPackages": "Point Packages"
+    },
+    "trialBanner": {
+      "title": "Get 2,000 Free AI Points on Sign Up"
+    },
+    "pointPackages": {
+      "description": "Purchase points on-demand. Buy more, save more! (Points valid for 1 year)",
+      "buy": "Buy",
+      "comingSoon": "Point package purchase coming soon",
+      "bestValue": "Best Value",
+      "points": "pts",
+      "bonusPoints": "+{{count, number}} bonus pts",
+      "unitCost": "NTD/pt",
+      "discount": "Save {{percent}}%",
+      "validity": "Valid for 1 year"
     },
     "payment": {
       "title": "Complete Payment",
@@ -417,6 +442,61 @@
       "failed": "Payment failed: {{error}}",
       "redirecting": "Payment page opened automatically",
       "hasSubscription": "You already have a subscription, redirecting to subscription management"
+    },
+    "plans": {
+      "free": {
+        "name": "Free Plan",
+        "description": "Try AI teaching features for free",
+        "studentCapacity": "Unlimited students",
+        "pointsLabel": "2,000 points (valid 1 year, until depleted)",
+        "features": {
+          "assignments": "Unlimited assignments",
+          "aiUntilDepleted": "AI grading available until points run out",
+          "semiAutoGrading": "Semi-auto grading for reading tasks (no points needed)"
+        }
+      },
+      "tutor": {
+        "name": "Tutor Teachers",
+        "description": "Small Tutoring ESL Teachers",
+        "studentCapacity": "Ideal for ~10 students",
+        "features": {
+          "assignments": "All Free Plan features",
+          "aiEvaluation": "AI lesson prep & grading",
+          "workshop": "Free online workshops"
+        }
+      },
+      "school": {
+        "name": "School Teachers",
+        "description": "Campus ESL Teachers",
+        "studentCapacity": "Ideal for ~30 students",
+        "features": {
+          "allTutor": "All Tutor Teacher features",
+          "report": "Student learning reports (coming soon)"
+        }
+      }
+    },
+    "fallback": {
+      "teacher": "Teacher",
+      "student": "Student {{id}}"
+    },
+    "faq": {
+      "title": "FAQ",
+      "q1": "Should I choose Tutor Teachers or School Teachers?",
+      "a1": "Tutor Teachers (NT$299/mo) is ideal for tutors with up to 30 students. School Teachers (NT$599/mo) is for school-based teachers with around 100 students. The School plan offers 33% lower per-point cost. We recommend upgrading when you have 30+ students.",
+      "q2": "How do new users get started?",
+      "a2": "New users enjoy an unlimited free trial with 2,000 AI points valid for one year. After upgrading, the remaining free points stay in your account until they expire.",
+      "q3": "What are points and how are they used?",
+      "a3": "Points are used for AI features: (1) AI analysis of student speaking recordings, (2) Fully automated AI assignment grading, (3) AI-assisted material conversion, (4) Student learning data analysis.",
+      "q4": "Do points expire?",
+      "a4": "Subscription points are valid for one month and reset at the start of each billing cycle. Purchased point packages are valid for one year.",
+      "q5": "What happens when subscription points run out?",
+      "a5": "When points are depleted, AI features become unavailable. You can purchase point packages or upgrade your plan.",
+      "q6": "How do I purchase additional points?",
+      "a6": "Point prices vary by volume: 1,000 pts = NT$180, 2,000 pts = NT$320, 5,000 pts = NT$700 (+200 bonus), 10,000 pts = NT$1,200 (+500 bonus), 20,000 pts = NT$2,000 (+800 bonus). The more you buy, the lower the unit price.",
+      "q7": "Does the subscription auto-renew?",
+      "a7": "Yes, subscriptions auto-renew every 30 days.",
+      "q8": "How do I cancel? What happens after cancellation?",
+      "a8": "You can cancel anytime in account settings. You won't be charged the following month. Remaining points can be used until they expire."
     }
   },
   "teacherDashboard": {
@@ -699,6 +779,27 @@
       "viewResults": "View Results",
       "resubmit": "Resubmit"
     },
+    "scoreCategory": {
+      "speaking": "Speaking",
+      "listening": "Listening",
+      "writing": "Writing",
+      "vocabulary": "Vocabulary",
+      "reading": "Reading"
+    },
+    "practiceMode": {
+      "reading": "Sentence Reading",
+      "rearrangement": "Sentence Rearrangement",
+      "word_selection": "Word Selection",
+      "word_reading": "Word Reading",
+      "all": "All Types"
+    },
+    "sort": {
+      "label": "Sort",
+      "due_date_asc": "Deadline (nearest first)",
+      "due_date_desc": "Deadline (farthest first)",
+      "assigned_at_desc": "Assigned Date (newest first)",
+      "status": "Status Priority"
+    },
     "emptyStates": {
       "todo": {
         "title": "No pending assignments",
@@ -720,6 +821,11 @@
         "title": "No resubmitted assignments",
         "description": "Resubmitted assignments will appear here."
       }
+    },
+    "pagination": {
+      "label": "Page {{current}} / {{total}}",
+      "previous": "Previous page",
+      "next": "Next page"
     }
   },
   "studentAssignmentDetail": {
@@ -1075,7 +1181,9 @@
       "verified": "Verified",
       "unverified": "Pending",
       "profile": "Profile",
-      "setupTitle": "📧 Set Up Email Notifications",
+      "setupTitle": "Set Up Email Notifications",
+      "setupButton": "Set Up Email",
+      "reverifyButton": "Re-verify",
       "yourEmail": "Your Email Address",
       "emailPlaceholder": "Enter your email address",
       "verifyButton": "Verify My Email",
@@ -1084,8 +1192,11 @@
     },
     "stats": {
       "completedAssignments": "Completed",
+      "completedAssignmentsDesc": "Total assignments finished",
       "averageScore": "Avg Score",
+      "averageScoreDesc": "Average across all assignments",
       "practiceTime": "Practice Time",
+      "practiceTimeDesc": "Total practice duration",
       "practiceDays": "Practice Days",
       "scoreUnit": "pts",
       "minutesUnit": "min",
@@ -1149,7 +1260,8 @@
       "missingLowercase": "Password must contain at least one lowercase letter",
       "missingNumber": "Password must contain at least one number",
       "missingSpecialChar": "Password must contain at least one special character (!@#$%^&* etc.)",
-      "registerFailed": "Registration failed, please try again later"
+      "registerFailed": "Registration failed, please try again later",
+      "successMessage": "Registration successful! Please check your email and click the verification link."
     },
     "footer": {
       "hasAccount": "Already have an account?",
@@ -1399,6 +1511,8 @@
         "quotaExceededDesc": "Please upgrade your plan or wait for the next billing cycle",
         "missingAudio": "Selected content is missing audio",
         "missingAudioDesc": "This practice mode requires audio. Please go to content management to generate TTS audio first",
+        "insufficientWords": "Not enough vocabulary words",
+        "insufficientWordsDesc": "Word selection mode requires at least 20 words, currently only {{count}}",
         "mixedContentType": "Only {{type}} can be selected. Please clear selected content before choosing a different type"
       },
       "warnings": {
@@ -2817,7 +2931,10 @@
     "tabs": {
       "overview": "Overview",
       "analytics": "Usage Analytics",
-      "paymentHistory": "Payment History"
+      "paymentHistory": "Payment History",
+      "plans": "Plans",
+      "pointPackages": "Point Packages",
+      "management": "Subscription"
     },
     "status": {
       "success": "Success",
@@ -2853,7 +2970,8 @@
       "enableRenewal": "Enable Auto-Renewal",
       "goBack": "Go Back",
       "confirmCancel": "Confirm Cancellation",
-      "selectPlan": "Select This Plan"
+      "selectPlan": "Select This Plan",
+      "viewUsageDetail": "View Usage Details"
     },
     "messages": {
       "pleaseLogin": "Please log in with a teacher account",
@@ -2867,7 +2985,8 @@
       "reactivateSuccess": "Successfully reactivated auto-renewal",
       "reactivateFailed": "Failed to reactivate",
       "pleaseBindCard": "Please bind a credit card in 'Payment Method Management' below",
-      "pleaseBindCardIcon": "💳 Please bind a credit card in 'Payment Method Management' below"
+      "pleaseBindCardIcon": "💳 Please bind a credit card in 'Payment Method Management' below",
+      "usageDetailComingSoon": "Usage details feature coming soon"
     },
     "warnings": {
       "renewalCancelled": "⚠️ Auto-renewal cancelled. Your subscription will expire on {{date}}",
@@ -2898,6 +3017,22 @@
       "remainsValidUntil": "Subscription remains valid until {{date}}",
       "loseAccess": "You will lose access to premium features after expiry",
       "canReactivate": "You can reactivate auto-renewal anytime"
+    },
+    "usageDetail": {
+      "title": "Usage Details",
+      "description": "View your points consumption history",
+      "tabs": {
+        "summary": "Summary",
+        "students": "Top Students",
+        "assignments": "Top Assignments"
+      },
+      "totalQuota": "Total Quota",
+      "used": "Used",
+      "usageRate": "Usage Rate",
+      "remaining": "{{points}} pts remaining",
+      "dailyTrend": "Daily Usage Trend",
+      "pointsUsed": "Points Used",
+      "noData": "No usage data available"
     },
     "plans": {
       "title": "Choose Subscription Plan",
@@ -4112,6 +4247,60 @@
       "showing": "Showing {{from}} to {{to}} of {{total}} results",
       "previous": "Previous",
       "next": "Next"
+    }
+  },
+  "teacherSetupPassword": {
+    "verifying": "Verifying link...",
+    "errors": {
+      "invalidLink": "Invalid link",
+      "linkExpired": "Link has expired or is invalid",
+      "passwordMismatch": "Passwords do not match",
+      "setupFailed": "Failed to set password",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "missingUppercase": "Password must contain at least one uppercase letter",
+      "missingLowercase": "Password must contain at least one lowercase letter",
+      "missingNumber": "Password must contain at least one number",
+      "missingSpecialChar": "Password must contain at least one special character (!@#$%^&* etc.)"
+    },
+    "success": {
+      "title": "Password Set Successfully!",
+      "canLoginNow": "You can now log in to Duotopia with your account",
+      "accountActivated": "Your Duotopia account is activated and ready to use!",
+      "youCanNow": "You can now:",
+      "loginPlatform": "Log in to the Duotopia teaching platform",
+      "manageClasses": "Manage classes and students",
+      "assignHomework": "Assign and grade homework",
+      "trackProgress": "Track student learning progress",
+      "goToLogin": "Go to Login Page"
+    },
+    "invalid": {
+      "title": "Invalid or Expired Link",
+      "description": "This password setup link is no longer valid",
+      "defaultError": "The link may have expired (valid for 48 hours) or has already been used",
+      "notes": "Important Notes:",
+      "validFor48h": "Password setup links are valid for 48 hours",
+      "singleUse": "Each link can only be used once",
+      "contactAdmin": "For assistance, please contact your organization administrator",
+      "backToLogin": "Back to Login Page"
+    },
+    "form": {
+      "pageSubtitle": "Set Your Password",
+      "title": "Set Your Password",
+      "organization": "Organization:",
+      "account": "Account:",
+      "name": "Name:",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Enter your password",
+      "confirmPassword": "Confirm Password",
+      "confirmPasswordPlaceholder": "Re-enter your password",
+      "requirements": "Password Requirements:",
+      "requirementHint": "At least 8 characters with uppercase, lowercase, number, and special character",
+      "submitting": "Setting up...",
+      "submit": "Set Password & Activate Account"
+    },
+    "footer": {
+      "willActivate": "Your account will be activated immediately after setting the password",
+      "useAllFeatures": "You can start using all Duotopia features"
     }
   }
 }

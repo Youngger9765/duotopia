@@ -1,9 +1,15 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { toast } from "sonner";
@@ -14,55 +20,93 @@ import {
   CheckCircle,
   AlertCircle,
   BarChart3,
+  ChevronLeft,
   ChevronRight,
   ArrowRight,
+  Mic,
+  Shuffle,
+  MousePointerClick,
+  Volume2,
+  ArrowUpDown,
 } from "lucide-react";
 import { StudentAssignmentCard, AssignmentStatusEnum } from "@/types";
 import { useTranslation } from "react-i18next";
+
+// Practice mode icon mapping
+const PRACTICE_MODE_ICONS: Record<string, React.ReactNode> = {
+  reading: <Mic className="h-7 w-7 sm:h-8 sm:w-8" />,
+  rearrangement: <Shuffle className="h-7 w-7 sm:h-8 sm:w-8" />,
+  word_selection: <MousePointerClick className="h-7 w-7 sm:h-8 sm:w-8" />,
+  word_reading: <Volume2 className="h-7 w-7 sm:h-8 sm:w-8" />,
+};
+
+// Score category colors
+const SCORE_CATEGORY_COLORS: Record<string, string> = {
+  speaking: "bg-orange-100 text-orange-700 border-orange-200",
+  listening: "bg-purple-100 text-purple-700 border-purple-200",
+  writing: "bg-blue-100 text-blue-700 border-blue-200",
+  vocabulary: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  reading: "bg-pink-100 text-pink-700 border-pink-200",
+};
+
+// Practice mode background colors for left icon area (crayon style)
+const PRACTICE_MODE_BG: Record<string, string> = {
+  reading:
+    "crayon-texture bg-gradient-to-b from-orange-100 to-orange-200 text-orange-600",
+  rearrangement:
+    "crayon-texture bg-gradient-to-b from-blue-100 to-blue-200 text-blue-600",
+  word_selection:
+    "crayon-texture bg-gradient-to-b from-emerald-100 to-emerald-200 text-emerald-600",
+  word_reading:
+    "crayon-texture bg-gradient-to-b from-purple-100 to-purple-200 text-purple-600",
+};
 
 export default function StudentAssignmentList() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { token, user } = useStudentAuthStore();
+  const [searchParams] = useSearchParams();
 
   const [assignments, setAssignments] = useState<StudentAssignmentCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("todo"); // Changed from "not_started" to "todo"
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "todo");
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  };
+  const [sortBy, setSortBy] = useState("due_date_asc");
+  const [filterMode, setFilterMode] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 8;
   const [stats, setStats] = useState({
     totalAssignments: 0,
-    todo: 0, // Merged NOT_STARTED + IN_PROGRESS
+    todo: 0,
     submitted: 0,
     graded: 0,
     returned: 0,
     resubmitted: 0,
-    averageScore: 0,
   });
 
-  useEffect(() => {
-    if (!user || !token) {
-      navigate("/student/login");
-      return;
-    }
-    loadAssignments();
-  }, [user, token, navigate]);
-
-  const loadAssignments = async () => {
+  const loadAssignments = useCallback(async () => {
+    if (!token) return;
     try {
       setLoading(true);
       const apiUrl = import.meta.env.VITE_API_URL || "";
 
-      // 🔍 DEBUG: 檢查基本資訊
-      console.log(token ? `${token.substring(0, 20)}...` : "null");
-      console.log(`${apiUrl}/api/students/assignments`);
+      const params = new URLSearchParams({ sort_by: sortBy });
+      if (filterMode) {
+        params.set("practice_mode", filterMode);
+      }
 
-      const response = await fetch(`${apiUrl}/api/students/assignments`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${apiUrl}/api/students/assignments?${params}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         },
-      });
-
-      console.log(Object.fromEntries(response.headers.entries()));
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -73,7 +117,6 @@ export default function StudentAssignmentList() {
 
       const data = await response.json();
 
-      // Transform data to match StudentAssignmentCard type
       interface AssignmentData {
         id: number;
         title: string;
@@ -83,40 +126,35 @@ export default function StudentAssignmentList() {
         submitted_at?: string;
         score?: number;
         feedback?: string;
-        content_id?: number;
         classroom_id: number;
         content_type?: string;
         practice_mode?: string;
+        score_category?: string;
+        content_count?: number;
       }
+
       const assignmentCards: StudentAssignmentCard[] = data.map(
-        (assignment: AssignmentData) => ({
-          id: assignment.id,
-          title: assignment.title,
-          status: assignment.status || "NOT_STARTED",
-          due_date: assignment.due_date,
-          assigned_at: assignment.assigned_at,
-          submitted_at: assignment.submitted_at,
-          score: assignment.score,
-          feedback: assignment.feedback,
-          content_id: assignment.content_id,
-          classroom_id: assignment.classroom_id,
-          content_type: assignment.content_type,
-          practice_mode: assignment.practice_mode,
-          progress_percentage: 0,
-          total_contents: 1,
-          completed_contents:
-            assignment.status === "GRADED" || assignment.status === "SUBMITTED"
-              ? 1
+        (a: AssignmentData) => ({
+          id: a.id,
+          title: a.title,
+          status: a.status || "NOT_STARTED",
+          due_date: a.due_date,
+          score: a.score,
+          content_type: a.content_type,
+          practice_mode: a.practice_mode,
+          score_category: a.score_category,
+          content_count: a.content_count || 0,
+          completed_count:
+            a.status === "GRADED" || a.status === "SUBMITTED"
+              ? a.content_count || 0
               : 0,
+          progress_percentage: 0,
         }),
       );
 
-      console.log(assignmentCards.length);
-
       setAssignments(assignmentCards);
 
-      // Calculate stats for each status
-      // Merge NOT_STARTED and IN_PROGRESS into TODO
+      // Calculate stats
       const todo = assignmentCards.filter(
         (a) => a.status === "NOT_STARTED" || a.status === "IN_PROGRESS",
       ).length;
@@ -133,34 +171,29 @@ export default function StudentAssignmentList() {
         (a) => a.status === "RESUBMITTED",
       ).length;
 
-      const scores = assignmentCards
-        .filter((a) => a.score)
-        .map((a) => a.score || 0);
-      const avgScore =
-        scores.length > 0
-          ? scores.reduce((a, b) => a + b, 0) / scores.length
-          : 0;
-
       setStats({
         totalAssignments: assignmentCards.length,
-        todo: todo, // Combined NOT_STARTED + IN_PROGRESS
-        submitted: submitted,
-        graded: graded,
-        returned: returned,
-        resubmitted: resubmitted,
-        averageScore: Math.round(avgScore),
+        todo,
+        submitted,
+        graded,
+        returned,
+        resubmitted,
       });
     } catch (error) {
-      console.error("🔥 [ERROR] Failed to load assignments:", error);
-      console.error("🔥 [ERROR] Error details:", {
-        message: (error as Error).message,
-        stack: (error as Error).stack,
-      });
+      console.error("Failed to load assignments:", error);
       toast.error(t("studentAssignmentList.errors.loadFailed"));
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, sortBy, filterMode, t]);
+
+  useEffect(() => {
+    if (!user || !token) {
+      navigate("/student/login");
+      return;
+    }
+    loadAssignments();
+  }, [user, token, navigate, loadAssignments]);
 
   const getStatusDisplay = (status: AssignmentStatusEnum) => {
     switch (status) {
@@ -168,47 +201,30 @@ export default function StudentAssignmentList() {
       case "IN_PROGRESS":
         return {
           text: t("studentAssignmentList.status.inProgress"),
-          color: "bg-blue-100 text-blue-800",
+          color: "bg-blue-100 text-blue-700 border-blue-200",
         };
       case "SUBMITTED":
         return {
           text: t("studentAssignmentList.status.submitted"),
-          color: "bg-yellow-100 text-yellow-800",
+          color: "bg-yellow-100 text-yellow-700 border-yellow-200",
         };
       case "GRADED":
         return {
           text: t("studentAssignmentList.status.graded"),
-          color: "bg-green-100 text-green-800",
+          color: "bg-green-100 text-green-700 border-green-200",
         };
       case "RETURNED":
         return {
           text: t("studentAssignmentList.status.returned"),
-          color: "bg-orange-100 text-orange-800",
+          color: "bg-orange-100 text-orange-700 border-orange-200",
         };
       case "RESUBMITTED":
         return {
           text: t("studentAssignmentList.status.resubmitted"),
-          color: "bg-purple-100 text-purple-800",
+          color: "bg-purple-100 text-purple-700 border-purple-200",
         };
       default:
-        return { text: status, color: "bg-gray-100 text-gray-800" };
-    }
-  };
-
-  const getStatusIcon = (status: AssignmentStatusEnum) => {
-    switch (status) {
-      case "NOT_STARTED":
-      case "IN_PROGRESS":
-        return <Clock className="h-4 w-4" />;
-      case "SUBMITTED":
-      case "RESUBMITTED":
-        return <CheckCircle className="h-4 w-4" />;
-      case "GRADED":
-        return <BarChart3 className="h-4 w-4" />;
-      case "RETURNED":
-        return <AlertCircle className="h-4 w-4" />;
-      default:
-        return <BookOpen className="h-4 w-4" />;
+        return { text: status, color: "bg-gray-100 text-gray-700" };
     }
   };
 
@@ -243,196 +259,261 @@ export default function StudentAssignmentList() {
   };
 
   const handleStartAssignment = (assignmentId: number) => {
-    // Navigate directly to activity page, skipping the confirmation screen (Issue #28)
     navigate(`/student/assignment/${assignmentId}/activity`);
   };
 
-  const renderAssignmentCard = (assignment: StudentAssignmentCard) => {
-    const statusDisplay = getStatusDisplay(assignment.status);
-    const statusIcon = getStatusIcon(assignment.status);
-    const dueDateInfo = formatDueDate(assignment.due_date);
+  const getActionButton = (assignment: StudentAssignmentCard) => {
     const canStart =
       assignment.status === "NOT_STARTED" ||
       assignment.status === "IN_PROGRESS";
 
+    // Hide button for completed word_selection
+    if (
+      assignment.status === "GRADED" &&
+      assignment.practice_mode === "word_selection"
+    ) {
+      return null;
+    }
+
+    const buttonText = (() => {
+      switch (assignment.status) {
+        case "NOT_STARTED":
+          return t("studentAssignmentList.buttons.start");
+        case "IN_PROGRESS":
+          return t("studentAssignmentList.buttons.continue");
+        case "SUBMITTED":
+          return t("studentAssignmentList.buttons.view");
+        case "GRADED":
+          return t("studentAssignmentList.buttons.viewResults");
+        case "RETURNED":
+          return t("studentAssignmentList.buttons.resubmit");
+        case "RESUBMITTED":
+          return t("studentAssignmentList.buttons.view");
+        default:
+          return t("studentAssignmentList.buttons.start");
+      }
+    })();
+
+    return (
+      <Button
+        onClick={() => handleStartAssignment(assignment.id)}
+        disabled={
+          !canStart &&
+          assignment.status !== "GRADED" &&
+          assignment.status !== "SUBMITTED" &&
+          assignment.status !== "RETURNED" &&
+          assignment.status !== "RESUBMITTED"
+        }
+        size="sm"
+        className={`crayon-texture text-xs sm:text-sm font-medium ${
+          canStart || assignment.status === "RETURNED"
+            ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
+            : "bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700"
+        }`}
+        data-testid="assignment-action-button"
+      >
+        {buttonText}
+        {(canStart || assignment.status === "RETURNED") && (
+          <ChevronRight className="ml-1 h-3.5 w-3.5" />
+        )}
+      </Button>
+    );
+  };
+
+  // --- New horizontal card design ---
+  const renderAssignmentCard = (assignment: StudentAssignmentCard) => {
+    const statusDisplay = getStatusDisplay(assignment.status);
+    const dueDateInfo = formatDueDate(assignment.due_date);
+    const practiceMode = assignment.practice_mode || "reading";
+    const scoreCategory = assignment.score_category;
+    const modeIcon = PRACTICE_MODE_ICONS[practiceMode] || (
+      <BookOpen className="h-5 w-5" />
+    );
+    const modeBg = PRACTICE_MODE_BG[practiceMode] || "bg-gray-50 text-gray-600";
+    const categoryColor = scoreCategory
+      ? SCORE_CATEGORY_COLORS[scoreCategory] || "bg-gray-100 text-gray-600"
+      : null;
+
     return (
       <Card
         key={assignment.id}
-        className="hover:shadow-lg transition-all duration-200 border-gray-200"
+        className="hover:shadow-md transition-all duration-200 border-gray-200"
         data-testid="assignment-card"
       >
-        <CardHeader className="p-4 sm:p-5">
-          <div className="flex flex-col gap-3">
-            <div className="flex-1">
-              <CardTitle className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 leading-relaxed">
+        <CardContent className="p-0">
+          <div className="flex items-stretch">
+            {/* Left: Practice mode icon */}
+            <div
+              className={`flex items-center justify-center w-16 sm:w-20 flex-shrink-0 rounded-l-lg ${modeBg}`}
+            >
+              {modeIcon}
+            </div>
+
+            {/* Right: Content */}
+            <div className="flex-1 p-3 sm:p-4 min-w-0">
+              {/* Top row: Badges */}
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 flex-wrap">
+                <Badge
+                  variant="outline"
+                  className={`${statusDisplay.color} text-[10px] sm:text-xs px-1.5 sm:px-2 py-0 sm:py-0.5 border`}
+                >
+                  {statusDisplay.text}
+                </Badge>
+                {categoryColor && (
+                  <Badge
+                    variant="outline"
+                    className={`${categoryColor} text-[10px] sm:text-xs px-1.5 sm:px-2 py-0 sm:py-0.5 border`}
+                  >
+                    {t(`studentAssignmentList.scoreCategory.${scoreCategory}`)}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Title */}
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900 leading-snug truncate">
                 {assignment.title}
-              </CardTitle>
-              {assignment.classroom_name && (
-                <p className="text-xs sm:text-sm text-gray-500 mt-2">
-                  {assignment.classroom_name}{" "}
-                  {assignment.teacher_name && `• ${assignment.teacher_name}`}
-                </p>
-              )}
-            </div>
-            <div className="flex items-start">
-              <Badge
-                className={`${statusDisplay.color} flex items-center gap-1 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap`}
-              >
-                {statusIcon}
-                <span className="font-medium">{statusDisplay.text}</span>
-              </Badge>
-            </div>
-          </div>
-        </CardHeader>
+              </h3>
 
-        <CardContent className="p-4 sm:p-5 pt-0 space-y-4">
-          {/* Progress - 單字選擇已完成時不顯示（熟悉度已在下方顯示） */}
-          {assignment.status !== "NOT_STARTED" &&
-            !(
-              assignment.practice_mode === "word_selection" &&
-              assignment.status === "GRADED"
-            ) && (
-              <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                  <span className="text-sm sm:text-base text-gray-600 font-medium">
-                    {t("studentAssignmentList.progress.title")}
-                  </span>
-                  <span className="text-sm sm:text-base font-semibold text-gray-900">
-                    {t("studentAssignmentList.progress.activities", {
-                      completed: assignment.completed_count || 0,
-                      total: assignment.content_count || 1,
-                    })}
-                  </span>
+              {/* Practice mode label */}
+              <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5">
+                {t(`studentAssignmentList.practiceMode.${practiceMode}`)}
+              </p>
+
+              {/* Bottom row: due date + score + action */}
+              <div className="flex items-center justify-between mt-2 gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  {/* Due date / Overdue */}
+                  {dueDateInfo && (
+                    <span
+                      className={`flex items-center gap-1 text-[10px] sm:text-xs font-medium whitespace-nowrap ${
+                        dueDateInfo.isOverdue ? "text-red-600" : "text-gray-500"
+                      }`}
+                    >
+                      <Calendar className="h-3 w-3 flex-shrink-0" />
+                      {dueDateInfo.text}
+                    </span>
+                  )}
+
+                  {/* Score */}
+                  {assignment.score != null &&
+                    assignment.status === "GRADED" && (
+                      <span className="flex items-center gap-1 text-[10px] sm:text-xs font-medium text-green-600 whitespace-nowrap">
+                        <BarChart3 className="h-3 w-3 flex-shrink-0" />
+                        {assignment.practice_mode === "word_selection"
+                          ? t("studentAssignmentList.proficiency.label", {
+                              proficiency: assignment.score.toFixed(1),
+                            })
+                          : t("studentAssignmentList.score.label", {
+                              score: assignment.score,
+                            })}
+                      </span>
+                    )}
                 </div>
-                <Progress
-                  value={assignment.progress_percentage || 0}
-                  className="h-2.5 bg-gray-200"
-                />
+
+                {/* Action button */}
+                {getActionButton(assignment)}
               </div>
-            )}
-
-          {/* Details */}
-          <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-            <div className="flex items-center gap-2 text-sm sm:text-base text-gray-600">
-              <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0" />
-              <span>
-                {/* 🎯 Issue #118: 根據 content_type + practice_mode 顯示正確標籤 */}
-                {(() => {
-                  const contentType = assignment.content_type?.toUpperCase();
-                  const practiceMode = assignment.practice_mode;
-
-                  // VOCABULARY_SET 或 SENTENCE_MAKING → 顯示「單字集」
-                  if (
-                    contentType === "VOCABULARY_SET" ||
-                    contentType === "SENTENCE_MAKING"
-                  ) {
-                    return t(
-                      "studentAssignmentList.contentTypes.VOCABULARY_SET",
-                    );
-                  }
-
-                  // EXAMPLE_SENTENCES 或 READING_ASSESSMENT → 根據 practice_mode 區分
-                  if (
-                    contentType === "EXAMPLE_SENTENCES" ||
-                    contentType === "READING_ASSESSMENT"
-                  ) {
-                    return practiceMode === "rearrangement"
-                      ? t("studentAssignmentList.contentTypes.REARRANGEMENT")
-                      : t("studentAssignmentList.contentTypes.SPEAKING");
-                  }
-
-                  // 預設
-                  return t("studentAssignmentList.contentType.default");
-                })()}
-              </span>
             </div>
-            {assignment.estimated_time && (
-              <div className="flex items-center gap-2 text-sm sm:text-base text-gray-600">
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0" />
-                <span>{assignment.estimated_time}</span>
-              </div>
-            )}
-            {dueDateInfo && (
-              <div
-                className={`flex items-center gap-2 text-sm sm:text-base font-medium ${
-                  dueDateInfo.isOverdue ? "text-red-600" : "text-gray-700"
-                }`}
-              >
-                <Calendar
-                  className={`h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 ${dueDateInfo.isOverdue ? "text-red-500" : "text-gray-400"}`}
-                />
-                <span>{dueDateInfo.text}</span>
-              </div>
-            )}
           </div>
-
-          {/* Score / Proficiency */}
-          {assignment.score !== undefined && assignment.status === "GRADED" && (
-            <div className="flex items-center gap-2 pt-2">
-              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
-              <span className="text-sm sm:text-base font-medium text-green-600">
-                {assignment.practice_mode === "word_selection"
-                  ? t("studentAssignmentList.proficiency.label", {
-                      proficiency: assignment.score.toFixed(1),
-                    })
-                  : t("studentAssignmentList.score.label", {
-                      score: assignment.score,
-                    })}
-              </span>
-            </div>
-          )}
-
-          {/* Action Button - 單字選擇已完成時不顯示按鈕 */}
-          {!(
-            assignment.status === "GRADED" &&
-            assignment.practice_mode === "word_selection"
-          ) && (
-            <div className="pt-4 mt-3 border-t border-gray-100">
-              <Button
-                onClick={() => handleStartAssignment(assignment.id)}
-                disabled={
-                  !canStart &&
-                  assignment.status !== "GRADED" &&
-                  assignment.status !== "SUBMITTED" &&
-                  assignment.status !== "RETURNED" &&
-                  assignment.status !== "RESUBMITTED"
-                }
-                className={`w-full py-2.5 sm:py-3 text-sm sm:text-base font-medium transition-all ${
-                  canStart || assignment.status === "RETURNED"
-                    ? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white shadow-sm hover:shadow-md"
-                    : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                }`}
-                data-testid="assignment-action-button"
-              >
-                {assignment.status === "NOT_STARTED" && (
-                  <>
-                    {t("studentAssignmentList.buttons.start")}{" "}
-                    <ChevronRight className="ml-1 h-4 w-4 inline" />
-                  </>
-                )}
-                {assignment.status === "IN_PROGRESS" && (
-                  <>
-                    {t("studentAssignmentList.buttons.continue")}{" "}
-                    <ChevronRight className="ml-1 h-4 w-4 inline" />
-                  </>
-                )}
-                {assignment.status === "SUBMITTED" &&
-                  t("studentAssignmentList.buttons.view")}
-                {assignment.status === "GRADED" &&
-                  t("studentAssignmentList.buttons.viewResults")}
-                {assignment.status === "RETURNED" && (
-                  <>
-                    {t("studentAssignmentList.buttons.resubmit")}{" "}
-                    <AlertCircle className="ml-1 h-4 w-4 inline" />
-                  </>
-                )}
-                {assignment.status === "RESUBMITTED" &&
-                  t("studentAssignmentList.buttons.view")}
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
+    );
+  };
+
+  const filterAssignments = (statusFilter: string) => {
+    switch (statusFilter) {
+      case "todo":
+        return assignments.filter(
+          (a) => a.status === "NOT_STARTED" || a.status === "IN_PROGRESS",
+        );
+      case "submitted":
+        return assignments.filter((a) => a.status === "SUBMITTED");
+      case "graded":
+        return assignments.filter((a) => a.status === "GRADED");
+      case "returned":
+        return assignments.filter((a) => a.status === "RETURNED");
+      case "resubmitted":
+        return assignments.filter((a) => a.status === "RESUBMITTED");
+      default:
+        return assignments;
+    }
+  };
+
+  const renderEmptyState = (tab: string) => {
+    const iconMap: Record<string, React.ReactNode> = {
+      todo: <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />,
+      submitted: (
+        <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+      ),
+      graded: <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-3" />,
+      returned: (
+        <AlertCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+      ),
+      resubmitted: (
+        <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+      ),
+    };
+
+    return (
+      <div className="text-center py-12">
+        {iconMap[tab]}
+        <h3 className="text-base font-medium text-gray-500 mb-1">
+          {t(`studentAssignmentList.emptyStates.${tab}.title`)}
+        </h3>
+        <p className="text-sm text-gray-400">
+          {t(`studentAssignmentList.emptyStates.${tab}.description`)}
+        </p>
+      </div>
+    );
+  };
+
+  const renderTabContent = (tab: string) => {
+    const filtered = filterAssignments(tab);
+    if (filtered.length === 0) return renderEmptyState(tab);
+
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+    const startIdx = (safeCurrentPage - 1) * PAGE_SIZE;
+    const paged = filtered.slice(startIdx, startIdx + PAGE_SIZE);
+
+    return (
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3 sm:gap-4">
+          {paged.map(renderAssignmentCard)}
+        </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3 mt-6">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={safeCurrentPage <= 1}
+              className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label={t(
+                "studentAssignmentList.pagination.previous",
+                "Previous page",
+              )}
+            >
+              <ChevronLeft className="h-5 w-5 text-gray-600" />
+            </button>
+            <span className="text-sm text-gray-700 font-medium">
+              {t("studentAssignmentList.pagination.label", {
+                current: safeCurrentPage,
+                total: totalPages,
+              })}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safeCurrentPage >= totalPages}
+              className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label={t(
+                "studentAssignmentList.pagination.next",
+                "Next page",
+              )}
+            >
+              <ChevronRight className="h-5 w-5 text-gray-600" />
+            </button>
+          </div>
+        )}
+      </>
     );
   };
 
@@ -449,206 +530,191 @@ export default function StudentAssignmentList() {
     );
   }
 
+  const practiceModes = [
+    "reading",
+    "rearrangement",
+    "word_selection",
+    "word_reading",
+  ];
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Assignment Flow Status */}
-        <Card className="mb-8 overflow-visible">
+      {/* Assignment Flow Status — full width */}
+      <div className="mx-auto mb-6">
+        <Card className="overflow-visible">
           <CardContent className="p-4 sm:p-6 overflow-visible">
-            <h3 className="text-lg font-semibold mb-4">
-              {t("studentAssignmentList.flowStatus.title")}
-            </h3>
-            <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-4 pt-2 justify-start sm:justify-center flex-nowrap">
-              {/* 待完成 (Merged: NOT_STARTED + IN_PROGRESS) */}
-              <button
-                onClick={() => setActiveTab("todo")}
-                className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
-                  activeTab === "todo"
-                    ? "scale-105"
-                    : "opacity-70 hover:opacity-100"
-                }`}
-              >
-                <div className="relative">
-                  <div
-                    className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 sm:border-3 ${
-                      activeTab === "todo"
-                        ? "bg-blue-600 border-blue-600 text-white"
-                        : "bg-white border-gray-300 text-blue-600"
+            <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-2 pt-2 justify-start sm:justify-center flex-nowrap">
+              {/* Flow status buttons */}
+              {(
+                [
+                  {
+                    key: "todo",
+                    icon: (
+                      <Clock className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+                    ),
+                    count: stats.todo,
+                    activeColor: "bg-blue-600 border-blue-600 text-white",
+                    inactiveColor: "bg-white border-gray-300 text-blue-600",
+                    badgeColor: "bg-red-500",
+                  },
+                  {
+                    key: "submitted",
+                    icon: (
+                      <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+                    ),
+                    count: stats.submitted,
+                    activeColor: "bg-yellow-600 border-yellow-600 text-white",
+                    inactiveColor: "bg-white border-gray-300 text-yellow-600",
+                    badgeColor: "bg-red-500",
+                  },
+                  {
+                    key: "returned",
+                    icon: (
+                      <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+                    ),
+                    count: stats.returned,
+                    activeColor: "bg-orange-600 border-orange-600 text-white",
+                    inactiveColor: "bg-white border-gray-300 text-orange-600",
+                    badgeColor: "bg-orange-500",
+                  },
+                  {
+                    key: "resubmitted",
+                    icon: (
+                      <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+                    ),
+                    count: stats.resubmitted,
+                    activeColor: "bg-purple-600 border-purple-600 text-white",
+                    inactiveColor: "bg-white border-gray-300 text-purple-600",
+                    badgeColor: "bg-purple-500",
+                  },
+                  {
+                    key: "graded",
+                    icon: (
+                      <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+                    ),
+                    count: stats.graded,
+                    activeColor: "bg-green-600 border-green-600 text-white",
+                    inactiveColor: "bg-white border-gray-300 text-green-600",
+                    badgeColor: "bg-green-500",
+                  },
+                ] as const
+              ).map((item, idx, arr) => (
+                <div key={item.key} className="flex items-center">
+                  <button
+                    onClick={() => handleTabChange(item.key)}
+                    className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
+                      activeTab === item.key
+                        ? "scale-105"
+                        : "opacity-70 hover:opacity-100"
                     }`}
                   >
-                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
-                  </div>
-                  {stats.todo > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold z-10">
-                      {stats.todo}
+                    <div className="relative">
+                      <div
+                        className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 sm:border-3 ${
+                          activeTab === item.key
+                            ? item.activeColor
+                            : item.inactiveColor
+                        }`}
+                      >
+                        {item.icon}
+                      </div>
+                      {item.count > 0 && (
+                        <div
+                          className={`absolute -top-1 -right-1 ${item.badgeColor} text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold z-10`}
+                        >
+                          {item.count}
+                        </div>
+                      )}
                     </div>
+                    <span
+                      className={`mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium ${
+                        activeTab === item.key
+                          ? "text-gray-900"
+                          : "text-gray-600"
+                      }`}
+                    >
+                      {t(`studentAssignmentList.flowStatus.${item.key}`)}
+                    </span>
+                  </button>
+                  {idx < arr.length - 1 && (
+                    <ArrowRight className="text-gray-400 mx-0.5 sm:mx-1 flex-shrink-0 h-3 w-3 sm:h-4 sm:w-4" />
                   )}
                 </div>
-                <span
-                  className={`mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium ${
-                    activeTab === "todo" ? "text-gray-900" : "text-gray-600"
-                  }`}
-                >
-                  {t("studentAssignmentList.flowStatus.todo")}
-                </span>
-              </button>
-
-              <ArrowRight className="text-gray-400 mx-0.5 sm:mx-1 flex-shrink-0 h-3 w-3 sm:h-4 sm:w-4" />
-
-              {/* 已提交 */}
-              <button
-                onClick={() => setActiveTab("submitted")}
-                className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
-                  activeTab === "submitted"
-                    ? "scale-110"
-                    : "opacity-70 hover:opacity-100"
-                }`}
-              >
-                <div className="relative">
-                  <div
-                    className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 sm:border-3 ${
-                      activeTab === "submitted"
-                        ? "bg-yellow-600 border-yellow-600 text-white"
-                        : "bg-white border-gray-300 text-yellow-600"
-                    }`}
-                  >
-                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
-                  </div>
-                  {stats.submitted > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold z-10">
-                      {stats.submitted}
-                    </div>
-                  )}
-                </div>
-                <span
-                  className={`mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium ${
-                    activeTab === "submitted"
-                      ? "text-gray-900"
-                      : "text-gray-600"
-                  }`}
-                >
-                  {t("studentAssignmentList.flowStatus.submitted")}
-                </span>
-              </button>
-
-              <ArrowRight className="text-gray-400 mx-0.5 sm:mx-1 flex-shrink-0 h-3 w-3 sm:h-4 sm:w-4" />
-
-              {/* 退回訂正 (分支) */}
-              <button
-                onClick={() => setActiveTab("returned")}
-                className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
-                  activeTab === "returned"
-                    ? "scale-110"
-                    : "opacity-70 hover:opacity-100"
-                }`}
-              >
-                <div className="relative">
-                  <div
-                    className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 sm:border-3 ${
-                      activeTab === "returned"
-                        ? "bg-orange-600 border-orange-600 text-white"
-                        : "bg-white border-gray-300 text-orange-600"
-                    }`}
-                  >
-                    <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
-                  </div>
-                  {stats.returned > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold z-10">
-                      {stats.returned}
-                    </div>
-                  )}
-                </div>
-                <span
-                  className={`mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium ${
-                    activeTab === "returned" ? "text-gray-900" : "text-gray-600"
-                  }`}
-                >
-                  {t("studentAssignmentList.flowStatus.returned")}
-                </span>
-              </button>
-
-              <ArrowRight className="text-gray-400 mx-0.5 sm:mx-1 flex-shrink-0 h-3 w-3 sm:h-4 sm:w-4" />
-
-              {/* 重新提交 */}
-              <button
-                onClick={() => setActiveTab("resubmitted")}
-                className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
-                  activeTab === "resubmitted"
-                    ? "scale-110"
-                    : "opacity-70 hover:opacity-100"
-                }`}
-              >
-                <div className="relative">
-                  <div
-                    className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 sm:border-3 ${
-                      activeTab === "resubmitted"
-                        ? "bg-purple-600 border-purple-600 text-white"
-                        : "bg-white border-gray-300 text-purple-600"
-                    }`}
-                  >
-                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
-                  </div>
-                  {stats.resubmitted > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-purple-500 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold z-10">
-                      {stats.resubmitted}
-                    </div>
-                  )}
-                </div>
-                <span
-                  className={`mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium ${
-                    activeTab === "resubmitted"
-                      ? "text-gray-900"
-                      : "text-gray-600"
-                  }`}
-                >
-                  {t("studentAssignmentList.flowStatus.resubmitted")}
-                </span>
-              </button>
-
-              <ArrowRight className="text-gray-400 mx-0.5 sm:mx-1 flex-shrink-0 h-3 w-3 sm:h-4 sm:w-4" />
-
-              {/* 已完成 */}
-              <button
-                onClick={() => setActiveTab("graded")}
-                className={`flex flex-col items-center min-w-[60px] sm:min-w-[80px] transition-all ${
-                  activeTab === "graded"
-                    ? "scale-110"
-                    : "opacity-70 hover:opacity-100"
-                }`}
-              >
-                <div className="relative">
-                  <div
-                    className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 sm:border-3 ${
-                      activeTab === "graded"
-                        ? "bg-green-600 border-green-600 text-white"
-                        : "bg-white border-gray-300 text-green-600"
-                    }`}
-                  >
-                    <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
-                  </div>
-                  {stats.graded > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold z-10">
-                      {stats.graded}
-                    </div>
-                  )}
-                </div>
-                <span
-                  className={`mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium ${
-                    activeTab === "graded" ? "text-gray-900" : "text-gray-600"
-                  }`}
-                >
-                  {t("studentAssignmentList.flowStatus.graded")}
-                </span>
-              </button>
+              ))}
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Cards area — same width as flow status */}
+      <div className="mx-auto">
+        {/* Sort + Filter controls */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
+          {/* Sort dropdown */}
+          <div className="flex items-center gap-2">
+            <ArrowUpDown className="h-4 w-4 text-gray-500" />
+            <Select
+              value={sortBy}
+              onValueChange={(v) => {
+                setSortBy(v);
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[200px] h-8 text-xs sm:text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="due_date_asc">
+                  {t("studentAssignmentList.sort.due_date_asc")}
+                </SelectItem>
+                <SelectItem value="due_date_desc">
+                  {t("studentAssignmentList.sort.due_date_desc")}
+                </SelectItem>
+                <SelectItem value="assigned_at_desc">
+                  {t("studentAssignmentList.sort.assigned_at_desc")}
+                </SelectItem>
+                <SelectItem value="status">
+                  {t("studentAssignmentList.sort.status")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Practice mode filter */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Button
+              variant={filterMode === null ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs px-2.5"
+              onClick={() => {
+                setFilterMode(null);
+                setCurrentPage(1);
+              }}
+            >
+              {t("studentAssignmentList.practiceMode.all")}
+            </Button>
+            {practiceModes.map((mode) => (
+              <Button
+                key={mode}
+                variant={filterMode === mode ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-xs px-2.5"
+                onClick={() => {
+                  setFilterMode(filterMode === mode ? null : mode);
+                  setCurrentPage(1);
+                }}
+              >
+                {t(`studentAssignmentList.practiceMode.${mode}`)}
+              </Button>
+            ))}
+          </div>
+        </div>
 
         {/* Assignment Lists by Status */}
         <Tabs
           value={activeTab}
-          onValueChange={setActiveTab}
-          className="space-y-6"
+          onValueChange={handleTabChange}
+          className="space-y-4"
         >
           <TabsList className="hidden">
             <TabsTrigger value="todo" />
@@ -658,146 +724,18 @@ export default function StudentAssignmentList() {
             <TabsTrigger value="graded" />
           </TabsList>
 
-          {/* TODO Tab (Merged: NOT_STARTED + IN_PROGRESS) */}
-          <TabsContent value="todo" className="space-y-4">
-            {(() => {
-              const todoAssignments = assignments.filter(
-                (a) => a.status === "NOT_STARTED" || a.status === "IN_PROGRESS",
-              );
-              return todoAssignments.length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-600 mb-2">
-                      {t("studentAssignmentList.emptyStates.todo.title")}
-                    </h3>
-                    <p className="text-gray-500">
-                      {t("studentAssignmentList.emptyStates.todo.description")}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {todoAssignments.map(renderAssignmentCard)}
-                </div>
-              );
-            })()}
+          <TabsContent value="todo">{renderTabContent("todo")}</TabsContent>
+          <TabsContent value="submitted">
+            {renderTabContent("submitted")}
           </TabsContent>
-
-          {/* SUBMITTED Tab */}
-          <TabsContent value="submitted" className="space-y-4">
-            {(() => {
-              const submittedAssignments = assignments.filter(
-                (a) => a.status === "SUBMITTED",
-              );
-              return submittedAssignments.length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-600 mb-2">
-                      {t("studentAssignmentList.emptyStates.submitted.title")}
-                    </h3>
-                    <p className="text-gray-500">
-                      {t(
-                        "studentAssignmentList.emptyStates.submitted.description",
-                      )}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {submittedAssignments.map(renderAssignmentCard)}
-                </div>
-              );
-            })()}
+          <TabsContent value="returned">
+            {renderTabContent("returned")}
           </TabsContent>
-
-          {/* GRADED Tab - 已完成 */}
-          <TabsContent value="graded" className="space-y-4">
-            {(() => {
-              const gradedAssignments = assignments.filter(
-                (a) => a.status === "GRADED",
-              );
-              return gradedAssignments.length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-600 mb-2">
-                      {t("studentAssignmentList.emptyStates.graded.title")}
-                    </h3>
-                    <p className="text-gray-500">
-                      {t(
-                        "studentAssignmentList.emptyStates.graded.description",
-                      )}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {gradedAssignments.map(renderAssignmentCard)}
-                </div>
-              );
-            })()}
+          <TabsContent value="resubmitted">
+            {renderTabContent("resubmitted")}
           </TabsContent>
-
-          {/* RETURNED Tab */}
-          <TabsContent value="returned" className="space-y-4">
-            {(() => {
-              const returnedAssignments = assignments.filter(
-                (a) => a.status === "RETURNED",
-              );
-              return returnedAssignments.length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-600 mb-2">
-                      {t("studentAssignmentList.emptyStates.returned.title")}
-                    </h3>
-                    <p className="text-gray-500">
-                      {t(
-                        "studentAssignmentList.emptyStates.returned.description",
-                      )}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {returnedAssignments.map(renderAssignmentCard)}
-                </div>
-              );
-            })()}
-          </TabsContent>
-
-          {/* RESUBMITTED Tab */}
-          <TabsContent value="resubmitted" className="space-y-4">
-            {(() => {
-              const resubmittedAssignments = assignments.filter(
-                (a) => a.status === "RESUBMITTED",
-              );
-              return resubmittedAssignments.length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-600 mb-2">
-                      {t("studentAssignmentList.emptyStates.resubmitted.title")}
-                    </h3>
-                    <p className="text-gray-500">
-                      {t(
-                        "studentAssignmentList.emptyStates.resubmitted.description",
-                      )}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {resubmittedAssignments.map(renderAssignmentCard)}
-                </div>
-              );
-            })()}
-          </TabsContent>
+          <TabsContent value="graded">{renderTabContent("graded")}</TabsContent>
         </Tabs>
-
-        {/* Recent Activity - Removed for now since we don't have this data yet */}
       </div>
     </div>
   );

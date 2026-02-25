@@ -164,7 +164,7 @@ export default function StudentActivityPage() {
     } catch (error) {
       console.error("Failed to load activities:", error);
       toast.error(t("studentActivityPage.errors.loadFailed"));
-      navigate(`/student/assignment/${assignmentId}/detail`);
+      navigate("/student/assignments");
     } finally {
       setLoading(false);
     }
