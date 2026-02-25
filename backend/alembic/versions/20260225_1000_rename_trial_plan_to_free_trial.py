@@ -17,16 +17,20 @@ depends_on = None
 
 def upgrade() -> None:
     # Rename "30-Day Trial" to "Free Trial" in subscription_periods (idempotent)
-    op.execute("""
+    op.execute(
+        """
         UPDATE subscription_periods
         SET plan_name = 'Free Trial'
         WHERE plan_name = '30-Day Trial'
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
-    op.execute("""
+    op.execute(
+        """
         UPDATE subscription_periods
         SET plan_name = '30-Day Trial'
         WHERE plan_name = 'Free Trial'
-    """)
+    """
+    )
