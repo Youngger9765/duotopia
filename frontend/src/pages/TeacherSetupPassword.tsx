@@ -72,9 +72,10 @@ export default function TeacherSetupPassword() {
             setUserInfo({
               email: response.email as string,
               name: response.name as string,
-              organization_name: response.organization_name as
-                | string
-                | undefined,
+              organization_name:
+                "organization_name" in response
+                  ? (response.organization_name as string | undefined)
+                  : undefined,
             });
           }
         }
