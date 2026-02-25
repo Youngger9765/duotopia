@@ -122,7 +122,7 @@ async def reset_test_accounts(db: Session = Depends(get_db)):
             teacher_id=demo.id,
             plan_name="Tutor Teachers",
             amount_paid=0,
-            quota_total=10000,
+            quota_total=2000,
             quota_used=0,
             start_date=now,
             end_date=now + timedelta(days=30),
@@ -199,7 +199,7 @@ async def update_subscription_status(
             teacher_id=current_teacher.id,
             plan_name="Tutor Teachers",
             amount_paid=0,
-            quota_total=10000,
+            quota_total=2000,
             quota_used=0,
             start_date=now,
             end_date=now + timedelta(days=30),
@@ -241,7 +241,7 @@ async def update_subscription_status(
                 teacher_id=current_teacher.id,
                 plan_name="Tutor Teachers",
                 amount_paid=0,
-                quota_total=10000,
+                quota_total=2000,
                 quota_used=0,
                 start_date=now,
                 end_date=now + timedelta(days=30 * months),
@@ -264,7 +264,7 @@ async def update_subscription_status(
             teacher_id=current_teacher.id,
             plan_name="Tutor Teachers",
             amount_paid=0,
-            quota_total=10000,
+            quota_total=2000,
             quota_used=0,
             start_date=now,
             end_date=now + timedelta(days=30),
@@ -286,7 +286,7 @@ async def update_subscription_status(
                 teacher_id=current_teacher.id,
                 plan_name="Tutor Teachers",
                 amount_paid=0,
-                quota_total=10000,
+                quota_total=2000,
                 quota_used=0,
                 start_date=now,
                 end_date=now + timedelta(days=1),
@@ -308,7 +308,7 @@ async def update_subscription_status(
                 teacher_id=current_teacher.id,
                 plan_name="Tutor Teachers",
                 amount_paid=0,
-                quota_total=10000,
+                quota_total=2000,
                 quota_used=0,
                 start_date=now,
                 end_date=now + timedelta(days=7),
@@ -348,13 +348,13 @@ async def update_subscription_status(
         # Update current period's quota_total and plan_name
         current_period = current_teacher.current_period
         if current_period:
-            new_quota = 25000 if new_plan == "School Teachers" else 10000
+            new_quota = 6000 if new_plan == "School Teachers" else 2000
             current_period.quota_total = new_quota
             current_period.plan_name = new_plan
             message = f"已切換方案至 {new_plan}，配額已更新為 {new_quota} 點"
         else:
             # 創建新的訂閱週期
-            new_quota = 25000 if new_plan == "School Teachers" else 10000
+            new_quota = 6000 if new_plan == "School Teachers" else 2000
             new_period = SubscriptionPeriod(
                 teacher_id=current_teacher.id,
                 plan_name=new_plan,

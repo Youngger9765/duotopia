@@ -126,7 +126,7 @@ def main():
             timeout=10,
         )
         resp.raise_for_status()
-        print("✅ Subscription set (quota_total=10000, quota_used=0)")
+        print("✅ Subscription set (quota_total=2000, quota_used=0)")
     except Exception as e:
         print(f"❌ Set subscription failed: {e}")
         return

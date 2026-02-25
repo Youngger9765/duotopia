@@ -216,9 +216,11 @@ async def monthly_renewal_cron(
             # ========================================
             # 取得上個月訂閱資訊用於續訂
             # ========================================
+            from config.plans import PLAN_PRICES, PLAN_QUOTAS
+
             plan_name = last_month_subscription.plan_name
-            amount = 330 if plan_name == "Tutor Teachers" else 660
-            quota_total = 10000 if plan_name == "Tutor Teachers" else 25000
+            amount = PLAN_PRICES.get(plan_name, 299)
+            quota_total = PLAN_QUOTAS.get(plan_name, 2000)
 
             # 生成訂單編號
             order_number = f"RENEWAL_{teacher.id}_{today_taipei.strftime('%Y%m%d')}"

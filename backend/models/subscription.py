@@ -36,9 +36,9 @@ class SubscriptionPeriod(Base):
     )
 
     # 訂閱資訊
-    plan_name = Column(String, nullable=False)  # "Tutor Teachers" or "School Teachers"
-    amount_paid = Column(Integer, nullable=False)  # 330 or 660
-    quota_total = Column(Integer, nullable=False)  # 10000 or 25000 點
+    plan_name = Column(String, nullable=False)  # "Free Trial", "Tutor Teachers", "School Teachers"
+    amount_paid = Column(Integer, nullable=False)  # 0 (trial), 299 (tutor), 599 (school)
+    quota_total = Column(Integer, nullable=False)  # 2000 (trial/tutor), 6000 (school)
     quota_used = Column(Integer, default=0, nullable=False)
 
     # 時間範圍

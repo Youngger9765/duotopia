@@ -33,7 +33,7 @@ def teacher_with_quota(db_session: Session):
     period = SubscriptionPeriod(
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
-        amount_paid=330,
+        amount_paid=299,
         quota_total=1000,  # 基本配額 1000 秒
         quota_used=0,
         start_date=datetime.now(timezone.utc),
@@ -132,8 +132,8 @@ class TestQuotaBuffer:
         """📊 測試 4：驗證不同配額的緩衝計算"""
         test_cases = [
             (1000, 1200),  # 1000 秒 → 1200 秒
-            (10000, 12000),  # 10000 秒 → 12000 秒
-            (25000, 30000),  # 25000 秒 → 30000 秒
+            (2000, 2400),  # 2000 秒 → 2400 秒
+            (6000, 7200),  # 6000 秒 → 7200 秒
         ]
 
         for quota_total, expected_limit in test_cases:

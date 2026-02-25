@@ -323,7 +323,9 @@ async def process_payment(
             period.status = "expired"
 
         # ✅ 創建新的訂閱週期記錄（包含 Trial 剩餘點數）
-        quota_total = 25000 if payment_request.plan_name == "School Teachers" else 10000
+        from config.plans import PLAN_QUOTAS
+
+        quota_total = PLAN_QUOTAS.get(payment_request.plan_name, 2000)
         quota_total += trial_remaining_points  # 🔥 加上 Trial 剩餘點數
         new_period = SubscriptionPeriod(
             teacher_id=current_teacher.id,
