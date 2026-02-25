@@ -4263,5 +4263,54 @@
       "previous": "上一頁",
       "next": "下一頁"
     }
+  },
+  "teacherSetupPassword": {
+    "verifying": "驗證連結中...",
+    "errors": {
+      "invalidLink": "連結無效",
+      "linkExpired": "連結已過期或無效",
+      "passwordMismatch": "密碼確認不符",
+      "setupFailed": "密碼設定失敗"
+    },
+    "success": {
+      "title": "密碼設定成功！",
+      "canLoginNow": "您現在可以使用您的帳號登入 Duotopia 了",
+      "accountActivated": "您的 Duotopia 帳號已啟用，可以開始使用所有功能！",
+      "youCanNow": "您現在可以：",
+      "loginPlatform": "登入 Duotopia 教學平台",
+      "manageClasses": "管理班級和學生",
+      "assignHomework": "指派和批改作業",
+      "trackProgress": "追蹤學生學習進度",
+      "goToLogin": "前往登入頁面"
+    },
+    "invalid": {
+      "title": "連結無效或已過期",
+      "description": "此密碼設定連結已失效",
+      "defaultError": "連結可能已過期（48 小時有效期）或已被使用過",
+      "notes": "注意事項：",
+      "validFor48h": "密碼設定連結有效期為 48 小時",
+      "singleUse": "每個連結只能使用一次",
+      "contactAdmin": "如需協助，請聯繫您的機構管理員",
+      "backToLogin": "返回登入頁面"
+    },
+    "form": {
+      "pageSubtitle": "設定您的密碼",
+      "title": "設定您的密碼",
+      "organization": "機構：",
+      "account": "帳號：",
+      "name": "姓名：",
+      "newPassword": "新密碼",
+      "newPasswordPlaceholder": "請輸入密碼",
+      "confirmPassword": "確認密碼",
+      "confirmPasswordPlaceholder": "請再次輸入密碼",
+      "requirements": "密碼要求：",
+      "requirementHint": "至少 8 個字元，包含大小寫、數字及特殊字元",
+      "submitting": "設定中...",
+      "submit": "設定密碼並啟用帳號"
+    },
+    "footer": {
+      "willActivate": "設定密碼後，您的帳號將立即啟用",
+      "useAllFeatures": "可以開始使用 Duotopia 的所有功能"
+    }
   }
 }

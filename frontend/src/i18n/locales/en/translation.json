@@ -4248,5 +4248,54 @@
       "previous": "Previous",
       "next": "Next"
     }
+  },
+  "teacherSetupPassword": {
+    "verifying": "Verifying link...",
+    "errors": {
+      "invalidLink": "Invalid link",
+      "linkExpired": "Link has expired or is invalid",
+      "passwordMismatch": "Passwords do not match",
+      "setupFailed": "Failed to set password"
+    },
+    "success": {
+      "title": "Password Set Successfully!",
+      "canLoginNow": "You can now log in to Duotopia with your account",
+      "accountActivated": "Your Duotopia account is activated and ready to use!",
+      "youCanNow": "You can now:",
+      "loginPlatform": "Log in to the Duotopia teaching platform",
+      "manageClasses": "Manage classes and students",
+      "assignHomework": "Assign and grade homework",
+      "trackProgress": "Track student learning progress",
+      "goToLogin": "Go to Login Page"
+    },
+    "invalid": {
+      "title": "Invalid or Expired Link",
+      "description": "This password setup link is no longer valid",
+      "defaultError": "The link may have expired (valid for 48 hours) or has already been used",
+      "notes": "Important Notes:",
+      "validFor48h": "Password setup links are valid for 48 hours",
+      "singleUse": "Each link can only be used once",
+      "contactAdmin": "For assistance, please contact your organization administrator",
+      "backToLogin": "Back to Login Page"
+    },
+    "form": {
+      "pageSubtitle": "Set Your Password",
+      "title": "Set Your Password",
+      "organization": "Organization:",
+      "account": "Account:",
+      "name": "Name:",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Enter your password",
+      "confirmPassword": "Confirm Password",
+      "confirmPasswordPlaceholder": "Re-enter your password",
+      "requirements": "Password Requirements:",
+      "requirementHint": "At least 8 characters with uppercase, lowercase, number, and special character",
+      "submitting": "Setting up...",
+      "submit": "Set Password & Activate Account"
+    },
+    "footer": {
+      "willActivate": "Your account will be activated immediately after setting the password",
+      "useAllFeatures": "You can start using all Duotopia features"
+    }
   }
 }
