@@ -110,7 +110,7 @@ check_git_history() {
 # Function to update GitHub secrets
 update_github_secrets() {
     echo -e "${BLUE}Instructions to update GitHub secrets:${NC}"
-    echo "1. Go to: https://github.com/Youngger9765/duotopia/settings/secrets/actions"
+    echo "1. Go to: https://github.com/myduotopia/duotopia/settings/secrets/actions"
     echo "2. Update the following secrets:"
     echo "   - STAGING_DATABASE_URL"
     echo "   - STAGING_JWT_SECRET"
