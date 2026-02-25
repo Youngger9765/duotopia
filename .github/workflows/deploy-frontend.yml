@@ -89,7 +89,7 @@ jobs:
       working-directory: ./frontend
       run: |
         echo "Running TypeScript type check..."
-        npx tsc --noEmit || echo "TypeScript check completed with warnings"
+        npx tsc --noEmit
 
     - name: Run ESLint check
       working-directory: ./frontend

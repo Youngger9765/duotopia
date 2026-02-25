@@ -136,7 +136,7 @@ const isVocabularySetType = (type: string): boolean => {
 
 // Content type labels - using i18n
 // Map READING_ASSESSMENT and EXAMPLE_SENTENCES both to "例句集"
-const useContentTypeLabel = (type: string, t: (key: string) => string) => {
+const getContentTypeLabel = (type: string, t: (key: string) => string) => {
   // Normalize type for display - both READING_ASSESSMENT and EXAMPLE_SENTENCES show as "例句集"
   if (isExampleSentencesType(type)) {
     return t(`dialogs.assignmentDialog.contentTypes.EXAMPLE_SENTENCES`);
@@ -221,7 +221,7 @@ function SortableCartItem({ item, index, onRemove, t }: SortableCartItemProps) {
           </div>
           <div className="flex items-center gap-1 mt-1">
             <Badge variant="outline" className="px-1 py-0 text-xs">
-              {useContentTypeLabel(item.contentType, t)}
+              {getContentTypeLabel(item.contentType, t)}
             </Badge>
             {item.itemsCount && (
               <span className="text-xs text-gray-500">
@@ -1458,7 +1458,7 @@ export function AssignmentDialog({
                                                             variant="outline"
                                                             className="px-1 py-0"
                                                           >
-                                                            {useContentTypeLabel(
+                                                            {getContentTypeLabel(
                                                               content.type,
                                                               t,
                                                             )}
@@ -1868,7 +1868,7 @@ export function AssignmentDialog({
                                                             variant="outline"
                                                             className="px-1 py-0"
                                                           >
-                                                            {useContentTypeLabel(
+                                                            {getContentTypeLabel(
                                                               content.type,
                                                               t,
                                                             )}
@@ -2849,7 +2849,7 @@ export function AssignmentDialog({
                           <Layers className="h-3 w-3 text-blue-600" />
                           <span className="text-gray-700">作業類型：</span>
                           <span className="font-medium text-blue-900">
-                            {useContentTypeLabel(cartItems[0].contentType, t)}
+                            {getContentTypeLabel(cartItems[0].contentType, t)}
                           </span>
                         </div>
                       )}
