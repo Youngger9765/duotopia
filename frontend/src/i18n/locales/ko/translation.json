@@ -98,5 +98,59 @@
       "previous": "이전 페이지",
       "next": "다음 페이지"
     }
+  },
+  "teacherSetupPassword": {
+    "verifying": "링크 확인 중...",
+    "errors": {
+      "invalidLink": "유효하지 않은 링크",
+      "linkExpired": "링크가 만료되었거나 유효하지 않습니다",
+      "passwordMismatch": "비밀번호가 일치하지 않습니다",
+      "setupFailed": "비밀번호 설정에 실패했습니다",
+      "passwordTooShort": "비밀번호는 8자 이상이어야 합니다",
+      "missingUppercase": "비밀번호에 대문자를 1자 이상 포함해야 합니다",
+      "missingLowercase": "비밀번호에 소문자를 1자 이상 포함해야 합니다",
+      "missingNumber": "비밀번호에 숫자를 1자 이상 포함해야 합니다",
+      "missingSpecialChar": "비밀번호에 특수문자를 1자 이상 포함해야 합니다 (!@#$%^&* 등)"
+    },
+    "success": {
+      "title": "비밀번호 설정 완료!",
+      "canLoginNow": "이제 Duotopia에 로그인할 수 있습니다",
+      "accountActivated": "Duotopia 계정이 활성화되어 모든 기능을 사용할 수 있습니다!",
+      "youCanNow": "이용 가능한 기능:",
+      "loginPlatform": "Duotopia 교육 플랫폼에 로그인",
+      "manageClasses": "학급 및 학생 관리",
+      "assignHomework": "과제 출제 및 채점",
+      "trackProgress": "학생 학습 진행 상황 추적",
+      "goToLogin": "로그인 페이지로 이동"
+    },
+    "invalid": {
+      "title": "유효하지 않거나 만료된 링크",
+      "description": "이 비밀번호 설정 링크는 더 이상 유효하지 않습니다",
+      "defaultError": "링크가 만료(48시간 유효)되었거나 이미 사용되었을 수 있습니다",
+      "notes": "참고 사항:",
+      "validFor48h": "비밀번호 설정 링크는 48시간 동안 유효합니다",
+      "singleUse": "각 링크는 한 번만 사용할 수 있습니다",
+      "contactAdmin": "도움이 필요하시면 소속 기관 관리자에게 문의하세요",
+      "backToLogin": "로그인 페이지로 돌아가기"
+    },
+    "form": {
+      "pageSubtitle": "비밀번호 설정",
+      "title": "비밀번호 설정",
+      "organization": "소속 기관:",
+      "account": "계정:",
+      "name": "이름:",
+      "newPassword": "새 비밀번호",
+      "newPasswordPlaceholder": "비밀번호를 입력하세요",
+      "confirmPassword": "비밀번호 확인",
+      "confirmPasswordPlaceholder": "비밀번호를 다시 입력하세요",
+      "requirements": "비밀번호 요구 사항:",
+      "requirementHint": "8자 이상, 대문자·소문자·숫자·특수문자 포함",
+      "submitting": "설정 중...",
+      "submit": "비밀번호 설정 및 계정 활성화"
+    },
+    "footer": {
+      "willActivate": "비밀번호 설정 후 계정이 즉시 활성화됩니다",
+      "useAllFeatures": "Duotopia의 모든 기능을 사용할 수 있습니다"
+    }
   }
 }

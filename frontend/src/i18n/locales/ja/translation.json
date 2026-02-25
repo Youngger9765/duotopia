@@ -98,5 +98,59 @@
       "previous": "前のページ",
       "next": "次のページ"
     }
+  },
+  "teacherSetupPassword": {
+    "verifying": "リンクを確認中...",
+    "errors": {
+      "invalidLink": "無効なリンク",
+      "linkExpired": "リンクの有効期限が切れたか、無効です",
+      "passwordMismatch": "パスワードが一致しません",
+      "setupFailed": "パスワードの設定に失敗しました",
+      "passwordTooShort": "パスワードは8文字以上必要です",
+      "missingUppercase": "パスワードには大文字を1文字以上含めてください",
+      "missingLowercase": "パスワードには小文字を1文字以上含めてください",
+      "missingNumber": "パスワードには数字を1文字以上含めてください",
+      "missingSpecialChar": "パスワードには特殊文字を1文字以上含めてください（!@#$%^&* など）"
+    },
+    "success": {
+      "title": "パスワード設定完了！",
+      "canLoginNow": "Duotopiaにログインできるようになりました",
+      "accountActivated": "Duotopiaアカウントが有効化され、すべての機能を利用できます！",
+      "youCanNow": "利用可能な機能：",
+      "loginPlatform": "Duotopia教育プラットフォームにログイン",
+      "manageClasses": "クラスと生徒を管理",
+      "assignHomework": "課題の配布と採点",
+      "trackProgress": "生徒の学習進捗を追跡",
+      "goToLogin": "ログインページへ"
+    },
+    "invalid": {
+      "title": "無効または期限切れのリンク",
+      "description": "このパスワード設定リンクは無効です",
+      "defaultError": "リンクの有効期限（48時間）が切れたか、すでに使用されている可能性があります",
+      "notes": "注意事項：",
+      "validFor48h": "パスワード設定リンクの有効期限は48時間です",
+      "singleUse": "各リンクは1回のみ使用可能です",
+      "contactAdmin": "お困りの場合は、所属機関の管理者にお問い合わせください",
+      "backToLogin": "ログインページに戻る"
+    },
+    "form": {
+      "pageSubtitle": "パスワードを設定",
+      "title": "パスワードを設定",
+      "organization": "所属機関：",
+      "account": "アカウント：",
+      "name": "氏名：",
+      "newPassword": "新しいパスワード",
+      "newPasswordPlaceholder": "パスワードを入力",
+      "confirmPassword": "パスワード確認",
+      "confirmPasswordPlaceholder": "パスワードを再入力",
+      "requirements": "パスワード要件：",
+      "requirementHint": "8文字以上、大文字・小文字・数字・特殊文字を含む",
+      "submitting": "設定中...",
+      "submit": "パスワードを設定してアカウントを有効化"
+    },
+    "footer": {
+      "willActivate": "パスワード設定後、アカウントがすぐに有効化されます",
+      "useAllFeatures": "Duotopiaのすべての機能を利用開始できます"
+    }
   }
 }

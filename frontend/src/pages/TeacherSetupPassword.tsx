@@ -23,6 +23,7 @@ import {
 import { apiClient } from "../lib/api";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useTranslation } from "react-i18next";
+import { validatePasswordStrength } from "@/utils/passwordValidation";
 
 export default function TeacherSetupPassword() {
   const { t } = useTranslation();
@@ -50,7 +51,7 @@ export default function TeacherSetupPassword() {
 
   useEffect(() => {
     if (!token) {
-      setError("連結無效");
+      setError(t("teacherSetupPassword.errors.invalidLink"));
       setIsVerifying(false);
       return;
     }
@@ -59,7 +60,7 @@ export default function TeacherSetupPassword() {
     const verifyToken = async () => {
       try {
         const response = await apiClient.get(
-          `/api/auth/teacher/verify-reset-token?token=${token}`,
+          `/api/auth/teacher/verify-reset-token?token=${encodeURIComponent(token)}`,
         );
         if (
           response &&
@@ -72,17 +73,18 @@ export default function TeacherSetupPassword() {
             setUserInfo({
               email: response.email as string,
               name: response.name as string,
-              organization_name: response.organization_name as
-                | string
-                | undefined,
+              organization_name:
+                "organization_name" in response
+                  ? (response.organization_name as string | undefined)
+                  : undefined,
             });
           }
         }
       } catch (err) {
         if (err instanceof Error) {
-          setError(err.message || "連結已過期或無效");
+          setError(err.message || t("teacherSetupPassword.errors.linkExpired"));
         } else {
-          setError("連結已過期或無效");
+          setError(t("teacherSetupPassword.errors.linkExpired"));
         }
         setTokenValid(false);
       } finally {
@@ -99,12 +101,13 @@ export default function TeacherSetupPassword() {
 
     // 驗證密碼
     if (formData.newPassword !== formData.confirmPassword) {
-      setError("密碼確認不符");
+      setError(t("teacherSetupPassword.errors.passwordMismatch"));
       return;
     }
 
-    if (formData.newPassword.length < 6) {
-      setError("密碼長度至少需要 6 個字元");
+    const validation = validatePasswordStrength(formData.newPassword);
+    if (!validation.valid && validation.errorKey) {
+      setError(t(`teacherSetupPassword.errors.${validation.errorKey}`));
       return;
     }
 
@@ -130,9 +133,9 @@ export default function TeacherSetupPassword() {
       }
     } catch (err) {
       if (err instanceof Error) {
-        setError(err.message || "密碼設定失敗");
+        setError(err.message || t("teacherSetupPassword.errors.setupFailed"));
       } else {
-        setError("密碼設定失敗");
+        setError(t("teacherSetupPassword.errors.setupFailed"));
       }
     } finally {
       setIsLoading(false);
@@ -151,7 +154,9 @@ export default function TeacherSetupPassword() {
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-purple-600 mb-4" />
-            <p className="text-gray-600">驗證連結中...</p>
+            <p className="text-gray-600">
+              {t("teacherSetupPassword.verifying")}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -173,7 +178,9 @@ export default function TeacherSetupPassword() {
               <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
-              <CardTitle className="text-2xl">🎉 密碼設定成功！</CardTitle>
+              <CardTitle className="text-2xl">
+                {t("teacherSetupPassword.success.title")}
+              </CardTitle>
               <CardDescription>
                 {userInfo?.organization_name && (
                   <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
@@ -186,7 +193,7 @@ export default function TeacherSetupPassword() {
                   </div>
                 )}
                 <p className="mt-4 text-gray-600">
-                  您現在可以使用您的帳號登入 Duotopia 了
+                  {t("teacherSetupPassword.success.canLoginNow")}
                 </p>
               </CardDescription>
             </CardHeader>
@@ -195,17 +202,19 @@ export default function TeacherSetupPassword() {
               <Alert className="bg-green-50 border-green-200">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">
-                  您的 Duotopia 帳號已啟用，可以開始使用所有功能！
+                  {t("teacherSetupPassword.success.accountActivated")}
                 </AlertDescription>
               </Alert>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-                <p className="font-semibold mb-2">✨ 您現在可以：</p>
+                <p className="font-semibold mb-2">
+                  {t("teacherSetupPassword.success.youCanNow")}
+                </p>
                 <ul className="space-y-1 ml-4">
-                  <li>• 登入 Duotopia 教學平台</li>
-                  <li>• 管理班級和學生</li>
-                  <li>• 指派和批改作業</li>
-                  <li>• 追蹤學生學習進度</li>
+                  <li>{t("teacherSetupPassword.success.loginPlatform")}</li>
+                  <li>{t("teacherSetupPassword.success.manageClasses")}</li>
+                  <li>{t("teacherSetupPassword.success.assignHomework")}</li>
+                  <li>{t("teacherSetupPassword.success.trackProgress")}</li>
                 </ul>
               </div>
 
@@ -213,7 +222,7 @@ export default function TeacherSetupPassword() {
                 className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                 onClick={() => navigate("/teacher/login")}
               >
-                前往登入頁面
+                {t("teacherSetupPassword.success.goToLogin")}
               </Button>
             </CardContent>
           </Card>
@@ -237,24 +246,30 @@ export default function TeacherSetupPassword() {
               <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
                 <XCircle className="h-8 w-8 text-red-600" />
               </div>
-              <CardTitle className="text-2xl">連結無效或已過期</CardTitle>
-              <CardDescription>此密碼設定連結已失效</CardDescription>
+              <CardTitle className="text-2xl">
+                {t("teacherSetupPassword.invalid.title")}
+              </CardTitle>
+              <CardDescription>
+                {t("teacherSetupPassword.invalid.description")}
+              </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
               <Alert className="bg-red-50 border-red-200">
                 <XCircle className="h-4 w-4 text-red-600" />
                 <AlertDescription className="text-red-800">
-                  {error || "連結可能已過期（48 小時有效期）或已被使用過"}
+                  {error || t("teacherSetupPassword.invalid.defaultError")}
                 </AlertDescription>
               </Alert>
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
-                <p className="font-semibold mb-2">⏰ 注意事項：</p>
+                <p className="font-semibold mb-2">
+                  {t("teacherSetupPassword.invalid.notes")}
+                </p>
                 <ul className="space-y-1 ml-4">
-                  <li>• 密碼設定連結有效期為 48 小時</li>
-                  <li>• 每個連結只能使用一次</li>
-                  <li>• 如需協助，請聯繫您的機構管理員</li>
+                  <li>{t("teacherSetupPassword.invalid.validFor48h")}</li>
+                  <li>{t("teacherSetupPassword.invalid.singleUse")}</li>
+                  <li>{t("teacherSetupPassword.invalid.contactAdmin")}</li>
                 </ul>
               </div>
 
@@ -264,7 +279,7 @@ export default function TeacherSetupPassword() {
                   className="w-full"
                   onClick={() => navigate("/teacher/login")}
                 >
-                  返回登入頁面
+                  {t("teacherSetupPassword.invalid.backToLogin")}
                 </Button>
               </div>
             </CardContent>
@@ -287,14 +302,16 @@ export default function TeacherSetupPassword() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
             Duotopia
           </h1>
-          <p className="text-gray-600">設定您的密碼</p>
+          <p className="text-gray-600">
+            {t("teacherSetupPassword.form.pageSubtitle")}
+          </p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lock className="h-5 w-5 text-purple-600" />
-              設定您的密碼
+              {t("teacherSetupPassword.form.title")}
             </CardTitle>
             <CardDescription>
               {userInfo && (
@@ -303,7 +320,9 @@ export default function TeacherSetupPassword() {
                     <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
                       <Building2 className="h-4 w-4 text-purple-600" />
                       <div className="text-sm">
-                        <span className="text-gray-600">機構：</span>
+                        <span className="text-gray-600">
+                          {t("teacherSetupPassword.form.organization")}
+                        </span>
                         <span className="font-medium text-purple-700 ml-1">
                           {userInfo.organization_name}
                         </span>
@@ -311,8 +330,14 @@ export default function TeacherSetupPassword() {
                     </div>
                   )}
                   <div className="text-sm text-gray-600">
-                    <p className="font-medium">帳號：{userInfo.email}</p>
-                    <p>姓名：{userInfo.name}</p>
+                    <p className="font-medium">
+                      {t("teacherSetupPassword.form.account")}
+                      {userInfo.email}
+                    </p>
+                    <p>
+                      {t("teacherSetupPassword.form.name")}
+                      {userInfo.name}
+                    </p>
                   </div>
                 </div>
               )}
@@ -322,13 +347,17 @@ export default function TeacherSetupPassword() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="newPassword">新密碼</Label>
+                <Label htmlFor="newPassword">
+                  {t("teacherSetupPassword.form.newPassword")}
+                </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="newPassword"
                     type={showPassword ? "text" : "password"}
-                    placeholder="請輸入至少 6 個字元的密碼"
+                    placeholder={t(
+                      "teacherSetupPassword.form.newPasswordPlaceholder",
+                    )}
                     value={formData.newPassword}
                     onChange={(e) =>
                       setFormData({ ...formData, newPassword: e.target.value })
@@ -336,7 +365,7 @@ export default function TeacherSetupPassword() {
                     className="pl-10 pr-10"
                     required
                     disabled={isLoading}
-                    minLength={6}
+                    minLength={8}
                   />
                   <button
                     type="button"
@@ -353,13 +382,17 @@ export default function TeacherSetupPassword() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">確認密碼</Label>
+                <Label htmlFor="confirmPassword">
+                  {t("teacherSetupPassword.form.confirmPassword")}
+                </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
-                    placeholder="請再次輸入密碼"
+                    placeholder={t(
+                      "teacherSetupPassword.form.confirmPasswordPlaceholder",
+                    )}
                     value={formData.confirmPassword}
                     onChange={(e) =>
                       setFormData({
@@ -370,7 +403,7 @@ export default function TeacherSetupPassword() {
                     className="pl-10 pr-10"
                     required
                     disabled={isLoading}
-                    minLength={6}
+                    minLength={8}
                   />
                   <button
                     type="button"
@@ -393,11 +426,10 @@ export default function TeacherSetupPassword() {
               )}
 
               <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
-                <p className="font-medium mb-1">密碼要求：</p>
-                <ul className="space-y-1 ml-4">
-                  <li>• 至少 6 個字元</li>
-                  <li>• 建議包含英文字母和數字</li>
-                </ul>
+                <p className="font-medium mb-1">
+                  {t("teacherSetupPassword.form.requirements")}
+                </p>
+                <p>{t("teacherSetupPassword.form.requirementHint")}</p>
               </div>
 
               <Button
@@ -408,10 +440,10 @@ export default function TeacherSetupPassword() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    設定中...
+                    {t("teacherSetupPassword.form.submitting")}
                   </>
                 ) : (
-                  "設定密碼並啟用帳號"
+                  t("teacherSetupPassword.form.submit")
                 )}
               </Button>
             </form>
@@ -419,8 +451,10 @@ export default function TeacherSetupPassword() {
         </Card>
 
         <div className="mt-6 text-center text-sm text-gray-600">
-          <p>設定密碼後，您的帳號將立即啟用</p>
-          <p className="mt-1">可以開始使用 Duotopia 的所有功能</p>
+          <p>{t("teacherSetupPassword.footer.willActivate")}</p>
+          <p className="mt-1">
+            {t("teacherSetupPassword.footer.useAllFeatures")}
+          </p>
         </div>
       </div>
     </div>
