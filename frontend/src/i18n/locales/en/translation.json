@@ -4255,7 +4255,12 @@
       "invalidLink": "Invalid link",
       "linkExpired": "Link has expired or is invalid",
       "passwordMismatch": "Passwords do not match",
-      "setupFailed": "Failed to set password"
+      "setupFailed": "Failed to set password",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "missingUppercase": "Password must contain at least one uppercase letter",
+      "missingLowercase": "Password must contain at least one lowercase letter",
+      "missingNumber": "Password must contain at least one number",
+      "missingSpecialChar": "Password must contain at least one special character (!@#$%^&* etc.)"
     },
     "success": {
       "title": "Password Set Successfully!",

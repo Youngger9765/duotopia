@@ -4270,7 +4270,12 @@
       "invalidLink": "連結無效",
       "linkExpired": "連結已過期或無效",
       "passwordMismatch": "密碼確認不符",
-      "setupFailed": "密碼設定失敗"
+      "setupFailed": "密碼設定失敗",
+      "passwordTooShort": "密碼至少需要 8 個字元",
+      "missingUppercase": "密碼必須包含至少一個大寫字母",
+      "missingLowercase": "密碼必須包含至少一個小寫字母",
+      "missingNumber": "密碼必須包含至少一個數字",
+      "missingSpecialChar": "密碼必須包含至少一個特殊字元（!@#$%^&* 等）"
     },
     "success": {
       "title": "密碼設定成功！",

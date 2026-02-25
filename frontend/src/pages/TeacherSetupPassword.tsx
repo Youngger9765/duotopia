@@ -60,7 +60,7 @@ export default function TeacherSetupPassword() {
     const verifyToken = async () => {
       try {
         const response = await apiClient.get(
-          `/api/auth/teacher/verify-reset-token?token=${token}`,
+          `/api/auth/teacher/verify-reset-token?token=${encodeURIComponent(token)}`,
         );
         if (
           response &&
@@ -93,7 +93,7 @@ export default function TeacherSetupPassword() {
     };
 
     verifyToken();
-  }, [token]);
+  }, [token, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +107,7 @@ export default function TeacherSetupPassword() {
 
     const validation = validatePasswordStrength(formData.newPassword);
     if (!validation.valid && validation.errorKey) {
-      setError(t(`teacherRegister.errors.${validation.errorKey}`));
+      setError(t(`teacherSetupPassword.errors.${validation.errorKey}`));
       return;
     }
 
