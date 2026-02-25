@@ -66,6 +66,7 @@
 |-------|---------|
 | `/worktree <issues \| description>` | 使用 git worktree 隔離開發。支援 GitHub issue（如 `#42 #43`）或任意任務描述。自動觸發：「開 worktree」、「用 worktree 處理」 |
 | `/fix-review <PR-number>` | 自動分析 Claude Code Review 回饋並反覆修正，直到 PR 可以 merge。遇到需要人為判斷的項目才會提問 |
+| `/fix-workflow <PR-number>` | 自動分析 CI test workflow 錯誤（backend/frontend），解析 GitHub Actions log，修復 Black、Flake8、Prettier、TypeScript、ESLint、build 等錯誤後重推 |
 
 ### Commands (`.claude/commands/`)
 
