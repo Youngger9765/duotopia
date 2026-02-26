@@ -4,7 +4,7 @@ Creates student_identities table and adds identity-related columns to students.
 Supports merging multiple student accounts under one unified identity.
 
 Revision ID: 20260225_1600
-Revises: 20260206_1000
+Revises: 20260225_1000
 Create Date: 2026-02-25 16:00:00.000000
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "20260225_1600"
-down_revision = "20260206_1000"
+down_revision = "20260225_1000"
 branch_labels = None
 depends_on = None
 
