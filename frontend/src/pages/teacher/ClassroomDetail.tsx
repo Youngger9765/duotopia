@@ -1619,24 +1619,16 @@ export default function ClassroomDetail({
                             {t("classroomDetail.filters.allTypes")}
                           </option>
                           <option value="WORD_READING">
-                            {t(
-                              "classroomDetail.contentTypes.WORD_READING",
-                            )}
+                            {t("classroomDetail.contentTypes.WORD_READING")}
                           </option>
                           <option value="WORD_SELECTION">
-                            {t(
-                              "classroomDetail.contentTypes.WORD_SELECTION",
-                            )}
+                            {t("classroomDetail.contentTypes.WORD_SELECTION")}
                           </option>
                           <option value="SPEAKING">
-                            {t(
-                              "classroomDetail.contentTypes.SPEAKING",
-                            )}
+                            {t("classroomDetail.contentTypes.SPEAKING")}
                           </option>
                           <option value="REARRANGEMENT">
-                            {t(
-                              "classroomDetail.contentTypes.REARRANGEMENT",
-                            )}
+                            {t("classroomDetail.contentTypes.REARRANGEMENT")}
                           </option>
                         </select>
                         <div className="relative w-full md:w-[35%]">
@@ -1655,13 +1647,9 @@ export default function ClassroomDetail({
                           <input
                             type="date"
                             value={filterDateFrom}
-                            onChange={(e) =>
-                              setFilterDateFrom(e.target.value)
-                            }
+                            onChange={(e) => setFilterDateFrom(e.target.value)}
                             className="h-9 rounded-md border border-input bg-background px-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-                            placeholder={t(
-                              "classroomDetail.filters.startDate",
-                            )}
+                            placeholder={t("classroomDetail.filters.startDate")}
                           />
                           <span className="text-gray-400 text-sm">~</span>
                           <input
@@ -1669,9 +1657,7 @@ export default function ClassroomDetail({
                             value={filterDateTo}
                             onChange={(e) => setFilterDateTo(e.target.value)}
                             className="h-9 rounded-md border border-input bg-background px-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-                            placeholder={t(
-                              "classroomDetail.filters.endDate",
-                            )}
+                            placeholder={t("classroomDetail.filters.endDate")}
                           />
                           <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap cursor-pointer">
                             <Checkbox
@@ -1867,7 +1853,9 @@ export default function ClassroomDetail({
                                 {/* Title & AI Batch Grade Button */}
                                 <div className="flex items-start justify-between gap-2">
                                   <Checkbox
-                                    checked={selectedForPrint.has(assignment.id)}
+                                    checked={selectedForPrint.has(
+                                      assignment.id,
+                                    )}
                                     onCheckedChange={() =>
                                       togglePrintSelection(assignment.id)
                                     }
@@ -2061,8 +2049,7 @@ export default function ClassroomDetail({
                               </tr>
                             </thead>
                             <tbody>
-                              {paginatedAssignments.map(
-                                (assignment) => {
+                              {paginatedAssignments.map((assignment) => {
                                 const assignmentIdx = assignments.findIndex(
                                   (a) => a.id === assignment.id,
                                 );
@@ -2354,9 +2341,7 @@ export default function ClassroomDetail({
                                   Math.min(totalAssignmentPages, p + 1),
                                 )
                               }
-                              disabled={
-                                assignmentPage === totalAssignmentPages
-                              }
+                              disabled={assignmentPage === totalAssignmentPages}
                             >
                               <ChevronRight className="h-4 w-4" />
                             </Button>
@@ -2980,9 +2965,7 @@ export default function ClassroomDetail({
       {/* Sticky Note Modal */}
       <AssignmentStickyNote
         open={stickyNoteModal.open}
-        onClose={() =>
-          setStickyNoteModal({ ...stickyNoteModal, open: false })
-        }
+        onClose={() => setStickyNoteModal({ ...stickyNoteModal, open: false })}
         assignments={assignments}
         initialAssignmentIndex={stickyNoteModal.assignmentIndex}
         classroomId={id || ""}

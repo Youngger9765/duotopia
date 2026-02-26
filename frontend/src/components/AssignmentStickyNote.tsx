@@ -73,8 +73,7 @@ const STATUS_CONFIG: Record<
   NOT_STARTED: {
     color: "bg-gray-400",
     textColor: "text-gray-400",
-    bgColor:
-      "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-600",
+    bgColor: "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-600",
     label: "stickyNote.status.notStarted",
     symbol: "○",
   },
@@ -120,7 +119,6 @@ const STATUS_CONFIG: Record<
     symbol: "✓",
   },
 };
-
 
 export default function AssignmentStickyNote({
   open,
@@ -259,10 +257,14 @@ export default function AssignmentStickyNote({
     if (!captureRef.current) return;
 
     // Temporarily show the title/footer and remove scroll/truncate constraints
-    const titleEl = captureRef.current.querySelector<HTMLElement>(".capture-title");
-    const footerEl = captureRef.current.querySelector<HTMLElement>(".capture-footer");
-    const gridEl = captureRef.current.querySelector<HTMLElement>(".student-grid");
-    const nameEls = captureRef.current.querySelectorAll<HTMLElement>(".student-name");
+    const titleEl =
+      captureRef.current.querySelector<HTMLElement>(".capture-title");
+    const footerEl =
+      captureRef.current.querySelector<HTMLElement>(".capture-footer");
+    const gridEl =
+      captureRef.current.querySelector<HTMLElement>(".student-grid");
+    const nameEls =
+      captureRef.current.querySelectorAll<HTMLElement>(".student-name");
 
     if (titleEl) titleEl.style.display = "block";
     if (footerEl) footerEl.style.display = "block";
@@ -403,7 +405,6 @@ export default function AssignmentStickyNote({
               {sortLabel}
             </button>
           </div>
-
         </div>
 
         {/* Capturable area: legend + grid (for download/print) */}
