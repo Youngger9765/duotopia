@@ -22,7 +22,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   useWorkspace,
   Organization,
@@ -106,7 +105,7 @@ export const WorkspaceSwitcher: React.FC = () => {
             <DialogTitle>{t("workspace.selectWorkspace")}</DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[60vh] px-6 py-4">
+          <div className="max-h-[60vh] overflow-y-auto px-6 py-4">
             <div className="space-y-3">
               {/* Personal Mode Option */}
               <WorkspaceOption
@@ -155,7 +154,7 @@ export const WorkspaceSwitcher: React.FC = () => {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
     </>
