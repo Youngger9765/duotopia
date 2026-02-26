@@ -106,7 +106,7 @@ export const WorkspaceSwitcher: React.FC = () => {
             <DialogTitle>{t("workspace.selectWorkspace")}</DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 min-h-0 px-6 py-4">
+          <ScrollArea className="max-h-[60vh] px-6 py-4">
             <div className="space-y-3">
               {/* Personal Mode Option */}
               <WorkspaceOption
