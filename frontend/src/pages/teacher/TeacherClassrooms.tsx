@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -29,8 +29,16 @@ import {
   GraduationCap,
   Trash2,
   AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ClipboardList,
+  Search,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
+import { AssignmentDialog } from "@/components/AssignmentDialog";
 
 interface ClassroomDetail {
   id: number;
@@ -49,6 +57,9 @@ interface ClassroomDetail {
   school_name?: string;
   organization_id?: string;
 }
+
+type SortField = "name" | "student_count" | "created_at";
+type SortDirection = "asc" | "desc";
 
 export default function TeacherClassrooms() {
   const { t } = useTranslation();
@@ -69,6 +80,21 @@ export default function TeacherClassrooms() {
     description: "",
     level: "A1",
   });
+
+  // Search & Filter
+  const [searchQuery, setSearchQuery] = useState("");
+  const [levelFilter, setLevelFilter] = useState<string>("all");
+
+  // Sorting
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
+  // Expandable rows
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+  // Assignment dialog
+  const [assignmentClassroom, setAssignmentClassroom] =
+    useState<ClassroomDetail | null>(null);
 
   useEffect(() => {
     fetchClassrooms();
@@ -98,9 +124,7 @@ export default function TeacherClassrooms() {
       const data = (await apiClient.getTeacherClassrooms(
         apiParams,
       )) as ClassroomDetail[];
-      // Sort by ID to maintain consistent order
-      const sortedData = data.sort((a, b) => a.id - b.id);
-      setClassrooms(sortedData);
+      setClassrooms(data);
     } catch (err) {
       console.error("Fetch classrooms error:", err);
     } finally {
@@ -206,23 +230,132 @@ export default function TeacherClassrooms() {
     );
   };
 
-  // Filter classrooms based on workspace selection
-  const filteredClassrooms = classrooms.filter((classroom) => {
-    if (mode === "personal") {
-      // Personal mode: only show classrooms without school_id or organization_id
-      return !classroom.school_id && !classroom.organization_id;
+  // Sort toggle handler
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else {
+        setSortField(null);
+        setSortDirection("asc");
+      }
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
     }
-    if (selectedSchool) {
-      // School selected: show only classrooms from this school
-      return classroom.school_id === selectedSchool.id;
+  };
+
+  // Expandable row toggle
+  const toggleRowExpanded = (classroomId: number) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(classroomId)) {
+        next.delete(classroomId);
+      } else {
+        next.add(classroomId);
+      }
+      return next;
+    });
+  };
+
+  // Sortable header component
+  const SortableHeader = ({
+    field,
+    children,
+    className,
+  }: {
+    field: SortField;
+    children: React.ReactNode;
+    className?: string;
+  }) => {
+    const isActive = sortField === field;
+    const icon = isActive ? (
+      sortDirection === "asc" ? (
+        <ArrowUp className="h-3 w-3" />
+      ) : (
+        <ArrowDown className="h-3 w-3" />
+      )
+    ) : (
+      <ArrowUpDown className="h-3 w-3 opacity-50" />
+    );
+
+    return (
+      <TableHead className={className}>
+        <button
+          onClick={() => handleSort(field)}
+          className="flex items-center gap-1 hover:text-gray-900 dark:hover:text-gray-100 transition-colors text-xs sm:text-sm"
+        >
+          {children}
+          {icon}
+        </button>
+      </TableHead>
+    );
+  };
+
+  // Filter and sort classrooms
+  const processedClassrooms = useMemo(() => {
+    // Workspace filter
+    let result = classrooms.filter((classroom) => {
+      if (mode === "personal") {
+        return !classroom.school_id && !classroom.organization_id;
+      }
+      if (selectedSchool) {
+        return classroom.school_id === selectedSchool.id;
+      }
+      if (selectedOrganization) {
+        return classroom.organization_id === selectedOrganization.id;
+      }
+      return true;
+    });
+
+    // Text search by name
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      result = result.filter((c) => c.name.toLowerCase().includes(query));
     }
-    if (selectedOrganization) {
-      // Organization selected (no specific school): show all classrooms from the organization
-      return classroom.organization_id === selectedOrganization.id;
+
+    // Level filter
+    if (levelFilter !== "all") {
+      result = result.filter(
+        (c) => (c.level || "A1").toUpperCase() === levelFilter.toUpperCase(),
+      );
     }
-    // Default: show all
-    return true;
-  });
+
+    // Sorting
+    if (sortField) {
+      result = [...result].sort((a, b) => {
+        let comparison = 0;
+        switch (sortField) {
+          case "name":
+            comparison = a.name.localeCompare(b.name, "zh-TW");
+            break;
+          case "student_count":
+            comparison = a.student_count - b.student_count;
+            break;
+          case "created_at":
+            comparison =
+              new Date(a.created_at || "").getTime() -
+              new Date(b.created_at || "").getTime();
+            break;
+        }
+        return sortDirection === "asc" ? comparison : -comparison;
+      });
+    } else {
+      // Default: sort by ID ascending
+      result = [...result].sort((a, b) => a.id - b.id);
+    }
+
+    return result;
+  }, [
+    classrooms,
+    mode,
+    selectedSchool,
+    selectedOrganization,
+    searchQuery,
+    levelFilter,
+    sortField,
+    sortDirection,
+  ]);
 
   if (loading) {
     return (
@@ -282,7 +415,7 @@ export default function TeacherClassrooms() {
                 {t("teacherClassrooms.stats.totalClassrooms")}
               </p>
               <p className="text-xl sm:text-2xl font-bold dark:text-gray-100">
-                {filteredClassrooms.length}
+                {processedClassrooms.length}
               </p>
             </div>
             <GraduationCap className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 dark:text-blue-400" />
@@ -295,7 +428,7 @@ export default function TeacherClassrooms() {
                 {t("teacherClassrooms.stats.totalStudents")}
               </p>
               <p className="text-xl sm:text-2xl font-bold dark:text-gray-100">
-                {filteredClassrooms.reduce(
+                {processedClassrooms.reduce(
                   (sum, c) => sum + c.student_count,
                   0,
                 )}
@@ -311,7 +444,7 @@ export default function TeacherClassrooms() {
                 {t("teacherClassrooms.stats.activeClassrooms")}
               </p>
               <p className="text-xl sm:text-2xl font-bold dark:text-gray-100">
-                {filteredClassrooms.length}
+                {processedClassrooms.length}
               </p>
             </div>
             <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 dark:text-purple-400" />
@@ -319,102 +452,188 @@ export default function TeacherClassrooms() {
         </div>
       </div>
 
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <select
+          value={levelFilter}
+          onChange={(e) => setLevelFilter(e.target.value)}
+          className="px-3 py-2 border dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm"
+        >
+          <option value="all">
+            {t("teacherClassrooms.filters.allLevels")}
+          </option>
+          <option value="PREA">Pre-A</option>
+          <option value="A1">A1</option>
+          <option value="A2">A2</option>
+          <option value="B1">B1</option>
+          <option value="B2">B2</option>
+          <option value="C1">C1</option>
+          <option value="C2">C2</option>
+        </select>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder={t("teacherClassrooms.placeholders.searchName")}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 border dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm"
+          />
+        </div>
+      </div>
+
       {/* Classrooms Table */}
       <>
-        {/* Mobile Card View */}
-        <div className="md:hidden space-y-4">
-          {filteredClassrooms.map((classroom) => (
-            <div
-              key={classroom.id}
-              className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 space-y-3"
+        {/* Mobile Sort + Card View */}
+        <div className="md:hidden">
+          {/* Mobile sort control */}
+          <div className="flex items-center gap-2 mb-3">
+            <ArrowUpDown className="h-4 w-4 text-gray-500" />
+            <select
+              value={sortField ? `${sortField}_${sortDirection}` : "default"}
+              onChange={(e) => {
+                if (e.target.value === "default") {
+                  setSortField(null);
+                  setSortDirection("asc");
+                } else {
+                  const parts = e.target.value.split("_");
+                  const dir = parts.pop() as SortDirection;
+                  const field = parts.join("_") as SortField;
+                  setSortField(field);
+                  setSortDirection(dir);
+                }
+              }}
+              className="px-2 py-1 border dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm"
             >
-              {/* Header */}
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
-                    <GraduationCap className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        ID: {classroom.id}
-                      </span>
-                      {getLevelBadge(classroom.level)}
+              <option value="default">
+                {t("teacherClassrooms.sort.default")}
+              </option>
+              <option value="name_asc">
+                {t("teacherClassrooms.sort.nameAsc")}
+              </option>
+              <option value="name_desc">
+                {t("teacherClassrooms.sort.nameDesc")}
+              </option>
+              <option value="student_count_desc">
+                {t("teacherClassrooms.sort.studentCountDesc")}
+              </option>
+              <option value="created_at_desc">
+                {t("teacherClassrooms.sort.createdAtDesc")}
+              </option>
+              <option value="created_at_asc">
+                {t("teacherClassrooms.sort.createdAtAsc")}
+              </option>
+            </select>
+          </div>
+
+          <div className="space-y-4">
+            {processedClassrooms.map((classroom) => (
+              <div
+                key={classroom.id}
+                className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 space-y-3"
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
+                      <GraduationCap className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <Link
-                      to={`/teacher/classroom/${classroom.id}`}
-                      className="font-medium text-lg text-blue-600 dark:text-blue-400 hover:underline block mt-1"
-                    >
-                      {classroom.name}
-                    </Link>
-                    {classroom.description && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {classroom.description}
-                      </p>
-                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          ID: {classroom.id}
+                        </span>
+                        {getLevelBadge(classroom.level)}
+                      </div>
+                      <Link
+                        to={`/teacher/classroom/${classroom.id}`}
+                        className="font-medium text-lg text-blue-600 dark:text-blue-400 hover:underline block mt-1"
+                      >
+                        {classroom.name}
+                      </Link>
+                      {classroom.description && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          {classroom.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Info */}
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {t("teacherClassrooms.labels.students")}:
-                  </span>
-                  <span className="font-medium dark:text-gray-200">
-                    {classroom.student_count}
-                  </span>
+                {/* Info */}
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    <span className="text-gray-600 dark:text-gray-400">
+                      {t("teacherClassrooms.labels.students")}:
+                    </span>
+                    <span className="font-medium dark:text-gray-200">
+                      {classroom.student_count}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    <span className="text-gray-600 dark:text-gray-400">
+                      {t("teacherClassrooms.labels.programs")}:
+                    </span>
+                    <span className="font-medium dark:text-gray-200">
+                      {classroom.program_count || 0}
+                    </span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-600 dark:text-gray-400">
+                      {t("teacherClassrooms.labels.createdAt")}:{" "}
+                    </span>
+                    <span className="dark:text-gray-200">
+                      {formatDate(classroom.created_at)}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {t("teacherClassrooms.labels.programs")}:
-                  </span>
-                  <span className="font-medium dark:text-gray-200">
-                    {classroom.program_count || 0}
-                  </span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {t("teacherClassrooms.labels.createdAt")}:{" "}
-                  </span>
-                  <span className="dark:text-gray-200">
-                    {formatDate(classroom.created_at)}
-                  </span>
-                </div>
-              </div>
 
-              {/* Actions */}
-              <div className="flex gap-2 pt-2 border-t dark:border-gray-700">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleEdit(classroom)}
-                  className="flex-1"
-                  disabled={mode === "organization" || selectedSchool !== null}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  {t("common.edit")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDeleteConfirmId(classroom.id)}
-                  className="flex-1 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400"
-                  disabled={mode === "organization" || selectedSchool !== null}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {t("common.delete")}
-                </Button>
+                {/* Actions */}
+                <div className="flex gap-2 pt-2 border-t dark:border-gray-700">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAssignmentClassroom(classroom)}
+                    className="flex-1"
+                    disabled={classroom.student_count === 0}
+                  >
+                    <ClipboardList className="h-4 w-4 mr-2" />
+                    {t("teacherClassrooms.buttons.dispatchAssignment")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEdit(classroom)}
+                    className="flex-1"
+                    disabled={
+                      mode === "organization" || selectedSchool !== null
+                    }
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    {t("common.edit")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeleteConfirmId(classroom.id)}
+                    className="flex-1 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400"
+                    disabled={
+                      mode === "organization" || selectedSchool !== null
+                    }
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {t("common.delete")}
+                  </Button>
+                </div>
               </div>
+            ))}
+            <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
+              {t("teacherClassrooms.messages.totalCount", {
+                count: processedClassrooms.length,
+              })}
             </div>
-          ))}
-          <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
-            {t("teacherClassrooms.messages.totalCount", {
-              count: filteredClassrooms.length,
-            })}
           </div>
         </div>
 
@@ -424,7 +643,7 @@ export default function TeacherClassrooms() {
             <Table>
               <TableCaption className="dark:text-gray-400">
                 {t("teacherClassrooms.messages.totalCount", {
-                  count: filteredClassrooms.length,
+                  count: processedClassrooms.length,
                 })}
               </TableCaption>
               <TableHeader>
@@ -432,107 +651,186 @@ export default function TeacherClassrooms() {
                   <TableHead className="w-[50px] text-left text-xs sm:text-sm">
                     ID
                   </TableHead>
-                  <TableHead className="text-left text-xs sm:text-sm min-w-[120px]">
+                  <SortableHeader
+                    field="name"
+                    className="text-left text-xs sm:text-sm min-w-[200px]"
+                  >
                     {t("teacherClassrooms.labels.classroomName")}
-                  </TableHead>
-                  <TableHead className="text-left text-xs sm:text-sm min-w-[100px]">
-                    {t("teacherClassrooms.labels.description")}
-                  </TableHead>
+                  </SortableHeader>
                   <TableHead className="text-left text-xs sm:text-sm min-w-[60px]">
                     {t("teacherClassrooms.labels.level")}
                   </TableHead>
-                  <TableHead className="text-left text-xs sm:text-sm min-w-[80px]">
-                    {t("teacherClassrooms.labels.studentCount")}
-                  </TableHead>
-                  <TableHead className="text-left text-xs sm:text-sm min-w-[80px]">
-                    {t("teacherClassrooms.labels.programCount")}
-                  </TableHead>
-                  <TableHead className="text-left text-xs sm:text-sm min-w-[100px]">
+                  <SortableHeader
+                    field="created_at"
+                    className="text-left text-xs sm:text-sm min-w-[100px]"
+                  >
                     {t("teacherClassrooms.labels.createdAt")}
-                  </TableHead>
-                  <TableHead className="text-left text-xs sm:text-sm min-w-[80px]">
+                  </SortableHeader>
+                  <TableHead className="text-left text-xs sm:text-sm min-w-[120px]">
                     {t("teacherClassrooms.labels.actions")}
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredClassrooms.map((classroom) => (
-                  <TableRow
-                    key={classroom.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                  >
-                    <TableCell className="font-medium text-xs sm:text-sm">
-                      {classroom.id}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-1 sm:space-x-2">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
-                          <GraduationCap className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <Link
-                          to={`/teacher/classroom/${classroom.id}`}
-                          className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline text-xs sm:text-sm truncate"
-                        >
-                          {classroom.name}
-                        </Link>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                        {classroom.description ||
-                          t("teacherClassrooms.messages.noDescription")}
-                      </p>
-                    </TableCell>
-                    <TableCell>{getLevelBadge(classroom.level)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 text-gray-400 dark:text-gray-500" />
-                        <span className="text-xs sm:text-sm dark:text-gray-200">
-                          {classroom.student_count}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 mr-1 text-gray-400 dark:text-gray-500" />
-                        <span className="text-xs sm:text-sm dark:text-gray-200">
-                          {classroom.program_count || 0}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs sm:text-sm dark:text-gray-200">
-                      {formatDate(classroom.created_at)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          title={t("common.edit")}
-                          onClick={() => handleEdit(classroom)}
-                          className="p-1 sm:p-2"
-                          disabled={
-                            mode === "organization" || selectedSchool !== null
-                          }
-                        >
-                          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          title={t("common.delete")}
-                          onClick={() => setDeleteConfirmId(classroom.id)}
-                          className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 sm:p-2"
-                          disabled={
-                            mode === "organization" || selectedSchool !== null
-                          }
-                        >
-                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {processedClassrooms.map((classroom) => {
+                  const isExpanded = expandedRows.has(classroom.id);
+                  return (
+                    <React.Fragment key={classroom.id}>
+                      {/* Main Row */}
+                      <TableRow
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                        onClick={() => toggleRowExpanded(classroom.id)}
+                      >
+                        <TableCell className="font-medium text-xs sm:text-sm">
+                          {classroom.id}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            )}
+                            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
+                              <GraduationCap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                              <Link
+                                to={`/teacher/classroom/${classroom.id}`}
+                                className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline text-sm"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {classroom.name}
+                              </Link>
+                              {/* Sub-info */}
+                              <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                <span className="flex items-center gap-1">
+                                  <Users className="h-3 w-3" />
+                                  {classroom.student_count}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <BookOpen className="h-3 w-3" />
+                                  {classroom.program_count || 0}
+                                </span>
+                                {classroom.description && (
+                                  <span className="truncate max-w-[200px]">
+                                    {classroom.description}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{getLevelBadge(classroom.level)}</TableCell>
+                        <TableCell className="text-xs sm:text-sm dark:text-gray-200">
+                          {formatDate(classroom.created_at)}
+                        </TableCell>
+                        <TableCell>
+                          <div
+                            className="flex items-center space-x-1"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {/* Dispatch Assignment */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title={t(
+                                "teacherClassrooms.buttons.dispatchAssignment",
+                              )}
+                              onClick={() => setAssignmentClassroom(classroom)}
+                              className="p-1 sm:p-2"
+                              disabled={classroom.student_count === 0}
+                            >
+                              <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="hidden sm:inline ml-1 text-xs">
+                                {t(
+                                  "teacherClassrooms.buttons.dispatchAssignment",
+                                )}
+                              </span>
+                            </Button>
+                            {/* Edit */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title={t("common.edit")}
+                              onClick={() => handleEdit(classroom)}
+                              className="p-1 sm:p-2"
+                              disabled={
+                                mode === "organization" ||
+                                selectedSchool !== null
+                              }
+                            >
+                              <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                            {/* Delete */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title={t("common.delete")}
+                              onClick={() => setDeleteConfirmId(classroom.id)}
+                              className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 sm:p-2"
+                              disabled={
+                                mode === "organization" ||
+                                selectedSchool !== null
+                              }
+                            >
+                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+
+                      {/* Expanded Detail Row */}
+                      {isExpanded && (
+                        <TableRow className="bg-gray-50 dark:bg-gray-700/30">
+                          <TableCell colSpan={5} className="py-3 px-6">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <span className="text-gray-500 dark:text-gray-400 text-xs">
+                                  {t("teacherClassrooms.labels.description")}
+                                </span>
+                                <p className="dark:text-gray-200 mt-1">
+                                  {classroom.description ||
+                                    t(
+                                      "teacherClassrooms.messages.noDescription",
+                                    )}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 dark:text-gray-400 text-xs">
+                                  {t("teacherClassrooms.labels.studentCount")}
+                                </span>
+                                <p className="dark:text-gray-200 mt-1 flex items-center gap-1">
+                                  <Users className="h-4 w-4 text-gray-400" />
+                                  {classroom.student_count}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 dark:text-gray-400 text-xs">
+                                  {t("teacherClassrooms.labels.programCount")}
+                                </span>
+                                <p className="dark:text-gray-200 mt-1 flex items-center gap-1">
+                                  <BookOpen className="h-4 w-4 text-gray-400" />
+                                  {classroom.program_count || 0}
+                                </p>
+                              </div>
+                              {classroom.school_name && (
+                                <div>
+                                  <span className="text-gray-500 dark:text-gray-400 text-xs">
+                                    {t("teacherClassrooms.labels.school")}
+                                  </span>
+                                  <p className="dark:text-gray-200 mt-1">
+                                    {classroom.school_name}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -540,7 +838,7 @@ export default function TeacherClassrooms() {
       </>
 
       {/* Empty State */}
-      {filteredClassrooms.length === 0 && (
+      {processedClassrooms.length === 0 && (
         <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
           <GraduationCap className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400">
@@ -789,6 +1087,17 @@ export default function TeacherClassrooms() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Assignment Dialog */}
+      {assignmentClassroom && (
+        <AssignmentDialog
+          open={!!assignmentClassroom}
+          onClose={() => setAssignmentClassroom(null)}
+          classroomId={assignmentClassroom.id}
+          students={assignmentClassroom.students}
+          onSuccess={() => setAssignmentClassroom(null)}
+        />
+      )}
     </div>
   );
 }

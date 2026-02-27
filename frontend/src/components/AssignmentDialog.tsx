@@ -260,12 +260,12 @@ export function AssignmentDialog({
     {},
   );
   const [currentStep, setCurrentStep] = useState(1);
-  const [activeTab, setActiveTab] = useState<
-    "template" | "classroom" | "organization"
-  >("template");
-
   // 只在機構模式且選擇了機構時顯示「機構教材」tab
   const showOrgTab = mode === "organization" && selectedOrganization !== null;
+
+  const [activeTab, setActiveTab] = useState<
+    "template" | "classroom" | "organization"
+  >(showOrgTab ? "organization" : "template");
 
   // 分別儲存公版和班級課程
   const [templatePrograms, setTemplatePrograms] = useState<Program[]>([]);
@@ -350,9 +350,9 @@ export function AssignmentDialog({
         show_image: true,
       });
       setCurrentStep(1);
-      setActiveTab("template");
+      setActiveTab(showOrgTab ? "organization" : "template");
     }
-  }, [open, classroomId, students]);
+  }, [open, classroomId, students, showOrgTab]);
 
   const loadQuotaInfo = async () => {
     try {
@@ -904,7 +904,7 @@ export function AssignmentDialog({
     setExpandedPrograms(new Set());
     setExpandedLessons(new Set());
     setCurrentStep(1);
-    setActiveTab("template");
+    setActiveTab(showOrgTab ? "organization" : "template");
     onClose();
   };
 
