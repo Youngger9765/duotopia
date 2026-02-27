@@ -63,7 +63,7 @@ PR_BRANCH=$(gh pr view "$PR_NUM" --json headRefName -q '.headRefName')
 CURRENT_BRANCH=$(git branch --show-current)
 
 if [ "$CURRENT_BRANCH" != "$PR_BRANCH" ]; then
-    WORKTREE_PATH=$(git worktree list | grep "$PR_BRANCH" | awk '{print $1}')
+    WORKTREE_PATH=$(git worktree list | grep -F "$PR_BRANCH" | awk '{print $1}')
     if [ -n "$WORKTREE_PATH" ]; then
         echo "Found worktree at: $WORKTREE_PATH"
     else
@@ -115,14 +115,20 @@ Focus on **test workflow jobs** only (not review or deploy):
 
 ```bash
 echo "Test workflows are running... polling every 30 seconds"
+POLL_COUNT=0
 
 while true; do
     CHECKS=$(gh pr checks "$PR_NUM" --json name,status,conclusion)
-    PENDING=$(echo "$CHECKS" | jq '[.[] | select(.name | test("Test Backend|Test Frontend"; "i")) | select(.status != "COMPLETED")] | length')
+    PENDING=$(echo "$CHECKS" | jq '[.[] | select(.name | test("Test Backend|Test Frontend"; "i")) | select(.status != "completed")] | length')
     if [ "$PENDING" = "0" ]; then
         break
     fi
-    echo "Still waiting for $PENDING check(s)..."
+    POLL_COUNT=$((POLL_COUNT + 1))
+    if [ "$POLL_COUNT" -ge 60 ]; then
+        echo "ERROR: Timed out after 30 minutes waiting for CI checks to complete."
+        break
+    fi
+    echo "Still waiting for $PENDING check(s)... (poll $POLL_COUNT/60)"
     sleep 30
 done
 ```
@@ -135,10 +141,16 @@ done
 
 ```bash
 # For backend
-BACKEND_RUN_ID=$(gh run list --workflow="Deploy Backend (Cloud Run)" --branch="$PR_BRANCH" --limit=1 --json databaseId,conclusion -q '.[0].databaseId')
+BACKEND_RUN_ID=$(gh run list --workflow="Deploy Backend (Cloud Run)" --branch="$PR_BRANCH" --limit=1 --json databaseId,conclusion -q '.[0].databaseId // empty')
+if [ -z "$BACKEND_RUN_ID" ]; then
+    echo "No backend workflow run found for branch $PR_BRANCH"
+fi
 
 # For frontend
-FRONTEND_RUN_ID=$(gh run list --workflow="Deploy Frontend (Cloud Run)" --branch="$PR_BRANCH" --limit=1 --json databaseId,conclusion -q '.[0].databaseId')
+FRONTEND_RUN_ID=$(gh run list --workflow="Deploy Frontend (Cloud Run)" --branch="$PR_BRANCH" --limit=1 --json databaseId,conclusion -q '.[0].databaseId // empty')
+if [ -z "$FRONTEND_RUN_ID" ]; then
+    echo "No frontend workflow run found for branch $PR_BRANCH"
+fi
 ```
 
 ### 3.2 Fetch failed step logs
@@ -208,6 +220,8 @@ cd backend && black .
 ```bash
 cd frontend && npx prettier --write src
 ```
+
+> **Note:** These commands format all files in the directory, not just PR-changed files. This ensures consistency but may produce slightly larger diffs. The CI checks run the same way, so this matches the expected behavior.
 
 After running, verify the formatter made changes:
 ```bash
@@ -370,14 +384,20 @@ git push origin "$PR_BRANCH"
 ```bash
 echo "Changes pushed. Waiting for test workflows to re-run..."
 sleep 10
+POLL_COUNT=0
 
 while true; do
     CHECKS=$(gh pr checks "$PR_NUM" --json name,status,conclusion)
-    PENDING=$(echo "$CHECKS" | jq '[.[] | select(.name | test("Test Backend|Test Frontend"; "i")) | select(.status != "COMPLETED")] | length')
+    PENDING=$(echo "$CHECKS" | jq '[.[] | select(.name | test("Test Backend|Test Frontend"; "i")) | select(.status != "completed")] | length')
     if [ "$PENDING" = "0" ]; then
         break
     fi
-    echo "Tests still running... ($PENDING pending)"
+    POLL_COUNT=$((POLL_COUNT + 1))
+    if [ "$POLL_COUNT" -ge 60 ]; then
+        echo "ERROR: Timed out after 30 minutes waiting for CI checks to complete."
+        break
+    fi
+    echo "Tests still running... ($PENDING pending, poll $POLL_COUNT/60)"
     sleep 30
 done
 ```
