@@ -1,6 +1,14 @@
 // Shared print HTML generation for sticky note views
 // Used by both single-print (AssignmentStickyNote modal) and batch-print (ClassroomDetail)
 
+function escapeHtml(s: string | number | undefined | null): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 export const STATUS_HEX: Record<
   string,
   { dot: string; bg: string; border: string; symbol: string; fontSize?: string }
@@ -104,17 +112,17 @@ export function buildStickyNotePageHtml(
       const parts: string[] = [];
       if (showNumber && hasNumber) {
         parts.push(
-          `<div style="font-weight:bold;font-size:16px">${student.student_number}</div>`,
+          `<div style="font-weight:bold;font-size:16px">${escapeHtml(student.student_number)}</div>`,
         );
       }
       if (showName) {
         parts.push(
-          `<div style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">${student.student_name}</div>`,
+          `<div style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">${escapeHtml(student.student_name)}</div>`,
         );
       }
       if (showScore) {
         parts.push(
-          `<div style="font-size:10px;color:#6b7280">${student.score != null ? student.score : "-"}</div>`,
+          `<div style="font-size:10px;color:#6b7280">${student.score != null ? escapeHtml(student.score) : "-"}</div>`,
         );
       }
       return `<div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px;border-radius:8px;border:1px solid ${hex.border};background:${hex.bg};min-height:56px;text-align:center;overflow:hidden">
@@ -125,7 +133,7 @@ export function buildStickyNotePageHtml(
     .join("");
 
   return `<div class="page">
-  <h2>${title}</h2>
+  <h2>${escapeHtml(title)}</h2>
   <div class="legend">${legendHtml}</div>
   <div class="grid">${cardsHtml}</div>
   <div class="footer">

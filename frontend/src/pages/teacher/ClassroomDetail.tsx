@@ -3,14 +3,6 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Card } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import StudentTable, { Student } from "@/components/StudentTable";
 import { StudentDialogs } from "@/components/StudentDialogs";
 import { ProgramDialog } from "@/components/ProgramDialog";
@@ -21,7 +13,6 @@ import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
 import VocabularySetPanel from "@/components/VocabularySetPanel";
 import { AssignmentDialog } from "@/components/AssignmentDialog";
 import BatchGradingModal from "@/components/BatchGradingModal";
-import { StudentCompletionDashboard } from "@/components/StudentCompletionDashboard";
 import { RecursiveTreeAccordion } from "@/components/shared/RecursiveTreeAccordion";
 import { programTreeConfig } from "@/components/shared/programTreeConfig";
 import {
@@ -29,7 +20,6 @@ import {
   Users,
   BookOpen,
   Plus,
-  Edit,
   FileText,
   X,
   Save,
@@ -84,6 +74,100 @@ interface ReadingAssessmentContent {
   target_wpm?: number;
   target_accuracy?: number;
   time_limit_seconds?: number;
+}
+
+function getAssignmentTypeInfo(
+  assignment: Assignment,
+  t: (key: string) => string,
+): { label: string; color: string } {
+  const contentType = assignment.content_type?.toUpperCase();
+  const practiceMode = assignment.practice_mode;
+
+  if (contentType === "VOCABULARY_SET" || contentType === "SENTENCE_MAKING") {
+    if (practiceMode === "word_selection") {
+      return {
+        label: t("classroomDetail.contentTypes.WORD_SELECTION"),
+        color:
+          "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+      };
+    }
+    return {
+      label: t("classroomDetail.contentTypes.WORD_READING"),
+      color:
+        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+    };
+  }
+
+  if (
+    contentType === "EXAMPLE_SENTENCES" ||
+    contentType === "READING_ASSESSMENT"
+  ) {
+    if (practiceMode === "rearrangement") {
+      return {
+        label: t("classroomDetail.contentTypes.REARRANGEMENT"),
+        color:
+          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+      };
+    }
+    return {
+      label: t("classroomDetail.contentTypes.SPEAKING"),
+      color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+    };
+  }
+
+  const practiceModeLabels: Record<string, { label: string; color: string }> = {
+    rearrangement: {
+      label: t("classroomDetail.contentTypes.REARRANGEMENT"),
+      color:
+        "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+    },
+    reading: {
+      label: t("classroomDetail.contentTypes.SPEAKING"),
+      color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+    },
+    word_reading: {
+      label: t("classroomDetail.contentTypes.WORD_READING"),
+      color:
+        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+    },
+    word_selection: {
+      label: t("classroomDetail.contentTypes.WORD_SELECTION"),
+      color:
+        "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+    },
+  };
+  if (practiceMode && practiceModeLabels[practiceMode]) {
+    return practiceModeLabels[practiceMode];
+  }
+
+  const otherTypeLabels: Record<string, { label: string; color: string }> = {
+    SPEAKING_PRACTICE: {
+      label: t("classroomDetail.contentTypes.speakingPractice"),
+      color:
+        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+    },
+    SPEAKING_SCENARIO: {
+      label: t("classroomDetail.contentTypes.speakingScenario"),
+      color:
+        "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+    },
+    LISTENING_CLOZE: {
+      label: t("classroomDetail.contentTypes.listeningCloze"),
+      color:
+        "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+    },
+    SPEAKING_QUIZ: {
+      label: t("classroomDetail.contentTypes.speakingQuiz"),
+      color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+    },
+  };
+
+  return (
+    otherTypeLabels[contentType || ""] || {
+      label: t("classroomDetail.labels.unknownType"),
+      color: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
+    }
+  );
 }
 
 interface ClassroomDetailProps {
@@ -169,8 +253,6 @@ export default function ClassroomDetail({
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [assignmentsLoaded, setAssignmentsLoaded] = useState(false);
-  const [selectedAssignment] = useState<Assignment | null>(null);
-  const [showAssignmentDetails, setShowAssignmentDetails] = useState(false);
   const [batchGradingModal, setBatchGradingModal] = useState({
     open: false,
     assignmentId: 0,
@@ -254,10 +336,10 @@ export default function ClassroomDetail({
   };
 
   const toggleSelectAll = () => {
-    if (selectedForPrint.size === assignments.length) {
+    if (selectedForPrint.size === filteredAssignments.length) {
       setSelectedForPrint(new Set());
     } else {
-      setSelectedForPrint(new Set(assignments.map((a) => a.id)));
+      setSelectedForPrint(new Set(filteredAssignments.map((a) => a.id)));
     }
   };
 
@@ -528,43 +610,6 @@ export default function ClassroomDetail({
     } catch (err) {
       console.error("Failed to fetch teacher permissions:", err);
       setCanAssignHomework(false);
-    }
-  };
-
-  const handleEditAssignment = (assignment: Assignment) => {
-    // TODO: Open edit dialog with assignment data
-    toast.info(
-      t("classroomDetail.messages.prepareEditAssignment", {
-        title: assignment.title,
-      }),
-    );
-    setShowAssignmentDetails(false);
-    // In production: open edit dialog
-    // setEditingAssignment(assignment);
-    // setShowEditAssignmentDialog(true);
-  };
-
-  const handleDeleteAssignment = async (assignment: Assignment) => {
-    if (
-      confirm(
-        t("classroomDetail.messages.confirmDeleteAssignment", {
-          title: assignment.title,
-        }),
-      )
-    ) {
-      try {
-        await apiClient.delete(`/api/teachers/assignments/${assignment.id}`);
-        toast.success(
-          t("classroomDetail.messages.assignmentDeleted", {
-            title: assignment.title,
-          }),
-        );
-        setShowAssignmentDetails(false);
-        fetchAssignments(); // Refresh the list
-      } catch (error) {
-        console.error("Failed to delete assignment:", error);
-        toast.error(t("classroomDetail.messages.deleteAssignmentFailed"));
-      }
     }
   };
 
@@ -1386,7 +1431,13 @@ export default function ClassroomDetail({
                       onClick={handleCreateStudent}
                       className="h-10 bg-blue-500 hover:bg-blue-600 text-white"
                       disabled={isOrgMode}
-                      title={isOrgMode ? "請從學校後台處理學生管理" : ""}
+                      title={
+                        isOrgMode
+                          ? t(
+                              "classroomDetail.messages.manageStudentsFromSchool",
+                            )
+                          : ""
+                      }
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       {t("classroomDetail.buttons.addStudent")}
@@ -1412,7 +1463,9 @@ export default function ClassroomDetail({
                     onResetPassword={handleResetPassword}
                     emptyMessage={t("classroomDetail.messages.noStudents")}
                     disableActions={isOrgMode}
-                    disableReason="請從學校後台處理學生管理"
+                    disableReason={t(
+                      "classroomDetail.messages.manageStudentsFromSchool",
+                    )}
                   />
                 </TabsContent>
               )}
@@ -1704,146 +1757,10 @@ export default function ClassroomDetail({
                             );
                             const completionRate =
                               assignment.completion_rate || 0;
-                            // 🎯 Issue #118: 根據 content_type + practice_mode 決定顯示標籤
-                            const getTypeInfo = () => {
-                              const contentType =
-                                assignment.content_type?.toUpperCase();
-                              const practiceMode = assignment.practice_mode;
-
-                              // VOCABULARY_SET 或 SENTENCE_MAKING → 根據 practice_mode
-                              if (
-                                contentType === "VOCABULARY_SET" ||
-                                contentType === "SENTENCE_MAKING"
-                              ) {
-                                if (practiceMode === "word_selection") {
-                                  return {
-                                    label: t(
-                                      "classroomDetail.contentTypes.WORD_SELECTION",
-                                    ),
-                                    color:
-                                      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-                                  };
-                                }
-                                // default: word_reading
-                                return {
-                                  label: t(
-                                    "classroomDetail.contentTypes.WORD_READING",
-                                  ),
-                                  color:
-                                    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-                                };
-                              }
-
-                              // EXAMPLE_SENTENCES 或 READING_ASSESSMENT → 根據 practice_mode
-                              if (
-                                contentType === "EXAMPLE_SENTENCES" ||
-                                contentType === "READING_ASSESSMENT"
-                              ) {
-                                if (practiceMode === "rearrangement") {
-                                  return {
-                                    label: t(
-                                      "classroomDetail.contentTypes.REARRANGEMENT",
-                                    ),
-                                    color:
-                                      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-                                  };
-                                }
-                                return {
-                                  label: t(
-                                    "classroomDetail.contentTypes.SPEAKING",
-                                  ),
-                                  color:
-                                    "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-                                };
-                              }
-
-                              // Fallback: infer from practice_mode when content_type is missing
-                              const practiceModeLabels: Record<
-                                string,
-                                { label: string; color: string }
-                              > = {
-                                rearrangement: {
-                                  label: t(
-                                    "classroomDetail.contentTypes.REARRANGEMENT",
-                                  ),
-                                  color:
-                                    "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-                                },
-                                reading: {
-                                  label: t(
-                                    "classroomDetail.contentTypes.SPEAKING",
-                                  ),
-                                  color:
-                                    "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-                                },
-                                word_reading: {
-                                  label: t(
-                                    "classroomDetail.contentTypes.WORD_READING",
-                                  ),
-                                  color:
-                                    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-                                },
-                                word_selection: {
-                                  label: t(
-                                    "classroomDetail.contentTypes.WORD_SELECTION",
-                                  ),
-                                  color:
-                                    "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-                                },
-                              };
-                              if (
-                                practiceMode &&
-                                practiceModeLabels[practiceMode]
-                              ) {
-                                return practiceModeLabels[practiceMode];
-                              }
-
-                              // 其他類型保持原有邏輯
-                              const otherTypeLabels: Record<
-                                string,
-                                { label: string; color: string }
-                              > = {
-                                SPEAKING_PRACTICE: {
-                                  label: t(
-                                    "classroomDetail.contentTypes.speakingPractice",
-                                  ),
-                                  color:
-                                    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-                                },
-                                SPEAKING_SCENARIO: {
-                                  label: t(
-                                    "classroomDetail.contentTypes.speakingScenario",
-                                  ),
-                                  color:
-                                    "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-                                },
-                                LISTENING_CLOZE: {
-                                  label: t(
-                                    "classroomDetail.contentTypes.listeningCloze",
-                                  ),
-                                  color:
-                                    "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-                                },
-                                SPEAKING_QUIZ: {
-                                  label: t(
-                                    "classroomDetail.contentTypes.speakingQuiz",
-                                  ),
-                                  color:
-                                    "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-                                },
-                              };
-
-                              return (
-                                otherTypeLabels[contentType || ""] || {
-                                  label: t(
-                                    "classroomDetail.labels.unknownType",
-                                  ),
-                                  color:
-                                    "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
-                                }
-                              );
-                            };
-                            const typeInfo = getTypeInfo();
+                            const typeInfo = getAssignmentTypeInfo(
+                              assignment,
+                              t,
+                            );
 
                             return (
                               <div
@@ -2055,105 +1972,10 @@ export default function ClassroomDetail({
                                 );
                                 const completionRate =
                                   assignment.completion_rate || 0;
-                                // 🎯 Issue #118: 根據 content_type + practice_mode 決定顯示標籤
-                                const getTypeInfo = () => {
-                                  const contentType =
-                                    assignment.content_type?.toUpperCase();
-                                  const practiceMode = assignment.practice_mode;
-
-                                  // VOCABULARY_SET 或 SENTENCE_MAKING → 根據 practice_mode
-                                  if (
-                                    contentType === "VOCABULARY_SET" ||
-                                    contentType === "SENTENCE_MAKING"
-                                  ) {
-                                    if (practiceMode === "word_selection") {
-                                      return {
-                                        label: t(
-                                          "classroomDetail.contentTypes.WORD_SELECTION",
-                                        ),
-                                        color:
-                                          "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-                                      };
-                                    }
-                                    // default: word_reading
-                                    return {
-                                      label: t(
-                                        "classroomDetail.contentTypes.WORD_READING",
-                                      ),
-                                      color:
-                                        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-                                    };
-                                  }
-
-                                  // EXAMPLE_SENTENCES 或 READING_ASSESSMENT → 根據 practice_mode
-                                  if (
-                                    contentType === "EXAMPLE_SENTENCES" ||
-                                    contentType === "READING_ASSESSMENT"
-                                  ) {
-                                    if (practiceMode === "rearrangement") {
-                                      return {
-                                        label: t(
-                                          "classroomDetail.contentTypes.REARRANGEMENT",
-                                        ),
-                                        color:
-                                          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-                                      };
-                                    }
-                                    return {
-                                      label: t(
-                                        "classroomDetail.contentTypes.SPEAKING",
-                                      ),
-                                      color:
-                                        "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-                                    };
-                                  }
-
-                                  // 其他類型
-                                  const otherTypeLabels: Record<
-                                    string,
-                                    { label: string; color: string }
-                                  > = {
-                                    SPEAKING_PRACTICE: {
-                                      label: t(
-                                        "classroomDetail.contentTypes.speakingPractice",
-                                      ),
-                                      color:
-                                        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-                                    },
-                                    SPEAKING_SCENARIO: {
-                                      label: t(
-                                        "classroomDetail.contentTypes.speakingScenario",
-                                      ),
-                                      color:
-                                        "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-                                    },
-                                    LISTENING_CLOZE: {
-                                      label: t(
-                                        "classroomDetail.contentTypes.listeningCloze",
-                                      ),
-                                      color:
-                                        "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-                                    },
-                                    SPEAKING_QUIZ: {
-                                      label: t(
-                                        "classroomDetail.contentTypes.speakingQuiz",
-                                      ),
-                                      color:
-                                        "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-                                    },
-                                  };
-
-                                  return (
-                                    otherTypeLabels[contentType || ""] || {
-                                      label: t(
-                                        "classroomDetail.labels.unknownType",
-                                      ),
-                                      color:
-                                        "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
-                                    }
-                                  );
-                                };
-                                const typeInfo = getTypeInfo();
+                                const typeInfo = getAssignmentTypeInfo(
+                                  assignment,
+                                  t,
+                                );
 
                                 return (
                                   <tr
@@ -2664,179 +2486,6 @@ export default function ClassroomDetail({
         }}
       />
 
-      {/* Assignment Details Dialog */}
-      {showAssignmentDetails && selectedAssignment && (
-        <Dialog
-          open={showAssignmentDetails}
-          onOpenChange={setShowAssignmentDetails}
-        >
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold">
-                {t("classroomDetail.dialogs.assignmentDetailTitle", {
-                  title: selectedAssignment.title,
-                })}
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-6">
-              {/* Basic Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm text-gray-600">
-                    {t("classroomDetail.labels.contentType")}
-                  </Label>
-                  <p className="font-medium">
-                    {(() => {
-                      const contentTypeLabels: Record<string, string> = {
-                        READING_ASSESSMENT: t(
-                          "classroomDetail.contentTypes.readingAssessment",
-                        ),
-                        SPEAKING_PRACTICE: t(
-                          "classroomDetail.contentTypes.speakingPractice",
-                        ),
-                        SPEAKING_SCENARIO: t(
-                          "classroomDetail.contentTypes.speakingScenario",
-                        ),
-                        LISTENING_CLOZE: t(
-                          "classroomDetail.contentTypes.listeningCloze",
-                        ),
-                        SENTENCE_MAKING: t(
-                          "classroomDetail.contentTypes.sentenceMaking",
-                        ),
-                        SPEAKING_QUIZ: t(
-                          "classroomDetail.contentTypes.speakingQuiz",
-                        ),
-                      };
-                      return (
-                        contentTypeLabels[
-                          selectedAssignment.content_type || ""
-                        ] ||
-                        selectedAssignment.content_type ||
-                        t("classroomDetail.labels.unknownType")
-                      );
-                    })()}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm text-gray-600">
-                    {t("classroomDetail.labels.assignedDate")}
-                  </Label>
-                  <p className="font-medium">
-                    {selectedAssignment.assigned_at
-                      ? new Date(
-                          selectedAssignment.assigned_at,
-                        ).toLocaleDateString("zh-TW")
-                      : t("classroomDetail.labels.notSet")}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm text-gray-600">
-                    {t("classroomDetail.labels.dueDate")}
-                  </Label>
-                  <p className="font-medium">
-                    {selectedAssignment.due_date
-                      ? new Date(
-                          selectedAssignment.due_date,
-                        ).toLocaleDateString("zh-TW")
-                      : t("classroomDetail.labels.noDeadline")}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm text-gray-600">
-                    {t("classroomDetail.labels.assignedStudents")}
-                  </Label>
-                  <p className="font-medium">
-                    {selectedAssignment.student_count || 0} 人
-                  </p>
-                </div>
-              </div>
-
-              {/* Instructions */}
-              {selectedAssignment.instructions && (
-                <div>
-                  <Label className="text-sm text-gray-600">
-                    {t("classroomDetail.labels.instructions")}
-                  </Label>
-                  <Card className="p-4 mt-2 bg-gray-50">
-                    <p className="text-sm">{selectedAssignment.instructions}</p>
-                  </Card>
-                </div>
-              )}
-
-              {/* Progress */}
-              <div>
-                <Label className="text-sm text-gray-600 mb-3 block">
-                  {t("classroomDetail.labels.completionProgress")}
-                </Label>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">
-                      {t("classroomDetail.labels.overallCompletionRate")}
-                    </span>
-                    <span className="text-2xl font-bold text-blue-600">
-                      {selectedAssignment.completion_rate || 0}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div
-                      className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all"
-                      style={{
-                        width: `${selectedAssignment.completion_rate || 0}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Student Completion Dashboard */}
-              <div>
-                <Label className="text-sm text-gray-600 mb-3 block">
-                  {t("classroomDetail.labels.studentList")}
-                </Label>
-                <StudentCompletionDashboard
-                  assignmentId={selectedAssignment.id}
-                  classroomId={Number(id)}
-                  onRefresh={fetchAssignments}
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    // TODO: Implement view student submissions
-                    toast.info(
-                      t(
-                        "classroomDetail.messages.viewSubmissionsInDevelopment",
-                      ),
-                    );
-                  }}
-                >
-                  <Users className="h-4 w-4 mr-2" />
-                  {t("classroomDetail.buttons.viewSubmissions")}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleEditAssignment(selectedAssignment)}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  {t("classroomDetail.buttons.editAssignment")}
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => handleDeleteAssignment(selectedAssignment)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {t("classroomDetail.buttons.deleteAssignment")}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
       {/* Content Type Dialog */}
       {contentLessonInfo && (
         <ContentTypeDialog
@@ -2930,7 +2579,9 @@ export default function ClassroomDetail({
                   setVocabularySetLessonId(null);
                   setVocabularySetContentId(null);
                   await refreshPrograms();
-                  toast.success("內容已成功儲存");
+                  toast.success(
+                    t("classroomDetail.messages.contentSavedSuccessfully"),
+                  );
                 }}
                 onCancel={() => {
                   setShowVocabularySetEditor(false);

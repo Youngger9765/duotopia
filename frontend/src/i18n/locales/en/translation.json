@@ -2457,7 +2457,9 @@
       "resetPasswordFailed": "Failed to reset password. Please try again later.",
       "viewSubmissionsInDevelopment": "View student submissions feature is under development",
       "contentSaved": "Content saved successfully",
-      "noAssignments": "No assignments assigned yet"
+      "noAssignments": "No assignments assigned yet",
+      "manageStudentsFromSchool": "Please manage students from the school admin panel",
+      "contentSavedSuccessfully": "Content saved successfully"
     },
     "pagination": {
       "page": "Page {{current}} / {{total}}"

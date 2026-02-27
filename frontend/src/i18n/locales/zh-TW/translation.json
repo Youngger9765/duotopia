@@ -2456,7 +2456,9 @@
       "resetPasswordFailed": "重設密碼失敗，請稍後再試",
       "viewSubmissionsInDevelopment": "查看學生提交功能尚在開發中",
       "contentSaved": "內容已成功儲存",
-      "noAssignments": "尚未指派任何作業"
+      "noAssignments": "尚未指派任何作業",
+      "manageStudentsFromSchool": "請從學校後台處理學生管理",
+      "contentSavedSuccessfully": "內容已成功儲存"
     },
     "pagination": {
       "page": "第 {{current}} 頁 / 共 {{total}} 頁"

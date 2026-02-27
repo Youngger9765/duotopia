@@ -188,7 +188,7 @@ export default function AssignmentStickyNote({
     if (open && currentAssignment) {
       fetchProgress(currentAssignment.id);
     }
-  }, [open, currentAssignment, fetchProgress]);
+  }, [open, currentAssignment?.id, fetchProgress]);
 
   const handlePrev = () => {
     const newIndex =
@@ -281,22 +281,25 @@ export default function AssignmentStickyNote({
       el.style.wordBreak = "break-all";
     });
 
-    const canvas = await html2canvas(captureRef.current, {
-      backgroundColor: "#ffffff",
-      scale: 2,
-      useCORS: true,
-    });
-
-    // Restore original styles
-    if (titleEl) titleEl.style.display = "";
-    if (footerEl) footerEl.style.display = "";
-    if (gridEl) gridEl.style.cssText = origGridStyle;
-    nameEls.forEach((el) => {
-      el.style.overflow = "";
-      el.style.textOverflow = "";
-      el.style.whiteSpace = "";
-      el.style.wordBreak = "";
-    });
+    let canvas: HTMLCanvasElement;
+    try {
+      canvas = await html2canvas(captureRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+      });
+    } finally {
+      // Restore original styles even if html2canvas throws
+      if (titleEl) titleEl.style.display = "";
+      if (footerEl) footerEl.style.display = "";
+      if (gridEl) gridEl.style.cssText = origGridStyle;
+      nameEls.forEach((el) => {
+        el.style.overflow = "";
+        el.style.textOverflow = "";
+        el.style.whiteSpace = "";
+        el.style.wordBreak = "";
+      });
+    }
 
     canvas.toBlob((blob) => {
       if (!blob) return;
