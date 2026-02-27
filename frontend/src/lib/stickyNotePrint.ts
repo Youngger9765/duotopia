@@ -143,6 +143,8 @@ export function openPrintWindow(pagesHtml: string[]): void {
   if (!printWindow) return;
 
   const allPages = pagesHtml.join("");
+  // eslint-disable-next-line no-useless-escape
+  const printScript = `<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script>`;
 
   printWindow.document.write(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Print</title>
@@ -160,7 +162,7 @@ export function openPrintWindow(pagesHtml: string[]): void {
 </style>
 </head><body>
   ${allPages}
-  <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<` + `/script>
+  ${printScript}
 </body></html>`);
   printWindow.document.close();
 }
