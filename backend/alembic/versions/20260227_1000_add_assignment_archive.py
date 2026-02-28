@@ -21,7 +21,7 @@ def upgrade() -> None:
         """
         DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-                          WHERE table_name = 'assignments' AND column_name = 'is_archived') THEN
+                          WHERE table_schema = 'public' AND table_name = 'assignments' AND column_name = 'is_archived') THEN
                 ALTER TABLE assignments ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT FALSE;
             END IF;
         END $$;
@@ -33,18 +33,21 @@ def upgrade() -> None:
         """
         DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-                          WHERE table_name = 'assignments' AND column_name = 'archived_at') THEN
+                          WHERE table_schema = 'public' AND table_name = 'assignments' AND column_name = 'archived_at') THEN
                 ALTER TABLE assignments ADD COLUMN archived_at TIMESTAMPTZ;
             END IF;
         END $$;
     """
     )
 
-    # Add index for faster archive queries (idempotent)
+    # Add partial index for faster active assignment queries (idempotent)
     op.execute(
-        "CREATE INDEX IF NOT EXISTS idx_assignments_is_archived ON assignments (is_archived)"
+        "CREATE INDEX IF NOT EXISTS idx_assignments_active_not_archived"
+        " ON assignments (teacher_id, is_active)"
+        " WHERE is_archived = FALSE"
     )
 
 
 def downgrade() -> None:
+    # No-op: follows idempotent-only migration approach (see CLAUDE.md)
     pass
