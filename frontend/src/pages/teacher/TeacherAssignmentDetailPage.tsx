@@ -1381,12 +1381,9 @@ export default function TeacherAssignmentDetailPage() {
                       <VocabularySetPanel
                         content={{
                           id: editingContentId,
-                          title:
-                            contentDetails[editingContentId].title || "",
+                          title: contentDetails[editingContentId].title || "",
                         }}
-                        editingContent={
-                          contentDetails[editingContentId]
-                        }
+                        editingContent={contentDetails[editingContentId]}
                         onUpdateContent={async () => {}}
                         onSave={handleEditSave}
                         lessonId={0}
@@ -1400,8 +1397,7 @@ export default function TeacherAssignmentDetailPage() {
                     <ReadingAssessmentPanel
                       content={{
                         id: editingContentId,
-                        title:
-                          contentDetails[editingContentId].title || "",
+                        title: contentDetails[editingContentId].title || "",
                       }}
                       editingContent={contentDetails[editingContentId]}
                       onUpdateContent={async () => {}}
