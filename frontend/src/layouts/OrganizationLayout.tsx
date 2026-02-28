@@ -11,6 +11,11 @@ import {
 } from "@/contexts/OrganizationContext";
 import { OrganizationTree } from "@/components/organization/OrganizationTree";
 import { API_URL } from "@/config/api";
+import {
+  useAiAssistant,
+  AiAssistantFab,
+  AiAssistantPanel,
+} from "@/components/ai-assistant";
 
 interface OrganizationLayoutProps {
   children?: ReactNode;
@@ -20,6 +25,8 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { isOpen: aiPanelOpen, close: closeAiPanel } = useAiAssistant();
+  const effectiveCollapsed = aiPanelOpen || sidebarCollapsed;
   const {
     token,
     logout: storeLogout,
@@ -120,12 +127,12 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
       <aside
         className={cn(
           "flex flex-col border-r bg-white transition-all duration-300",
-          sidebarCollapsed ? "w-16" : "w-64",
+          effectiveCollapsed ? "w-16" : "w-64",
         )}
       >
         {/* Sidebar Header */}
         <div className="flex h-16 items-center justify-between border-b px-4">
-          {!sidebarCollapsed && (
+          {!effectiveCollapsed && (
             <div className="flex items-center gap-2">
               <Building2 className="h-6 w-6 text-primary" />
               <span className="font-semibold">組織管理</span>
@@ -134,10 +141,17 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onClick={() => {
+              if (effectiveCollapsed) {
+                if (aiPanelOpen) closeAiPanel();
+                setSidebarCollapsed(false);
+              } else {
+                setSidebarCollapsed(true);
+              }
+            }}
             className="ml-auto"
           >
-            {sidebarCollapsed ? (
+            {effectiveCollapsed ? (
               <ChevronRight className="h-4 w-4" />
             ) : (
               <ChevronLeft className="h-4 w-4" />
@@ -147,7 +161,7 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
 
         {/* Sidebar Navigation - Organization Tree */}
         <nav className="flex-1 overflow-y-auto p-4">
-          {!sidebarCollapsed ? (
+          {!effectiveCollapsed ? (
             <>
               <div className="flex items-center justify-between mb-3">
                 <div className="text-xs font-semibold text-gray-500 uppercase">
@@ -194,12 +208,12 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
             variant="ghost"
             className={cn(
               "w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50",
-              sidebarCollapsed && "justify-center px-2",
+              effectiveCollapsed && "justify-center px-2",
             )}
             onClick={handleLogout}
           >
             <LogOut className="h-4 w-4" />
-            {!sidebarCollapsed && <span className="ml-2">登出</span>}
+            {!effectiveCollapsed && <span className="ml-2">登出</span>}
           </Button>
         </div>
       </aside>
@@ -247,6 +261,12 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
           {children || <Outlet />}
         </main>
       </div>
+
+      {/* AI Assistant Panel (flex item) */}
+      <AiAssistantPanel />
+
+      {/* AI Assistant FAB (fixed position) */}
+      <AiAssistantFab />
     </div>
   );
 }

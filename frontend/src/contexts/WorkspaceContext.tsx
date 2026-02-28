@@ -52,9 +52,10 @@ export interface WorkspaceContextState {
 // Context
 // ============================================
 
-const WorkspaceContext = createContext<WorkspaceContextState | undefined>(
-  undefined,
-);
+// Exported so components outside WorkspaceProvider can safely use useContext() with null check
+export const WorkspaceContext = createContext<
+  WorkspaceContextState | undefined
+>(undefined);
 
 // ============================================
 // localStorage keys

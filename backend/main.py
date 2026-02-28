@@ -50,6 +50,7 @@ from routers import (
 from routers import organization_programs
 from routers import school_programs
 from routers import resource_materials
+from routers import ai_assistant
 from routers.organization_points import router as organization_points_router
 from routes import logs
 from api import debug
@@ -275,6 +276,7 @@ app.include_router(admin_subscriptions.router)  # Admin 訂閱管理路由（新
 app.include_router(admin_monitoring.router)  # 監控路由（無需認證）
 app.include_router(admin_billing.router)  # Admin 帳單監控路由（Admin only）
 app.include_router(admin_audio_errors.router)  # Admin 錄音錯誤監控路由（Admin only）
+app.include_router(ai_assistant.router)  # AI 助手路由
 app.include_router(cron.router)  # Cron Job 路由
 app.include_router(debug.router)  # Debug 路由
 
