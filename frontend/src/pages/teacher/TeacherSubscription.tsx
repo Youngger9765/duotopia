@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { PLAN_NAMES } from "@/constants/plans";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -211,7 +212,7 @@ export default function TeacherSubscription() {
     if (!subscription || !subscription.is_active) return null;
     const plan = subscription.plan;
     if (!plan) return null;
-    if (plan === "30-Day Trial") return "free";
+    if (plan === PLAN_NAMES.FREE_TRIAL) return "free";
     if (plan.toLowerCase().includes("tutor")) return "tutor";
     if (plan.toLowerCase().includes("school")) return "school";
     return "free";
@@ -323,14 +324,9 @@ export default function TeacherSubscription() {
   };
 
   const handlePaymentError = (error: string) => {
-    if (error.includes("免費優惠期間") || error.includes("未來將會開放儲值")) {
-      toast.info(error, { duration: 6000 });
-      setShowPaymentDialog(false);
-    } else {
-      toast.error(
-        t("teacherSubscription.messages.subscriptionFailed", { error }),
-      );
-    }
+    toast.error(
+      t("teacherSubscription.messages.subscriptionFailed", { error }),
+    );
   };
 
   const handleCancelSubscription = async () => {
@@ -524,19 +520,19 @@ export default function TeacherSubscription() {
                           </h3>
                           <Badge
                             className={
-                              subscription.plan === "30-Day Trial"
+                              subscription.plan === PLAN_NAMES.FREE_TRIAL
                                 ? "bg-blue-500"
                                 : "bg-green-500"
                             }
                           >
                             <CheckCircle className="w-3 h-3 mr-1" />
-                            {subscription.plan === "30-Day Trial"
+                            {subscription.plan === PLAN_NAMES.FREE_TRIAL
                               ? t("teacherSubscription.subscription.trial")
                               : t("teacherSubscription.subscription.active")}
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-600 mt-1">
-                          {subscription.plan === "30-Day Trial"
+                          {subscription.plan === PLAN_NAMES.FREE_TRIAL
                             ? t(
                                 "teacherSubscription.subscription.trialDescription",
                               )
@@ -545,14 +541,14 @@ export default function TeacherSubscription() {
                         <p className="text-sm text-blue-600 mt-1 font-medium">
                           {subscription.plan === "School Teachers"
                             ? t("teacherSubscription.subscription.quotaSchool")
-                            : subscription.plan === "30-Day Trial"
+                            : subscription.plan === PLAN_NAMES.FREE_TRIAL
                               ? t("teacherSubscription.subscription.quotaTrial")
                               : t(
                                   "teacherSubscription.subscription.quotaTutor",
                                 )}
                         </p>
                       </div>
-                      {subscription.plan === "30-Day Trial" && (
+                      {subscription.plan === PLAN_NAMES.FREE_TRIAL && (
                         <div className="flex-shrink-0">
                           <Button
                             onClick={() => {

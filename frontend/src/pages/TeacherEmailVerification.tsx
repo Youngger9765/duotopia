@@ -50,7 +50,7 @@ export function TeacherEmailVerification() {
         if (response.message || response.status === "success") {
           setStatus("success");
           setMessage(
-            response.message || "Email 驗證成功！您的 30 天免費試用已開始。",
+            response.message || "Email 驗證成功！您的免費試用已開始。",
           );
 
           console.log("驗證成功，用戶需要自行登入");
@@ -146,7 +146,9 @@ export function TeacherEmailVerification() {
               <div className="space-y-4">
                 <div className="text-center text-gray-600">
                   <p>您的帳號已成功啟用！</p>
-                  <p className="text-sm mt-2">30天免費試用已開始</p>
+                  <p className="text-sm mt-2">
+                    免費試用已開始，您已獲得 2,000 點 AI 配額
+                  </p>
                 </div>
                 <div className="flex justify-center">
                   <button

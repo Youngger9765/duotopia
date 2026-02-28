@@ -35,7 +35,7 @@ class CreateSubscriptionRequest(BaseModel):
     """創建訂閱請求"""
 
     teacher_email: EmailStr
-    # "30-Day Trial" | "Tutor Teachers" | "School Teachers" |
+    # "Free Trial" | "Tutor Teachers" | "School Teachers" |
     # "Demo Unlimited Plan" | "VIP"
     plan_name: str
     end_date: str  # YYYY-MM-DD (月底日期)
@@ -74,14 +74,9 @@ class SubscriptionResponse(BaseModel):
 # ============ Helper Functions ============
 def get_plan_quota(plan_name: str) -> int:
     """根據方案名稱獲取對應的 quota"""
-    plan_quotas = {
-        "30-Day Trial": 4000,
-        "Tutor Teachers": 10000,
-        "School Teachers": 25000,
-        "Demo Unlimited Plan": 999999,
-        "VIP": 0,  # VIP 方案的 quota 由 Admin 自訂
-    }
-    return plan_quotas.get(plan_name, 0)
+    from config.plans import PLAN_QUOTAS
+
+    return PLAN_QUOTAS.get(plan_name, 0)
 
 
 def parse_end_date(date_str: str) -> datetime:
@@ -270,18 +265,7 @@ async def edit_subscription(
             # 其他方案：使用預設 quota
             base_quota = get_plan_quota(request.plan_name)
 
-            # 🔥 如果有 Trial 轉移記錄，保留額外點數
-            trial_credits = 0
-            if (
-                current_period.admin_metadata
-                and isinstance(current_period.admin_metadata, dict)
-                and "trial_credits_transferred" in current_period.admin_metadata
-            ):
-                trial_credits = current_period.admin_metadata[
-                    "trial_credits_transferred"
-                ]
-
-            new_quota = base_quota + trial_credits
+            new_quota = base_quota
             if new_quota != current_period.quota_total:
                 changes["quota_total"] = {
                     "from": current_period.quota_total,

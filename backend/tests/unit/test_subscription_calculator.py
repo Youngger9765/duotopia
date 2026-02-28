@@ -33,7 +33,7 @@ class TestSubscriptionCalculator:
             end_date.date()
             == datetime(2025, 11, 1, 0, 0, 0, tzinfo=timezone.utc).date()
         )
-        assert amount == 230  # 完整月價格
+        assert amount == 299  # 完整月價格
         assert details["actual_days"] == 31  # 10/1 到 11/1 = October 全月 31 天
         assert details["pricing_method"] == "prorated"
 
@@ -49,8 +49,8 @@ class TestSubscriptionCalculator:
         )
         # 1/15 到 2/1 = 17 天
         # 1月有 31 天
-        # 230 × (17/31) = 126.45... → 126
-        assert amount == 126
+        # 299 × (17/31) = 163.97... → 164
+        assert amount == 164
         assert details["actual_days"] == 17
         assert details["pricing_method"] == "prorated"
 
@@ -66,8 +66,8 @@ class TestSubscriptionCalculator:
         )
         # 2/15 到 3/1 = 14 days (2/15-2/28)
         # 2月有 28 天
-        # 230 × (14/28) = 115
-        assert amount == 115
+        # 299 × (14/28) = 149.5 → 150
+        assert amount == 150
         assert details["actual_days"] == 14
         assert details["pricing_method"] == "prorated"
 
@@ -83,8 +83,8 @@ class TestSubscriptionCalculator:
         )
         # 2/15 到 3/1 = 15 days (2/15-2/29)
         # 閏年 2 月有 29 天
-        # 230 × (15/29) = 119.0
-        assert amount == 119
+        # 299 × (15/29) = 154.66 → 155
+        assert amount == 155
         assert details["actual_days"] == 15
 
     def test_subscription_end_of_month_prorated(self):
@@ -99,8 +99,8 @@ class TestSubscriptionCalculator:
             end_date.date()
             == datetime(2025, 11, 1, 0, 0, 0, tzinfo=timezone.utc).date()
         )
-        # 230 × (6/31) = 44.5... → 45
-        assert amount == 45
+        # 299 × (6/31) = 57.87... → 58
+        assert amount == 58
         assert details["actual_days"] == 6
         assert details["pricing_method"] == "prorated"
 
@@ -116,8 +116,8 @@ class TestSubscriptionCalculator:
             end_date.date()
             == datetime(2025, 11, 1, 0, 0, 0, tzinfo=timezone.utc).date()
         )
-        # 230 × (1/31) = 7.4... → 7
-        assert amount == 7
+        # 299 × (1/31) = 9.65... → 10
+        assert amount == 10
         assert details["actual_days"] == 1
         assert details["pricing_method"] == "prorated"
 
@@ -132,22 +132,22 @@ class TestSubscriptionCalculator:
         assert (
             end_date.date() == datetime(2025, 2, 1, 0, 0, 0, tzinfo=timezone.utc).date()
         )
-        # 230 × (4/31) = 29.7... → 30
-        assert amount == 30
+        # 299 × (4/31) = 38.58... → 39
+        assert amount == 39
         assert details["actual_days"] == 4
         assert details["pricing_method"] == "prorated"
 
     def test_school_teachers_plan(self):
-        """測試 School Teachers 方案（330元）"""
+        """測試 School Teachers 方案（599元）"""
         start_date = datetime(2025, 10, 15, 10, 0, 0, tzinfo=timezone.utc)
         end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
             start_date, "School Teachers"
         )
 
         # 10 月有 31 天，10/15 到 11/1 = 17 天
-        # 330 × (17/31) = 181.29... → 181
-        assert amount == 181
-        assert details["full_price"] == 330
+        # 599 × (17/31) = 328.42... → 328
+        assert amount == 328
+        assert details["full_price"] == 599
 
     def test_renewal_calculation(self):
         """測試續訂計算"""
@@ -161,7 +161,7 @@ class TestSubscriptionCalculator:
             new_end_date.date()
             == datetime(2025, 12, 1, 0, 0, 0, tzinfo=timezone.utc).date()
         )
-        assert amount == 230  # 續訂收全額
+        assert amount == 299  # 續訂收全額
 
     def test_renewal_cross_year(self):
         """測試跨年續訂"""
@@ -175,7 +175,7 @@ class TestSubscriptionCalculator:
             new_end_date.date()
             == datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc).date()
         )
-        assert amount == 230
+        assert amount == 299
 
     def test_days_until_renewal(self):
         """測試距離續訂天數計算"""
@@ -216,11 +216,11 @@ class TestSubscriptionCalculator:
 
         # 12/15 到 1/1 = 17 days (12/15-12/31)
         # 12 月有 31 天
-        # 230 × (17/31) = 126.45... → 126
+        # 299 × (17/31) = 163.97... → 164
         assert (
             end_date.date() == datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc).date()
         )
-        assert amount == 126
+        assert amount == 164
         assert details["actual_days"] == 17
 
     def test_all_months_calculations(self):
@@ -253,7 +253,7 @@ class TestSubscriptionCalculator:
             # 驗證計算有用到正確的月份天數
             assert details["actual_days"] > 0, f"Month {month} failed"
             assert amount > 0, f"Month {month} amount is 0"
-            assert amount <= 230, f"Month {month} amount exceeds full price"
+            assert amount <= 299, f"Month {month} amount exceeds full price"
 
 
 if __name__ == "__main__":

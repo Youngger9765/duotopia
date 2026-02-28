@@ -81,8 +81,8 @@ def teacher_with_paid_subscription(test_session: Session):
     period = SubscriptionPeriod(
         teacher_id=teacher.id,
         plan_name="School Teachers",
-        amount_paid=660,
-        quota_total=25000,
+        amount_paid=599,
+        quota_total=6000,
         quota_used=5000,
         start_date=now,
         end_date=now + timedelta(days=30),
@@ -100,7 +100,7 @@ def teacher_with_paid_subscription(test_session: Session):
         teacher_email=teacher.email,
         transaction_type=TransactionType.RECHARGE,
         subscription_type="月方案",
-        amount=660,
+        amount=599,
         currency="TWD",
         status="SUCCESS",
         months=1,
@@ -218,12 +218,12 @@ def test_admin_refund_partial_success(
 
         # 使用 admin_headers fixture
 
-        # 部分退款 NT$ 330（一半）
+        # 部分退款 NT$ 299（一半）
         response = test_client.post(
             "/api/admin/refund",
             json={
                 "rec_trade_id": "TEST_REC_TRADE_ID_123",
-                "amount": 330,
+                "amount": 299,
                 "reason": "用戶要求部分退款",
             },
             headers=admin_headers,
@@ -235,7 +235,7 @@ def test_admin_refund_partial_success(
 
         # 驗證 TapPay API 被調用（帶金額）
         mock_refund.assert_called_once_with(
-            rec_trade_id="TEST_REC_TRADE_ID_123", amount=330
+            rec_trade_id="TEST_REC_TRADE_ID_123", amount=299
         )
 
 

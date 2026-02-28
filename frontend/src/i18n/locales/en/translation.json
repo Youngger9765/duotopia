@@ -521,7 +521,7 @@
       "subtitle": "Manage your classes, courses, and student learning progress"
     },
     "subscription": {
-      "trialTitle": "🎉 30-Day Free Trial",
+      "trialTitle": "🎉 Free Trial",
       "trialDescription": "Your free trial expires in {{days}} days",
       "expiryDate": "Expiry Date:",
       "days": "days",
@@ -689,7 +689,7 @@
         "planNoChange": "— No change —",
         "planSelect": "Select a plan",
         "plans": {
-          "trial": "30-Day Trial",
+          "trial": "Free Trial",
           "tutor": "Tutor Teachers",
           "school": "School Teachers",
           "demo": "Demo Unlimited Plan",
@@ -1080,13 +1080,13 @@
       "separator": "Quick Login with Test Accounts",
       "demoTeacher": "Demo Teacher (300 days prepaid)",
       "demoEmail": "demo@duotopia.com",
-      "trialTeacher": "Trial Teacher (30-day trial)",
+      "trialTeacher": "Trial Teacher (free trial)",
       "trialEmail": "trial@duotopia.com",
       "expiredTeacher": "Expired Teacher (Unsubscribed)",
       "expiredEmail": "expired@duotopia.com",
       "passwordHint": "🔐 All test account passwords: demo123",
       "demoDescription": "demo@duotopia.com - 300 days prepaid",
-      "trialDescription": "trial@duotopia.com - 30-day trial",
+      "trialDescription": "trial@duotopia.com - free trial",
       "expiredDescription": "expired@duotopia.com - Unsubscribed/Expired"
     },
     "footer": {
@@ -2985,11 +2985,11 @@
       "unknownPlan": "Unknown Plan",
       "trial": "Trial",
       "active": "Active",
-      "trialDescription": "Trial period, remaining points can be transferred to paid plan",
+      "trialDescription": "Free trial, remaining points can be transferred to paid plan",
       "statusGood": "Subscription status is good",
-      "quotaSchool": "25000 AI assessment points/month (approx. 416 minutes of speaking assessment)",
-      "quotaTrial": "10000 AI assessment points (30-day trial)",
-      "quotaTutor": "10000 AI assessment points/month (approx. 166 minutes of speaking assessment)",
+      "quotaSchool": "6000 AI points/month",
+      "quotaTrial": "2000 AI points (1-year free trial)",
+      "quotaTutor": "2000 AI points/month",
       "noSubscription": "No active subscription",
       "choosePlan": "Choose a subscription plan that suits you"
     },

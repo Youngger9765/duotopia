@@ -11,18 +11,15 @@ from datetime import datetime, timezone
 from typing import Tuple
 from calendar import monthrange
 
+from config.plans import PLAN_PRICES as _PLAN_PRICES, DEFAULT_PRICE as _DEFAULT_PRICE
+
 
 class SubscriptionCalculator:
     """訂閱計算器"""
 
-    # 方案價格
-    PLAN_PRICES = {
-        "Tutor Teachers": 330,
-        "School Teachers": 660,
-    }
+    PLAN_PRICES = _PLAN_PRICES
 
-    # 預設方案價格（用於未知方案）
-    DEFAULT_PRICE = 330
+    DEFAULT_PRICE = _DEFAULT_PRICE
 
     @staticmethod
     def calculate_first_subscription(

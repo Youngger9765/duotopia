@@ -56,9 +56,9 @@ def create_teacher(db_session):
             now = datetime.now(timezone.utc)
             period = SubscriptionPeriod(
                 teacher_id=teacher.id,
-                plan_name="30-Day Trial",
+                plan_name="Free Trial",
                 amount_paid=0,
-                quota_total=10000,
+                quota_total=2000,
                 quota_used=0,
                 start_date=now,
                 end_date=now + timedelta(days=30),
