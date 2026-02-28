@@ -1796,8 +1796,7 @@ export function AssignmentDialog({
                         <div className="space-y-2">
                           {classroomPrograms.map((program) => (
                             <Card key={program.id} className="overflow-hidden">
-                              {program.lessons &&
-                              program.lessons.length > 0 ? (
+                              {program.lessons && program.lessons.length > 0 ? (
                                 <button
                                   onClick={() => toggleProgram(program.id)}
                                   className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
