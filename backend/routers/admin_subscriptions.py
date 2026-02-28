@@ -265,18 +265,7 @@ async def edit_subscription(
             # 其他方案：使用預設 quota
             base_quota = get_plan_quota(request.plan_name)
 
-            # 🔥 如果有 Trial 轉移記錄，保留額外點數
-            trial_credits = 0
-            if (
-                current_period.admin_metadata
-                and isinstance(current_period.admin_metadata, dict)
-                and "trial_credits_transferred" in current_period.admin_metadata
-            ):
-                trial_credits = current_period.admin_metadata[
-                    "trial_credits_transferred"
-                ]
-
-            new_quota = base_quota + trial_credits
+            new_quota = base_quota
             if new_quota != current_period.quota_total:
                 changes["quota_total"] = {
                     "from": current_period.quota_total,

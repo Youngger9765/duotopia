@@ -1,5 +1,5 @@
 """
-測試 Trial 期間點數轉移到付費方案
+測試 Trial → 付費方案升級行為
 
 測試情境：
 1. 用戶完成 Email 驗證，獲得 Free Trial (2000 點)
@@ -7,8 +7,7 @@
 3. 用戶刷卡購買付費方案（Tutor Teachers: 2000 點）
 4. 系統應該：
    - 取消 Trial period (status = "cancelled")
-   - 建立新的 period，quota_total = 2000 + 1500（Trial 剩餘）
-   - 在 admin_metadata 記錄 Trial 點數轉移資訊
+   - 建立新的 period，quota_total = 2000（不轉移 Trial 剩餘點數）
 """
 
 import pytest
@@ -76,10 +75,10 @@ def trial_teacher_with_usage(db_session: Session, trial_teacher: Teacher):
     return trial_teacher
 
 
-def test_trial_to_paid_quota_transfer(
+def test_trial_to_paid_no_quota_transfer(
     db_session: Session, trial_teacher_with_usage: Teacher
 ):
-    """測試：Trial 轉付費時，剩餘點數應正確轉移"""
+    """測試：Trial 轉付費時，剩餘點數不應轉移"""
 
     teacher = trial_teacher_with_usage
 
@@ -99,46 +98,23 @@ def test_trial_to_paid_quota_transfer(
     assert trial_period is not None
     assert trial_period.quota_total == 2000  # Trial 是 2000 點
     assert trial_period.quota_used == 500  # 使用了 500 點
-    trial_remaining = trial_period.quota_total - trial_period.quota_used
-    assert trial_remaining == 1500  # 剩餘 1500 點
 
     # ========================================
-    # 2️⃣ 模擬刷卡購買 Tutor Teachers (2000 點)
+    # 2️⃣ 模擬購買 Tutor Teachers (2000 點)
     # ========================================
-    # 注意：這裡需要 mock TapPay API
-    # 暫時跳過實際付款測試，直接測試核心邏輯
-
-    # 手動建立付費 period（模擬 payment.py 的邏輯）
     now = datetime.now(timezone.utc)
 
-    # 🔥 核心邏輯：計算 Trial 剩餘點數
-    trial_period_before_cancel = (
-        db_session.query(SubscriptionPeriod)
-        .filter(
-            SubscriptionPeriod.teacher_id == teacher.id,
-            SubscriptionPeriod.payment_method == "trial",
-            SubscriptionPeriod.status == "active",
-        )
-        .first()
-    )
+    # 取消 Trial period（不轉移剩餘點數）
+    trial_period.status = "cancelled"
+    trial_period.cancelled_at = now
+    trial_period.cancel_reason = "Upgraded to paid plan"
 
-    trial_remaining_points = 0
-    if trial_period_before_cancel:
-        trial_remaining_points = (
-            trial_period_before_cancel.quota_total
-            - trial_period_before_cancel.quota_used
-        )
-        # 取消 Trial period
-        trial_period_before_cancel.status = "cancelled"
-        trial_period_before_cancel.cancelled_at = now
-        trial_period_before_cancel.cancel_reason = "Upgraded to paid plan"
-
-    # 建立新的付費 period（包含 Trial 剩餘點數）
+    # 建立新的付費 period（純方案配額，不加 Trial 剩餘）
     new_period = SubscriptionPeriod(
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=299,
-        quota_total=2000 + trial_remaining_points,  # 🔥 關鍵：包含 Trial 剩餘
+        quota_total=2000,  # 純方案配額，不轉移 Trial 剩餘
         quota_used=0,
         start_date=now,
         end_date=now + timedelta(days=30),
@@ -146,14 +122,6 @@ def test_trial_to_paid_quota_transfer(
         payment_status="paid",
         status="active",
     )
-
-    # 記錄 Trial 點數轉移資訊
-    if trial_remaining_points > 0:
-        new_period.admin_metadata = {
-            "trial_credits_transferred": trial_remaining_points,
-            "from_period_id": trial_period_before_cancel.id,
-            "transferred_at": now.isoformat(),
-        }
 
     db_session.add(new_period)
     db_session.commit()
@@ -176,20 +144,18 @@ def test_trial_to_paid_quota_transfer(
     assert cancelled_trial.cancel_reason == "Upgraded to paid plan"
     assert cancelled_trial.cancelled_at is not None
 
-    # ✅ 驗證：新 period 的 quota_total 包含 Trial 剩餘點數
-    assert new_period.quota_total == 3500  # 2000 + 1500
+    # ✅ 驗證：新 period 的 quota_total 不包含 Trial 剩餘點數
+    assert new_period.quota_total == 2000  # 純方案配額
     assert new_period.quota_used == 0
     assert new_period.status == "active"
     assert new_period.payment_method == "credit_card"
 
-    # ✅ 驗證：admin_metadata 記錄正確
-    assert new_period.admin_metadata is not None
-    assert new_period.admin_metadata["trial_credits_transferred"] == 1500
-    assert new_period.admin_metadata["from_period_id"] == cancelled_trial.id
+    # ✅ 驗證：沒有 trial_credits_transferred metadata
+    assert new_period.admin_metadata is None
 
 
-def test_trial_fully_used_no_transfer(db_session: Session, trial_teacher: Teacher):
-    """測試：Trial 點數用完時，不應轉移點數"""
+def test_trial_fully_used_then_purchase(db_session: Session, trial_teacher: Teacher):
+    """測試：Trial 點數用完時，購買後只有方案配額"""
 
     # ========================================
     # 1️⃣ 模擬 Trial 點數用完
@@ -212,9 +178,6 @@ def test_trial_fully_used_no_transfer(db_session: Session, trial_teacher: Teache
     # ========================================
     now = datetime.now(timezone.utc)
 
-    trial_remaining_points = trial_period.quota_total - trial_period.quota_used  # 0
-    assert trial_remaining_points == 0
-
     trial_period.status = "cancelled"
     trial_period.cancelled_at = now
     trial_period.cancel_reason = "Upgraded to paid plan"
@@ -223,7 +186,7 @@ def test_trial_fully_used_no_transfer(db_session: Session, trial_teacher: Teache
         teacher_id=trial_teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=299,
-        quota_total=2000 + trial_remaining_points,  # 2000 + 0
+        quota_total=2000,
         quota_used=0,
         start_date=now,
         end_date=now + timedelta(days=30),
@@ -231,14 +194,6 @@ def test_trial_fully_used_no_transfer(db_session: Session, trial_teacher: Teache
         payment_status="paid",
         status="active",
     )
-
-    # 沒有剩餘點數，不記錄 metadata
-    if trial_remaining_points > 0:
-        new_period.admin_metadata = {
-            "trial_credits_transferred": trial_remaining_points,
-            "from_period_id": trial_period.id,
-            "transferred_at": now.isoformat(),
-        }
 
     db_session.add(new_period)
     db_session.commit()
@@ -248,8 +203,8 @@ def test_trial_fully_used_no_transfer(db_session: Session, trial_teacher: Teache
     # ========================================
     db_session.refresh(new_period)
 
-    assert new_period.quota_total == 2000  # 沒有額外點數
-    assert new_period.admin_metadata is None  # 沒有 metadata
+    assert new_period.quota_total == 2000  # 標準配額
+    assert new_period.admin_metadata is None
 
 
 def test_no_trial_period_normal_purchase(db_session: Session):
@@ -273,28 +228,11 @@ def test_no_trial_period_normal_purchase(db_session: Session):
     # ========================================
     now = datetime.now(timezone.utc)
 
-    # 檢查 Trial period（應該沒有）
-    trial_period = (
-        db_session.query(SubscriptionPeriod)
-        .filter(
-            SubscriptionPeriod.teacher_id == teacher.id,
-            SubscriptionPeriod.payment_method == "trial",
-            SubscriptionPeriod.status == "active",
-        )
-        .first()
-    )
-
-    trial_remaining_points = 0
-    if trial_period:
-        trial_remaining_points = trial_period.quota_total - trial_period.quota_used
-        trial_period.status = "cancelled"
-        trial_period.cancelled_at = now
-
     new_period = SubscriptionPeriod(
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=299,
-        quota_total=2000 + trial_remaining_points,  # 2000 + 0
+        quota_total=2000,
         quota_used=0,
         start_date=now,
         end_date=now + timedelta(days=30),
@@ -312,87 +250,3 @@ def test_no_trial_period_normal_purchase(db_session: Session):
     # ========================================
     assert new_period.quota_total == 2000  # 標準配額
     assert new_period.admin_metadata is None
-
-
-def test_trial_period_cancelled_not_transferred_twice(
-    db_session: Session, trial_teacher_with_usage: Teacher
-):
-    """測試：已取消的 Trial period 不會被重複轉移"""
-
-    teacher = trial_teacher_with_usage
-
-    # ========================================
-    # 1️⃣ 第一次購買（Trial 轉移）
-    # ========================================
-    now = datetime.now(timezone.utc)
-
-    trial_period = (
-        db_session.query(SubscriptionPeriod)
-        .filter(
-            SubscriptionPeriod.teacher_id == teacher.id,
-            SubscriptionPeriod.payment_method == "trial",
-            SubscriptionPeriod.status == "active",
-        )
-        .first()
-    )
-
-    trial_remaining = trial_period.quota_total - trial_period.quota_used  # 1500
-    trial_period.status = "cancelled"
-    trial_period.cancelled_at = now
-
-    first_period = SubscriptionPeriod(
-        teacher_id=teacher.id,
-        plan_name="Tutor Teachers",
-        amount_paid=299,
-        quota_total=2000 + trial_remaining,
-        quota_used=0,
-        start_date=now,
-        end_date=now + timedelta(days=30),
-        payment_method="credit_card",
-        payment_status="paid",
-        status="active",
-    )
-    db_session.add(first_period)
-    db_session.commit()
-
-    # ========================================
-    # 2️⃣ 第二次續訂（不應轉移 Trial）
-    # ========================================
-    first_period.status = "expired"
-
-    # 查詢 active trial period（應該沒有）
-    active_trial = (
-        db_session.query(SubscriptionPeriod)
-        .filter(
-            SubscriptionPeriod.teacher_id == teacher.id,
-            SubscriptionPeriod.payment_method == "trial",
-            SubscriptionPeriod.status == "active",  # 🔥 關鍵：只轉移 active 的
-        )
-        .first()
-    )
-
-    trial_remaining_second = 0
-    if active_trial:
-        trial_remaining_second = active_trial.quota_total - active_trial.quota_used
-
-    second_period = SubscriptionPeriod(
-        teacher_id=teacher.id,
-        plan_name="Tutor Teachers",
-        amount_paid=299,
-        quota_total=2000 + trial_remaining_second,  # 2000 + 0
-        quota_used=0,
-        start_date=now + timedelta(days=30),
-        end_date=now + timedelta(days=60),
-        payment_method="credit_card",
-        payment_status="paid",
-        status="active",
-    )
-    db_session.add(second_period)
-    db_session.commit()
-    db_session.refresh(second_period)
-
-    # ========================================
-    # 3️⃣ 驗證
-    # ========================================
-    assert second_period.quota_total == 2000  # 沒有轉移 Trial（已 cancelled）
-    assert second_period.admin_metadata is None

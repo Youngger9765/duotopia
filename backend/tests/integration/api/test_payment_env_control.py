@@ -27,7 +27,7 @@ def test_enable_payment_false():
     expected_behavior = """
     預期行為:
     - Payment API 應該返回 success=False
-    - message 應該包含 "免費優惠期間"
+    - message 應該包含 "付款功能尚未開放"
     - 不應該觸發實際付款流程
     """
     print(expected_behavior)

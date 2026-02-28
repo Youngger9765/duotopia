@@ -324,14 +324,9 @@ export default function TeacherSubscription() {
   };
 
   const handlePaymentError = (error: string) => {
-    if (error.includes("免費優惠期間") || error.includes("未來將會開放儲值")) {
-      toast.info(error, { duration: 6000 });
-      setShowPaymentDialog(false);
-    } else {
-      toast.error(
-        t("teacherSubscription.messages.subscriptionFailed", { error }),
-      );
-    }
+    toast.error(
+      t("teacherSubscription.messages.subscriptionFailed", { error }),
+    );
   };
 
   const handleCancelSubscription = async () => {

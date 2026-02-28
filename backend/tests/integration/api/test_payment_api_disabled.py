@@ -108,9 +108,9 @@ def test_payment_disabled():
         print()
 
         # 驗證是否符合預期
-        if data.get("success") is False and "免費優惠期間" in data.get("message", ""):
+        if data.get("success") is False and "付款功能尚未開放" in data.get("message", ""):
             print("   ✅ 測試通過！")
-            print("   ✅ Payment API 正確返回免費優惠期提醒")
+            print("   ✅ Payment API 正確返回付款未開放提醒")
             print("   ✅ 未觸發實際付款流程")
         else:
             print("   ❌ 測試失敗！")
