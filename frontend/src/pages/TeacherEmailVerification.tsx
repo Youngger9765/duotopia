@@ -146,7 +146,9 @@ export function TeacherEmailVerification() {
               <div className="space-y-4">
                 <div className="text-center text-gray-600">
                   <p>您的帳號已成功啟用！</p>
-                  <p className="text-sm mt-2">免費試用已開始，您已獲得 2,000 點 AI 配額</p>
+                  <p className="text-sm mt-2">
+                    免費試用已開始，您已獲得 2,000 點 AI 配額
+                  </p>
                 </div>
                 <div className="flex justify-center">
                   <button
