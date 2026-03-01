@@ -447,13 +447,28 @@ function TeacherLayoutInner({
           {children}
         </div>
 
-        {/* AI Assistant Panel — 僅個人模式顯示 */}
+        {/* AI Assistant Panel — desktop: sidebar */}
         {showAiAssistant && (
           <div className="hidden md:flex h-screen sticky top-0">
             <AiAssistantPanel />
           </div>
         )}
       </div>
+
+      {/* AI Assistant Panel — narrow screen: floating overlay */}
+      {showAiAssistant && effectiveAiPanelOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={closeAiPanel}
+          />
+          {/* Panel */}
+          <div className="relative w-[340px] max-w-[85vw] h-full">
+            <AiAssistantPanel />
+          </div>
+        </div>
+      )}
 
       {/* AI Assistant FAB — 僅個人模式顯示 */}
       {showAiAssistant && <AiAssistantFab />}

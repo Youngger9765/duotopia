@@ -55,9 +55,9 @@ interface OrganizationContextType {
   refreshSchools: (token: string, orgId: string) => Promise<void>;
 }
 
-const OrganizationContext = createContext<OrganizationContextType | undefined>(
-  undefined,
-);
+export const OrganizationContext = createContext<
+  OrganizationContextType | undefined
+>(undefined);
 
 export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
