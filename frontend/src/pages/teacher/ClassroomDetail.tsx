@@ -1803,7 +1803,10 @@ export default function ClassroomDetail({
                                     </div>
                                     <div className="font-medium text-gray-900 dark:text-gray-100 mt-1">
                                       {assignment.student_count
-                                        ? t("classroomDetail.labels.studentCountWithUnit", { count: assignment.student_count })
+                                        ? t(
+                                            "classroomDetail.labels.studentCountWithUnit",
+                                            { count: assignment.student_count },
+                                          )
                                         : t("classroomDetail.labels.allClass")}
                                     </div>
                                   </div>
@@ -1956,7 +1959,13 @@ export default function ClassroomDetail({
                                         </span>
                                         <span>
                                           {assignment.student_count
-                                            ? t("classroomDetail.labels.studentCountWithUnit", { count: assignment.student_count })
+                                            ? t(
+                                                "classroomDetail.labels.studentCountWithUnit",
+                                                {
+                                                  count:
+                                                    assignment.student_count,
+                                                },
+                                              )
                                             : t(
                                                 "classroomDetail.labels.allClass",
                                               )}
