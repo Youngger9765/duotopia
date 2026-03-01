@@ -2,6 +2,7 @@
 Assignment CRUD operations
 """
 
+import uuid
 from typing import Optional, List
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -14,6 +15,8 @@ from models import (
     Student,
     Classroom,
     ClassroomStudent,
+    ClassroomSchool,
+    School,
     Content,
     ContentItem,
     Lesson,
@@ -25,6 +28,7 @@ from models import (
     StudentItemProgress,
     AssignmentStatus,
 )
+from utils.permissions import has_read_org_materials_permission
 from .validators import (
     CreateAssignmentRequest,
     UpdateAssignmentRequest,
@@ -57,13 +61,15 @@ async def create_assignment(
                 detail="Your subscription has expired. Please recharge to create assignments.",
             )
 
-    # 驗證班級存在且屬於當前教師
+    # 驗證班級存在且當前教師有權限
+    # 支援兩種授權路徑：
+    # 1. 班級導師（teacher_id == current_teacher.id）
+    # 2. 機構管理員（透過 organization_id 驗證角色）
     classroom = (
         db.query(Classroom)
         .filter(
             and_(
                 Classroom.id == request.classroom_id,
-                Classroom.teacher_id == current_teacher.id,
                 Classroom.is_active.is_(True),
             )
         )
@@ -71,6 +77,44 @@ async def create_assignment(
     )
 
     if not classroom:
+        raise HTTPException(
+            status_code=404, detail="Classroom not found"
+        )
+
+    # 授權檢查
+    is_classroom_teacher = classroom.teacher_id == current_teacher.id
+    is_org_admin = False
+
+    if not is_classroom_teacher and request.organization_id:
+        # 機構管理員路徑：驗證班級屬於該機構的學校，且教師有機構權限
+        org_id = uuid.UUID(request.organization_id)
+
+        # 檢查班級是否屬於該機構的學校
+        classroom_school = (
+            db.query(ClassroomSchool)
+            .filter(
+                ClassroomSchool.classroom_id == request.classroom_id,
+                ClassroomSchool.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if classroom_school:
+            school = (
+                db.query(School)
+                .filter(
+                    School.id == classroom_school.school_id,
+                    School.organization_id == org_id,
+                )
+                .first()
+            )
+
+            if school and has_read_org_materials_permission(
+                current_teacher.id, org_id, db
+            ):
+                is_org_admin = True
+
+    if not is_classroom_teacher and not is_org_admin:
         raise HTTPException(
             status_code=404, detail="Classroom not found or you don't have permission"
         )

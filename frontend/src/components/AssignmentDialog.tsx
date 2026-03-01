@@ -62,7 +62,7 @@ import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspaceSafe } from "@/contexts/WorkspaceContext";
 
 interface Student {
   id: number;
@@ -115,6 +115,10 @@ interface AssignmentDialogProps {
   classroomId: number;
   students: Student[];
   onSuccess?: () => void;
+  /** Override organization context (for use outside WorkspaceProvider, e.g. org admin module) */
+  organizationId?: string;
+  /** Override school context (for use outside WorkspaceProvider, e.g. org admin module) */
+  schoolId?: string;
 }
 
 // =============================================================================
@@ -248,9 +252,24 @@ export function AssignmentDialog({
   classroomId,
   students,
   onSuccess,
+  organizationId: propOrganizationId,
+  schoolId: propSchoolId,
 }: AssignmentDialogProps) {
   const { t } = useTranslation();
-  const { mode, selectedSchool, selectedOrganization } = useWorkspace();
+  // useWorkspaceSafe 在 WorkspaceProvider 外（如機構管理模組）不會 throw，而是回傳 null
+  const workspace = useWorkspaceSafe();
+
+  // 支援 props 覆蓋 WorkspaceContext（用於機構管理模組）
+  const effectiveOrganizationId =
+    propOrganizationId || workspace?.selectedOrganization?.id || null;
+  const effectiveSchoolId =
+    propSchoolId || workspace?.selectedSchool?.id || null;
+  // 只要有 organizationId（不論來源），就視為機構模式
+  const isOrgMode =
+    (workspace?.mode === "organization" &&
+      workspace?.selectedOrganization !== null) ||
+    !!propOrganizationId;
+
   const [loading, setLoading] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [loadingClassroomPrograms, setLoadingClassroomPrograms] =
@@ -260,8 +279,8 @@ export function AssignmentDialog({
     {},
   );
   const [currentStep, setCurrentStep] = useState(1);
-  // 只在機構模式且選擇了機構時顯示「機構教材」tab
-  const showOrgTab = mode === "organization" && selectedOrganization !== null;
+  // 只在機構模式且有機構 ID 時顯示「機構教材」tab
+  const showOrgTab = isOrgMode && effectiveOrganizationId !== null;
 
   const [activeTab, setActiveTab] = useState<
     "template" | "classroom" | "organization"
@@ -358,8 +377,8 @@ export function AssignmentDialog({
     try {
       // 根據工作區 context 決定查哪個配額
       const params = new URLSearchParams();
-      if (mode === "organization" && selectedOrganization) {
-        params.append("organization_id", selectedOrganization.id);
+      if (effectiveOrganizationId) {
+        params.append("organization_id", effectiveOrganizationId);
       }
       const url = `/api/teachers/subscription${params.toString() ? `?${params.toString()}` : ""}`;
 
@@ -397,8 +416,8 @@ export function AssignmentDialog({
       params.append("is_template", "true");
 
       console.log("[DEBUG] loadTemplatePrograms called with:", {
-        mode,
-        selectedSchool: selectedSchool?.id,
+        mode: workspace?.mode,
+        selectedSchool: workspace?.selectedSchool?.id,
         params: params.toString(),
         url: `/api/teachers/programs?${params.toString()}`,
       });
@@ -449,13 +468,14 @@ export function AssignmentDialog({
   };
 
   // 加載機構教材（機構層級的課程）
+  // 注意：機構 API 已回傳完整階層（lessons → contents → items），不需額外 lazy-load
   const loadOrgPrograms = async () => {
-    if (!selectedOrganization) return;
+    if (!effectiveOrganizationId) return;
 
     try {
       setLoadingOrgPrograms(true);
       const response = await apiClient.get<Program[]>(
-        `/api/organizations/${selectedOrganization.id}/programs`,
+        `/api/organizations/${effectiveOrganizationId}/programs`,
       );
       setOrgPrograms(response);
     } catch (error) {
@@ -474,11 +494,23 @@ export function AssignmentDialog({
       return; // Already loaded
     }
 
+    // 判斷是否為機構教材（org API 已回傳完整階層，理論上不需要再載入）
+    const isOrgProgram = orgPrograms.some((p: Program) => p.id === programId);
+
     try {
       setLoadingLessons((prev) => ({ ...prev, [programId]: true }));
-      const detail = await apiClient.get<Program>(
-        `/api/teachers/programs/${programId}`,
-      );
+
+      let detail: Program;
+      if (isOrgProgram && effectiveOrganizationId) {
+        // 使用機構 API 取得詳情（含 lessons → contents → items）
+        detail = await apiClient.get<Program>(
+          `/api/organizations/${effectiveOrganizationId}/programs/${programId}`,
+        );
+      } else {
+        detail = await apiClient.get<Program>(
+          `/api/teachers/programs/${programId}`,
+        );
+      }
 
       // Update the program with lessons in all lists
       const updatePrograms = (prev: Program[]) =>
@@ -500,15 +532,32 @@ export function AssignmentDialog({
   const loadLessonContents = async (lessonId: number) => {
     // Find the lesson and check if contents already loaded in any list
     let foundLesson: Lesson | undefined;
+    let isOrgLesson = false;
     allPrograms.forEach((program) => {
       const lesson = program.lessons?.find((l) => l.id === lessonId);
       if (lesson) {
         foundLesson = lesson;
+        if (orgPrograms.some((p: Program) => p.id === program.id)) {
+          isOrgLesson = true;
+        }
       }
     });
 
     if (foundLesson?.contents && foundLesson.contents.length > 0) {
       return; // Already loaded
+    }
+
+    // 機構教材的 contents 已在 loadOrgPrograms/loadProgramLessons 時載入
+    // 如果還是沒有，就用機構 API 重新取得整個 program
+    if (isOrgLesson && effectiveOrganizationId) {
+      // 找到此 lesson 所屬的 program，重新載入整個 program
+      const parentProgram = orgPrograms.find((p: Program) =>
+        p.lessons?.some((l) => l.id === lessonId),
+      );
+      if (parentProgram) {
+        await loadProgramLessons(parentProgram.id);
+        return;
+      }
     }
 
     try {
@@ -826,6 +875,11 @@ export function AssignmentDialog({
         show_translation: formData.show_translation,
         show_word: formData.show_word,
         show_image: formData.show_image,
+        // ===== 機構模式：傳遞機構/學校 ID 以供後端授權驗證 =====
+        ...(effectiveOrganizationId && {
+          organization_id: effectiveOrganizationId,
+        }),
+        ...(effectiveSchoolId && { school_id: effectiveSchoolId }),
       };
 
       const result = await apiClient.post<{ student_count: number }>(

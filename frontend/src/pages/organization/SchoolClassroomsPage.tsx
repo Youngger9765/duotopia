@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { API_URL } from "@/config/api";
+import { apiClient } from "@/lib/api";
 import { logError } from "@/utils/errorLogger";
 import { Breadcrumb } from "@/components/organization/Breadcrumb";
 import { LoadingSpinner } from "@/components/organization/LoadingSpinner";
@@ -12,9 +13,11 @@ import { EditClassroomDialog } from "@/components/organization/EditClassroomDial
 import { AssignTeacherDialog } from "@/components/organization/AssignTeacherDialog";
 import { ClassroomStudentsSidebar } from "@/components/organization/ClassroomStudentsSidebar";
 import { ClassroomMaterialsSidebar } from "@/components/organization/ClassroomMaterialsSidebar";
+import { AssignmentDialog } from "@/components/AssignmentDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 interface Classroom {
   id: string;
@@ -75,6 +78,13 @@ export default function SchoolClassroomsPage() {
     null,
   );
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  // 派發作業
+  const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
+  const [assignmentClassroom, setAssignmentClassroom] =
+    useState<Classroom | null>(null);
+  const [assignmentStudents, setAssignmentStudents] = useState<
+    { id: number; name: string; student_number?: string }[]
+  >([]);
 
   useEffect(() => {
     if (schoolId && token) {
@@ -185,6 +195,29 @@ export default function SchoolClassroomsPage() {
     setShowMaterialsSidebar(true);
   };
 
+  const handleAssignHomework = async (classroom: Classroom) => {
+    try {
+      // 取得班級學生列表
+      const students = (await apiClient.getClassroomStudents(
+        schoolId || "",
+        parseInt(classroom.id),
+      )) as { id: number; name: string; student_number?: string }[];
+      if (!students || students.length === 0) {
+        toast.error("此班級尚無學生，無法派發作業");
+        return;
+      }
+      setAssignmentClassroom(classroom);
+      setAssignmentStudents(students);
+      setShowAssignmentDialog(true);
+    } catch (error) {
+      logError("Failed to fetch classroom students for assignment", error, {
+        schoolId,
+        classroomId: classroom.id,
+      });
+      toast.error("載入學生列表失敗");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -250,6 +283,7 @@ export default function SchoolClassroomsPage() {
               onAssignTeacher={handleAssignTeacher}
               onViewStudents={handleViewStudents}
               onViewMaterials={handleViewMaterials}
+              onAssignHomework={handleAssignHomework}
             />
           )}
         </CardContent>
@@ -307,6 +341,23 @@ export default function SchoolClassroomsPage() {
           classroomName={viewingClassroom.name}
           schoolId={schoolId || ""}
           organizationId={school.organization_id}
+          onSuccess={fetchClassrooms}
+        />
+      )}
+
+      {/* Assignment Dialog - 機構模式派發作業 */}
+      {assignmentClassroom && (
+        <AssignmentDialog
+          open={showAssignmentDialog}
+          onClose={() => {
+            setShowAssignmentDialog(false);
+            setAssignmentClassroom(null);
+            setAssignmentStudents([]);
+          }}
+          classroomId={parseInt(assignmentClassroom.id)}
+          students={assignmentStudents}
+          organizationId={school?.organization_id}
+          schoolId={schoolId}
           onSuccess={fetchClassrooms}
         />
       )}
