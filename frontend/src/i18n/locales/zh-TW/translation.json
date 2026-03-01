@@ -2532,6 +2532,7 @@
       "noContentItems": "尚無內容項目",
       "enterTitle": "輸入標題",
       "allClass": "全班",
+      "studentCountWithUnit": "{{count}} 人",
       "noDeadline": "無期限",
       "noDescription": "無說明",
       "unknownType": "未知類型",
@@ -2837,7 +2838,8 @@
       "delete": "刪除",
       "confirmDelete": "確認刪除",
       "create": "建立",
-      "createFirst": "建立第一個班級"
+      "createFirst": "建立第一個班級",
+      "dispatchAssignment": "派發作業"
     },
     "stats": {
       "totalClassrooms": "總班級數",
@@ -2854,7 +2856,8 @@
       "programCount": "課程數",
       "createdAt": "建立時間",
       "actions": "操作",
-      "grade": "級別"
+      "grade": "級別",
+      "school": "所屬學校"
     },
     "messages": {
       "totalCount": "共 {{count}} 個班級",
@@ -2877,7 +2880,19 @@
     },
     "placeholders": {
       "classroomName": "例如：五年級A班",
-      "description": "班級描述（選填）"
+      "description": "班級描述（選填）",
+      "searchName": "搜尋班級名稱..."
+    },
+    "filters": {
+      "allLevels": "所有等級"
+    },
+    "sort": {
+      "default": "預設排序",
+      "nameAsc": "名稱 A→Z",
+      "nameDesc": "名稱 Z→A",
+      "studentCountDesc": "學生數 多→少",
+      "createdAtDesc": "最新建立",
+      "createdAtAsc": "最早建立"
     }
   },
   "teacherStudents": {

@@ -2532,6 +2532,7 @@
       "noContentItems": "No content items yet",
       "enterTitle": "Enter title",
       "allClass": "All Class",
+      "studentCountWithUnit": "{{count}} students",
       "noDeadline": "No Deadline",
       "noDescription": "No Description",
       "unknownType": "Unknown Type",
@@ -2836,7 +2837,8 @@
       "delete": "Delete",
       "confirmDelete": "Confirm Delete",
       "create": "Create",
-      "createFirst": "Create First Classroom"
+      "createFirst": "Create First Classroom",
+      "dispatchAssignment": "Assign Homework"
     },
     "stats": {
       "totalClassrooms": "Total Classrooms",
@@ -2853,7 +2855,8 @@
       "programCount": "Program Count",
       "createdAt": "Created At",
       "actions": "Actions",
-      "grade": "Grade"
+      "grade": "Grade",
+      "school": "School"
     },
     "messages": {
       "totalCount": "Total {{count}} classrooms",
@@ -2876,7 +2879,19 @@
     },
     "placeholders": {
       "classroomName": "e.g., Grade 5 Class A",
-      "description": "Classroom description (optional)"
+      "description": "Classroom description (optional)",
+      "searchName": "Search classroom name..."
+    },
+    "filters": {
+      "allLevels": "All Levels"
+    },
+    "sort": {
+      "default": "Default",
+      "nameAsc": "Name A→Z",
+      "nameDesc": "Name Z→A",
+      "studentCountDesc": "Most Students",
+      "createdAtDesc": "Newest First",
+      "createdAtAsc": "Oldest First"
     }
   },
   "teacherStudents": {
