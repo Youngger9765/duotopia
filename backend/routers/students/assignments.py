@@ -348,7 +348,6 @@ async def get_assignment_activities(
                                 and item_progress.ai_feedback
                             ):
                                 # 從 ai_feedback JSON 中取得分數
-                                import json
 
                                 try:
                                     ai_feedback = (
@@ -404,7 +403,7 @@ async def get_assignment_activities(
                     activity_data["item_count"] = len(items_with_ids)
                 else:
                     # 沒有 ContentItem 記錄的情況 - 返回空陣列
-                    print(f"Warning: Content {content.id} has no ContentItem records")
+                    logger.warning("Content %s has no ContentItem records", content.id)
                     activity_data["items"] = []
                     activity_data["item_count"] = 0
 
@@ -630,7 +629,7 @@ async def submit_assignment(
                 if is_auto_graded
                 else AssignmentStatus.SUBMITTED
             )
-            progress.completed_at = datetime.now()
+            progress.completed_at = datetime.now(timezone.utc)
 
     # 更新作業狀態
     # Issue #165: 例句重組和單字選擇為自動批改，提交後直接標記為 GRADED（已完成）
@@ -1434,9 +1433,16 @@ async def submit_word_selection_answer(
             detail="Assignment not found or not assigned to you",
         )
 
-    # Get the correct answer from content item
+    # Get the correct answer from content item (verify it belongs to this assignment)
     content_item = (
-        db.query(ContentItem).filter(ContentItem.id == request.content_item_id).first()
+        db.query(ContentItem)
+        .join(Content, ContentItem.content_id == Content.id)
+        .join(AssignmentContent, AssignmentContent.content_id == Content.id)
+        .filter(
+            ContentItem.id == request.content_item_id,
+            AssignmentContent.assignment_id == student_assignment.assignment_id,
+        )
+        .first()
     )
 
     if not content_item:
@@ -1446,6 +1452,9 @@ async def submit_word_selection_answer(
         )
 
     correct_answer = content_item.translation or ""
+
+    # 伺服器端驗證答案正確性（不信任客戶端的 is_correct）
+    is_correct = request.selected_answer.strip() == correct_answer.strip()
 
     # Call update_memory_strength PostgreSQL function
     result = db.execute(
@@ -1461,7 +1470,7 @@ async def submit_word_selection_answer(
         {
             "sa_id": assignment_id,
             "item_id": request.content_item_id,
-            "is_correct": request.is_correct,
+            "is_correct": is_correct,
         },
     ).fetchone()
 
@@ -1495,10 +1504,10 @@ async def submit_word_selection_answer(
 
     return {
         "success": True,
-        "is_correct": request.is_correct,
+        "is_correct": is_correct,
         "correct_answer": correct_answer,
         "new_memory_strength": new_memory_strength,
-        "message": "正確！" if request.is_correct else f"正確答案是: {correct_answer}",
+        "message": "正確！" if is_correct else f"正確答案是: {correct_answer}",
     }
 
 
@@ -1823,7 +1832,7 @@ async def submit_rearrangement_answer(
             "selected": request.selected_word,
             "correct": correct_word,
             "is_correct": is_correct,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     )
     progress.rearrangement_data = {"selections": selections}
@@ -1985,5 +1994,5 @@ async def complete_rearrangement(
         "success": True,
         "final_score": float(progress.expected_score or 0),
         "timeout": request.timeout,
-        "completed_at": datetime.now().isoformat(),
+        "completed_at": datetime.now(timezone.utc).isoformat(),
     }
