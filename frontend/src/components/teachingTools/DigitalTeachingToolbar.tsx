@@ -806,9 +806,7 @@ const DigitalTeachingToolbar: React.FC = () => {
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
         <DialogContent className="sm:max-w-md pointer-events-auto">
           <DialogHeader>
-            <DialogTitle>
-              {t("teacherDashboard.share.title")}
-            </DialogTitle>
+            <DialogTitle>{t("teacherDashboard.share.title")}</DialogTitle>
             <DialogDescription>
               {t("teacherDashboard.share.description")}
             </DialogDescription>
@@ -818,11 +816,7 @@ const DigitalTeachingToolbar: React.FC = () => {
               <QRCodeSVG value={getStudentLoginUrl()} size={200} />
             </div>
             <div className="flex items-center space-x-2">
-              <Input
-                value={getStudentLoginUrl()}
-                readOnly
-                className="flex-1"
-              />
+              <Input value={getStudentLoginUrl()} readOnly className="flex-1" />
               <Button
                 size="sm"
                 onClick={handleCopyUrl}
