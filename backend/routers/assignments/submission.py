@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import (
+    Assignment,
     Student,
     StudentAssignment,
     StudentContentProgress,
@@ -30,9 +31,14 @@ async def get_student_assignments(
     取得學生的作業列表
     學生只能看到自己的作業
     """
-    # 建立查詢
-    query = db.query(StudentAssignment).filter(
-        StudentAssignment.student_id == current_student.id
+    # 建立查詢（排除已封存的作業）
+    query = (
+        db.query(StudentAssignment)
+        .join(Assignment, StudentAssignment.assignment_id == Assignment.id)
+        .filter(
+            StudentAssignment.student_id == current_student.id,
+            Assignment.is_archived.is_(False),
+        )
     )
 
     # 套用篩選條件
