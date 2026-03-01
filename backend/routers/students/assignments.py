@@ -2,6 +2,7 @@
 
 import json
 import logging
+import math
 import random
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List, Literal
@@ -465,21 +466,22 @@ async def get_assignment_activities(
     practice_mode = None
     show_answer = False
     score_category = None
+    parent_assignment = None
     if student_assignment.assignment_id:
-        assignment = (
+        parent_assignment = (
             db.query(Assignment)
             .filter(Assignment.id == student_assignment.assignment_id)
             .first()
         )
-        if assignment:
-            practice_mode = assignment.practice_mode
-            show_answer = assignment.show_answer or False
-            score_category = assignment.score_category
+        if parent_assignment:
+            practice_mode = parent_assignment.practice_mode
+            show_answer = parent_assignment.show_answer or False
+            score_category = parent_assignment.score_category
 
     # 檢查 AI 分析額度（根據作業所屬班級判斷：機構班級→機構點數，個人班級→個人配額）
     can_use_ai_analysis = (
-        QuotaService.check_ai_analysis_availability_by_assignment(assignment, db)
-        if assignment
+        QuotaService.check_ai_analysis_availability_by_assignment(parent_assignment, db)
+        if parent_assignment
         else True
     )
 
@@ -980,12 +982,16 @@ async def save_vocabulary_assessment(
             detail="Assignment not found or not assigned to you",
         )
 
-    # Find the progress record
+    # Find the progress record and verify the content item belongs to this assignment
     progress = (
         db.query(StudentItemProgress)
+        .join(ContentItem, StudentItemProgress.content_item_id == ContentItem.id)
+        .join(Content, ContentItem.content_id == Content.id)
+        .join(AssignmentContent, AssignmentContent.content_id == Content.id)
         .filter(
             StudentItemProgress.id == request.progress_id,
             StudentItemProgress.student_assignment_id == assignment_id,
+            AssignmentContent.assignment_id == student_assignment.assignment_id,
         )
         .first()
     )
@@ -1114,8 +1120,6 @@ async def start_word_selection_practice(
     Returns 10 words selected by the intelligent get_words_for_practice function,
     each with 3 distractors from the word set plus the correct answer.
     """
-    # from services.translation import translation_service  # disabled (#303)
-
     student_id = int(current_student.get("sub"))
 
     # Verify student has this assignment
@@ -1248,49 +1252,6 @@ async def start_word_selection_practice(
                     else 0,
                 }
             )
-
-    # NOTE: AI distractor generation is temporarily disabled (#303).
-    # All distractors now come from other words in the assignment.
-    # Original AI generation code is preserved below for future reactivation.
-    #
-    # --- AI distractor generation (disabled) ---
-    # content_item_ids = [w["content_item_id"] for w in words_data]
-    # items_with_distractors = (
-    #     db.query(ContentItem).filter(ContentItem.id.in_(content_item_ids)).all()
-    # )
-    # distractors_map = {item.id: item.distractors for item in items_with_distractors}
-    # items_needing_generation = [
-    #     w for w in words_data if not distractors_map.get(w["content_item_id"])
-    # ]
-    # if not items_needing_generation:
-    #     all_distractors = [
-    #         distractors_map.get(w["content_item_id"], []) for w in words_data
-    #     ]
-    # else:
-    #     words_for_distractors = [
-    #         {"word": w["text"], "translation": w["translation"]}
-    #         for w in items_needing_generation
-    #     ]
-    #     try:
-    #         generated_distractors = (
-    #             await translation_service.batch_generate_distractors(
-    #                 words_for_distractors, count=3
-    #             )
-    #         )
-    #     except Exception as e:
-    #         logger.error(f"Failed to generate distractors: {e}")
-    #         generated_distractors = [
-    #             ["選項A", "選項B", "選項C"] for _ in items_needing_generation
-    #         ]
-    #     generated_idx = 0
-    #     all_distractors = []
-    #     for w in words_data:
-    #         if distractors_map.get(w["content_item_id"]):
-    #             all_distractors.append(distractors_map[w["content_item_id"]])
-    #         else:
-    #             all_distractors.append(generated_distractors[generated_idx])
-    #             generated_idx += 1
-    # --- end AI distractor generation ---
 
     # Create practice session
     practice_session = PracticeSession(
@@ -1747,7 +1708,6 @@ async def submit_rearrangement_answer(
     db: Session = Depends(get_db),
 ):
     """提交例句重組答案"""
-    import math
 
     student_id = int(current_student.get("sub"))
 
