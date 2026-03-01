@@ -61,8 +61,7 @@ vi.mock("react-i18next", () => ({
         "teacherClassrooms.messages.noClassrooms": "No classrooms yet",
         "teacherClassrooms.messages.createFirstDescription":
           "Create your first classroom",
-        "teacherClassrooms.placeholders.searchName":
-          "Search classroom name...",
+        "teacherClassrooms.placeholders.searchName": "Search classroom name...",
         "teacherClassrooms.filters.allLevels": "All Levels",
         "teacherClassrooms.sort.default": "Default",
         "teacherClassrooms.sort.nameAsc": "Name A→Z",
@@ -76,8 +75,7 @@ vi.mock("react-i18next", () => ({
         "teacherClassrooms.dialogs.deleteDescription":
           "Are you sure you want to delete?",
         "teacherClassrooms.dialogs.createTitle": "Add Classroom",
-        "teacherClassrooms.dialogs.createDescription":
-          "Create a new classroom",
+        "teacherClassrooms.dialogs.createDescription": "Create a new classroom",
         "teacherClassrooms.placeholders.classroomName": "e.g., Grade 5",
         "teacherClassrooms.placeholders.description": "Description",
         "common.loading": "Loading...",
@@ -341,11 +339,7 @@ describe("TeacherClassrooms", () => {
         const links = table.querySelectorAll("tbody a");
         const names = Array.from(links).map((a) => a.textContent);
         // In desc order: Charlie > Beta > Alpha
-        expect(names).toEqual([
-          "Charlie Class",
-          "Beta Class",
-          "Alpha Class",
-        ]);
+        expect(names).toEqual(["Charlie Class", "Beta Class", "Alpha Class"]);
       });
     });
   });
@@ -387,9 +381,7 @@ describe("TeacherClassrooms", () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(
-          screen.getAllByText("Charlie Class").length,
-        ).toBeGreaterThan(0);
+        expect(screen.getAllByText("Charlie Class").length).toBeGreaterThan(0);
       });
 
       // Charlie Class has 0 students, so its dispatch button should be disabled
@@ -443,9 +435,7 @@ describe("TeacherClassrooms", () => {
       await user.click(alphaDispatch!);
 
       await waitFor(() => {
-        expect(
-          screen.getByTestId("assignment-dialog"),
-        ).toBeInTheDocument();
+        expect(screen.getByTestId("assignment-dialog")).toBeInTheDocument();
       });
 
       // Verify AssignmentDialog was called with correct props
@@ -509,9 +499,7 @@ describe("TeacherClassrooms", () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(
-          screen.getByText("No classrooms yet"),
-        ).toBeInTheDocument();
+        expect(screen.getByText("No classrooms yet")).toBeInTheDocument();
       });
     });
   });
