@@ -77,9 +77,7 @@ async def create_assignment(
     )
 
     if not classroom:
-        raise HTTPException(
-            status_code=404, detail="Classroom not found"
-        )
+        raise HTTPException(status_code=404, detail="Classroom not found")
 
     # 授權檢查
     is_classroom_teacher = classroom.teacher_id == current_teacher.id
