@@ -1751,6 +1751,12 @@ export default function VocabularySetPanel({
           },
         );
         setRows(convertedRows);
+
+        // 從既有資料初始化翻譯語言，避免儲存時被預設的 "chinese" 覆蓋（#366）
+        const firstLang = convertedRows[0]?.selectedWordLanguage;
+        if (firstLang) {
+          setLastSelectedWordLang(firstLang);
+        }
       }
     } catch (error) {
       console.error("Failed to load content:", error);
