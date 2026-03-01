@@ -1388,7 +1388,9 @@ export default function TeacherAssignmentDetailPage() {
                         onSave={handleEditSave}
                         lessonId={0}
                         isCreating={false}
-                        isAssignmentCopy={true}
+                        isAssignmentCopy={
+                          assignment?.practice_mode === "word_selection"
+                        }
                       />
                     );
                   }
