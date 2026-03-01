@@ -579,6 +579,8 @@ Only reply with JSON array, no other text."""
         words: List[str],
         definitions: Optional[List[str]] = None,
         unit_context: Optional[str] = None,
+        lesson_name: Optional[str] = None,
+        program_context: Optional[str] = None,
         level: str = "A1",
         prompt: Optional[str] = None,
         translate_to: Optional[str] = None,
@@ -639,12 +641,12 @@ Level guidelines:
 - A1: Simple present/past, basic vocabulary, short sentences (5-8 words)
 - A2: Simple sentences with common phrases, everyday topics (8-12 words)
 - B1: Compound sentences, wider vocabulary, various tenses (12-20 words)
-- B2: Complex sentences, idiomatic expressions, abstract topics (15-25 words)
-- C1: Sophisticated vocabulary, nuanced meaning, formal/informal register (18-30 words)
-- C2: Near-native fluency, literary style, rare vocabulary acceptable
+- B2: Complex sentences, idiomatic expressions, abstract topics (15-25 words). FORBIDDEN: Do NOT use simple present or simple past for more than 30% of the sentences.
+- C1: Sophisticated vocabulary, nuanced meaning, formal/informal register (18-30 words). FORBIDDEN: Do NOT use simple present or simple past for more than 20% of the sentences.
+- C2: Near-native fluency, literary style, rare vocabulary acceptable. FORBIDDEN: Do NOT use simple present or simple past for more than 10% of the sentences.
 
-6. **GRAMMAR VARIETY**: When generating MULTIPLE sentences (batch), distribute grammar patterns across the batch.
-   Do NOT repeat the same tense/structure for every sentence. Use the following grammar points for level {level}:
+6. **GRAMMAR VARIETY (MANDATORY)**: You MUST distribute grammar patterns across ALL sentences — even when generating a single sentence, pick a grammar point from the list below that is NOT simple present or simple past (for B1 and above).
+   When generating multiple sentences (batch), each sentence MUST use a DIFFERENT grammar pattern. Do NOT default to simple present/past tense — actively choose varied structures from this list for level {level}:
 {chr(10).join(f'   - {g}' for g in GRAMMAR_BY_LEVEL.get(level, GRAMMAR_BY_LEVEL.get("B1", [])))}
 
 7. **SUBJECT VARIETY**: Do NOT start every sentence with pronouns \
@@ -656,12 +658,20 @@ This recipe), abstract nouns (Happiness, His decision), gerund phrases \
             # 構建 user prompt
             user_prompt = ""
 
-            # 如果有單元上下文，先說明
+            # 如果有教學情境，先說明（program + lesson 資訊）
+            context_parts = []
+            if program_context:
+                context_parts.append(f"Course: {program_context}")
+            if lesson_name:
+                context_parts.append(f"Unit: {lesson_name}")
             if unit_context:
-                user_prompt += f"""**UNIT CONTEXT**:
-This lesson is about: {unit_context}
+                context_parts.append(f"Unit description: {unit_context}")
 
-Please generate sentences that align with this learning context when appropriate.
+            if context_parts:
+                user_prompt += f"""**TEACHING CONTEXT**:
+{chr(10).join(context_parts)}
+
+Generate sentences that fit this teaching context. Use vocabulary and topics relevant to the unit theme when possible.
 
 """
 
