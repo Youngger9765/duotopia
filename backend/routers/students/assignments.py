@@ -1311,7 +1311,9 @@ async def start_word_selection_practice(
 
     # Collect all unique translations for picking distractors from the word set
     all_translations = {
-        w["translation"].lower().strip(): w["translation"] for w in words_data
+        w["translation"].lower().strip(): w["translation"]
+        for w in words_data
+        if w["translation"]
     }
 
     # Query stored AI distractors from DB
@@ -1353,8 +1355,8 @@ async def start_word_selection_practice(
 
         # Fallback for small word sets
         num_needed = 3 - len(final_distractors)
-        for i in range(num_needed):
-            final_distractors.append(f"選項{chr(65 + i)}")
+        for j in range(num_needed):
+            final_distractors.append(f"選項{chr(65 + j)}")
 
         # Create options array with correct answer and 3 distractors = 4 total
         options = [correct_answer] + final_distractors

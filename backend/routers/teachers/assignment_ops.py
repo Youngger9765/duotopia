@@ -409,8 +409,8 @@ async def preview_word_selection_start(
 
         # Fallback for small word sets
         num_needed = 3 - len(final_distractors)
-        for i in range(num_needed):
-            final_distractors.append(f"選項{chr(65 + i)}")
+        for j in range(num_needed):
+            final_distractors.append(f"選項{chr(65 + j)}")
 
         # Build options array and shuffle
         options = [correct_answer] + final_distractors
