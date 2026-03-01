@@ -42,10 +42,19 @@ import {
   Archive,
   ArchiveRestore,
   Search,
+  StickyNote,
+  Printer,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { getContentTypeIcon } from "@/lib/contentTypeIcon";
 import { apiClient, ApiError } from "@/lib/api";
 import { toast } from "sonner";
+import AssignmentStickyNote from "@/components/AssignmentStickyNote";
+import {
+  buildStickyNotePageHtml,
+  openPrintWindow,
+} from "@/lib/stickyNotePrint";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   Content,
@@ -213,6 +222,106 @@ export default function ClassroomDetail({
     assignmentId: 0,
     classroomId: 0,
   });
+  // Sticky note modal state
+  const [stickyNoteModal, setStickyNoteModal] = useState({
+    open: false,
+    assignmentIndex: 0,
+  });
+  // Batch print selection
+  const [selectedForPrint, setSelectedForPrint] = useState<Set<number>>(
+    new Set(),
+  );
+  const [batchPrinting, setBatchPrinting] = useState(false);
+
+  // Pagination (on filtered results)
+  const [assignmentPage, setAssignmentPage] = useState(1);
+  const assignmentPageSize = 10;
+  const totalAssignmentPages = Math.ceil(
+    filteredAssignments.length / assignmentPageSize,
+  );
+  const paginatedAssignments = filteredAssignments.slice(
+    (assignmentPage - 1) * assignmentPageSize,
+    assignmentPage * assignmentPageSize,
+  );
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setAssignmentPage(1);
+  }, [filterKeyword, filterType, filterDateFrom, filterDateTo, filterOverdue]);
+
+  const togglePrintSelection = (assignmentId: number) => {
+    setSelectedForPrint((prev) => {
+      const next = new Set(prev);
+      if (next.has(assignmentId)) next.delete(assignmentId);
+      else next.add(assignmentId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedForPrint.size === filteredAssignments.length) {
+      setSelectedForPrint(new Set());
+    } else {
+      setSelectedForPrint(new Set(filteredAssignments.map((a) => a.id)));
+    }
+  };
+
+  const handleBatchPrint = async () => {
+    if (selectedForPrint.size === 0) return;
+    setBatchPrinting(true);
+    try {
+      const selected = assignments.filter((a) => selectedForPrint.has(a.id));
+      const progressResults = await Promise.all(
+        selected.map(async (a) => {
+          const response = await apiClient.get(
+            `/api/teachers/assignments/${a.id}/progress`,
+          );
+          const arr = Array.isArray(response)
+            ? response
+            : (response as { data?: unknown[] }).data || [];
+          return {
+            title: a.title,
+            students: arr
+              .filter(
+                (p: Record<string, unknown>) =>
+                  p.status !== "unassigned" && p.is_assigned !== false,
+              )
+              .map((p: Record<string, unknown>) => ({
+                student_number: (p.student_number as number) || 0,
+                student_name:
+                  (p.student_name as string) || (p.name as string) || "",
+                score: (p.score as number) ?? undefined,
+                status: (p.status as string) || "NOT_STARTED",
+              })),
+          };
+        }),
+      );
+
+      const pages = progressResults.map(({ title, students }) => {
+        const counts = students.reduce(
+          (acc: Record<string, number>, s) => {
+            acc[s.status] = (acc[s.status] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>,
+        );
+        return buildStickyNotePageHtml(
+          title,
+          students,
+          counts,
+          { showNumber: true, showName: true, showScore: false },
+          t,
+        );
+      });
+
+      openPrintWindow(pages);
+      setSelectedForPrint(new Set());
+    } catch {
+      toast.error(t("stickyNote.batchPrintError", "列印失敗"));
+    } finally {
+      setBatchPrinting(false);
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -497,6 +606,14 @@ export default function ClassroomDetail({
   };
 
   const handleUnarchiveAssignment = async (assignment: Assignment) => {
+    if (
+      !confirm(
+        t("classroomDetail.messages.confirmUnarchiveAssignment", {
+          title: assignment.title,
+        }),
+      )
+    )
+      return;
     try {
       await apiClient.patch(
         `/api/teachers/assignments/${assignment.id}/unarchive`,
@@ -1331,7 +1448,13 @@ export default function ClassroomDetail({
                       onClick={handleCreateStudent}
                       className="h-10 bg-blue-500 hover:bg-blue-600 text-white"
                       disabled={isOrgMode}
-                      title={isOrgMode ? "請從學校後台處理學生管理" : ""}
+                      title={
+                        isOrgMode
+                          ? t(
+                              "classroomDetail.messages.manageStudentsFromSchool",
+                            )
+                          : ""
+                      }
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       {t("classroomDetail.buttons.addStudent")}
@@ -1357,7 +1480,9 @@ export default function ClassroomDetail({
                     onResetPassword={handleResetPassword}
                     emptyMessage={t("classroomDetail.messages.noStudents")}
                     disableActions={isOrgMode}
-                    disableReason="請從學校後台處理學生管理"
+                    disableReason={t(
+                      "classroomDetail.messages.manageStudentsFromSchool",
+                    )}
                   />
                 </TabsContent>
               )}
@@ -1471,6 +1596,21 @@ export default function ClassroomDetail({
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           {t("classroomDetail.buttons.assignNewHomework")}
+                        </Button>
+                      )}
+                      {assignments.length > 0 && !showArchived && (
+                        <Button
+                          variant="outline"
+                          onClick={handleBatchPrint}
+                          disabled={
+                            selectedForPrint.size === 0 || batchPrinting
+                          }
+                          className="h-10"
+                        >
+                          <Printer className="h-4 w-4 mr-2" />
+                          {t("stickyNote.batchPrint")}
+                          {selectedForPrint.size > 0 &&
+                            ` (${selectedForPrint.size})`}
                         </Button>
                       )}
                       {!canAssignHomework && !showArchived && teacherData && (
@@ -1668,7 +1808,7 @@ export default function ClassroomDetail({
                       <>
                         {/* Mobile: Card Layout */}
                         <div className="md:hidden space-y-3">
-                          {filteredAssignments.map((assignment) => {
+                          {paginatedAssignments.map((assignment) => {
                             const completionRate =
                               assignment.completion_rate || 0;
                             // 🎯 Issue #118: 根據 content_type + practice_mode 決定顯示標籤
@@ -1778,6 +1918,17 @@ export default function ClassroomDetail({
                               >
                                 {/* Title & AI Batch Grade Button */}
                                 <div className="flex items-start justify-between gap-2">
+                                  {!showArchived && (
+                                    <Checkbox
+                                      checked={selectedForPrint.has(
+                                        assignment.id,
+                                      )}
+                                      onCheckedChange={() =>
+                                        togglePrintSelection(assignment.id)
+                                      }
+                                      className="mt-1"
+                                    />
+                                  )}
                                   <div className="flex-1 min-w-0">
                                     <h4 className="font-medium text-gray-900 dark:text-gray-100 truncate">
                                       {assignment.title}
@@ -1920,6 +2071,21 @@ export default function ClassroomDetail({
                                   >
                                     {t("classroomDetail.buttons.previewDemo")}
                                   </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-12 min-h-12 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                                    onClick={() =>
+                                      setStickyNoteModal({
+                                        open: true,
+                                        assignmentIndex: assignments.findIndex(
+                                          (a) => a.id === assignment.id,
+                                        ),
+                                      })
+                                    }
+                                  >
+                                    <StickyNote className="h-5 w-5" />
+                                  </Button>
                                   {showArchived ? (
                                     <Button
                                       variant="outline"
@@ -1960,6 +2126,18 @@ export default function ClassroomDetail({
                           <table className="w-full">
                             <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
                               <tr>
+                                {!showArchived && (
+                                  <th className="w-10 px-4 py-3">
+                                    <Checkbox
+                                      checked={
+                                        filteredAssignments.length > 0 &&
+                                        selectedForPrint.size ===
+                                          filteredAssignments.length
+                                      }
+                                      onCheckedChange={toggleSelectAll}
+                                    />
+                                  </th>
+                                )}
                                 <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
                                   {t("classroomDetail.labels.assignmentTitle")}
                                 </th>
@@ -1983,7 +2161,7 @@ export default function ClassroomDetail({
                               </tr>
                             </thead>
                             <tbody>
-                              {filteredAssignments.map((assignment) => {
+                              {paginatedAssignments.map((assignment) => {
                                 const completionRate =
                                   assignment.completion_rate || 0;
                                 // 🎯 Issue #118: 根據 content_type + practice_mode 決定顯示標籤
@@ -2091,6 +2269,18 @@ export default function ClassroomDetail({
                                     key={assignment.id}
                                     className="border-b hover:bg-gray-50 dark:hover:bg-gray-700/50 dark:border-gray-600"
                                   >
+                                    {!showArchived && (
+                                      <td className="w-10 px-4 py-3">
+                                        <Checkbox
+                                          checked={selectedForPrint.has(
+                                            assignment.id,
+                                          )}
+                                          onCheckedChange={() =>
+                                            togglePrintSelection(assignment.id)
+                                          }
+                                        />
+                                      </td>
+                                    )}
                                     <td className="px-4 py-3">
                                       <div className="font-medium dark:text-gray-100">
                                         {assignment.title}
@@ -2140,7 +2330,12 @@ export default function ClassroomDetail({
                                     </td>
                                     <td className="px-4 py-3 text-sm dark:text-gray-300">
                                       {assignment.student_count
-                                        ? `${assignment.student_count} 人`
+                                        ? t(
+                                            "classroomDetail.labels.studentCountWithUnit",
+                                            {
+                                              count: assignment.student_count,
+                                            },
+                                          )
                                         : t("classroomDetail.labels.allClass")}
                                     </td>
                                     <td className="px-4 py-3 text-sm dark:text-gray-300">
@@ -2237,6 +2432,22 @@ export default function ClassroomDetail({
                                               )}
                                             </Button>
                                           ))}
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-amber-600 hover:text-amber-700 dark:text-amber-400 h-10 min-h-10"
+                                          onClick={() =>
+                                            setStickyNoteModal({
+                                              open: true,
+                                              assignmentIndex:
+                                                assignments.findIndex(
+                                                  (a) => a.id === assignment.id,
+                                                ),
+                                            })
+                                          }
+                                        >
+                                          <StickyNote className="h-5 w-5" />
+                                        </Button>
                                         {showArchived ? (
                                           <Button
                                             variant="ghost"
@@ -2278,6 +2489,38 @@ export default function ClassroomDetail({
                             </tbody>
                           </table>
                         </div>
+                        {totalAssignmentPages > 1 && (
+                          <div className="flex items-center justify-center gap-4 pt-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={assignmentPage === 1}
+                              onClick={() =>
+                                setAssignmentPage((p) => Math.max(1, p - 1))
+                              }
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              {t("classroomDetail.pagination.page", {
+                                current: assignmentPage,
+                                total: totalAssignmentPages,
+                              })}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={assignmentPage === totalAssignmentPages}
+                              onClick={() =>
+                                setAssignmentPage((p) =>
+                                  Math.min(totalAssignmentPages, p + 1),
+                                )
+                              }
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div className="border dark:border-gray-700 rounded-lg p-8 text-center text-gray-500 dark:text-gray-400">
@@ -2863,7 +3106,7 @@ export default function ClassroomDetail({
                   setVocabularySetLessonId(null);
                   setVocabularySetContentId(null);
                   await refreshPrograms();
-                  toast.success("內容已成功儲存");
+                  toast.success(t("classroomDetail.messages.contentSaved"));
                 }}
                 onCancel={() => {
                   setShowVocabularySetEditor(false);
@@ -2893,6 +3136,15 @@ export default function ClassroomDetail({
           });
           fetchAssignments();
         }}
+      />
+
+      {/* Sticky Note Modal */}
+      <AssignmentStickyNote
+        open={stickyNoteModal.open}
+        onClose={() => setStickyNoteModal({ open: false, assignmentIndex: 0 })}
+        assignments={assignments}
+        initialAssignmentIndex={stickyNoteModal.assignmentIndex}
+        classroomId={Number(id)}
       />
     </>
   );

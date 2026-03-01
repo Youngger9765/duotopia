@@ -2465,6 +2465,7 @@
       "confirmArchiveAssignment": "Are you sure you want to archive assignment \"{{title}}\"? All student scores will be finalized at their current state and the assignment will be moved to the archive.",
       "assignmentArchived": "Assignment \"{{title}}\" has been archived",
       "archiveAssignmentFailed": "Failed to archive assignment. Please try again later.",
+      "confirmUnarchiveAssignment": "Are you sure you want to unarchive assignment \"{{title}}\"? It will be restored to the active assignment list.",
       "assignmentUnarchived": "Assignment \"{{title}}\" has been unarchived",
       "unarchiveAssignmentFailed": "Failed to unarchive assignment. Please try again later.",
       "noArchivedAssignments": "No archived assignments"
