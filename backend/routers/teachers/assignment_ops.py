@@ -381,24 +381,11 @@ async def preview_word_selection_start(
         correct_answer = item.translation or ""
         stored_distractors = item.distractors
 
-        if stored_distractors and len(stored_distractors) >= 2:
-            # 有 AI distractors: 取 2 個 AI + 1 個其他單字翻譯
-            ai_distractors = stored_distractors[:2]
-            other_translations = [
-                t
-                for key, t in all_translations.items()
-                if key != correct_answer.lower().strip() and t not in ai_distractors
-            ]
-            random.shuffle(other_translations)
-            if other_translations:
-                word_distractor = [other_translations[0]]
-            elif len(stored_distractors) > 2:
-                word_distractor = [stored_distractors[2]]
-            else:
-                word_distractor = []
-            final_distractors = ai_distractors + word_distractor
+        if stored_distractors and len(stored_distractors) > 0:
+            # 使用已儲存的干擾項（來自同作業其他單字翻譯）
+            final_distractors = list(stored_distractors[:3])
         else:
-            # Fallback: 全部從其他單字取
+            # Fallback: 從其他單字翻譯取
             other_translations = [
                 t
                 for key, t in all_translations.items()
