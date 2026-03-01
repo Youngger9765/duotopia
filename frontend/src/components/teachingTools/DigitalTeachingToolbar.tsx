@@ -13,7 +13,22 @@ import {
   Triangle,
   Play,
   Square,
+  Share2,
+  Copy,
+  Check,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import { useTranslation } from "react-i18next";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 // Timer Component
 const TimerTool: React.FC<{ show: boolean; onClose: () => void }> = ({
@@ -753,8 +768,12 @@ const DiceTool: React.FC<{ show: boolean; onClose: () => void }> = ({
 
 // Main Toolbar Component
 const DigitalTeachingToolbar: React.FC = () => {
+  const { t } = useTranslation();
+  const user = useTeacherAuthStore((state) => state.user);
   const [showTimer, setShowTimer] = useState(false);
   const [showDice, setShowDice] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleToggleTimer = useCallback(() => {
     setShowTimer((prev) => !prev);
@@ -764,10 +783,87 @@ const DigitalTeachingToolbar: React.FC = () => {
     setShowDice((prev) => !prev);
   }, []);
 
+  const getStudentLoginUrl = useCallback(() => {
+    if (!user?.email) return "";
+    return `${window.location.origin}/student/login?teacher_email=${user.email}`;
+  }, [user?.email]);
+
+  const handleCopyUrl = useCallback(async () => {
+    const url = getStudentLoginUrl();
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy URL:", err);
+    }
+  }, [getStudentLoginUrl]);
+
   return (
     <div className="fixed inset-0 pointer-events-none z-[140]">
-      {/* Side toolbar with only Timer and Dice */}
+      {/* Share to Students Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="sm:max-w-md pointer-events-auto">
+          <DialogHeader>
+            <DialogTitle>{t("teacherDashboard.share.title")}</DialogTitle>
+            <DialogDescription>
+              {t("teacherDashboard.share.description")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex justify-center p-4 bg-white border rounded-lg">
+              <QRCodeSVG value={getStudentLoginUrl()} size={200} />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Input value={getStudentLoginUrl()} readOnly className="flex-1" />
+              <Button
+                size="sm"
+                onClick={handleCopyUrl}
+                className="flex-shrink-0"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    {t("teacherDashboard.share.copied")}
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    {t("teacherDashboard.share.copy")}
+                  </>
+                )}
+              </Button>
+            </div>
+            <div className="text-sm text-gray-600 space-y-2">
+              <p>{t("teacherDashboard.share.instructions")}</p>
+              <ul className="list-disc list-inside space-y-1 text-xs">
+                <li>{t("teacherDashboard.share.instruction1")}</li>
+                <li>{t("teacherDashboard.share.instruction2")}</li>
+              </ul>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Side toolbar */}
       <div className="fixed right-0 top-1/2 -translate-y-1/2 flex flex-col gap-1 bg-white/90 backdrop-blur-md shadow-2xl border border-gray-200 border-r-0 rounded-l-xl p-1.5 z-[150] pointer-events-auto">
+        <button
+          onClick={() => {
+            setShowShareDialog(true);
+            setShowTimer(false);
+            setShowDice(false);
+          }}
+          className={`p-1.5 rounded-lg transition-all duration-300 ${
+            showShareDialog
+              ? "bg-blue-500 text-white shadow-md"
+              : "hover:bg-gray-100 text-blue-500"
+          }`}
+          aria-label={t("teacherDashboard.share.button")}
+        >
+          <Share2 size={18} />
+        </button>
+
         <button
           onClick={handleToggleTimer}
           className={`p-1.5 rounded-lg transition-all duration-300 ${
@@ -784,8 +880,8 @@ const DigitalTeachingToolbar: React.FC = () => {
           onClick={handleToggleDice}
           className={`p-1.5 rounded-lg transition-all duration-300 ${
             showDice
-              ? "bg-gray-800 text-white shadow-md"
-              : "hover:bg-gray-100 text-gray-600"
+              ? "bg-blue-500 text-white shadow-md"
+              : "hover:bg-gray-100 text-blue-500"
           }`}
           aria-label="Dice"
         >
