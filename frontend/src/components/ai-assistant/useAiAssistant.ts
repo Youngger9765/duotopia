@@ -2,7 +2,12 @@ import { create } from "zustand";
 
 const AI_ASSISTANT_SEEN_KEY = "ai-assistant-seen";
 
-export type FlowId = "add-teacher" | "add-classroom-students";
+export type FlowId =
+  | "add-teacher"
+  | "add-classroom"
+  | "add-students"
+  | "find-feature"
+  | "quick-start";
 
 interface AiAssistantState {
   isOpen: boolean;

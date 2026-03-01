@@ -266,6 +266,25 @@ async def create_student(
         if not check_classroom_is_personal(classroom.id, db):
             raise HTTPException(status_code=403, detail="此班級屬於學校，請通過學校管理頁面創建學生")
 
+    # Check for duplicate name in the same classroom
+    if student_data.classroom_id:
+        existing = (
+            db.query(Student)
+            .join(ClassroomStudent, Student.id == ClassroomStudent.student_id)
+            .filter(
+                ClassroomStudent.classroom_id == student_data.classroom_id,
+                ClassroomStudent.is_active.is_(True),
+                Student.name == student_data.name,
+                Student.is_active.is_(True),
+            )
+            .first()
+        )
+        if existing:
+            raise HTTPException(
+                status_code=409,
+                detail=f"班級內已有同名學生「{student_data.name}」，無法重複新增",
+            )
+
     # Parse birthdate with error handling
     try:
         # Try to parse the birthdate

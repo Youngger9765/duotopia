@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef, useContext } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { ChatContainer } from "../chat/ChatContainer";
 import { useAiAssistant } from "../useAiAssistant";
-import { useOrganization } from "@/contexts/OrganizationContext";
+import { OrganizationContext } from "@/contexts/OrganizationContext";
 import { WorkspaceContext } from "@/contexts/WorkspaceContext";
 import { API_URL } from "@/config/api";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
@@ -26,9 +26,10 @@ function userMsg(content: string): ChatMessage {
 
 export function FindFeatureChat() {
   const { exitFlow } = useAiAssistant();
-  const navigate = useNavigate();
   const location = useLocation();
-  const { selectedNode } = useOrganization();
+  // Safe access: OrganizationContext only exists in OrganizationLayout, not TeacherLayout
+  const orgCtx = useContext(OrganizationContext);
+  const selectedNode = orgCtx?.selectedNode ?? null;
   // Safe access: WorkspaceContext only exists in TeacherLayout, not OrganizationLayout
   const workspace = useContext(WorkspaceContext);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -51,24 +52,18 @@ export function FindFeatureChat() {
     return undefined;
   }, [location.pathname, selectedNode]);
 
-  const emit = useCallback(
-    (msgs: ChatMessage[]) => {
-      // Remove loading messages
-      const current = messagesRef.current.filter((m) => !m.loading);
-      current.push(...msgs);
-      messagesRef.current = current;
-      setMessages([...current]);
-    },
-    [],
-  );
+  const emit = useCallback((msgs: ChatMessage[]) => {
+    // Remove loading messages
+    const current = messagesRef.current.filter((m) => !m.loading);
+    current.push(...msgs);
+    messagesRef.current = current;
+    setMessages([...current]);
+  }, []);
 
   const handleSend = useCallback(
     async (text: string) => {
       setInputDisabled(true);
-      emit([
-        userMsg(text),
-        assistantMsg("正在搜尋...", { loading: true }),
-      ]);
+      emit([userMsg(text), assistantMsg("正在搜尋...", { loading: true })]);
 
       try {
         const token = useTeacherAuthStore.getState().token;
@@ -108,7 +103,7 @@ export function FindFeatureChat() {
             }
             return { label: `${nav.label} →`, value: `navigate:${path}` };
           })
-          .filter((b: QuickButton) => !b.value.includes("{"));  // Skip remaining unresolved
+          .filter((b: QuickButton) => !b.value.includes("{")); // Skip remaining unresolved
 
         // Deduplicate buttons (e.g., multiple school pages → single schools link)
         const seen = new Set<string>();
@@ -119,7 +114,10 @@ export function FindFeatureChat() {
         });
 
         emit([
-          assistantMsg(data.message, uniqueButtons.length > 0 ? { buttons: uniqueButtons } : undefined),
+          assistantMsg(
+            data.message,
+            uniqueButtons.length > 0 ? { buttons: uniqueButtons } : undefined,
+          ),
         ]);
       } catch {
         emit([
@@ -136,11 +134,11 @@ export function FindFeatureChat() {
     (_messageId: string, value: string) => {
       if (value.startsWith("navigate:")) {
         const path = value.replace("navigate:", "");
-        navigate(path);
+        window.open(path, "_blank");
         return;
       }
     },
-    [navigate],
+    [],
   );
 
   return (

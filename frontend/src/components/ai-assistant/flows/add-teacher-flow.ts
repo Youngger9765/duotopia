@@ -96,9 +96,18 @@ function orgDisplayName(org: OrgInfo) {
 
 /** Map of page keywords to path templates. orgId/schoolId are filled at runtime. */
 const PAGE_NAV_MAP: Record<string, { label: string; pathTemplate: string }> = {
-  教師清單: { label: "前往教師清單 →", pathTemplate: "/organization/{orgId}/teachers" },
-  分校清單: { label: "前往分校清單 →", pathTemplate: "/organization/{orgId}/schools" },
-  教材管理: { label: "前往教材管理 →", pathTemplate: "/organization/{orgId}/materials" },
+  教師清單: {
+    label: "前往教師清單 →",
+    pathTemplate: "/organization/{orgId}/teachers",
+  },
+  分校清單: {
+    label: "前往分校清單 →",
+    pathTemplate: "/organization/{orgId}/schools",
+  },
+  教材管理: {
+    label: "前往教材管理 →",
+    pathTemplate: "/organization/{orgId}/materials",
+  },
   我的班級: { label: "前往我的班級 →", pathTemplate: "/teacher/classrooms" },
   所有學生: { label: "前往所有學生 →", pathTemplate: "/teacher/students" },
   我的教材: { label: "前往我的教材 →", pathTemplate: "/teacher/programs" },
@@ -110,7 +119,9 @@ function buildNavButtons(message: string, orgId?: string): QuickButton[] {
   const buttons: QuickButton[] = [];
   for (const [keyword, nav] of Object.entries(PAGE_NAV_MAP)) {
     if (message.includes(keyword)) {
-      const path = orgId ? nav.pathTemplate.replace("{orgId}", orgId) : nav.pathTemplate;
+      const path = orgId
+        ? nav.pathTemplate.replace("{orgId}", orgId)
+        : nav.pathTemplate;
       buttons.push({ label: nav.label, value: `navigate:${path}` });
     }
   }
@@ -363,8 +374,16 @@ export class AddTeacherFlow {
       const result = await callParseTeachers(text);
       if (result.teachers.length === 0) {
         // AI understood but found no teacher data — show message with nav buttons if applicable
-        const navButtons = buildNavButtons(result.message, this.state.selectedOrg?.id);
-        this.emit([assistantMsg(result.message, navButtons.length > 0 ? { buttons: navButtons } : undefined)]);
+        const navButtons = buildNavButtons(
+          result.message,
+          this.state.selectedOrg?.id,
+        );
+        this.emit([
+          assistantMsg(
+            result.message,
+            navButtons.length > 0 ? { buttons: navButtons } : undefined,
+          ),
+        ]);
         this.set({ step: "collect_data", inputDisabled: false });
       } else {
         this.state.teachers = result.teachers;
@@ -408,15 +427,11 @@ export class AddTeacherFlow {
       const idx = teachers.indexOf(t);
       if (t.role === "teacher") {
         const label =
-          validTeachers.length === 1
-            ? "改為管理員"
-            : `${t.name} 改為管理員`;
+          validTeachers.length === 1 ? "改為管理員" : `${t.name} 改為管理員`;
         roleButtons.push({ label, value: `toggle_role:${idx}:org_admin` });
       } else {
         const label =
-          validTeachers.length === 1
-            ? "改為教師"
-            : `${t.name} 改為教師`;
+          validTeachers.length === 1 ? "改為教師" : `${t.name} 改為教師`;
         roleButtons.push({ label, value: `toggle_role:${idx}:teacher` });
       }
     }
@@ -671,7 +686,11 @@ export class AddTeacherFlow {
       const missingName = this.state.teachers.filter(
         (t) => !t.name && t.error === "缺少姓名",
       );
-      if (missingName.length === 1 && !text.includes("@") && text.trim().length < 30) {
+      if (
+        missingName.length === 1 &&
+        !text.includes("@") &&
+        text.trim().length < 30
+      ) {
         this.emit([userMsg(text)]);
         missingName[0].name = text.trim();
         missingName[0].valid = true;
@@ -782,7 +801,9 @@ export class AddTeacherFlow {
       if (t) {
         t.role = newRole;
         this.emit([userMsg(`${t.name} 改為${roleLabel(newRole)}`)]);
-        this.showConfirmTable(`已將 ${t.name} 的角色改為${roleLabel(newRole)}。`);
+        this.showConfirmTable(
+          `已將 ${t.name} 的角色改為${roleLabel(newRole)}。`,
+        );
       }
       return;
     }

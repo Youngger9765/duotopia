@@ -165,6 +165,60 @@ class ProcessModificationResponse(BaseModel):
     )
 
 
+class ParseClassroomsRequest(BaseModel):
+    user_input: str = Field(..., description="User's free-text input with classroom info")
+
+
+class ParsedClassroom(BaseModel):
+    name: str = Field(..., description="Classroom name")
+    level: str = Field(default="A1", description="CEFR level: PREA|A1|A2|B1|B2|C1|C2")
+    valid: bool = Field(default=True, description="Whether the record is valid")
+    error: Optional[str] = Field(default=None, description="Validation error message if invalid")
+
+
+class ParseClassroomsResponse(BaseModel):
+    classrooms: List[ParsedClassroom]
+    message: str = Field(..., description="AI response message in Chinese")
+
+
+class ProcessClassroomModificationRequest(BaseModel):
+    user_input: str = Field(..., description="User's modification instruction")
+    current_classrooms: List[ParsedClassroom] = Field(..., description="Current classroom list")
+
+
+class ProcessClassroomModificationResponse(BaseModel):
+    classrooms: List[ParsedClassroom]
+    message: str = Field(..., description="AI response message in Chinese")
+    action: str = Field(..., description="Action taken: 'modify', 'add', 'remove', 'unclear'")
+
+
+class ParseStudentsRequest(BaseModel):
+    user_input: str = Field(..., description="User's free-text input with student info")
+
+
+class ParsedStudent(BaseModel):
+    name: str = Field(..., description="Student name")
+    birthdate: str = Field(default="", description="Birthdate in YYYY-MM-DD format")
+    valid: bool = Field(default=True, description="Whether the record is valid")
+    error: Optional[str] = Field(default=None, description="Validation error message if invalid")
+
+
+class ParseStudentsResponse(BaseModel):
+    students: List[ParsedStudent]
+    message: str = Field(..., description="AI response message in Chinese")
+
+
+class ProcessStudentModificationRequest(BaseModel):
+    user_input: str = Field(..., description="User's modification instruction")
+    current_students: List[ParsedStudent] = Field(..., description="Current student list")
+
+
+class ProcessStudentModificationResponse(BaseModel):
+    students: List[ParsedStudent]
+    message: str = Field(..., description="AI response message in Chinese")
+    action: str = Field(..., description="Action taken: 'modify', 'add', 'remove', 'unclear'")
+
+
 class FindFeatureRequest(BaseModel):
     user_input: str = Field(..., description="User's question about finding a feature")
     context: str = Field(default="organization", description="Current backend: 'organization' or 'teacher'")
@@ -250,6 +304,73 @@ PROCESS_MODIFICATION_SYSTEM_PROMPT = COMMON_RULES + _ADD_TEACHER_CONTEXT + """
 ## 輸出格式（永遠回傳有效 JSON）
 {
   "teachers": [...完整修改後的列表...],
+  "message": "中文訊息",
+  "action": "modify|add|remove|unclear"
+}
+"""
+
+PARSE_CLASSROOMS_SYSTEM_PROMPT = """
+## 你的角色
+你是「新增班級」流程中的資料解析助手。用戶正在建立班級。
+
+## 你的任務
+從用戶的自由文字中提取班級資料（名稱、語言等級）。
+
+## 關鍵能力
+1. **理解自然語言序列** — 例如：
+   - 「114-2 110 A2, 114-2 109 B1, 以此類推到 101 都是 B1」
+     → 展開成 114-2 110 (A2), 114-2 109 (B1), 114-2 108 (B1), ..., 114-2 101 (B1)
+   - 「A班到E班 都是 A1」→ A班 (A1), B班 (A1), C班 (A1), D班 (A1), E班 (A1)
+   - 「一年級到三年級」→ 一年級, 二年級, 三年級
+2. **推斷等級** — 如果用戶對某些班級指定了等級，對其餘未指定的使用上下文中最近的等級
+3. **容錯** — 「班及」→「班級」、「bl」→「B1」等常見打字錯誤
+
+## 語言等級
+有效等級：PREA, A1, A2, B1, B2, C1, C2
+- 不區分大小寫
+- 無法辨識的等級 → valid=false, error="等級不正確"
+- 未指定等級 → 預設 A1
+
+## 驗證規則
+- 班級名稱為空 → valid=false, error="缺少名稱"
+- 名稱超過 100 字元 → valid=false, error="名稱過長"
+- 名稱含有中文或英文髒話、不雅詞彙、侮辱性用語 → valid=false, error="班級名稱包含不適當用語，請修改"
+  - 常見髒話包括但不限於：幹、靠、他媽、操、fuck、shit、damn、ass、bitch 等
+  - 偽裝寫法也要偵測（如用符號替代、拼音、諧音）
+
+## 輸出格式（永遠回傳有效 JSON）
+{
+  "classrooms": [
+    {"name": "班級名稱", "level": "A1", "valid": true, "error": null}
+  ],
+  "message": "中文訊息"
+}
+
+完全無法解析時回 classrooms=[]，用 message 友善引導。
+例如用戶打招呼或問不相關問題時，回 classrooms=[]，message 引導回「請提供班級名稱和等級」。
+"""
+
+PROCESS_CLASSROOM_MODIFICATION_SYSTEM_PROMPT = """
+## 你的角色
+你是「新增班級」流程中的資料修改助手。用戶正在修改一份班級名單。
+
+## 你的任務
+理解用戶的口語修改指令，回傳修改後的完整列表。
+
+## 三個原則
+1. **盡力推斷意圖** — 用戶可能簡短、口語、有錯字，從上下文推斷。名單只有一筆時不需指定名稱
+2. **不確定就問** — 用 message 禮貌詢問，action 設 "unclear"，回傳原始列表不變
+3. **離題就引導回來** — 友善回應後引導回修改操作
+
+## 語言等級
+有效等級：PREA, A1, A2, B1, B2, C1, C2
+
+## 驗證規則
+- 名稱含有中文或英文髒話、不雅詞彙 → valid=false, error="班級名稱包含不適當用語，請修改"
+
+## 輸出格式（永遠回傳有效 JSON）
+{
+  "classrooms": [...完整修改後的列表...],
   "message": "中文訊息",
   "action": "modify|add|remove|unclear"
 }
@@ -472,4 +593,332 @@ async def find_feature(request: FindFeatureRequest):
         return FindFeatureResponse(
             message="抱歉，目前無法處理您的問題。請試著用不同的方式描述您想找的功能。",
             navigation=[],
+        )
+
+
+# ---- Classroom parsing ----
+
+VALID_LEVELS = {"PREA", "A1", "A2", "B1", "B2", "C1", "C2"}
+
+
+def _normalize_level(level: str) -> str | None:
+    """Normalize a level string. Returns None if invalid."""
+    upper = level.strip().upper().replace("-", "").replace(" ", "")
+    if upper in VALID_LEVELS:
+        return upper
+    return None
+
+
+def _validate_classrooms(classrooms: list[dict]) -> list[ParsedClassroom]:
+    """Deterministic validation on top of AI result."""
+    result = []
+    for c in classrooms:
+        name = c.get("name", "").strip()
+        level = c.get("level", "A1").strip()
+        valid = c.get("valid", True)
+        error = c.get("error")
+
+        # Name check
+        if not name:
+            valid = False
+            error = "缺少名稱"
+        elif len(name) > 100:
+            valid = False
+            error = "名稱過長"
+
+        # Level normalization
+        normalized = _normalize_level(level)
+        if normalized:
+            level = normalized
+        else:
+            valid = False
+            error = f"等級「{level}」不正確，有效等級：PREA, A1, A2, B1, B2, C1, C2"
+
+        result.append(ParsedClassroom(
+            name=name,
+            level=level if normalized else level.upper(),
+            valid=valid,
+            error=error,
+        ))
+    return result
+
+
+@router.post("/parse-classrooms", response_model=ParseClassroomsResponse)
+async def parse_classrooms(request: ParseClassroomsRequest):
+    """
+    Parse free-text classroom input using Gemini.
+    Understands natural language like sequences and ranges.
+    """
+    try:
+        prompt = f"請解析以下用戶輸入的班級資料：\n\n{request.user_input}"
+
+        result = await vertex_ai_service.generate_json(
+            prompt=prompt,
+            system_instruction=PARSE_CLASSROOMS_SYSTEM_PROMPT,
+            temperature=0.1,
+            max_tokens=4000,
+        )
+
+        classrooms = result.get("classrooms", [])
+        message = result.get("message", "解析完成。")
+
+        parsed = _validate_classrooms(classrooms)
+
+        return ParseClassroomsResponse(classrooms=parsed, message=message)
+
+    except Exception as e:
+        logger.warning(f"Gemini parse-classrooms failed, using fallback: {e}")
+        # Fallback: simple line-based parsing
+        lines = [l.strip() for l in request.user_input.strip().split("\n") if l.strip()]
+        fallback = []
+        for line in lines:
+            parts = line.split()
+            if len(parts) >= 2:
+                last = parts[-1].upper().replace("-", "").replace(" ", "")
+                if last in VALID_LEVELS:
+                    fallback.append({"name": " ".join(parts[:-1]), "level": last})
+                else:
+                    fallback.append({"name": line, "level": "A1"})
+            elif len(parts) == 1:
+                fallback.append({"name": parts[0], "level": "A1"})
+
+        parsed = _validate_classrooms(fallback)
+        return ParseClassroomsResponse(
+            classrooms=parsed,
+            message="解析完成。" if parsed else "無法解析班級資料，請提供班級名稱和等級。",
+        )
+
+
+@router.post("/process-classroom-modification", response_model=ProcessClassroomModificationResponse)
+async def process_classroom_modification(request: ProcessClassroomModificationRequest):
+    """
+    Process a modification instruction on the current classroom list using Gemini.
+    """
+    try:
+        current_list = "\n".join(
+            f"- {c.name} | {c.level}"
+            for c in request.current_classrooms
+        )
+
+        prompt = (
+            f"目前的班級名單：\n{current_list}\n\n"
+            f"用戶的修改指令：{request.user_input}"
+        )
+
+        result = await vertex_ai_service.generate_json(
+            prompt=prompt,
+            system_instruction=PROCESS_CLASSROOM_MODIFICATION_SYSTEM_PROMPT,
+            temperature=0.1,
+            max_tokens=4000,
+        )
+
+        classrooms = result.get("classrooms", [])
+        message = result.get("message", "修改完成。")
+        action = result.get("action", "unclear")
+
+        parsed = _validate_classrooms(classrooms)
+
+        return ProcessClassroomModificationResponse(
+            classrooms=parsed, message=message, action=action
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to process classroom modification: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"AI 處理失敗：{str(e)}",
+        )
+
+
+# ---- Student parsing ----
+
+import re as _re
+
+_BIRTHDATE_RE = _re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+PARSE_STUDENTS_SYSTEM_PROMPT = """
+## 你的角色
+你是「新增班級學生」流程中的資料解析助手。用戶正在新增學生到班級中。
+
+## 你的任務
+從用戶的自由文字中提取學生資料（姓名、生日）。
+
+## 關鍵能力
+1. **理解自然語言** — 例如：
+   - 「小明 2015/3/21, 小華 2014-08-15」→ 兩筆學生資料
+   - 「座號1到5號，名字分別是小明、小華、小美、小強、小玲，生日都是 2015-01-01」→ 五筆
+   - 「再加小明 生日 3月21號 2015年」→ 理解非標準日期格式
+2. **日期格式容錯** — 接受多種格式：
+   - YYYY-MM-DD, YYYY/MM/DD, YYYYMMDD
+   - MM/DD/YYYY, DD/MM/YYYY（根據上下文推斷）
+   - 口語：「2015年3月21日」「3月21號 2015年」
+   - 所有日期統一輸出為 YYYY-MM-DD
+3. **容錯** — 常見打字錯誤、同音字等
+4. **不知道生日** — 當用戶表示不知道學生生日時（如「不知道」「不確定」「沒有生日資料」），使用預設值 2012-01-01
+
+## 驗證規則
+- 姓名為空 → valid=false, error="缺少姓名"
+- 姓名超過 50 字元 → valid=false, error="姓名過長"
+- 缺少生日 → valid=false, error="缺少生日"
+- 生日格式無法辨識 → valid=false, error="生日格式不正確"
+- 姓名含有中文或英文髒話、不雅詞彙、侮辱性用語 → valid=false, error="姓名包含不適當用語，請修改"
+  - 常見髒話包括但不限於：幹、靠、他媽、操、fuck、shit、damn、ass、bitch 等
+  - 偽裝寫法也要偵測（如用符號替代、拼音、諧音）
+
+## 輸出格式（永遠回傳有效 JSON）
+{
+  "students": [
+    {"name": "學生姓名", "birthdate": "2015-03-21", "valid": true, "error": null}
+  ],
+  "message": "中文訊息"
+}
+
+完全無法解析時回 students=[]，用 message 友善引導。
+例如用戶打招呼或問不相關問題時，回 students=[]，message 引導回「請提供學生姓名和生日」。
+"""
+
+PROCESS_STUDENT_MODIFICATION_SYSTEM_PROMPT = """
+## 你的角色
+你是「新增班級學生」流程中的資料修改助手。用戶正在修改一份學生名單。
+
+## 你的任務
+理解用戶的口語修改指令，回傳修改後的完整列表。
+
+## 三個原則
+1. **盡力推斷意圖** — 用戶可能簡短、口語、有錯字，從上下文推斷。名單只有一筆時不需指定姓名
+2. **不確定就問** — 用 message 禮貌詢問，action 設 "unclear"，回傳原始列表不變
+3. **離題就引導回來** — 友善回應後引導回修改操作
+
+## 日期格式
+- 接受多種格式，統一輸出 YYYY-MM-DD
+
+## 驗證規則
+- 姓名含有中文或英文髒話、不雅詞彙 → valid=false, error="姓名包含不適當用語，請修改"
+
+## 輸出格式（永遠回傳有效 JSON）
+{
+  "students": [...完整修改後的列表...],
+  "message": "中文訊息",
+  "action": "modify|add|remove|unclear"
+}
+"""
+
+
+def _validate_students(students: list[dict]) -> list[ParsedStudent]:
+    """Deterministic validation on top of AI result."""
+    result = []
+    for s in students:
+        name = s.get("name", "").strip()
+        birthdate = s.get("birthdate", "").strip()
+        valid = s.get("valid", True)
+        error = s.get("error")
+
+        # Name check
+        if not name:
+            valid = False
+            error = "缺少姓名"
+        elif len(name) > 50:
+            valid = False
+            error = "姓名過長"
+
+        # Birthdate check
+        if valid and not birthdate:
+            valid = False
+            error = "缺少生日"
+        elif valid and not _BIRTHDATE_RE.match(birthdate):
+            valid = False
+            error = "生日格式不正確，請使用 YYYY-MM-DD"
+
+        result.append(ParsedStudent(
+            name=name,
+            birthdate=birthdate,
+            valid=valid,
+            error=error,
+        ))
+    return result
+
+
+@router.post("/parse-students", response_model=ParseStudentsResponse)
+async def parse_students(request: ParseStudentsRequest):
+    """
+    Parse free-text student input using Gemini.
+    Understands natural language dates and sequences.
+    """
+    try:
+        prompt = f"請解析以下用戶輸入的學生資料：\n\n{request.user_input}"
+
+        result = await vertex_ai_service.generate_json(
+            prompt=prompt,
+            system_instruction=PARSE_STUDENTS_SYSTEM_PROMPT,
+            temperature=0.1,
+            max_tokens=4000,
+        )
+
+        students = result.get("students", [])
+        message = result.get("message", "解析完成。")
+
+        parsed = _validate_students(students)
+
+        return ParseStudentsResponse(students=parsed, message=message)
+
+    except Exception as e:
+        logger.warning(f"Gemini parse-students failed, using fallback: {e}")
+        # Fallback: simple line-based parsing
+        lines = [l.strip() for l in request.user_input.strip().split("\n") if l.strip()]
+        fallback = []
+        for line in lines:
+            parts = line.split()
+            if len(parts) >= 2:
+                name = parts[0]
+                birthdate = parts[1] if len(parts) > 1 else ""
+                fallback.append({"name": name, "birthdate": birthdate})
+            elif len(parts) == 1:
+                fallback.append({"name": parts[0], "birthdate": ""})
+
+        parsed = _validate_students(fallback)
+        return ParseStudentsResponse(
+            students=parsed,
+            message="解析完成。" if parsed else "無法解析學生資料，請提供學生姓名和生日。",
+        )
+
+
+@router.post("/process-student-modification", response_model=ProcessStudentModificationResponse)
+async def process_student_modification(request: ProcessStudentModificationRequest):
+    """
+    Process a modification instruction on the current student list using Gemini.
+    """
+    try:
+        current_list = "\n".join(
+            f"- {s.name} | {s.birthdate}"
+            for s in request.current_students
+        )
+
+        prompt = (
+            f"目前的學生名單：\n{current_list}\n\n"
+            f"用戶的修改指令：{request.user_input}"
+        )
+
+        result = await vertex_ai_service.generate_json(
+            prompt=prompt,
+            system_instruction=PROCESS_STUDENT_MODIFICATION_SYSTEM_PROMPT,
+            temperature=0.1,
+            max_tokens=4000,
+        )
+
+        students = result.get("students", [])
+        message = result.get("message", "修改完成。")
+        action = result.get("action", "unclear")
+
+        parsed = _validate_students(students)
+
+        return ProcessStudentModificationResponse(
+            students=parsed, message=message, action=action
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to process student modification: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"AI 處理失敗：{str(e)}",
         )
