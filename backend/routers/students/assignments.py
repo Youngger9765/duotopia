@@ -1314,19 +1314,44 @@ async def start_word_selection_practice(
         w["translation"].lower().strip(): w["translation"] for w in words_data
     }
 
+    # Query stored AI distractors from DB
+    content_item_ids = [w["content_item_id"] for w in words_data]
+    items_with_distractors = (
+        db.query(ContentItem).filter(ContentItem.id.in_(content_item_ids)).all()
+    )
+    distractors_map = {item.id: item.distractors for item in items_with_distractors}
+
     for i, word in enumerate(words_data):
         correct_answer = word["translation"]
+        stored_distractors = distractors_map.get(word["content_item_id"])
 
-        # Pick 3 random distractors from other words' translations (#303)
-        other_translations = [
-            t
-            for key, t in all_translations.items()
-            if key != correct_answer.lower().strip()
-        ]
-        random.shuffle(other_translations)
-        final_distractors = other_translations[:3]
+        if stored_distractors and len(stored_distractors) >= 2:
+            # 有 AI distractors: 取 2 個 AI + 1 個其他單字翻譯
+            ai_distractors = stored_distractors[:2]
+            other_translations = [
+                t
+                for key, t in all_translations.items()
+                if key != correct_answer.lower().strip() and t not in ai_distractors
+            ]
+            random.shuffle(other_translations)
+            if other_translations:
+                word_distractor = [other_translations[0]]
+            elif len(stored_distractors) > 2:
+                word_distractor = [stored_distractors[2]]
+            else:
+                word_distractor = []
+            final_distractors = ai_distractors + word_distractor
+        else:
+            # Fallback: 全部從其他單字取
+            other_translations = [
+                t
+                for key, t in all_translations.items()
+                if key != correct_answer.lower().strip()
+            ]
+            random.shuffle(other_translations)
+            final_distractors = other_translations[:3]
 
-        # Fallback for legacy assignments with small word sets
+        # Fallback for small word sets
         num_needed = 3 - len(final_distractors)
         for i in range(num_needed):
             final_distractors.append(f"選項{chr(65 + i)}")
