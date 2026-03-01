@@ -168,6 +168,9 @@ export interface Assignment {
     | "rearrangement"
     | "word_reading"
     | "word_selection";
+  // 封存狀態
+  is_archived?: boolean;
+  archived_at?: string;
 }
 
 // ============ Student Assignment Types ============

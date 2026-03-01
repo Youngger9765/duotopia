@@ -3,6 +3,16 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import StudentTable, { Student } from "@/components/StudentTable";
 import { StudentDialogs } from "@/components/StudentDialogs";
 import { ProgramDialog } from "@/components/ProgramDialog";
@@ -13,6 +23,7 @@ import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
 import VocabularySetPanel from "@/components/VocabularySetPanel";
 import { AssignmentDialog } from "@/components/AssignmentDialog";
 import BatchGradingModal from "@/components/BatchGradingModal";
+import { StudentCompletionDashboard } from "@/components/StudentCompletionDashboard";
 import { RecursiveTreeAccordion } from "@/components/shared/RecursiveTreeAccordion";
 import { programTreeConfig } from "@/components/shared/programTreeConfig";
 import {
@@ -20,6 +31,7 @@ import {
   Users,
   BookOpen,
   Plus,
+  Edit,
   FileText,
   X,
   Save,
@@ -27,18 +39,18 @@ import {
   Trash2,
   Sparkles,
   Eye,
+  Archive,
+  ArchiveRestore,
+  Search,
   StickyNote,
   Printer,
   ChevronLeft,
   ChevronRight,
-  Search,
 } from "lucide-react";
 import { getContentTypeIcon } from "@/lib/contentTypeIcon";
 import { apiClient, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import AssignmentStickyNote from "@/components/AssignmentStickyNote";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import {
   buildStickyNotePageHtml,
   openPrintWindow,
@@ -74,100 +86,6 @@ interface ReadingAssessmentContent {
   target_wpm?: number;
   target_accuracy?: number;
   time_limit_seconds?: number;
-}
-
-function getAssignmentTypeInfo(
-  assignment: Assignment,
-  t: (key: string) => string,
-): { label: string; color: string } {
-  const contentType = assignment.content_type?.toUpperCase();
-  const practiceMode = assignment.practice_mode;
-
-  if (contentType === "VOCABULARY_SET" || contentType === "SENTENCE_MAKING") {
-    if (practiceMode === "word_selection") {
-      return {
-        label: t("classroomDetail.contentTypes.WORD_SELECTION"),
-        color:
-          "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-      };
-    }
-    return {
-      label: t("classroomDetail.contentTypes.WORD_READING"),
-      color:
-        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-    };
-  }
-
-  if (
-    contentType === "EXAMPLE_SENTENCES" ||
-    contentType === "READING_ASSESSMENT"
-  ) {
-    if (practiceMode === "rearrangement") {
-      return {
-        label: t("classroomDetail.contentTypes.REARRANGEMENT"),
-        color:
-          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-      };
-    }
-    return {
-      label: t("classroomDetail.contentTypes.SPEAKING"),
-      color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-    };
-  }
-
-  const practiceModeLabels: Record<string, { label: string; color: string }> = {
-    rearrangement: {
-      label: t("classroomDetail.contentTypes.REARRANGEMENT"),
-      color:
-        "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-    },
-    reading: {
-      label: t("classroomDetail.contentTypes.SPEAKING"),
-      color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-    },
-    word_reading: {
-      label: t("classroomDetail.contentTypes.WORD_READING"),
-      color:
-        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-    },
-    word_selection: {
-      label: t("classroomDetail.contentTypes.WORD_SELECTION"),
-      color:
-        "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-    },
-  };
-  if (practiceMode && practiceModeLabels[practiceMode]) {
-    return practiceModeLabels[practiceMode];
-  }
-
-  const otherTypeLabels: Record<string, { label: string; color: string }> = {
-    SPEAKING_PRACTICE: {
-      label: t("classroomDetail.contentTypes.speakingPractice"),
-      color:
-        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-    },
-    SPEAKING_SCENARIO: {
-      label: t("classroomDetail.contentTypes.speakingScenario"),
-      color:
-        "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-    },
-    LISTENING_CLOZE: {
-      label: t("classroomDetail.contentTypes.listeningCloze"),
-      color:
-        "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-    },
-    SPEAKING_QUIZ: {
-      label: t("classroomDetail.contentTypes.speakingQuiz"),
-      color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-    },
-  };
-
-  return (
-    otherTypeLabels[contentType || ""] || {
-      label: t("classroomDetail.labels.unknownType"),
-      color: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
-    }
-  );
 }
 
 interface ClassroomDetailProps {
@@ -253,6 +171,52 @@ export default function ClassroomDetail({
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [assignmentsLoaded, setAssignmentsLoaded] = useState(false);
+  const [selectedAssignment] = useState<Assignment | null>(null);
+  const [showAssignmentDetails, setShowAssignmentDetails] = useState(false);
+  // Filter states
+  const [filterKeyword, setFilterKeyword] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+  const [filterOverdue, setFilterOverdue] = useState(false);
+
+  // Filter type → practice_mode mapping
+  const filterTypeMap: Record<string, string> = {
+    WORD_READING: "word_reading",
+    WORD_SELECTION: "word_selection",
+    SPEAKING: "reading",
+    REARRANGEMENT: "rearrangement",
+  };
+
+  // Archive states
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivedAssignments, setArchivedAssignments] = useState<Assignment[]>(
+    [],
+  );
+  const filteredAssignments = (
+    showArchived ? archivedAssignments : assignments
+  ).filter((a) => {
+    if (
+      filterKeyword &&
+      !a.title.toLowerCase().includes(filterKeyword.toLowerCase())
+    )
+      return false;
+    if (filterType && a.practice_mode !== filterTypeMap[filterType])
+      return false;
+    if (filterDateFrom && a.created_at) {
+      if (new Date(a.created_at) < new Date(filterDateFrom)) return false;
+    }
+    if (filterDateTo && a.created_at) {
+      const endOfDay = new Date(filterDateTo);
+      endOfDay.setHours(23, 59, 59, 999);
+      if (new Date(a.created_at) > endOfDay) return false;
+    }
+    if (filterOverdue) {
+      if (!a.due_date || new Date(a.due_date) >= new Date()) return false;
+    }
+    return true;
+  });
+
   const [batchGradingModal, setBatchGradingModal] = useState({
     open: false,
     assignmentId: 0,
@@ -268,47 +232,6 @@ export default function ClassroomDetail({
     new Set(),
   );
   const [batchPrinting, setBatchPrinting] = useState(false);
-
-  // Filters
-  const [filterKeyword, setFilterKeyword] = useState("");
-  const [filterType, setFilterType] = useState("");
-  const [filterDateFrom, setFilterDateFrom] = useState("");
-  const [filterDateTo, setFilterDateTo] = useState("");
-  const [filterOverdue, setFilterOverdue] = useState(false);
-
-  // Filter type → practice_mode mapping
-  const filterTypeMap: Record<string, string> = {
-    WORD_READING: "word_reading",
-    WORD_SELECTION: "word_selection",
-    SPEAKING: "reading",
-    REARRANGEMENT: "rearrangement",
-  };
-
-  const filteredAssignments = assignments.filter((a) => {
-    // Keyword: match title
-    if (
-      filterKeyword &&
-      !a.title.toLowerCase().includes(filterKeyword.toLowerCase())
-    )
-      return false;
-    // Type: match practice_mode
-    if (filterType && a.practice_mode !== filterTypeMap[filterType])
-      return false;
-    // Date range: match created_at
-    if (filterDateFrom && a.created_at) {
-      if (new Date(a.created_at) < new Date(filterDateFrom)) return false;
-    }
-    if (filterDateTo && a.created_at) {
-      const endOfDay = new Date(filterDateTo);
-      endOfDay.setHours(23, 59, 59, 999);
-      if (new Date(a.created_at) > endOfDay) return false;
-    }
-    // Overdue: due_date < now
-    if (filterOverdue) {
-      if (!a.due_date || new Date(a.due_date) >= new Date()) return false;
-    }
-    return true;
-  });
 
   // Pagination (on filtered results)
   const [assignmentPage, setAssignmentPage] = useState(1);
@@ -581,13 +504,20 @@ export default function ClassroomDetail({
 
   const fetchAssignments = async () => {
     try {
-      const response = await apiClient.get(
-        `/api/teachers/assignments/?classroom_id=${id}`,
+      const [activeResponse, archivedResponse] = await Promise.all([
+        apiClient.get(`/api/teachers/assignments/?classroom_id=${id}`),
+        apiClient.get(
+          `/api/teachers/assignments/?classroom_id=${id}&is_archived=true`,
+        ),
+      ]);
+      setAssignments(Array.isArray(activeResponse) ? activeResponse : []);
+      setArchivedAssignments(
+        Array.isArray(archivedResponse) ? archivedResponse : [],
       );
-      setAssignments(Array.isArray(response) ? response : []);
     } catch (err) {
       console.error("Failed to fetch assignments:", err);
       setAssignments([]);
+      setArchivedAssignments([]);
     } finally {
       setAssignmentsLoaded(true);
     }
@@ -610,6 +540,93 @@ export default function ClassroomDetail({
     } catch (err) {
       console.error("Failed to fetch teacher permissions:", err);
       setCanAssignHomework(false);
+    }
+  };
+
+  const handleEditAssignment = (assignment: Assignment) => {
+    // TODO: Open edit dialog with assignment data
+    toast.info(
+      t("classroomDetail.messages.prepareEditAssignment", {
+        title: assignment.title,
+      }),
+    );
+    setShowAssignmentDetails(false);
+    // In production: open edit dialog
+    // setEditingAssignment(assignment);
+    // setShowEditAssignmentDialog(true);
+  };
+
+  const handleDeleteAssignment = async (assignment: Assignment) => {
+    if (
+      confirm(
+        t("classroomDetail.messages.confirmDeleteAssignment", {
+          title: assignment.title,
+        }),
+      )
+    ) {
+      try {
+        await apiClient.delete(`/api/teachers/assignments/${assignment.id}`);
+        toast.success(
+          t("classroomDetail.messages.assignmentDeleted", {
+            title: assignment.title,
+          }),
+        );
+        setShowAssignmentDetails(false);
+        fetchAssignments(); // Refresh the list
+      } catch (error) {
+        console.error("Failed to delete assignment:", error);
+        toast.error(t("classroomDetail.messages.deleteAssignmentFailed"));
+      }
+    }
+  };
+
+  const handleArchiveAssignment = async (assignment: Assignment) => {
+    if (
+      confirm(
+        t("classroomDetail.messages.confirmArchiveAssignment", {
+          title: assignment.title,
+        }),
+      )
+    ) {
+      try {
+        await apiClient.patch(
+          `/api/teachers/assignments/${assignment.id}/archive`,
+        );
+        toast.success(
+          t("classroomDetail.messages.assignmentArchived", {
+            title: assignment.title,
+          }),
+        );
+        fetchAssignments();
+      } catch (error) {
+        console.error("Failed to archive assignment:", error);
+        toast.error(t("classroomDetail.messages.archiveAssignmentFailed"));
+      }
+    }
+  };
+
+  const handleUnarchiveAssignment = async (assignment: Assignment) => {
+    if (
+      !confirm(
+        t("classroomDetail.messages.confirmUnarchiveAssignment", {
+          title: assignment.title,
+        }),
+      )
+    )
+      return;
+    try {
+      await apiClient.patch(
+        `/api/teachers/assignments/${assignment.id}/unarchive`,
+      );
+      toast.success(
+        t("classroomDetail.messages.assignmentUnarchived", {
+          title: assignment.title,
+        }),
+      );
+      fetchAssignments();
+    } catch (error) {
+      console.error("Failed to unarchive assignment:", error);
+      toast.error(t("classroomDetail.messages.unarchiveAssignmentFailed"));
     }
   };
 
@@ -1555,29 +1572,33 @@ export default function ClassroomDetail({
               {!isTemplateMode && (
                 <TabsContent value="assignments" className="p-3 sm:p-6">
                   <div className="space-y-4 sm:space-y-6">
-                    {/* Header with Create Button */}
+                    {/* Header with Create Button and Archive Toggle */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                      <Button
-                        onClick={() => {
-                          if (!canAssignHomework) {
-                            toast.error(
-                              t("classroomDetail.messages.subscriptionExpired"),
-                            );
-                            return;
-                          }
-                          setShowAssignmentDialog(true);
-                        }}
-                        disabled={!canAssignHomework}
-                        className={`h-10 ${
-                          canAssignHomework
-                            ? "bg-blue-500 hover:bg-blue-600 text-white"
-                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        }`}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        {t("classroomDetail.buttons.assignNewHomework")}
-                      </Button>
-                      {assignments.length > 0 && (
+                      {!showArchived && (
+                        <Button
+                          onClick={() => {
+                            if (!canAssignHomework) {
+                              toast.error(
+                                t(
+                                  "classroomDetail.messages.subscriptionExpired",
+                                ),
+                              );
+                              return;
+                            }
+                            setShowAssignmentDialog(true);
+                          }}
+                          disabled={!canAssignHomework}
+                          className={`h-10 ${
+                            canAssignHomework
+                              ? "bg-blue-500 hover:bg-blue-600 text-white"
+                              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          }`}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          {t("classroomDetail.buttons.assignNewHomework")}
+                        </Button>
+                      )}
+                      {assignments.length > 0 && !showArchived && (
                         <Button
                           variant="outline"
                           onClick={handleBatchPrint}
@@ -1592,7 +1613,7 @@ export default function ClassroomDetail({
                             ` (${selectedForPrint.size})`}
                         </Button>
                       )}
-                      {!canAssignHomework && teacherData && (
+                      {!canAssignHomework && !showArchived && teacherData && (
                         <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded-lg border border-yellow-200 dark:border-yellow-800">
                           <span className="font-medium">
                             {t(
@@ -1610,7 +1631,91 @@ export default function ClassroomDetail({
                           </span>
                         </div>
                       )}
+                      <div className="sm:ml-auto flex">
+                        <button
+                          onClick={() => setShowArchived(false)}
+                          className={`px-4 py-2 text-sm font-medium rounded-l-lg border ${
+                            !showArchived
+                              ? "bg-blue-500 text-white border-blue-500"
+                              : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          {t("classroomDetail.tabs.activeAssignments")}
+                          {assignments.length > 0 && (
+                            <span className="ml-1.5 text-xs">
+                              ({assignments.length})
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setShowArchived(true)}
+                          className={`px-4 py-2 text-sm font-medium rounded-r-lg border-t border-r border-b ${
+                            showArchived
+                              ? "bg-blue-500 text-white border-blue-500"
+                              : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          <Archive className="inline-block w-4 h-4 mr-1 -mt-0.5" />
+                          {t("classroomDetail.tabs.archivedAssignments")}
+                          {archivedAssignments.length > 0 && (
+                            <span className="ml-1.5 text-xs">
+                              ({archivedAssignments.length})
+                            </span>
+                          )}
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Assignment Stats - Using Real Data (only for active view) */}
+                    {!showArchived && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 sm:p-4 border dark:border-blue-800">
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            {t("classroomDetail.stats.totalAssignments")}
+                          </div>
+                          <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                            {assignments.length}
+                          </div>
+                        </div>
+                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 sm:p-4 border dark:border-green-800">
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            {t("classroomDetail.stats.completedAssignments")}
+                          </div>
+                          <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
+                            {
+                              assignments.filter(
+                                (a) => a.status === "completed",
+                              ).length
+                            }
+                          </div>
+                        </div>
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 sm:p-4 border dark:border-yellow-800">
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            {t("classroomDetail.stats.inProgressAssignments")}
+                          </div>
+                          <div className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                            {
+                              assignments.filter(
+                                (a) =>
+                                  a.status === "in_progress" ||
+                                  a.status === "not_started",
+                              ).length
+                            }
+                          </div>
+                        </div>
+                        <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 sm:p-4 border dark:border-red-800">
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            {t("classroomDetail.stats.overdueAssignments")}
+                          </div>
+                          <div className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
+                            {
+                              assignments.filter((a) => a.status === "overdue")
+                                .length
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Filter Bar */}
                     <div className="space-y-2">
@@ -1699,20 +1804,112 @@ export default function ClassroomDetail({
                     </div>
 
                     {/* Assignment List */}
-                    {assignments.length > 0 ? (
+                    {filteredAssignments.length > 0 ? (
                       <>
                         {/* Mobile: Card Layout */}
                         <div className="md:hidden space-y-3">
                           {paginatedAssignments.map((assignment) => {
-                            const assignmentIdx = assignments.findIndex(
-                              (a) => a.id === assignment.id,
-                            );
                             const completionRate =
                               assignment.completion_rate || 0;
-                            const typeInfo = getAssignmentTypeInfo(
-                              assignment,
-                              t,
-                            );
+                            // 🎯 Issue #118: 根據 content_type + practice_mode 決定顯示標籤
+                            const getTypeInfo = () => {
+                              const contentType =
+                                assignment.content_type?.toUpperCase();
+                              const practiceMode = assignment.practice_mode;
+
+                              // VOCABULARY_SET 或 SENTENCE_MAKING → 根據 practice_mode
+                              if (
+                                contentType === "VOCABULARY_SET" ||
+                                contentType === "SENTENCE_MAKING"
+                              ) {
+                                if (practiceMode === "word_selection") {
+                                  return {
+                                    label: t(
+                                      "classroomDetail.contentTypes.WORD_SELECTION",
+                                    ),
+                                    color:
+                                      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                  };
+                                }
+                                // default: word_reading
+                                return {
+                                  label: t(
+                                    "classroomDetail.contentTypes.WORD_READING",
+                                  ),
+                                  color:
+                                    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+                                };
+                              }
+
+                              // EXAMPLE_SENTENCES 或 READING_ASSESSMENT → 根據 practice_mode
+                              if (
+                                contentType === "EXAMPLE_SENTENCES" ||
+                                contentType === "READING_ASSESSMENT"
+                              ) {
+                                if (practiceMode === "rearrangement") {
+                                  return {
+                                    label: t(
+                                      "classroomDetail.contentTypes.REARRANGEMENT",
+                                    ),
+                                    color:
+                                      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                                  };
+                                }
+                                return {
+                                  label: t(
+                                    "classroomDetail.contentTypes.SPEAKING",
+                                  ),
+                                  color:
+                                    "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                                };
+                              }
+
+                              // 其他類型保持原有邏輯
+                              const otherTypeLabels: Record<
+                                string,
+                                { label: string; color: string }
+                              > = {
+                                SPEAKING_PRACTICE: {
+                                  label: t(
+                                    "classroomDetail.contentTypes.speakingPractice",
+                                  ),
+                                  color:
+                                    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+                                },
+                                SPEAKING_SCENARIO: {
+                                  label: t(
+                                    "classroomDetail.contentTypes.speakingScenario",
+                                  ),
+                                  color:
+                                    "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                                },
+                                LISTENING_CLOZE: {
+                                  label: t(
+                                    "classroomDetail.contentTypes.listeningCloze",
+                                  ),
+                                  color:
+                                    "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+                                },
+                                SPEAKING_QUIZ: {
+                                  label: t(
+                                    "classroomDetail.contentTypes.speakingQuiz",
+                                  ),
+                                  color:
+                                    "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+                                },
+                              };
+
+                              return (
+                                otherTypeLabels[contentType || ""] || {
+                                  label: t(
+                                    "classroomDetail.labels.unknownType",
+                                  ),
+                                  color:
+                                    "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
+                                }
+                              );
+                            };
+                            const typeInfo = getTypeInfo();
 
                             return (
                               <div
@@ -1721,15 +1918,17 @@ export default function ClassroomDetail({
                               >
                                 {/* Title & AI Batch Grade Button */}
                                 <div className="flex items-start justify-between gap-2">
-                                  <Checkbox
-                                    checked={selectedForPrint.has(
-                                      assignment.id,
-                                    )}
-                                    onCheckedChange={() =>
-                                      togglePrintSelection(assignment.id)
-                                    }
-                                    className="mt-1 shrink-0"
-                                  />
+                                  {!showArchived && (
+                                    <Checkbox
+                                      checked={selectedForPrint.has(
+                                        assignment.id,
+                                      )}
+                                      onCheckedChange={() =>
+                                        togglePrintSelection(assignment.id)
+                                      }
+                                      className="mt-1"
+                                    />
+                                  )}
                                   <div className="flex-1 min-w-0">
                                     <h4 className="font-medium text-gray-900 dark:text-gray-100 truncate">
                                       {assignment.title}
@@ -1850,20 +2049,6 @@ export default function ClassroomDetail({
                                 <div className="flex gap-2">
                                   <Button
                                     variant="outline"
-                                    size="icon"
-                                    className="h-12 w-12 min-h-12 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 shrink-0"
-                                    onClick={() =>
-                                      setStickyNoteModal({
-                                        open: true,
-                                        assignmentIndex: assignmentIdx,
-                                      })
-                                    }
-                                    title={t("stickyNote.submissionStatus")}
-                                  >
-                                    <StickyNote className="h-5 w-5" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
                                     size="sm"
                                     className="flex-1 h-12 min-h-12 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                                     onClick={() => {
@@ -1886,6 +2071,50 @@ export default function ClassroomDetail({
                                   >
                                     {t("classroomDetail.buttons.previewDemo")}
                                   </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-12 min-h-12 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                                    onClick={() =>
+                                      setStickyNoteModal({
+                                        open: true,
+                                        assignmentIndex: assignments.findIndex(
+                                          (a) => a.id === assignment.id,
+                                        ),
+                                      })
+                                    }
+                                  >
+                                    <StickyNote className="h-5 w-5" />
+                                  </Button>
+                                  {showArchived ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-12 min-h-12 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                      onClick={() =>
+                                        handleUnarchiveAssignment(assignment)
+                                      }
+                                    >
+                                      <ArchiveRestore className="w-4 h-4 mr-1" />
+                                      {t(
+                                        "classroomDetail.buttons.unarchiveAssignment",
+                                      )}
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-12 min-h-12 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                      onClick={() =>
+                                        handleArchiveAssignment(assignment)
+                                      }
+                                    >
+                                      <Archive className="w-4 h-4 mr-1" />
+                                      {t(
+                                        "classroomDetail.buttons.archiveAssignment",
+                                      )}
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -1897,18 +2126,29 @@ export default function ClassroomDetail({
                           <table className="w-full">
                             <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
                               <tr>
-                                <th className="w-10 px-3 py-3">
-                                  <Checkbox
-                                    checked={
-                                      assignments.length > 0 &&
-                                      selectedForPrint.size ===
-                                        assignments.length
-                                    }
-                                    onCheckedChange={toggleSelectAll}
-                                  />
-                                </th>
+                                {!showArchived && (
+                                  <th className="w-10 px-4 py-3">
+                                    <Checkbox
+                                      checked={
+                                        filteredAssignments.length > 0 &&
+                                        selectedForPrint.size ===
+                                          filteredAssignments.length
+                                      }
+                                      onCheckedChange={toggleSelectAll}
+                                    />
+                                  </th>
+                                )}
                                 <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
                                   {t("classroomDetail.labels.assignmentTitle")}
+                                </th>
+                                <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                  {t("classroomDetail.labels.contentType")}
+                                </th>
+                                <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                  {t("classroomDetail.labels.assignedTo")}
+                                </th>
+                                <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                  {t("classroomDetail.labels.dueDate")}
                                 </th>
                                 <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
                                   {t(
@@ -1922,31 +2162,125 @@ export default function ClassroomDetail({
                             </thead>
                             <tbody>
                               {paginatedAssignments.map((assignment) => {
-                                const assignmentIdx = assignments.findIndex(
-                                  (a) => a.id === assignment.id,
-                                );
                                 const completionRate =
                                   assignment.completion_rate || 0;
-                                const typeInfo = getAssignmentTypeInfo(
-                                  assignment,
-                                  t,
-                                );
+                                // 🎯 Issue #118: 根據 content_type + practice_mode 決定顯示標籤
+                                const getTypeInfo = () => {
+                                  const contentType =
+                                    assignment.content_type?.toUpperCase();
+                                  const practiceMode = assignment.practice_mode;
+
+                                  // VOCABULARY_SET 或 SENTENCE_MAKING → 根據 practice_mode
+                                  if (
+                                    contentType === "VOCABULARY_SET" ||
+                                    contentType === "SENTENCE_MAKING"
+                                  ) {
+                                    if (practiceMode === "word_selection") {
+                                      return {
+                                        label: t(
+                                          "classroomDetail.contentTypes.WORD_SELECTION",
+                                        ),
+                                        color:
+                                          "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+                                      };
+                                    }
+                                    // default: word_reading
+                                    return {
+                                      label: t(
+                                        "classroomDetail.contentTypes.WORD_READING",
+                                      ),
+                                      color:
+                                        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+                                    };
+                                  }
+
+                                  // EXAMPLE_SENTENCES 或 READING_ASSESSMENT → 根據 practice_mode
+                                  if (
+                                    contentType === "EXAMPLE_SENTENCES" ||
+                                    contentType === "READING_ASSESSMENT"
+                                  ) {
+                                    if (practiceMode === "rearrangement") {
+                                      return {
+                                        label: t(
+                                          "classroomDetail.contentTypes.REARRANGEMENT",
+                                        ),
+                                        color:
+                                          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                                      };
+                                    }
+                                    return {
+                                      label: t(
+                                        "classroomDetail.contentTypes.SPEAKING",
+                                      ),
+                                      color:
+                                        "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                                    };
+                                  }
+
+                                  // 其他類型
+                                  const otherTypeLabels: Record<
+                                    string,
+                                    { label: string; color: string }
+                                  > = {
+                                    SPEAKING_PRACTICE: {
+                                      label: t(
+                                        "classroomDetail.contentTypes.speakingPractice",
+                                      ),
+                                      color:
+                                        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+                                    },
+                                    SPEAKING_SCENARIO: {
+                                      label: t(
+                                        "classroomDetail.contentTypes.speakingScenario",
+                                      ),
+                                      color:
+                                        "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                                    },
+                                    LISTENING_CLOZE: {
+                                      label: t(
+                                        "classroomDetail.contentTypes.listeningCloze",
+                                      ),
+                                      color:
+                                        "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+                                    },
+                                    SPEAKING_QUIZ: {
+                                      label: t(
+                                        "classroomDetail.contentTypes.speakingQuiz",
+                                      ),
+                                      color:
+                                        "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+                                    },
+                                  };
+
+                                  return (
+                                    otherTypeLabels[contentType || ""] || {
+                                      label: t(
+                                        "classroomDetail.labels.unknownType",
+                                      ),
+                                      color:
+                                        "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
+                                    }
+                                  );
+                                };
+                                const typeInfo = getTypeInfo();
 
                                 return (
                                   <tr
                                     key={assignment.id}
                                     className="border-b hover:bg-gray-50 dark:hover:bg-gray-700/50 dark:border-gray-600"
                                   >
-                                    <td className="w-10 px-3 py-3">
-                                      <Checkbox
-                                        checked={selectedForPrint.has(
-                                          assignment.id,
-                                        )}
-                                        onCheckedChange={() =>
-                                          togglePrintSelection(assignment.id)
-                                        }
-                                      />
-                                    </td>
+                                    {!showArchived && (
+                                      <td className="w-10 px-4 py-3">
+                                        <Checkbox
+                                          checked={selectedForPrint.has(
+                                            assignment.id,
+                                          )}
+                                          onCheckedChange={() =>
+                                            togglePrintSelection(assignment.id)
+                                          }
+                                        />
+                                      </td>
+                                    )}
                                     <td className="px-4 py-3">
                                       <div className="font-medium dark:text-gray-100">
                                         {assignment.title}
@@ -1988,6 +2322,32 @@ export default function ClassroomDetail({
                                       </div>
                                     </td>
                                     <td className="px-4 py-3">
+                                      <span
+                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeInfo.color}`}
+                                      >
+                                        {typeInfo.label}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm dark:text-gray-300">
+                                      {assignment.student_count
+                                        ? t(
+                                            "classroomDetail.labels.studentCountWithUnit",
+                                            {
+                                              count: assignment.student_count,
+                                            },
+                                          )
+                                        : t("classroomDetail.labels.allClass")}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm dark:text-gray-300">
+                                      {assignment.due_date
+                                        ? new Date(
+                                            assignment.due_date,
+                                          ).toLocaleDateString("zh-TW")
+                                        : t(
+                                            "classroomDetail.labels.noDeadline",
+                                          )}
+                                    </td>
+                                    <td className="px-4 py-3">
                                       <div className="flex items-center gap-2">
                                         <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                                           <div
@@ -2004,22 +2364,6 @@ export default function ClassroomDetail({
                                     </td>
                                     <td className="px-4 py-3">
                                       <div className="flex gap-2">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="text-amber-600 hover:text-amber-700 dark:text-amber-400 h-10 w-10 min-h-10"
-                                          onClick={() =>
-                                            setStickyNoteModal({
-                                              open: true,
-                                              assignmentIndex: assignmentIdx,
-                                            })
-                                          }
-                                          title={t(
-                                            "stickyNote.submissionStatus",
-                                          )}
-                                        >
-                                          <StickyNote className="h-5 w-5" />
-                                        </Button>
                                         <Button
                                           variant="ghost"
                                           size="sm"
@@ -2088,6 +2432,55 @@ export default function ClassroomDetail({
                                               )}
                                             </Button>
                                           ))}
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-amber-600 hover:text-amber-700 dark:text-amber-400 h-10 min-h-10"
+                                          onClick={() =>
+                                            setStickyNoteModal({
+                                              open: true,
+                                              assignmentIndex:
+                                                assignments.findIndex(
+                                                  (a) => a.id === assignment.id,
+                                                ),
+                                            })
+                                          }
+                                        >
+                                          <StickyNote className="h-5 w-5" />
+                                        </Button>
+                                        {showArchived ? (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-orange-600 hover:text-orange-700 dark:text-orange-400 h-10 min-h-10"
+                                            onClick={() =>
+                                              handleUnarchiveAssignment(
+                                                assignment,
+                                              )
+                                            }
+                                          >
+                                            <ArchiveRestore className="w-4 h-4 mr-1" />
+                                            {t(
+                                              "classroomDetail.buttons.unarchiveAssignment",
+                                            )}
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 h-10 min-h-10"
+                                            onClick={() =>
+                                              handleArchiveAssignment(
+                                                assignment,
+                                              )
+                                            }
+                                          >
+                                            <Archive className="w-4 h-4 mr-1" />
+                                            {t(
+                                              "classroomDetail.buttons.archiveAssignment",
+                                            )}
+                                          </Button>
+                                        )}
                                       </div>
                                     </td>
                                   </tr>
@@ -2096,17 +2489,15 @@ export default function ClassroomDetail({
                             </tbody>
                           </table>
                         </div>
-
-                        {/* Pagination */}
                         {totalAssignmentPages > 1 && (
-                          <div className="flex items-center justify-center gap-3 mt-4">
+                          <div className="flex items-center justify-center gap-4 pt-4">
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
+                              disabled={assignmentPage === 1}
                               onClick={() =>
                                 setAssignmentPage((p) => Math.max(1, p - 1))
                               }
-                              disabled={assignmentPage === 1}
                             >
                               <ChevronLeft className="h-4 w-4" />
                             </Button>
@@ -2117,14 +2508,14 @@ export default function ClassroomDetail({
                               })}
                             </span>
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
+                              disabled={assignmentPage === totalAssignmentPages}
                               onClick={() =>
                                 setAssignmentPage((p) =>
                                   Math.min(totalAssignmentPages, p + 1),
                                 )
                               }
-                              disabled={assignmentPage === totalAssignmentPages}
                             >
                               <ChevronRight className="h-4 w-4" />
                             </Button>
@@ -2133,7 +2524,9 @@ export default function ClassroomDetail({
                       </>
                     ) : (
                       <div className="border dark:border-gray-700 rounded-lg p-8 text-center text-gray-500 dark:text-gray-400">
-                        {t("classroomDetail.messages.noAssignments")}
+                        {showArchived
+                          ? t("classroomDetail.messages.noArchivedAssignments")
+                          : t("classroomDetail.messages.noAssignments")}
                       </div>
                     )}
                   </div>
@@ -2447,6 +2840,179 @@ export default function ClassroomDetail({
         }}
       />
 
+      {/* Assignment Details Dialog */}
+      {showAssignmentDetails && selectedAssignment && (
+        <Dialog
+          open={showAssignmentDetails}
+          onOpenChange={setShowAssignmentDetails}
+        >
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold">
+                {t("classroomDetail.dialogs.assignmentDetailTitle", {
+                  title: selectedAssignment.title,
+                })}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm text-gray-600">
+                    {t("classroomDetail.labels.contentType")}
+                  </Label>
+                  <p className="font-medium">
+                    {(() => {
+                      const contentTypeLabels: Record<string, string> = {
+                        READING_ASSESSMENT: t(
+                          "classroomDetail.contentTypes.readingAssessment",
+                        ),
+                        SPEAKING_PRACTICE: t(
+                          "classroomDetail.contentTypes.speakingPractice",
+                        ),
+                        SPEAKING_SCENARIO: t(
+                          "classroomDetail.contentTypes.speakingScenario",
+                        ),
+                        LISTENING_CLOZE: t(
+                          "classroomDetail.contentTypes.listeningCloze",
+                        ),
+                        SENTENCE_MAKING: t(
+                          "classroomDetail.contentTypes.sentenceMaking",
+                        ),
+                        SPEAKING_QUIZ: t(
+                          "classroomDetail.contentTypes.speakingQuiz",
+                        ),
+                      };
+                      return (
+                        contentTypeLabels[
+                          selectedAssignment.content_type || ""
+                        ] ||
+                        selectedAssignment.content_type ||
+                        t("classroomDetail.labels.unknownType")
+                      );
+                    })()}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-600">
+                    {t("classroomDetail.labels.assignedDate")}
+                  </Label>
+                  <p className="font-medium">
+                    {selectedAssignment.assigned_at
+                      ? new Date(
+                          selectedAssignment.assigned_at,
+                        ).toLocaleDateString("zh-TW")
+                      : t("classroomDetail.labels.notSet")}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-600">
+                    {t("classroomDetail.labels.dueDate")}
+                  </Label>
+                  <p className="font-medium">
+                    {selectedAssignment.due_date
+                      ? new Date(
+                          selectedAssignment.due_date,
+                        ).toLocaleDateString("zh-TW")
+                      : t("classroomDetail.labels.noDeadline")}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-600">
+                    {t("classroomDetail.labels.assignedStudents")}
+                  </Label>
+                  <p className="font-medium">
+                    {selectedAssignment.student_count || 0} 人
+                  </p>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              {selectedAssignment.instructions && (
+                <div>
+                  <Label className="text-sm text-gray-600">
+                    {t("classroomDetail.labels.instructions")}
+                  </Label>
+                  <Card className="p-4 mt-2 bg-gray-50">
+                    <p className="text-sm">{selectedAssignment.instructions}</p>
+                  </Card>
+                </div>
+              )}
+
+              {/* Progress */}
+              <div>
+                <Label className="text-sm text-gray-600 mb-3 block">
+                  {t("classroomDetail.labels.completionProgress")}
+                </Label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">
+                      {t("classroomDetail.labels.overallCompletionRate")}
+                    </span>
+                    <span className="text-2xl font-bold text-blue-600">
+                      {selectedAssignment.completion_rate || 0}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all"
+                      style={{
+                        width: `${selectedAssignment.completion_rate || 0}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Student Completion Dashboard */}
+              <div>
+                <Label className="text-sm text-gray-600 mb-3 block">
+                  {t("classroomDetail.labels.studentList")}
+                </Label>
+                <StudentCompletionDashboard
+                  assignmentId={selectedAssignment.id}
+                  classroomId={Number(id)}
+                  onRefresh={fetchAssignments}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // TODO: Implement view student submissions
+                    toast.info(
+                      t(
+                        "classroomDetail.messages.viewSubmissionsInDevelopment",
+                      ),
+                    );
+                  }}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  {t("classroomDetail.buttons.viewSubmissions")}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleEditAssignment(selectedAssignment)}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  {t("classroomDetail.buttons.editAssignment")}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleDeleteAssignment(selectedAssignment)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {t("classroomDetail.buttons.deleteAssignment")}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Content Type Dialog */}
       {contentLessonInfo && (
         <ContentTypeDialog
@@ -2540,9 +3106,7 @@ export default function ClassroomDetail({
                   setVocabularySetLessonId(null);
                   setVocabularySetContentId(null);
                   await refreshPrograms();
-                  toast.success(
-                    t("classroomDetail.messages.contentSavedSuccessfully"),
-                  );
+                  toast.success(t("classroomDetail.messages.contentSaved"));
                 }}
                 onCancel={() => {
                   setShowVocabularySetEditor(false);
@@ -2577,16 +3141,10 @@ export default function ClassroomDetail({
       {/* Sticky Note Modal */}
       <AssignmentStickyNote
         open={stickyNoteModal.open}
-        onClose={() => setStickyNoteModal({ ...stickyNoteModal, open: false })}
+        onClose={() => setStickyNoteModal({ open: false, assignmentIndex: 0 })}
         assignments={assignments}
         initialAssignmentIndex={stickyNoteModal.assignmentIndex}
-        classroomId={id || ""}
-        onStudentClick={(assignmentId, studentId, classroomId) => {
-          window.open(
-            `/teacher/classroom/${classroomId}/assignment/${assignmentId}/grading?studentId=${studentId}`,
-            "_blank",
-          );
-        }}
+        classroomId={Number(id)}
       />
     </>
   );
