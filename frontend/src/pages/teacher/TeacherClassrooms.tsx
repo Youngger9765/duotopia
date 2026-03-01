@@ -462,7 +462,7 @@ export default function TeacherClassrooms() {
           <option value="all">
             {t("teacherClassrooms.filters.allLevels")}
           </option>
-          <option value="PREA">Pre-A</option>
+          <option value="preA">Pre-A</option>
           <option value="A1">A1</option>
           <option value="A2">A2</option>
           <option value="B1">B1</option>

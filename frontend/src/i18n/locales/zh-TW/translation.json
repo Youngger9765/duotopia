@@ -2532,6 +2532,7 @@
       "noContentItems": "尚無內容項目",
       "enterTitle": "輸入標題",
       "allClass": "全班",
+      "studentCountWithUnit": "{{count}} 人",
       "noDeadline": "無期限",
       "noDescription": "無說明",
       "unknownType": "未知類型",

@@ -2532,6 +2532,7 @@
       "noContentItems": "No content items yet",
       "enterTitle": "Enter title",
       "allClass": "All Class",
+      "studentCountWithUnit": "{{count}} students",
       "noDeadline": "No Deadline",
       "noDescription": "No Description",
       "unknownType": "Unknown Type",

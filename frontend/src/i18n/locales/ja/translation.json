@@ -99,6 +99,73 @@
       "next": "次のページ"
     }
   },
+  "teacherClassrooms": {
+    "title": "マイクラス",
+    "buttons": {
+      "reload": "再読み込み",
+      "addClassroom": "クラスを追加",
+      "add": "追加",
+      "edit": "編集",
+      "delete": "削除",
+      "confirmDelete": "削除を確認",
+      "create": "作成",
+      "createFirst": "最初のクラスを作成",
+      "dispatchAssignment": "課題を配布"
+    },
+    "stats": {
+      "totalClassrooms": "クラス総数",
+      "totalStudents": "生徒総数",
+      "activeClassrooms": "アクティブなクラス"
+    },
+    "labels": {
+      "classroomName": "クラス名",
+      "description": "説明",
+      "level": "レベル",
+      "students": "生徒",
+      "programs": "プログラム",
+      "studentCount": "生徒数",
+      "programCount": "プログラム数",
+      "createdAt": "作成日",
+      "actions": "操作",
+      "grade": "学年",
+      "school": "所属学校"
+    },
+    "messages": {
+      "totalCount": "合計 {{count}} クラス",
+      "noDescription": "説明なし",
+      "noClassrooms": "まだクラスがありません",
+      "createFirstDescription": "最初のクラスを作成して、生徒とプログラムの管理を始めましょう",
+      "updateFailed": "クラスの更新に失敗しました。しばらくしてからもう一度お試しください",
+      "deleteFailed": "クラスの削除に失敗しました。しばらくしてからもう一度お試しください",
+      "nameRequired": "クラス名を入力してください",
+      "createFailed": "クラスの作成に失敗しました",
+      "error": "エラー"
+    },
+    "dialogs": {
+      "editTitle": "クラスを編集",
+      "editDescription": "クラス情報を変更",
+      "deleteTitle": "クラスの削除を確認",
+      "deleteDescription": "このクラスを削除してもよろしいですか？この操作は元に戻せません。生徒とプログラムのデータは保持されますが、このクラスとの関連付けは解除されます。",
+      "createTitle": "クラスを追加",
+      "createDescription": "新しいクラスを作成"
+    },
+    "placeholders": {
+      "classroomName": "例：5年A組",
+      "description": "クラスの説明（任意）",
+      "searchName": "クラス名を検索..."
+    },
+    "filters": {
+      "allLevels": "すべてのレベル"
+    },
+    "sort": {
+      "default": "デフォルト",
+      "nameAsc": "名前 A→Z",
+      "nameDesc": "名前 Z→A",
+      "studentCountDesc": "生徒数 多い順",
+      "createdAtDesc": "新しい順",
+      "createdAtAsc": "古い順"
+    }
+  },
   "teacherSetupPassword": {
     "verifying": "リンクを確認中...",
     "errors": {
