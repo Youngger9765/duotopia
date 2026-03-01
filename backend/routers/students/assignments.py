@@ -2,6 +2,7 @@
 
 import json
 import logging
+import math
 import random
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List, Literal
@@ -348,7 +349,6 @@ async def get_assignment_activities(
                                 and item_progress.ai_feedback
                             ):
                                 # 從 ai_feedback JSON 中取得分數
-                                import json
 
                                 try:
                                     ai_feedback = (
@@ -404,7 +404,7 @@ async def get_assignment_activities(
                     activity_data["item_count"] = len(items_with_ids)
                 else:
                     # 沒有 ContentItem 記錄的情況 - 返回空陣列
-                    print(f"Warning: Content {content.id} has no ContentItem records")
+                    logger.warning("Content %s has no ContentItem records", content.id)
                     activity_data["items"] = []
                     activity_data["item_count"] = 0
 
@@ -466,21 +466,22 @@ async def get_assignment_activities(
     practice_mode = None
     show_answer = False
     score_category = None
+    parent_assignment = None
     if student_assignment.assignment_id:
-        assignment = (
+        parent_assignment = (
             db.query(Assignment)
             .filter(Assignment.id == student_assignment.assignment_id)
             .first()
         )
-        if assignment:
-            practice_mode = assignment.practice_mode
-            show_answer = assignment.show_answer or False
-            score_category = assignment.score_category
+        if parent_assignment:
+            practice_mode = parent_assignment.practice_mode
+            show_answer = parent_assignment.show_answer or False
+            score_category = parent_assignment.score_category
 
     # 檢查 AI 分析額度（根據作業所屬班級判斷：機構班級→機構點數，個人班級→個人配額）
     can_use_ai_analysis = (
-        QuotaService.check_ai_analysis_availability_by_assignment(assignment, db)
-        if assignment
+        QuotaService.check_ai_analysis_availability_by_assignment(parent_assignment, db)
+        if parent_assignment
         else True
     )
 
@@ -630,7 +631,7 @@ async def submit_assignment(
                 if is_auto_graded
                 else AssignmentStatus.SUBMITTED
             )
-            progress.completed_at = datetime.now()
+            progress.completed_at = datetime.now(timezone.utc)
 
     # 更新作業狀態
     # Issue #165: 例句重組和單字選擇為自動批改，提交後直接標記為 GRADED（已完成）
@@ -981,12 +982,16 @@ async def save_vocabulary_assessment(
             detail="Assignment not found or not assigned to you",
         )
 
-    # Find the progress record
+    # Find the progress record and verify the content item belongs to this assignment
     progress = (
         db.query(StudentItemProgress)
+        .join(ContentItem, StudentItemProgress.content_item_id == ContentItem.id)
+        .join(Content, ContentItem.content_id == Content.id)
+        .join(AssignmentContent, AssignmentContent.content_id == Content.id)
         .filter(
             StudentItemProgress.id == request.progress_id,
             StudentItemProgress.student_assignment_id == assignment_id,
+            AssignmentContent.assignment_id == student_assignment.assignment_id,
         )
         .first()
     )
@@ -1115,8 +1120,6 @@ async def start_word_selection_practice(
     Returns 10 words selected by the intelligent get_words_for_practice function,
     each with 3 distractors from the word set plus the correct answer.
     """
-    # from services.translation import translation_service  # disabled (#303)
-
     student_id = int(current_student.get("sub"))
 
     # Verify student has this assignment
@@ -1250,49 +1253,6 @@ async def start_word_selection_practice(
                 }
             )
 
-    # NOTE: AI distractor generation is temporarily disabled (#303).
-    # All distractors now come from other words in the assignment.
-    # Original AI generation code is preserved below for future reactivation.
-    #
-    # --- AI distractor generation (disabled) ---
-    # content_item_ids = [w["content_item_id"] for w in words_data]
-    # items_with_distractors = (
-    #     db.query(ContentItem).filter(ContentItem.id.in_(content_item_ids)).all()
-    # )
-    # distractors_map = {item.id: item.distractors for item in items_with_distractors}
-    # items_needing_generation = [
-    #     w for w in words_data if not distractors_map.get(w["content_item_id"])
-    # ]
-    # if not items_needing_generation:
-    #     all_distractors = [
-    #         distractors_map.get(w["content_item_id"], []) for w in words_data
-    #     ]
-    # else:
-    #     words_for_distractors = [
-    #         {"word": w["text"], "translation": w["translation"]}
-    #         for w in items_needing_generation
-    #     ]
-    #     try:
-    #         generated_distractors = (
-    #             await translation_service.batch_generate_distractors(
-    #                 words_for_distractors, count=3
-    #             )
-    #         )
-    #     except Exception as e:
-    #         logger.error(f"Failed to generate distractors: {e}")
-    #         generated_distractors = [
-    #             ["選項A", "選項B", "選項C"] for _ in items_needing_generation
-    #         ]
-    #     generated_idx = 0
-    #     all_distractors = []
-    #     for w in words_data:
-    #         if distractors_map.get(w["content_item_id"]):
-    #             all_distractors.append(distractors_map[w["content_item_id"]])
-    #         else:
-    #             all_distractors.append(generated_distractors[generated_idx])
-    #             generated_idx += 1
-    # --- end AI distractor generation ---
-
     # Create practice session
     practice_session = PracticeSession(
         student_id=student_id,
@@ -1311,25 +1271,52 @@ async def start_word_selection_practice(
 
     # Collect all unique translations for picking distractors from the word set
     all_translations = {
-        w["translation"].lower().strip(): w["translation"] for w in words_data
+        w["translation"].lower().strip(): w["translation"]
+        for w in words_data
+        if w["translation"]
     }
+
+    # Query stored AI distractors from DB
+    content_item_ids = [w["content_item_id"] for w in words_data]
+    items_with_distractors = (
+        db.query(ContentItem).filter(ContentItem.id.in_(content_item_ids)).all()
+    )
+    distractors_map = {item.id: item.distractors for item in items_with_distractors}
 
     for i, word in enumerate(words_data):
         correct_answer = word["translation"]
+        stored_distractors = distractors_map.get(word["content_item_id"])
 
-        # Pick 3 random distractors from other words' translations (#303)
-        other_translations = [
-            t
-            for key, t in all_translations.items()
-            if key != correct_answer.lower().strip()
-        ]
-        random.shuffle(other_translations)
-        final_distractors = other_translations[:3]
+        if stored_distractors and len(stored_distractors) >= 2:
+            # 有 AI distractors: 取 2 個 AI + 1 個其他單字翻譯
+            ai_distractors = stored_distractors[:2]
+            other_translations = [
+                t
+                for key, t in all_translations.items()
+                if key != correct_answer.lower().strip() and t not in ai_distractors
+            ]
+            random.shuffle(other_translations)
+            if other_translations:
+                word_distractor = [other_translations[0]]
+            elif len(stored_distractors) > 2:
+                word_distractor = [stored_distractors[2]]
+            else:
+                word_distractor = []
+            final_distractors = ai_distractors + word_distractor
+        else:
+            # Fallback: 全部從其他單字取
+            other_translations = [
+                t
+                for key, t in all_translations.items()
+                if key != correct_answer.lower().strip()
+            ]
+            random.shuffle(other_translations)
+            final_distractors = other_translations[:3]
 
-        # Fallback for legacy assignments with small word sets
+        # Fallback for small word sets
         num_needed = 3 - len(final_distractors)
-        for i in range(num_needed):
-            final_distractors.append(f"選項{chr(65 + i)}")
+        for j in range(num_needed):
+            final_distractors.append(f"選項{chr(65 + j)}")
 
         # Create options array with correct answer and 3 distractors = 4 total
         options = [correct_answer] + final_distractors
@@ -1407,9 +1394,16 @@ async def submit_word_selection_answer(
             detail="Assignment not found or not assigned to you",
         )
 
-    # Get the correct answer from content item
+    # Get the correct answer from content item (verify it belongs to this assignment)
     content_item = (
-        db.query(ContentItem).filter(ContentItem.id == request.content_item_id).first()
+        db.query(ContentItem)
+        .join(Content, ContentItem.content_id == Content.id)
+        .join(AssignmentContent, AssignmentContent.content_id == Content.id)
+        .filter(
+            ContentItem.id == request.content_item_id,
+            AssignmentContent.assignment_id == student_assignment.assignment_id,
+        )
+        .first()
     )
 
     if not content_item:
@@ -1419,6 +1413,9 @@ async def submit_word_selection_answer(
         )
 
     correct_answer = content_item.translation or ""
+
+    # 伺服器端驗證答案正確性（不信任客戶端的 is_correct）
+    is_correct = request.selected_answer.strip() == correct_answer.strip()
 
     # Call update_memory_strength PostgreSQL function
     result = db.execute(
@@ -1434,7 +1431,7 @@ async def submit_word_selection_answer(
         {
             "sa_id": assignment_id,
             "item_id": request.content_item_id,
-            "is_correct": request.is_correct,
+            "is_correct": is_correct,
         },
     ).fetchone()
 
@@ -1468,10 +1465,10 @@ async def submit_word_selection_answer(
 
     return {
         "success": True,
-        "is_correct": request.is_correct,
+        "is_correct": is_correct,
         "correct_answer": correct_answer,
         "new_memory_strength": new_memory_strength,
-        "message": "正確！" if request.is_correct else f"正確答案是: {correct_answer}",
+        "message": "正確！" if is_correct else f"正確答案是: {correct_answer}",
     }
 
 
@@ -1711,7 +1708,6 @@ async def submit_rearrangement_answer(
     db: Session = Depends(get_db),
 ):
     """提交例句重組答案"""
-    import math
 
     student_id = int(current_student.get("sub"))
 
@@ -1796,7 +1792,7 @@ async def submit_rearrangement_answer(
             "selected": request.selected_word,
             "correct": correct_word,
             "is_correct": is_correct,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     )
     progress.rearrangement_data = {"selections": selections}
@@ -1958,5 +1954,5 @@ async def complete_rearrangement(
         "success": True,
         "final_score": float(progress.expected_score or 0),
         "timeout": request.timeout,
-        "completed_at": datetime.now().isoformat(),
+        "completed_at": datetime.now(timezone.utc).isoformat(),
     }

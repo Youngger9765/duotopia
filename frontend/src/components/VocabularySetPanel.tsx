@@ -24,6 +24,7 @@ import {
   Image as ImageIcon,
   X,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api";
@@ -198,6 +199,8 @@ interface ContentRow {
   example_sentence_translation?: string; // 例句中文翻譯
   example_sentence_japanese?: string; // 例句日文翻譯
   example_sentence_korean?: string; // 例句韓文翻譯
+  // 干擾項（單字選擇題用）
+  distractors?: string[];
 }
 
 interface TTSModalProps {
@@ -969,6 +972,7 @@ interface SortableRowInnerProps {
   isActive?: boolean;
   onRowFocus?: () => void;
   onWordLanguageChange?: (lang: WordTranslationLanguage) => void;
+  isAssignmentCopy?: boolean; // 是否為作業副本（顯示干擾項編輯）
 }
 
 function SortableRowInner({
@@ -991,6 +995,7 @@ function SortableRowInner({
   isActive = false,
   onRowFocus,
   onWordLanguageChange,
+  isAssignmentCopy = false,
 }: SortableRowInnerProps) {
   const { t } = useTranslation();
   const {
@@ -1387,6 +1392,39 @@ function SortableRowInner({
           )}
         </div>
       </div>
+
+      {/* 干擾項編輯區塊（僅在作業副本模式 + 有干擾項時顯示） */}
+      {isAssignmentCopy && row.distractors && row.distractors.length > 0 && (
+        <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-4 w-4 text-orange-600" />
+            <span className="text-xs font-semibold text-orange-800">
+              {t("vocabularySet.distractors.label", {
+                defaultValue: "AI 干擾項（單字選擇題的錯誤選項）",
+              })}
+            </span>
+          </div>
+          <div className="flex gap-2">
+            {row.distractors.map((distractor, dIdx) => (
+              <input
+                key={dIdx}
+                type="text"
+                value={distractor}
+                onChange={(e) => {
+                  const newDistractors = [...(row.distractors || [])];
+                  newDistractors[dIdx] = e.target.value;
+                  handleUpdateRow(index, "distractors", newDistractors);
+                }}
+                className="flex-1 px-2 py-1.5 border border-gray-300 rounded-md text-sm bg-white"
+                placeholder={t("vocabularySet.distractors.placeholder", {
+                  defaultValue: `干擾項 ${dIdx + 1}`,
+                  number: dIdx + 1,
+                })}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1402,6 +1440,7 @@ interface VocabularySetPanelProps {
   onCancel?: () => void;
   isOpen?: boolean;
   isCreating?: boolean; // 是否為新增模式
+  isAssignmentCopy?: boolean; // 是否為作業副本（顯示干擾項編輯）
 }
 
 export default function VocabularySetPanel({
@@ -1412,6 +1451,7 @@ export default function VocabularySetPanel({
   lessonId,
   programLevel,
   isCreating = false,
+  isAssignmentCopy = false,
 }: VocabularySetPanelProps) {
   const { t } = useTranslation();
 
@@ -1618,6 +1658,7 @@ export default function VocabularySetPanel({
               example_sentence_japanese?: string;
               example_sentence_korean?: string;
               parts_of_speech?: string[];
+              distractors?: string[];
               // 新的統一欄位
               vocabulary_translation?: string;
               vocabulary_translation_lang?: WordTranslationLanguage;
@@ -1705,6 +1746,7 @@ export default function VocabularySetPanel({
               example_sentence_japanese,
               example_sentence_korean,
               partsOfSpeech: item.parts_of_speech || [],
+              distractors: item.distractors || undefined,
             };
           },
         );
@@ -1732,6 +1774,7 @@ export default function VocabularySetPanel({
       example_sentence: row.example_sentence,
       example_sentence_translation: row.example_sentence_translation,
       parts_of_speech: row.partsOfSpeech || [],
+      ...(row.distractors ? { distractors: row.distractors } : {}),
     }));
 
     onUpdateContent({
@@ -3140,6 +3183,7 @@ export default function VocabularySetPanel({
                   isActive={activeRowIndex === index}
                   onRowFocus={() => setActiveRowIndex(index)}
                   onWordLanguageChange={setLastSelectedWordLang}
+                  isAssignmentCopy={isAssignmentCopy}
                 />
               );
             })}
@@ -3616,6 +3660,9 @@ export default function VocabularySetPanel({
                       example_sentence_translation: exampleTranslation,
                       example_sentence_translation_lang: sentenceLang,
                       parts_of_speech: row.partsOfSpeech || [],
+                      ...(row.distractors
+                        ? { distractors: row.distractors }
+                        : {}),
                     };
                   }),
                   target_wpm: 60,

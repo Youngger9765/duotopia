@@ -915,6 +915,7 @@ class ApiClient {
       selectedLanguage?: string;
       audio_url?: string;
       has_student_progress?: boolean; // 🔥 是否有學生進度
+      distractors?: string[];
       item_metadata?: Record<string, unknown>;
       order_index?: number;
       content_id?: number;
