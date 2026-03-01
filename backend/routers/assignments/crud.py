@@ -158,6 +158,10 @@ async def create_assignment(
                 item_metadata=original_item.item_metadata.copy()
                 if original_item.item_metadata
                 else {},
+                # 例句欄位
+                example_sentence=original_item.example_sentence,
+                example_sentence_translation=original_item.example_sentence_translation,
+                example_sentence_definition=original_item.example_sentence_definition,
                 # Phase 2 欄位
                 image_url=original_item.image_url,
                 part_of_speech=original_item.part_of_speech,
