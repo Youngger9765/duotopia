@@ -2,6 +2,7 @@
 Assignment CRUD operations
 """
 
+import random
 import uuid
 from typing import Optional, List
 from datetime import datetime, timezone
@@ -36,6 +37,10 @@ from .validators import (
     ContentResponse,
 )
 from .dependencies import get_current_teacher
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -216,6 +221,32 @@ async def create_assignment(
             db.add(item_copy)
             db.flush()
             content_items_copy_map[original_item.id] = item_copy.id
+
+    # word_selection 模式：為缺少干擾項的 items 自動從同作業其他單字翻譯生成
+    if request.practice_mode == "word_selection":
+        for copy_content_id in content_copy_map.values():
+            copy_items = (
+                db.query(ContentItem)
+                .filter(ContentItem.content_id == copy_content_id)
+                .filter(ContentItem.translation.isnot(None))
+                .filter(ContentItem.translation != "")
+                .order_by(ContentItem.order_index)
+                .all()
+            )
+            all_translations = [item.translation for item in copy_items]
+            for item in copy_items:
+                if item.distractors is None:
+                    candidates = [
+                        t
+                        for t in all_translations
+                        if t.lower().strip() != item.translation.lower().strip()
+                    ]
+                    random.shuffle(candidates)
+                    item.distractors = candidates[:3]
+            logger.info(
+                f"Auto-generated word-set distractors for "
+                f"content copy {copy_content_id}"
+            )
 
     # 建立 AssignmentContent 關聯（指向副本）
     for idx, original_content_id in enumerate(request.content_ids, 1):

@@ -23,6 +23,7 @@ from .utils import TEST_SUBSCRIPTION_WHITELIST, parse_birthdate
 from models import ContentType
 
 import logging
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -576,40 +577,35 @@ async def update_content(
     if update_data.tags is not None:
         content.tags = update_data.tags
 
-    # 單字集編輯時：為沒有 distractors 的項目生成干擾選項
+    # 單字集編輯時：為沒有 distractors 的項目從同作業其他單字翻譯生成干擾選項
     if content.type == ContentType.VOCABULARY_SET and update_data.items is not None:
         db.flush()
-        items_needing_distractors = (
+        all_items = (
             db.query(ContentItem)
             .filter(ContentItem.content_id == content.id)
             .filter(ContentItem.translation.isnot(None))
             .filter(ContentItem.translation != "")
-            .filter(ContentItem.distractors.is_(None))
             .order_by(ContentItem.order_index)
             .all()
         )
+        items_needing_distractors = [
+            item for item in all_items if item.distractors is None
+        ]
         if items_needing_distractors:
-            from services.translation import translation_service
-
-            words_data_for_ai = [
-                {"word": item.text, "translation": item.translation}
-                for item in items_needing_distractors
-            ]
-            try:
-                all_distractors = await translation_service.batch_generate_distractors(
-                    words_data_for_ai, count=3
-                )
-                for i, item in enumerate(items_needing_distractors):
-                    if i < len(all_distractors):
-                        item.distractors = all_distractors[i]
-                logger.info(
-                    f"Generated distractors for {len(items_needing_distractors)} "
-                    f"vocabulary items in content {content.id}"
-                )
-            except Exception as e:
-                logger.error(
-                    f"Failed to generate distractors for content {content.id}: {e}"
-                )
+            all_translations = [item.translation for item in all_items]
+            for item in items_needing_distractors:
+                candidates = [
+                    t
+                    for t in all_translations
+                    if t.lower().strip() != item.translation.lower().strip()
+                ]
+                random.shuffle(candidates)
+                item.distractors = candidates[:3]
+            logger.info(
+                f"Generated word-set distractors for "
+                f"{len(items_needing_distractors)} "
+                f"vocabulary items in content {content.id}"
+            )
 
     db.commit()
     db.refresh(content)
