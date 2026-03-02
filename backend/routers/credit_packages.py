@@ -155,7 +155,7 @@ async def purchase_credit_package(
     # Audit trail
     start_time = time.time()
     idempotency_key = str(uuid.uuid4())
-    order_number = f"PKG_{datetime.now().strftime('%Y%m%d%H%M%S')}_{current_teacher.id}"
+    order_number = f"PKG_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}_{current_teacher.id}"
     client_host = request.client.host if request.client else None
     user_agent = request.headers.get("user-agent", "")
     request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
@@ -174,6 +174,30 @@ async def purchase_credit_package(
     )
 
     now = datetime.now(timezone.utc)
+
+    # Idempotency check: prevent duplicate charges within 60 seconds
+    recent_purchase = (
+        db.query(CreditPackage)
+        .filter(
+            CreditPackage.teacher_id == current_teacher.id,
+            CreditPackage.package_id == package_id,
+            CreditPackage.status == "active",
+            CreditPackage.purchased_at > now - timedelta(seconds=60),
+        )
+        .first()
+    )
+    if recent_purchase:
+        logger.warning(
+            f"Duplicate purchase detected: teacher={current_teacher.id} pkg={package_id}"
+        )
+        return CreditPackagePurchaseResponse(
+            success=True,
+            transaction_id=recent_purchase.payment_id,
+            message=f"此筆訂單已完成購買",
+            credit_package_id=recent_purchase.id,
+            points_total=recent_purchase.points_total,
+            expires_at=recent_purchase.expires_at.isoformat(),
+        )
 
     try:
         # Call TapPay
@@ -365,7 +389,11 @@ async def org_purchase_credit_package(
         )
 
     # Verify org_owner permission
-    org_id = uuid.UUID(purchase_request.organization_id)
+    try:
+        org_id = uuid.UUID(purchase_request.organization_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid organization_id format")
+
     organization = (
         db.query(Organization)
         .filter(Organization.id == org_id, Organization.is_active.is_(True))
@@ -395,10 +423,25 @@ async def org_purchase_credit_package(
     # Audit trail
     start_time = time.time()
     idempotency_key = str(uuid.uuid4())
-    order_number = f"ORG_PKG_{datetime.now().strftime('%Y%m%d%H%M%S')}_{org_id}"
+    order_number = (
+        f"ORG_PKG_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}_{org_id}"
+    )
     client_host = request.client.host if request.client else None
     user_agent = request.headers.get("user-agent", "")
     request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
+
+    # Log attempt
+    log_payment_attempt(
+        transaction_id=order_number,
+        user_id=current_teacher.id,
+        user_email=current_teacher.email,
+        amount=amount,
+        plan_name=f"org_credit_package:{package_id}",
+        prime_token=purchase_request.prime,
+        request_data=body_json,
+        user_agent=user_agent,
+        client_ip=client_host,
+    )
 
     now = datetime.now(timezone.utc)
 
@@ -423,6 +466,23 @@ async def org_purchase_credit_package(
             error_msg = TapPayService.parse_error_code(
                 gateway_response.get("status"), gateway_response.get("msg")
             )
+
+            execution_time = int((time.time() - start_time) * 1000)
+            log_payment_failure(
+                transaction_id=order_number,
+                user_id=current_teacher.id,
+                user_email=current_teacher.email,
+                amount=amount,
+                plan_name=f"org_credit_package:{package_id}",
+                error_stage="tappay_api",
+                error_code=str(gateway_response.get("status")),
+                error_message=error_msg,
+                request_data=body_json,
+                response_status=400,
+                response_body=gateway_response,
+                execution_time_ms=execution_time,
+            )
+
             raise HTTPException(status_code=400, detail=error_msg)
 
         # Payment successful - create org CreditPackage
@@ -444,6 +504,19 @@ async def org_purchase_credit_package(
         db.add(credit_package)
         db.commit()
 
+        # Log success
+        execution_time = int((time.time() - start_time) * 1000)
+        log_payment_success(
+            transaction_id=external_transaction_id,
+            user_id=current_teacher.id,
+            user_email=current_teacher.email,
+            amount=amount,
+            plan_name=f"org_credit_package:{package_id}",
+            tappay_response=gateway_response,
+            tappay_rec_trade_id=external_transaction_id,
+            execution_time_ms=execution_time,
+        )
+
         logger.info(
             f"Org credit package purchased: org={org_id} "
             f"pkg={package_id} points={points_total} expires={expires_at.date()}"
@@ -461,7 +534,22 @@ async def org_purchase_credit_package(
     except HTTPException:
         raise
     except Exception as e:
+        execution_time = int((time.time() - start_time) * 1000)
         logger.error(f"Org credit package purchase error: {e}")
+        log_payment_failure(
+            transaction_id=order_number,
+            user_id=current_teacher.id,
+            user_email=current_teacher.email,
+            amount=amount,
+            plan_name=f"org_credit_package:{package_id}",
+            error_stage="server_error",
+            error_code="INTERNAL_ERROR",
+            error_message=str(e),
+            request_data=body_json,
+            response_status=500,
+            response_body=None,
+            execution_time_ms=execution_time,
+        )
         raise HTTPException(status_code=500, detail="Purchase processing failed")
 
 
@@ -486,7 +574,11 @@ async def org_renew_credit_package(
         raise HTTPException(status_code=400, detail="Invalid request format")
 
     # Verify org_owner permission
-    org_id = uuid.UUID(renew_request.organization_id)
+    try:
+        org_id = uuid.UUID(renew_request.organization_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid organization_id format")
+
     organization = (
         db.query(Organization)
         .filter(Organization.id == org_id, Organization.is_active.is_(True))
@@ -516,7 +608,9 @@ async def org_renew_credit_package(
     points_total = pkg_config["points"] + pkg_config["bonus"]
 
     start_time = time.time()
-    order_number = f"ORG_RENEW_{datetime.now().strftime('%Y%m%d%H%M%S')}_{org_id}"
+    order_number = (
+        f"ORG_RENEW_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}_{org_id}"
+    )
     now = datetime.now(timezone.utc)
 
     try:

@@ -228,6 +228,7 @@ export default function TeacherSubscription() {
   const [analytics, setAnalytics] = useState<QuotaUsageAnalytics | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("plans");
 
   const { isAuthenticated } = useTeacherAuthStore();
   const subscriptionPlans = useMemo(() => getSubscriptionPlans(t), [t]);
@@ -435,7 +436,7 @@ export default function TeacherSubscription() {
           </p>
         </div>
 
-        <Tabs defaultValue="plans" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-6 h-auto p-1 bg-gray-100">
             <TabsTrigger
               value="plans"
@@ -591,10 +592,7 @@ export default function TeacherSubscription() {
                         <div className="flex-shrink-0">
                           <Button
                             onClick={() => {
-                              const tabsTrigger = document.querySelector(
-                                '[value="plans"]',
-                              ) as HTMLElement;
-                              tabsTrigger?.click();
+                              setActiveTab("plans");
                             }}
                             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
                           >

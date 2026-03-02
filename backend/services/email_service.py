@@ -3,7 +3,7 @@
 import os
 import secrets
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -441,7 +441,7 @@ class EmailService:
             from config.plans import TRIAL_QUOTA, TRIAL_DAYS
             from models.credit_package import CreditPackage
 
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
 
             trial_package = CreditPackage(
                 teacher_id=teacher.id,
