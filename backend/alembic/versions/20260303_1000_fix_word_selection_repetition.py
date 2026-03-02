@@ -22,13 +22,9 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # DROP + CREATE because CREATE OR REPLACE is safer only when
-    # we're certain the signature hasn't changed across environments
-    op.execute("DROP FUNCTION IF EXISTS get_words_for_practice(INTEGER, INTEGER)")
-
     op.execute(
         """
-        CREATE FUNCTION get_words_for_practice(
+        CREATE OR REPLACE FUNCTION get_words_for_practice(
             p_student_assignment_id INTEGER,
             p_limit_count INTEGER DEFAULT 10
         ) RETURNS TABLE (
@@ -63,7 +59,7 @@ def upgrade() -> None:
                     ci.example_sentence_translation,
                     ci.audio_url,
                     ci.image_url,
-                    COALESCE(uwp.memory_strength, 0) as mem_strength,
+                    COALESCE(uwp.memory_strength, 0) as memory_strength,
                     -- Phase determines strict selection order:
                     --   1 = never practiced (always selected first)
                     --   2 = due for review   (selected second)
@@ -88,19 +84,19 @@ def upgrade() -> None:
                 c.example_sentence_translation,
                 c.audio_url,
                 c.image_url,
-                c.mem_strength as memory_strength,
+                c.memory_strength,
                 -- Priority score kept for API response compatibility
                 CASE c.phase
                     WHEN 1 THEN 100::DECIMAL
-                    WHEN 2 THEN (50 + (1 - c.mem_strength) * 50)::DECIMAL
-                    ELSE ((1 - c.mem_strength) * 30)::DECIMAL
+                    WHEN 2 THEN (50 + (1 - c.memory_strength) * 50)::DECIMAL
+                    ELSE ((1 - c.memory_strength) * 30)::DECIMAL
                 END as priority_score
             FROM categorized c
             -- KEY FIX (#379): Sort by phase ASC provides a hard guarantee:
             --   Phase 1 (unpracticed) ALWAYS before Phase 2 (due for review)
             --   Phase 2 ALWAYS before Phase 3 (not due yet)
             -- Within each phase, weakest words first, then random for variety
-            ORDER BY c.phase ASC, c.mem_strength ASC, RANDOM()
+            ORDER BY c.phase ASC, c.memory_strength ASC, RANDOM()
             LIMIT p_limit_count;
         END;
         $$ LANGUAGE plpgsql;
@@ -110,11 +106,9 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Restore previous version of the function
-    op.execute("DROP FUNCTION IF EXISTS get_words_for_practice(INTEGER, INTEGER)")
-
     op.execute(
         """
-        CREATE FUNCTION get_words_for_practice(
+        CREATE OR REPLACE FUNCTION get_words_for_practice(
             p_student_assignment_id INTEGER,
             p_limit_count INTEGER DEFAULT 10
         ) RETURNS TABLE (
