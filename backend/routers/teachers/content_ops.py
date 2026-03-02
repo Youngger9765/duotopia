@@ -363,8 +363,12 @@ async def get_content_detail(
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
                 # 新的統一欄位格式（vocabulary_translation）
-                "vocabulary_translation": item.item_metadata.get("chinese_translation")
-                or item.translation
+                # 優先從 metadata 讀取 vocabulary_translation，再 fallback 到舊欄位 (#366)
+                "vocabulary_translation": (
+                    item.item_metadata.get("vocabulary_translation")
+                    or item.item_metadata.get("chinese_translation")
+                    or item.translation
+                )
                 if item.item_metadata
                 else item.translation,
                 "vocabulary_translation_lang": item.item_metadata.get(
@@ -502,7 +506,11 @@ async def update_content(
                     metadata["english_definition"] = item_data["english_definition"]
                 if "selectedLanguage" in item_data:
                     metadata["selected_language"] = item_data["selectedLanguage"]
-                # 處理 vocabulary_translation_lang 欄位
+                # 處理統一翻譯欄位 vocabulary_translation (#366)
+                if "vocabulary_translation" in item_data:
+                    metadata["vocabulary_translation"] = item_data[
+                        "vocabulary_translation"
+                    ]
                 if "vocabulary_translation_lang" in item_data:
                     metadata["vocabulary_translation_lang"] = item_data[
                         "vocabulary_translation_lang"
@@ -636,8 +644,12 @@ async def update_content(
                 if item.item_metadata
                 else "chinese",  # 選擇的語言
                 # 新的統一欄位格式（vocabulary_translation）
-                "vocabulary_translation": item.item_metadata.get("chinese_translation")
-                or item.translation
+                # 優先從 metadata 讀取 vocabulary_translation，再 fallback 到舊欄位 (#366)
+                "vocabulary_translation": (
+                    item.item_metadata.get("vocabulary_translation")
+                    or item.item_metadata.get("chinese_translation")
+                    or item.translation
+                )
                 if item.item_metadata
                 else item.translation,
                 "vocabulary_translation_lang": item.item_metadata.get(
