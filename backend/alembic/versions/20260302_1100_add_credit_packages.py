@@ -17,7 +17,8 @@ depends_on = None
 
 def upgrade() -> None:
     # 1. Create credit_packages table (idempotent)
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS credit_packages (
             id SERIAL PRIMARY KEY,
             teacher_id INTEGER REFERENCES teachers(id) ON DELETE CASCADE,
@@ -34,7 +35,8 @@ def upgrade() -> None:
             created_at TIMESTAMPTZ DEFAULT NOW(),
             updated_at TIMESTAMPTZ
         )
-    """)
+    """
+    )
 
     # 2. Create indexes (idempotent)
     op.execute(
@@ -56,7 +58,8 @@ def upgrade() -> None:
 
     # 3. Migrate existing Free Trial SubscriptionPeriods to CreditPackages
     # Only migrate active Free Trial periods that haven't been migrated yet
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO credit_packages (
             teacher_id, package_id, points_total, points_used, price_paid,
             purchased_at, expires_at, status, source, created_at
@@ -80,10 +83,12 @@ def upgrade() -> None:
               WHERE cp.teacher_id = sp.teacher_id
                 AND cp.source = 'trial_bonus'
           )
-    """)
+    """
+    )
 
     # 4. Mark migrated Free Trial SubscriptionPeriods
-    op.execute("""
+    op.execute(
+        """
         UPDATE subscription_periods
         SET status = 'migrated'
         WHERE plan_name = 'Free Trial'
@@ -92,17 +97,21 @@ def upgrade() -> None:
               SELECT teacher_id FROM credit_packages
               WHERE source = 'trial_bonus'
           )
-    """)
+    """
+    )
 
     # 5. Make point_usage_logs.subscription_period_id nullable
     # (credit-package-only users won't have a subscription period)
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE point_usage_logs
         ALTER COLUMN subscription_period_id DROP NOT NULL
-    """)
+    """
+    )
 
     # 6. Add credit_package_id to point_usage_logs for tracking
-    op.execute("""
+    op.execute(
+        """
         DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns
                           WHERE table_name = 'point_usage_logs'
@@ -112,7 +121,8 @@ def upgrade() -> None:
                 REFERENCES credit_packages(id) ON DELETE SET NULL;
             END IF;
         END $$;
-    """)
+    """
+    )
     op.execute(
         "CREATE INDEX IF NOT EXISTS ix_point_usage_logs_credit_package_id "
         "ON point_usage_logs (credit_package_id)"
@@ -121,16 +131,20 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Reverse: restore migrated Free Trial periods
-    op.execute("""
+    op.execute(
+        """
         UPDATE subscription_periods
         SET status = 'active'
         WHERE plan_name = 'Free Trial'
           AND status = 'migrated'
-    """)
+    """
+    )
 
     # Remove migrated trial bonus credit packages
-    op.execute("""
+    op.execute(
+        """
         DELETE FROM credit_packages WHERE source = 'trial_bonus'
-    """)
+    """
+    )
 
     op.execute("DROP TABLE IF EXISTS credit_packages")
