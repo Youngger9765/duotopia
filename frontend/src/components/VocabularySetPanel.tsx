@@ -3654,7 +3654,11 @@ export default function VocabularySetPanel({
                       vocabulary_translation: vocabularyTranslation,
                       vocabulary_translation_lang: wordLang,
                       // 向後相容欄位（讓學生 API 能讀到 ContentItem.translation）
-                      definition: vocabularyTranslation,
+                      // definition 只存中文翻譯，避免其他語言被誤存為 chinese_translation (#366)
+                      definition:
+                        wordLang === "chinese"
+                          ? vocabularyTranslation
+                          : row.definition || "",
                       // 英文釋義向後相容
                       english_definition:
                         wordLang === "english"
