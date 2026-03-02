@@ -45,16 +45,16 @@ class CreditPackage(Base):
     )
 
     # Package info
-    package_id = Column(
-        String, nullable=False
-    )  # "pkg-1000", "pkg-5000", "trial-bonus"
+    package_id = Column(String, nullable=False)  # "pkg-1000", "pkg-5000", "trial-bonus"
     points_total = Column(Integer, nullable=False)  # includes bonus (5000+200=5200)
     points_used = Column(Integer, nullable=False, default=0)
     price_paid = Column(Integer, nullable=False)  # TWD, 0 for trial
 
     # Dates
     purchased_at = Column(DateTime(timezone=True), nullable=False)
-    expires_at = Column(DateTime(timezone=True), nullable=False)  # purchased_at + 1 year
+    expires_at = Column(
+        DateTime(timezone=True), nullable=False
+    )  # purchased_at + 1 year
 
     # Status
     status = Column(
@@ -82,7 +82,11 @@ class CreditPackage(Base):
         return max(0, self.points_total - self.points_used)
 
     def __repr__(self):
-        owner = f"teacher={self.teacher_id}" if self.teacher_id else f"org={self.organization_id}"
+        owner = (
+            f"teacher={self.teacher_id}"
+            if self.teacher_id
+            else f"org={self.organization_id}"
+        )
         return (
             f"<CreditPackage {owner} "
             f"pkg={self.package_id} remaining={self.points_remaining}/{self.points_total}>"

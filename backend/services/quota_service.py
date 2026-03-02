@@ -61,7 +61,9 @@ class QuotaService:
         return seconds
 
     @staticmethod
-    def _get_active_credit_packages(teacher: Teacher, db: Session) -> List[CreditPackage]:
+    def _get_active_credit_packages(
+        teacher: Teacher, db: Session
+    ) -> List[CreditPackage]:
         """Get active, non-expired credit packages ordered by earliest expiry"""
         now = datetime.now(timezone.utc)
         return (
@@ -92,7 +94,9 @@ class QuotaService:
         return remaining
 
     @staticmethod
-    def check_quota(teacher: Teacher, required_seconds: int, db: Session = None) -> bool:
+    def check_quota(
+        teacher: Teacher, required_seconds: int, db: Session = None
+    ) -> bool:
         """
         檢查配額是否足夠（訂閱 + 點數包加總）
 

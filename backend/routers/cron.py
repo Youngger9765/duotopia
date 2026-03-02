@@ -1198,7 +1198,9 @@ async def expire_credit_packages_cron(
 
         db.commit()
 
-        logger.info(f"Credit package expiry cron completed: {expired_count} packages expired")
+        logger.info(
+            f"Credit package expiry cron completed: {expired_count} packages expired"
+        )
 
         return {
             "success": True,

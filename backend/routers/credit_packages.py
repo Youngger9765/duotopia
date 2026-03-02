@@ -24,7 +24,11 @@ from models import (
 )
 from routers.teachers import get_current_teacher
 from services.tappay_service import TapPayService
-from config.plans import CREDIT_PACKAGES, ORG_ALLOWED_PACKAGES, CREDIT_PACKAGE_VALIDITY_DAYS
+from config.plans import (
+    CREDIT_PACKAGES,
+    ORG_ALLOWED_PACKAGES,
+    CREDIT_PACKAGE_VALIDITY_DAYS,
+)
 from utils.bigquery_logger import (
     log_payment_attempt,
     log_payment_success,
@@ -128,9 +132,7 @@ async def purchase_credit_package(
     """Purchase a credit package (individual teacher)"""
 
     if not ENABLE_PAYMENT:
-        return CreditPackagePurchaseResponse(
-            success=False, message="付款功能尚未開放，敬請期待！"
-        )
+        return CreditPackagePurchaseResponse(success=False, message="付款功能尚未開放，敬請期待！")
 
     # Parse request
     try:
@@ -179,7 +181,10 @@ async def purchase_credit_package(
         gateway_response = tappay_service.process_payment(
             prime=purchase_request.prime,
             amount=amount,
-            details={"item_name": f"Credit Package: {package_id}", "type": "credit_package"},
+            details={
+                "item_name": f"Credit Package: {package_id}",
+                "type": "credit_package",
+            },
             cardholder=purchase_request.cardholder
             or {"name": current_teacher.name, "email": current_teacher.email},
             order_number=order_number,
@@ -340,9 +345,7 @@ async def org_purchase_credit_package(
     """Purchase a credit package for an organization (org_owner only, pkg-20000 only)"""
 
     if not ENABLE_PAYMENT:
-        return CreditPackagePurchaseResponse(
-            success=False, message="付款功能尚未開放，敬請期待！"
-        )
+        return CreditPackagePurchaseResponse(success=False, message="付款功能尚未開放，敬請期待！")
 
     # Parse request
     try:
@@ -381,7 +384,9 @@ async def org_purchase_credit_package(
         .first()
     )
     if not membership or membership.role != "org_owner":
-        raise HTTPException(status_code=403, detail="Only org_owner can purchase credit packages")
+        raise HTTPException(
+            status_code=403, detail="Only org_owner can purchase credit packages"
+        )
 
     pkg_config = CREDIT_PACKAGES[package_id]
     amount = pkg_config["price"]
@@ -469,9 +474,7 @@ async def org_renew_credit_package(
     """Renew org credit package - extends expiry and adds points to existing package"""
 
     if not ENABLE_PAYMENT:
-        return CreditPackagePurchaseResponse(
-            success=False, message="付款功能尚未開放，敬請期待！"
-        )
+        return CreditPackagePurchaseResponse(success=False, message="付款功能尚未開放，敬請期待！")
 
     # Parse request
     try:
@@ -502,7 +505,9 @@ async def org_renew_credit_package(
         .first()
     )
     if not membership or membership.role != "org_owner":
-        raise HTTPException(status_code=403, detail="Only org_owner can renew credit packages")
+        raise HTTPException(
+            status_code=403, detail="Only org_owner can renew credit packages"
+        )
 
     # Use pkg-20000 for org renewal
     package_id = "pkg-20000"

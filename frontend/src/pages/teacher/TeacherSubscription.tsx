@@ -776,15 +776,11 @@ export default function TeacherSubscription() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
                       <h3 className="text-xl font-semibold">
-                        {t(
-                          "teacherSubscription.creditPackages.creditOnly",
-                        )}
+                        {t("teacherSubscription.creditPackages.creditOnly")}
                       </h3>
                       <Badge className="bg-blue-100 text-blue-700">
                         <Package className="w-3 h-3 mr-1" />
-                        {t(
-                          "teacherSubscription.creditPackages.active",
-                        )}
+                        {t("teacherSubscription.creditPackages.active")}
                       </Badge>
                     </div>
                     <Separator />
@@ -817,9 +813,7 @@ export default function TeacherSubscription() {
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
                           {subscription.quota_used || 0} /{" "}
-                          {(
-                            subscription.quota_total || 0
-                          ).toLocaleString()}{" "}
+                          {(subscription.quota_total || 0).toLocaleString()}{" "}
                           {t("teacherSubscription.labels.points")}
                         </p>
                       </div>
@@ -901,7 +895,9 @@ export default function TeacherSubscription() {
                               <Badge
                                 variant={isExpired ? "secondary" : "default"}
                                 className={
-                                  isExpired ? "bg-gray-200" : "bg-green-100 text-green-700"
+                                  isExpired
+                                    ? "bg-gray-200"
+                                    : "bg-green-100 text-green-700"
                                 }
                               >
                                 {isExpired

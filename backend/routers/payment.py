@@ -964,7 +964,9 @@ async def get_subscription_status(
                 "points_used": pkg.points_used,
                 "points_remaining": pkg.points_remaining,
                 "price_paid": pkg.price_paid,
-                "purchased_at": pkg.purchased_at.isoformat() if pkg.purchased_at else None,
+                "purchased_at": pkg.purchased_at.isoformat()
+                if pkg.purchased_at
+                else None,
                 "expires_at": pkg.expires_at.isoformat() if pkg.expires_at else None,
                 "status": pkg.status,
                 "source": pkg.source,

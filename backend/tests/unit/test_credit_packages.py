@@ -155,7 +155,9 @@ class TestWaterfallDeduction:
         pkg.points_used = points_used
         pkg.points_remaining = max(0, points_total - points_used)
         pkg.status = "active"
-        pkg.expires_at = expires_at or (datetime.now(timezone.utc) + timedelta(days=300))
+        pkg.expires_at = expires_at or (
+            datetime.now(timezone.utc) + timedelta(days=300)
+        )
         return pkg
 
     def test_deduct_from_subscription_only(self):
