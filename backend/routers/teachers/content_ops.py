@@ -507,13 +507,6 @@ async def update_content(
         # 創建新的 ContentItem
         for idx, item_data in enumerate(update_data.items):
             if isinstance(item_data, dict):
-                # DEBUG: 記錄前端傳來的 item_data (#366 debug)
-                logger.info(
-                    f"[#366 DEBUG] item[{idx}] keys={list(item_data.keys())}, "
-                    f"has_vt={'vocabulary_translation' in item_data}, "
-                    f"vt={item_data.get('vocabulary_translation', 'MISSING')!r}, "
-                    f"vt_lang={item_data.get('vocabulary_translation_lang', 'MISSING')!r}"
-                )
                 # Store additional fields in item_metadata
                 metadata = {}
                 if "options" in item_data:
@@ -568,9 +561,6 @@ async def update_content(
                 # 儲存完整的 parts_of_speech 陣列到 metadata
                 if "parts_of_speech" in item_data:
                     metadata["parts_of_speech"] = item_data["parts_of_speech"]
-
-                # DEBUG: 記錄最終的 metadata (#366 debug)
-                logger.info(f"[#366 DEBUG] item[{idx}] final metadata={metadata}")
 
                 # 根據前端傳來的資料決定存儲到 translation 欄位的內容
                 # 優先使用 definition (中文翻譯)，如果沒有則使用 translation
