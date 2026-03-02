@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RecursiveTreeAccordion } from "./RecursiveTreeAccordion";
 import { programTreeConfig } from "./programTreeConfig";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
@@ -200,6 +200,8 @@ export function ProgramTreeView({
     lesson: ProgramTreeLesson | null;
     programId: number | null;
   }>({ open: false, lesson: null, programId: null });
+  const [isSavingLesson, setIsSavingLesson] = useState(false);
+  const savingLessonRef = useRef(false);
 
   // Notify parent of changes (one-way: child -> parent)
   // Note: We do NOT sync externalPrograms back to avoid infinite loop
@@ -1206,6 +1208,7 @@ export function ProgramTreeView({
           <DialogFooter>
             <Button
               variant="outline"
+              disabled={isSavingLesson}
               onClick={() =>
                 setLessonEditDialog({
                   open: false,
@@ -1217,10 +1220,14 @@ export function ProgramTreeView({
               取消
             </Button>
             <Button
+              disabled={isSavingLesson}
               onClick={async () => {
+                if (savingLessonRef.current) return;
                 if (!lessonEditDialog.lesson || !lessonEditDialog.programId)
                   return;
 
+                savingLessonRef.current = true;
+                setIsSavingLesson(true);
                 try {
                   if (lessonEditDialog.lesson.id) {
                     // Update existing lesson
@@ -1290,10 +1297,17 @@ export function ProgramTreeView({
                       ? "更新課程失敗"
                       : "建立課程失敗",
                   );
+                } finally {
+                  savingLessonRef.current = false;
+                  setIsSavingLesson(false);
                 }
               }}
             >
-              {lessonEditDialog.lesson?.id ? "儲存" : "建立"}
+              {isSavingLesson
+                ? "處理中..."
+                : lessonEditDialog.lesson?.id
+                  ? "儲存"
+                  : "建立"}
             </Button>
           </DialogFooter>
         </DialogContent>
