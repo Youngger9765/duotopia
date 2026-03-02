@@ -911,16 +911,28 @@ class ApiClient {
       text: string;
       translation?: string;
       definition?: string;
-      english_definition?: string;
-      selectedLanguage?: string;
       audio_url?: string;
-      has_student_progress?: boolean; // 🔥 是否有學生進度
+      has_student_progress?: boolean;
       distractors?: string[];
       item_metadata?: Record<string, unknown>;
       order_index?: number;
       content_id?: number;
       created_at?: string;
       updated_at?: string;
+      // 統一翻譯欄位 (#366)
+      vocabulary_translation?: string;
+      vocabulary_translation_lang?: string;
+      parts_of_speech?: string[];
+      // 向後相容（ReadingAssessmentPanel 仍使用）
+      english_definition?: string;
+      selectedLanguage?: string;
+      selectedWordLanguage?: string;
+      part_of_speech?: string;
+      // 例句相關
+      example_sentence?: string;
+      example_sentence_translation?: string;
+      example_sentence_translation_lang?: string;
+      image_url?: string;
     }>;
     audio_urls?: string[];
     type?: string;
@@ -963,15 +975,23 @@ class ApiClient {
         text: string;
         translation?: string;
         definition?: string;
+        audio_url?: string;
+        // 統一翻譯欄位 (#366)
+        vocabulary_translation?: string;
+        vocabulary_translation_lang?: string;
+        parts_of_speech?: string[];
+        // 向後相容（ReadingAssessmentPanel 仍使用）
         english_definition?: string;
         selectedLanguage?: string;
-        audio_url?: string;
-        // Explicit optional fields for backend compatibility
+        // 其他欄位
         options?: Array<unknown>;
         correct_answer?: unknown;
         question_type?: string;
         example_sentence?: string;
         example_sentence_translation?: string;
+        example_sentence_translation_lang?: string;
+        image_url?: string;
+        distractors?: string[];
       }>;
       target_wpm?: number;
       target_accuracy?: number;

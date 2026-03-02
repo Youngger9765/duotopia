@@ -1644,25 +1644,26 @@ export default function VocabularySetPanel({
           (
             item: {
               text?: string;
-              translation?: string;
               definition?: string;
-              english_definition?: string;
-              japanese_translation?: string;
-              korean_translation?: string;
               audio_url?: string;
               image_url?: string;
-              selectedWordLanguage?: WordTranslationLanguage;
-              selectedSentenceLanguage?: SentenceTranslationLanguage;
               example_sentence?: string;
               example_sentence_translation?: string;
-              example_sentence_japanese?: string;
-              example_sentence_korean?: string;
               parts_of_speech?: string[];
               distractors?: string[];
-              // 新的統一欄位
+              // 統一翻譯欄位（canonical）
               vocabulary_translation?: string;
               vocabulary_translation_lang?: WordTranslationLanguage;
               example_sentence_translation_lang?: SentenceTranslationLanguage;
+              // 向後相容（ReadingAssessmentPanel 仍使用，VocabularySetPanel 不讀取）
+              english_definition?: string;
+              selectedWordLanguage?: WordTranslationLanguage;
+              translation?: string;
+              japanese_translation?: string;
+              korean_translation?: string;
+              example_sentence_japanese?: string;
+              example_sentence_korean?: string;
+              selectedSentenceLanguage?: SentenceTranslationLanguage;
             },
             index: number,
           ) => {
@@ -1679,22 +1680,21 @@ export default function VocabularySetPanel({
             ) {
               // 使用新的統一欄位格式
               selectedWordLanguage = item.vocabulary_translation_lang;
-              if (item.vocabulary_translation_lang === "chinese") {
+              // 永遠先載入中文翻譯，避免切換其他語言後中文遺失 (#366)
+              definition = item.definition || "";
+              // 再把 vocabulary_translation 放到對應語言欄位
+              if (selectedWordLanguage === "chinese") {
                 definition = item.vocabulary_translation;
-              } else if (item.vocabulary_translation_lang === "english") {
+              } else if (selectedWordLanguage === "english") {
                 translation = item.vocabulary_translation;
-              } else if (item.vocabulary_translation_lang === "japanese") {
+              } else if (selectedWordLanguage === "japanese") {
                 japanese_translation = item.vocabulary_translation;
-              } else if (item.vocabulary_translation_lang === "korean") {
+              } else if (selectedWordLanguage === "korean") {
                 korean_translation = item.vocabulary_translation;
               }
             } else {
-              // 向後相容：使用舊的欄位格式
+              // Fallback：vocabulary_translation 不存在時，從 definition 讀取中文
               definition = item.definition || "";
-              translation = item.english_definition || "";
-              japanese_translation = item.japanese_translation || "";
-              korean_translation = item.korean_translation || "";
-              selectedWordLanguage = item.selectedWordLanguage || "chinese";
             }
 
             // 處理例句翻譯：優先使用新的統一欄位
@@ -1751,6 +1751,12 @@ export default function VocabularySetPanel({
           },
         );
         setRows(convertedRows);
+
+        // 從既有資料初始化翻譯語言，避免儲存時被預設的 "chinese" 覆蓋（#366）
+        const firstLang = convertedRows[0]?.selectedWordLanguage;
+        if (firstLang) {
+          setLastSelectedWordLang(firstLang);
+        }
       }
     } catch (error) {
       console.error("Failed to load content:", error);
@@ -3648,12 +3654,11 @@ export default function VocabularySetPanel({
                       vocabulary_translation: vocabularyTranslation,
                       vocabulary_translation_lang: wordLang,
                       // 向後相容欄位（讓學生 API 能讀到 ContentItem.translation）
-                      definition: vocabularyTranslation,
-                      // 英文釋義向後相容
-                      english_definition:
-                        wordLang === "english"
+                      // definition 只存中文翻譯，避免其他語言被誤存為 chinese_translation (#366)
+                      definition:
+                        wordLang === "chinese"
                           ? vocabularyTranslation
-                          : row.translation || "",
+                          : row.definition || "",
                       audio_url: row.audioUrl || row.audio_url || "",
                       image_url: row.imageUrl || "",
                       example_sentence: row.example_sentence || "",

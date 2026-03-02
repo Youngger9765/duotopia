@@ -103,17 +103,38 @@ async def generate_sentences(
 ):
     """AI 生成例句"""
     try:
-        # 如果有 lesson_id，查詢 Lesson 取得 description 作為 unit_context
+        # 如果有 lesson_id，查詢 Lesson 與 Program 取得完整教學情境
         unit_context = None
+        lesson_name = None
+        program_context = None
         if request.lesson_id:
-            lesson = db.query(Lesson).filter(Lesson.id == request.lesson_id).first()
-            if lesson and lesson.description:
-                unit_context = lesson.description
+            lesson = (
+                db.query(Lesson)
+                .options(joinedload(Lesson.program))
+                .filter(Lesson.id == request.lesson_id)
+                .first()
+            )
+            if lesson:
+                lesson_name = lesson.name
+                if lesson.description:
+                    unit_context = lesson.description
+                if lesson.program:
+                    parts = []
+                    if lesson.program.name:
+                        parts.append(lesson.program.name)
+                    if lesson.program.description:
+                        parts.append(lesson.program.description)
+                    if lesson.program.level:
+                        parts.append(f"CEFR {lesson.program.level.value}")
+                    if parts:
+                        program_context = " — ".join(parts)
 
         sentences = await translation_service.generate_sentences(
             words=request.words,
             definitions=request.definitions,
             unit_context=unit_context,
+            lesson_name=lesson_name,
+            program_context=program_context,
             level=request.level,
             prompt=request.prompt,
             translate_to=request.translate_to,

@@ -124,10 +124,12 @@ interface ContentDetail {
     translation?: string;
     audio_url?: string;
     definition: string;
-    english_definition?: string;
-    selectedLanguage?: "chinese" | "japanese" | "korean";
     has_student_progress?: boolean;
     distractors?: string[];
+    // 統一翻譯欄位 (#366)
+    vocabulary_translation?: string;
+    vocabulary_translation_lang?: string;
+    parts_of_speech?: string[];
   }>;
   type?: string;
   audio_urls?: string[];
