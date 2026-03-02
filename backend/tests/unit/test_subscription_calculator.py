@@ -122,9 +122,7 @@ class TestSubscriptionCalculator:
             current_end_date, "Tutor Teachers"
         )
 
-        assert (
-            new_end_date.date() == datetime(2026, 1, 15, tzinfo=timezone.utc).date()
-        )
+        assert new_end_date.date() == datetime(2026, 1, 15, tzinfo=timezone.utc).date()
         assert amount == 299
 
     def test_renewal_month_end_boundary(self):
@@ -134,9 +132,7 @@ class TestSubscriptionCalculator:
             current_end_date, "Tutor Teachers"
         )
 
-        assert (
-            new_end_date.date() == datetime(2025, 2, 28, tzinfo=timezone.utc).date()
-        )
+        assert new_end_date.date() == datetime(2025, 2, 28, tzinfo=timezone.utc).date()
         assert amount == 299
 
     def test_days_until_renewal(self):
