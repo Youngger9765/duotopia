@@ -83,31 +83,12 @@ class FrontendErrorLog(BaseModel):
 def check_billing_permission(teacher: Teacher, db: Session) -> None:
     """
     Check if teacher has permission to manage billing.
-    Only org_owner or personal type (no organization) can manage billing.
 
-    Raises HTTPException if permission denied.
+    All payment endpoints handle personal subscriptions, not organization billing.
+    Organization billing is managed via admin_subscriptions endpoints.
+    Therefore, all teachers (with or without org membership) can manage
+    their own personal subscriptions.
     """
-    # Check if teacher has organization relationship
-    teacher_org = (
-        db.query(TeacherOrganization)
-        .filter(
-            TeacherOrganization.teacher_id == teacher.id,
-            TeacherOrganization.is_active.is_(True),
-        )
-        .first()
-    )
-
-    # If teacher has organization, check if they are org_owner
-    if teacher_org:
-        if teacher_org.role != "org_owner":
-            raise HTTPException(
-                status_code=403,
-                detail="Only organization owner can manage billing for organization accounts",
-            )
-        # org_owner can manage billing
-        return
-
-    # Personal teacher (no organization) can manage their own billing
     return
 
 
