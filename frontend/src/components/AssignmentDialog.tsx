@@ -1798,8 +1798,21 @@ export function AssignmentDialog({
                                                               variant="outline"
                                                               className="px-1 py-0"
                                                             >
-                                                              {content.type}
+                                                              {getContentTypeLabel(
+                                                                content.type,
+                                                                t,
+                                                              )}
                                                             </Badge>
+                                                            {content.items_count && (
+                                                              <span>
+                                                                {
+                                                                  content.items_count
+                                                                }{" "}
+                                                                {t(
+                                                                  "dialogs.assignmentDialog.selectContent.items",
+                                                                )}
+                                                              </span>
+                                                            )}
                                                           </div>
                                                         </div>
                                                       </button>
