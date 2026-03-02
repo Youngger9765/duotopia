@@ -222,34 +222,36 @@ async def create_assignment(
             db.flush()
             content_items_copy_map[original_item.id] = item_copy.id
 
-    # word_selection 模式：為缺少干擾項的 items 自動從同作業其他單字翻譯生成
+    # word_selection 模式：為缺少干擾項的 items 從作業內所有 content 的單字翻譯生成
     if request.practice_mode == "word_selection":
-        for copy_content_id in content_copy_map.values():
-            copy_items = (
-                db.query(ContentItem)
-                .filter(ContentItem.content_id == copy_content_id)
-                .filter(ContentItem.translation.isnot(None))
-                .filter(ContentItem.translation != "")
-                .order_by(ContentItem.order_index)
-                .all()
+        # 收集作業內所有 content copies 的翻譯（跨 content）
+        all_copy_content_ids = list(content_copy_map.values())
+        all_items_in_assignment = (
+            db.query(ContentItem)
+            .filter(ContentItem.content_id.in_(all_copy_content_ids))
+            .filter(ContentItem.translation.isnot(None))
+            .filter(ContentItem.translation != "")
+            .order_by(ContentItem.order_index)
+            .all()
+        )
+        all_translations = [item.translation for item in all_items_in_assignment]
+
+        generated_count = 0
+        for item in all_items_in_assignment:
+            if not item.distractors:
+                candidates = [
+                    t
+                    for t in all_translations
+                    if t.lower().strip() != item.translation.lower().strip()
+                ]
+                random.shuffle(candidates)
+                item.distractors = candidates[:3]
+                generated_count += 1
+        if generated_count > 0:
+            logger.info(
+                f"Auto-generated cross-content distractors for "
+                f"{generated_count} items in assignment {assignment.id}"
             )
-            all_translations = [item.translation for item in copy_items]
-            generated_count = 0
-            for item in copy_items:
-                if not item.distractors:
-                    candidates = [
-                        t
-                        for t in all_translations
-                        if t.lower().strip() != item.translation.lower().strip()
-                    ]
-                    random.shuffle(candidates)
-                    item.distractors = candidates[:3]
-                    generated_count += 1
-            if generated_count > 0:
-                logger.info(
-                    f"Auto-generated word-set distractors for "
-                    f"{generated_count} items in content copy {copy_content_id}"
-                )
 
     # 建立 AssignmentContent 關聯（指向副本）
     for idx, original_content_id in enumerate(request.content_ids, 1):

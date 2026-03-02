@@ -23,7 +23,6 @@ from .utils import TEST_SUBSCRIPTION_WHITELIST, parse_birthdate
 from models import ContentType
 
 import logging
-import random
 
 logger = logging.getLogger(__name__)
 
@@ -628,33 +627,8 @@ async def update_content(
     if update_data.tags is not None:
         content.tags = update_data.tags
 
-    # 單字集編輯時：為沒有 distractors 的項目從同作業其他單字翻譯生成干擾選項
-    if content.type == ContentType.VOCABULARY_SET and update_data.items is not None:
-        db.flush()
-        all_items = (
-            db.query(ContentItem)
-            .filter(ContentItem.content_id == content.id)
-            .filter(ContentItem.translation.isnot(None))
-            .filter(ContentItem.translation != "")
-            .order_by(ContentItem.order_index)
-            .all()
-        )
-        items_needing_distractors = [item for item in all_items if not item.distractors]
-        if items_needing_distractors:
-            all_translations = [item.translation for item in all_items]
-            for item in items_needing_distractors:
-                candidates = [
-                    t
-                    for t in all_translations
-                    if t.lower().strip() != item.translation.lower().strip()
-                ]
-                random.shuffle(candidates)
-                item.distractors = candidates[:3]
-            logger.info(
-                f"Generated word-set distractors for "
-                f"{len(items_needing_distractors)} "
-                f"vocabulary items in content {content.id}"
-            )
+    # 干擾項不在 content 編輯時生成，而是在建立作業時跨 content 生成
+    # 見 crud.py create_assignment 中的 word_selection 區塊
 
     db.commit()
     db.refresh(content)
