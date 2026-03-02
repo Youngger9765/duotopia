@@ -41,6 +41,8 @@ def upgrade() -> None:
             JOIN word_selection_contents wsc ON wsc.content_id = ci.content_id
             WHERE ci.translation IS NOT NULL
               AND ci.translation != ''
+              -- NULL: never set; '[]': empty array;
+              -- 'null': JSON null keyword; '"null"': JSONB-serialised string
               AND (
                   ci.distractors IS NULL
                   OR ci.distractors::text = '[]'
