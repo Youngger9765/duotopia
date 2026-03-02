@@ -30,3 +30,18 @@ PLAN_QUOTAS = {
     PLAN_DEMO_UNLIMITED: 999999,
     PLAN_VIP: 0,  # VIP 由 Admin 自訂
 }
+
+# === 點數包定義 ===
+CREDIT_PACKAGES = {
+    "pkg-1000": {"points": 1000, "bonus": 0, "price": 180},
+    "pkg-2000": {"points": 2000, "bonus": 0, "price": 320},
+    "pkg-5000": {"points": 5000, "bonus": 200, "price": 700},
+    "pkg-10000": {"points": 10000, "bonus": 500, "price": 1200},
+    "pkg-20000": {"points": 20000, "bonus": 800, "price": 2000},
+}
+
+# 機構可購買的點數包
+ORG_ALLOWED_PACKAGES = ["pkg-20000"]
+
+# 點數包效期（天）
+CREDIT_PACKAGE_VALIDITY_DAYS = 365

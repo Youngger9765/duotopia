@@ -431,7 +431,9 @@
       "bonusPoints": "+{{count, number}} bonus pts",
       "unitCost": "NTD/pt",
       "discount": "Save {{percent}}%",
-      "validity": "Valid for 1 year"
+      "validity": "Valid for 1 year",
+      "purchaseSuccess": "Successfully purchased {{points}} point package! Transaction ID: {{transactionId}}",
+      "purchaseTitle": "Purchase {{points}} Point Package"
     },
     "payment": {
       "title": "Complete Payment",
@@ -3116,6 +3118,15 @@
       "schoolFeature2": "All Tutor Teachers features",
       "schoolFeature3": "Advanced classroom management",
       "schoolFeature4": "Batch assignment features"
+    },
+    "creditPackages": {
+      "title": "Credit Package Details",
+      "trialBonus": "Free Trial Bonus",
+      "purchased": "{{points}} Point Package",
+      "active": "Active",
+      "expired": "Expired",
+      "expiresAt": "Expires: {{date}}",
+      "creditOnly": "Credit Package Quota"
     }
   },
   "subscriptionCardManagement": {

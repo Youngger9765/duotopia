@@ -26,6 +26,9 @@ import {
   Settings,
   Users,
   FileText,
+  Gift,
+  ShoppingCart,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -54,6 +57,20 @@ import {
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { apiClient } from "@/lib/api";
 
+interface CreditPackageInfo {
+  id: number;
+  package_id: string;
+  points_total: number;
+  points_used: number;
+  points_remaining: number;
+  price_paid: number;
+  purchased_at: string | null;
+  expires_at: string | null;
+  status: string;
+  source: string;
+  is_expired: boolean;
+}
+
 interface SubscriptionInfo {
   status: string;
   plan: string | null;
@@ -65,6 +82,12 @@ interface SubscriptionInfo {
   quota_used?: number;
   quota_total?: number;
   quota_remaining?: number;
+  subscription_total?: number;
+  subscription_used?: number;
+  subscription_remaining?: number;
+  credit_packages_total?: number;
+  credit_packages_remaining?: number;
+  credit_packages?: CreditPackageInfo[];
 }
 
 interface SavedCardInfo {
@@ -197,12 +220,15 @@ export default function TeacherSubscription() {
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(
     null,
   );
+  const [selectedPointPackage, setSelectedPointPackage] =
+    useState<PointPackage | null>(null);
   const [savedCardInfo, setSavedCardInfo] = useState<SavedCardInfo | null>(
     null,
   );
   const [analytics, setAnalytics] = useState<QuotaUsageAnalytics | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("plans");
 
   const { isAuthenticated } = useTeacherAuthStore();
   const subscriptionPlans = useMemo(() => getSubscriptionPlans(t), [t]);
@@ -310,16 +336,30 @@ export default function TeacherSubscription() {
     setShowPaymentDialog(true);
   };
 
-  const handleSelectPointPackage = (_pkg: PointPackage) => {
-    toast.info(t("pricing.pointPackages.comingSoon"));
+  const handleSelectPointPackage = (pkg: PointPackage) => {
+    setSelectedPointPackage(pkg);
+    setSelectedPlan(null);
+    setShowPaymentDialog(true);
   };
 
   const handlePaymentSuccess = async (transactionId: string) => {
-    toast.success(
-      t("teacherSubscription.messages.subscriptionSuccess", { transactionId }),
-    );
+    if (selectedPointPackage) {
+      toast.success(
+        t("pricing.pointPackages.purchaseSuccess", {
+          points: selectedPointPackage.points.toLocaleString(),
+          transactionId,
+        }),
+      );
+    } else {
+      toast.success(
+        t("teacherSubscription.messages.subscriptionSuccess", {
+          transactionId,
+        }),
+      );
+    }
     setShowPaymentDialog(false);
     setSelectedPlan(null);
+    setSelectedPointPackage(null);
     await fetchSubscriptionData();
   };
 
@@ -396,7 +436,7 @@ export default function TeacherSubscription() {
           </p>
         </div>
 
-        <Tabs defaultValue="plans" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-6 h-auto p-1 bg-gray-100">
             <TabsTrigger
               value="plans"
@@ -552,10 +592,7 @@ export default function TeacherSubscription() {
                         <div className="flex-shrink-0">
                           <Button
                             onClick={() => {
-                              const tabsTrigger = document.querySelector(
-                                '[value="plans"]',
-                              ) as HTMLElement;
-                              tabsTrigger?.click();
+                              setActiveTab("plans");
                             }}
                             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
                           >
@@ -732,6 +769,54 @@ export default function TeacherSubscription() {
                       </div>
                     )}
                   </div>
+                ) : subscription &&
+                  (subscription.credit_packages_total ?? 0) > 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-semibold">
+                        {t("teacherSubscription.creditPackages.creditOnly")}
+                      </h3>
+                      <Badge className="bg-blue-100 text-blue-700">
+                        <Package className="w-3 h-3 mr-1" />
+                        {t("teacherSubscription.creditPackages.active")}
+                      </Badge>
+                    </div>
+                    <Separator />
+                    <div className="flex items-start gap-3">
+                      <Gauge className="w-5 h-5 text-blue-600 mt-1" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-600 mb-2">
+                          {t("teacherSubscription.labels.quotaUsage")}
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 bg-gray-200 rounded-full h-2">
+                            <div
+                              className="h-2 rounded-full transition-all bg-blue-500"
+                              style={{
+                                width: `${Math.min(100, ((subscription.quota_used || 0) / (subscription.quota_total || 1)) * 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <p className="font-semibold text-sm whitespace-nowrap">
+                            {Math.min(
+                              100,
+                              Math.round(
+                                ((subscription.quota_used || 0) /
+                                  (subscription.quota_total || 1)) *
+                                  100,
+                              ),
+                            )}
+                            %
+                          </p>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {subscription.quota_used || 0} /{" "}
+                          {(subscription.quota_total || 0).toLocaleString()}{" "}
+                          {t("teacherSubscription.labels.points")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <div className="text-center py-8">
                     <XCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -756,6 +841,111 @@ export default function TeacherSubscription() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Credit Package Details */}
+            {subscription?.credit_packages &&
+              subscription.credit_packages.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="w-5 h-5" />
+                      {t("teacherSubscription.creditPackages.title")}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {subscription.credit_packages.map((pkg) => {
+                        const usagePercent =
+                          pkg.points_total > 0
+                            ? Math.round(
+                                (pkg.points_used / pkg.points_total) * 100,
+                              )
+                            : 0;
+                        const isExpired =
+                          pkg.is_expired || pkg.status === "expired";
+
+                        return (
+                          <div
+                            key={pkg.id}
+                            className={`border rounded-lg p-4 ${isExpired ? "opacity-50 bg-gray-50" : "bg-white"}`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                {pkg.source === "trial_bonus" ? (
+                                  <Gift className="w-4 h-4 text-purple-500" />
+                                ) : (
+                                  <ShoppingCart className="w-4 h-4 text-blue-500" />
+                                )}
+                                <span className="font-medium text-sm">
+                                  {pkg.source === "trial_bonus"
+                                    ? t(
+                                        "teacherSubscription.creditPackages.trialBonus",
+                                      )
+                                    : t(
+                                        "teacherSubscription.creditPackages.purchased",
+                                        {
+                                          points:
+                                            pkg.points_total.toLocaleString(),
+                                        },
+                                      )}
+                                </span>
+                              </div>
+                              <Badge
+                                variant={isExpired ? "secondary" : "default"}
+                                className={
+                                  isExpired
+                                    ? "bg-gray-200"
+                                    : "bg-green-100 text-green-700"
+                                }
+                              >
+                                {isExpired
+                                  ? t(
+                                      "teacherSubscription.creditPackages.expired",
+                                    )
+                                  : t(
+                                      "teacherSubscription.creditPackages.active",
+                                    )}
+                              </Badge>
+                            </div>
+
+                            <div className="flex items-center gap-3 mb-1">
+                              <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                <div
+                                  className={`h-2 rounded-full transition-all ${isExpired ? "bg-gray-400" : "bg-blue-500"}`}
+                                  style={{
+                                    width: `${Math.min(100, usagePercent)}%`,
+                                  }}
+                                />
+                              </div>
+                              <span className="text-sm font-medium whitespace-nowrap">
+                                {pkg.points_used.toLocaleString()} /{" "}
+                                {pkg.points_total.toLocaleString()}{" "}
+                                {t("teacherSubscription.labels.points")}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <Clock className="w-3 h-3" />
+                              <span>
+                                {pkg.expires_at
+                                  ? t(
+                                      "teacherSubscription.creditPackages.expiresAt",
+                                      {
+                                        date: new Date(
+                                          pkg.expires_at,
+                                        ).toLocaleDateString("zh-TW"),
+                                      },
+                                    )
+                                  : ""}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
             <div data-card-management>
               <SubscriptionCardManagement />
@@ -829,13 +1019,30 @@ export default function TeacherSubscription() {
           <DialogHeader className="sr-only">
             <DialogTitle>{t("pricing.payment.title")}</DialogTitle>
             <DialogDescription>
-              {t("pricing.payment.selectedPlan", {
-                planName: selectedPlan?.name,
-              })}
+              {selectedPointPackage
+                ? t("pricing.pointPackages.purchaseTitle", {
+                    points: selectedPointPackage.points.toLocaleString(),
+                  })
+                : t("pricing.payment.selectedPlan", {
+                    planName: selectedPlan?.name,
+                  })}
             </DialogDescription>
           </DialogHeader>
 
-          {selectedPlan && (
+          {selectedPointPackage ? (
+            <TapPayPayment
+              amount={selectedPointPackage.price}
+              planName={`${selectedPointPackage.points.toLocaleString()} ${t("pricing.pointPackages.points")}`}
+              apiEndpoint="/api/credit-packages/purchase"
+              customPayload={{ package_id: selectedPointPackage.id }}
+              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentError={handlePaymentError}
+              onCancel={() => {
+                setShowPaymentDialog(false);
+                setSelectedPointPackage(null);
+              }}
+            />
+          ) : selectedPlan ? (
             <TapPayPayment
               amount={selectedPlan.monthlyPrice}
               planName={selectedPlan.name}
@@ -843,7 +1050,7 @@ export default function TeacherSubscription() {
               onPaymentError={handlePaymentError}
               onCancel={() => setShowPaymentDialog(false)}
             />
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
 

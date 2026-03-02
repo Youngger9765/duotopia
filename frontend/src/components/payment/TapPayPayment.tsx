@@ -18,6 +18,8 @@ interface TapPayPaymentProps {
   onSuccess?: () => void; // 用於卡片更新成功
   onClose?: () => void; // 用於關閉對話框
   isCardUpdate?: boolean; // 是否為卡片更新模式
+  apiEndpoint?: string; // Custom API endpoint (default: /api/payment/process)
+  customPayload?: Record<string, unknown>; // Extra fields to merge into request body
 }
 
 const TapPayPayment: React.FC<TapPayPaymentProps> = ({
@@ -28,6 +30,8 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
   onCancel,
   onSuccess,
   isCardUpdate = false,
+  apiEndpoint,
+  customPayload,
 }) => {
   const { t } = useTranslation();
   const [canSubmit, setCanSubmit] = useState(false);
@@ -250,18 +254,22 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
         const currentUser = getCurrentUser();
 
         // 決定使用哪個 API endpoint
-        const apiEndpoint = isCardUpdate
+        const finalEndpoint = isCardUpdate
           ? `${import.meta.env.VITE_API_URL}/api/payment/update-card`
-          : `${import.meta.env.VITE_API_URL}/api/payment/process`;
+          : apiEndpoint
+            ? `${import.meta.env.VITE_API_URL}${apiEndpoint}`
+            : `${import.meta.env.VITE_API_URL}/api/payment/process`;
+
+        const cardholderData = {
+          name: currentUser.name,
+          email: currentUser.email,
+          phone_number: currentUser.phone || "+886912345678",
+        };
 
         const requestBody = isCardUpdate
           ? {
               prime: prime,
-              cardholder: {
-                name: currentUser.name,
-                email: currentUser.email,
-                phone_number: currentUser.phone || "+886912345678",
-              },
+              cardholder: cardholderData,
             }
           : {
               prime: prime,
@@ -271,15 +279,12 @@ const TapPayPayment: React.FC<TapPayPaymentProps> = ({
                 item_name: `Duotopia ${planName}`,
                 item_price: amount,
               },
-              cardholder: {
-                name: currentUser.name,
-                email: currentUser.email,
-                phone_number: currentUser.phone || "+886912345678",
-              },
+              cardholder: cardholderData,
+              ...customPayload,
             };
 
         // Real TapPay payment processing or card update
-        const response = await fetch(apiEndpoint, {
+        const response = await fetch(finalEndpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
