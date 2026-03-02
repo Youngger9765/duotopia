@@ -79,6 +79,15 @@ function TeacherLayoutInner({
   // Get workspace context
   const { mode, selectedSchool } = useWorkspace();
 
+  // ✅ 切換 workspace mode 時，自動導向 dashboard（避免殘留前一模式的頁面）
+  const prevModeRef = useRef(mode);
+  useEffect(() => {
+    if (prevModeRef.current !== mode) {
+      prevModeRef.current = mode;
+      navigate("/teacher/dashboard");
+    }
+  }, [mode, navigate]);
+
   // Check if user has organization management role
   const hasOrgRole = useMemo(() => {
     const managementRoles = [
