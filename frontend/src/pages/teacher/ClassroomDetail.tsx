@@ -764,10 +764,7 @@ export default function ClassroomDetail({
     // 這裡不需要再做第二次 PUT，否則會用不完整的 editingContent.items
     // 覆蓋掉 vocabulary_translation 等欄位 (#366)
     const contentType = selectedContent.type?.toLowerCase();
-    if (
-      contentType === "vocabulary_set" ||
-      contentType === "sentence_making"
-    ) {
+    if (contentType === "vocabulary_set" || contentType === "sentence_making") {
       await refreshPrograms();
       closePanel();
       return;
