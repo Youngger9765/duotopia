@@ -101,7 +101,7 @@ def test_1_payment_creates_period_with_quota():
     測試 1: 付款創建訂閱週期並初始化配額
 
     Given: 老師沒有訂閱
-    When: 付款購買 Tutor Teachers (330元)
+    When: 付款購買 Tutor Teachers (299元)
     Then:
         - 創建 SubscriptionPeriod (status=active)
         - quota_total = 1800 秒
@@ -128,7 +128,7 @@ def test_1_payment_creates_period_with_quota():
         period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=Decimal("330"),
+            amount_paid=Decimal("299"),
             quota_total=1800,
             quota_used=0,
             start_date=now,
@@ -198,7 +198,7 @@ def test_2_quota_deduction_updates_period():
         period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=Decimal("330"),
+            amount_paid=Decimal("299"),
             quota_total=1800,
             quota_used=0,
             start_date=now,
@@ -301,7 +301,7 @@ def test_4_auto_renewal_resets_quota():
         old_period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=Decimal("330"),
+            amount_paid=Decimal("299"),
             quota_total=1800,
             quota_used=1500,  # 用了很多
             start_date=now - timedelta(days=30),
@@ -322,7 +322,7 @@ def test_4_auto_renewal_resets_quota():
         new_period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=Decimal("330"),
+            amount_paid=Decimal("299"),
             quota_total=1800,
             quota_used=0,  # 配額重置
             start_date=now + timedelta(days=1),
@@ -392,7 +392,7 @@ def test_5_check_quota_function():
         period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=Decimal("330"),
+            amount_paid=Decimal("299"),
             quota_total=1800,
             quota_used=1795,  # 只剩 5 秒
             start_date=now,
@@ -459,7 +459,7 @@ def test_6_multiple_periods_only_active_counts():
         expired_period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=Decimal("330"),
+            amount_paid=Decimal("299"),
             quota_total=1800,
             quota_used=1800,
             start_date=now - timedelta(days=60),
@@ -474,7 +474,7 @@ def test_6_multiple_periods_only_active_counts():
         active_period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="School Teachers",
-            amount_paid=Decimal("660"),
+            amount_paid=Decimal("599"),
             quota_total=4000,
             quota_used=100,
             start_date=now,
@@ -544,7 +544,7 @@ def test_7_quota_analytics_matches_period():
         period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=Decimal("330"),
+            amount_paid=Decimal("299"),
             quota_total=1800,
             quota_used=0,
             start_date=now,

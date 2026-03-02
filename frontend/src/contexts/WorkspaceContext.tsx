@@ -222,3 +222,12 @@ export const useWorkspace = (): WorkspaceContextState => {
 
   return context;
 };
+
+/**
+ * Safe version of useWorkspace that returns null when used outside WorkspaceProvider.
+ * Useful for shared components that may render in both teacher and organization contexts.
+ */
+export const useWorkspaceSafe = (): WorkspaceContextState | null => {
+  const context = useContext(WorkspaceContext);
+  return context === undefined ? null : context;
+};

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { apiClient } from "@/lib/api";
 import { logError } from "@/utils/errorLogger";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ export function CreateStudentDialog({
     phone: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleClose = () => {
     setFormData({
@@ -48,6 +49,8 @@ export function CreateStudentDialog({
   };
 
   const handleSubmit = async () => {
+    if (submittingRef.current) return;
+
     const trimmedName = formData.name.trim();
     if (!trimmedName) {
       toast.error("請輸入學生姓名");
@@ -69,6 +72,7 @@ export function CreateStudentDialog({
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       // 確保空字串被轉換為 undefined，避免 422 錯誤
@@ -111,6 +115,7 @@ export function CreateStudentDialog({
       logError("Failed to create student", error, { schoolId, formData });
       toast.error("建立學生失敗，請稍後再試");
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import TeacherLayout from "@/components/TeacherLayout";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
+import VocabularySetPanel from "@/components/VocabularySetPanel";
 import BatchGradingModal from "@/components/BatchGradingModal";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
@@ -123,9 +124,12 @@ interface ContentDetail {
     translation?: string;
     audio_url?: string;
     definition: string;
-    english_definition?: string;
-    selectedLanguage?: "chinese" | "japanese" | "korean";
     has_student_progress?: boolean;
+    distractors?: string[];
+    // 統一翻譯欄位 (#366)
+    vocabulary_translation?: string;
+    vocabulary_translation_lang?: string;
+    parts_of_speech?: string[];
   }>;
   type?: string;
   audio_urls?: string[];
@@ -1353,45 +1357,59 @@ export default function TeacherAssignmentDetailPage() {
                 </p>
               </DialogHeader>
               <div className="mt-4">
-                <ReadingAssessmentPanel
-                  content={{
-                    id: editingContentId,
-                    title: contentDetails[editingContentId].title || "",
-                  }}
-                  editingContent={contentDetails[editingContentId]}
-                  onUpdateContent={async () => {
-                    // 🔥 只更新本地狀態，不觸發保存
-                    // onUpdateContent 會在載入時自動觸發，所以不應該直接保存
-                    // 保存應該由用戶點擊「儲存」按鈕觸發
-                  }}
-                  onSave={async () => {
-                    // onSave 在 ReadingAssessmentPanel 內部會自動調用 handleEditContent
-                    // 關閉編輯對話框
+                {(() => {
+                  const contentType =
+                    contentDetails[editingContentId]?.type?.toUpperCase();
+                  const isVocabSet =
+                    contentType === "VOCABULARY_SET" ||
+                    contentType === "SENTENCE_MAKING";
+
+                  const handleEditSave = async () => {
                     const savedContentId = editingContentId;
                     setEditingContentId(null);
 
-                    // 🔥 重新載入內容詳情以更新題目區塊
                     if (savedContentId) {
-                      // 清除舊的內容詳情，強制重新載入
                       setContentDetails((prev) => {
                         const updated = { ...prev };
                         delete updated[savedContentId];
                         return updated;
                       });
-
-                      // 重新載入內容詳情（無論是否展開都會重新載入）
-                      await loadContentDetail(savedContentId, true); // 🔥 強制重載以獲取最新數據
-
-                      // 如果該內容已展開，確保展開狀態保持
-                      if (expandedContentId === savedContentId) {
-                        // 內容詳情已重新載入，組件會自動重新渲染
-                      }
+                      await loadContentDetail(savedContentId, true);
                     }
-                  }}
-                  lessonId={0} // 作業副本不需要 lessonId
-                  isCreating={false}
-                  isAssignmentCopy={true} // 🔥 標記為作業副本
-                />
+                  };
+
+                  if (isVocabSet) {
+                    return (
+                      <VocabularySetPanel
+                        content={{
+                          id: editingContentId,
+                          title: contentDetails[editingContentId].title || "",
+                        }}
+                        editingContent={contentDetails[editingContentId]}
+                        onUpdateContent={async () => {}}
+                        onSave={handleEditSave}
+                        lessonId={0}
+                        isCreating={false}
+                        isAssignmentCopy={true}
+                      />
+                    );
+                  }
+
+                  return (
+                    <ReadingAssessmentPanel
+                      content={{
+                        id: editingContentId,
+                        title: contentDetails[editingContentId].title || "",
+                      }}
+                      editingContent={contentDetails[editingContentId]}
+                      onUpdateContent={async () => {}}
+                      onSave={handleEditSave}
+                      lessonId={0}
+                      isCreating={false}
+                      isAssignmentCopy={true}
+                    />
+                  );
+                })()}
               </div>
               <DialogFooter>
                 <Button

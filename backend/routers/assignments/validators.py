@@ -17,6 +17,9 @@ class CreateAssignmentRequest(BaseModel):
     student_ids: List[int] = []  # 空陣列 = 全班
     due_date: Optional[datetime] = None
     start_date: Optional[datetime] = None
+    # 機構模式：傳遞機構/學校 ID 以供後端授權驗證
+    organization_id: Optional[str] = None
+    school_id: Optional[str] = None
     # 作答模式設定
     practice_mode: Optional[
         str

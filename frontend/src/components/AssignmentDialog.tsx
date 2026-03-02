@@ -62,7 +62,7 @@ import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspaceSafe } from "@/contexts/WorkspaceContext";
 
 interface Student {
   id: number;
@@ -115,6 +115,10 @@ interface AssignmentDialogProps {
   classroomId: number;
   students: Student[];
   onSuccess?: () => void;
+  /** Override organization context (for use outside WorkspaceProvider, e.g. org admin module) */
+  organizationId?: string;
+  /** Override school context (for use outside WorkspaceProvider, e.g. org admin module) */
+  schoolId?: string;
 }
 
 // =============================================================================
@@ -248,9 +252,24 @@ export function AssignmentDialog({
   classroomId,
   students,
   onSuccess,
+  organizationId: propOrganizationId,
+  schoolId: propSchoolId,
 }: AssignmentDialogProps) {
   const { t } = useTranslation();
-  const { mode, selectedSchool, selectedOrganization } = useWorkspace();
+  // useWorkspaceSafe 在 WorkspaceProvider 外（如機構管理模組）不會 throw，而是回傳 null
+  const workspace = useWorkspaceSafe();
+
+  // 支援 props 覆蓋 WorkspaceContext（用於機構管理模組）
+  const effectiveOrganizationId =
+    propOrganizationId || workspace?.selectedOrganization?.id || null;
+  const effectiveSchoolId =
+    propSchoolId || workspace?.selectedSchool?.id || null;
+  // 只要有 organizationId（不論來源），就視為機構模式
+  const isOrgMode =
+    (workspace?.mode === "organization" &&
+      workspace?.selectedOrganization !== null) ||
+    !!propOrganizationId;
+
   const [loading, setLoading] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [loadingClassroomPrograms, setLoadingClassroomPrograms] =
@@ -260,12 +279,12 @@ export function AssignmentDialog({
     {},
   );
   const [currentStep, setCurrentStep] = useState(1);
+  // 只在機構模式且有機構 ID 時顯示「機構教材」tab
+  const showOrgTab = isOrgMode && effectiveOrganizationId !== null;
+
   const [activeTab, setActiveTab] = useState<
     "template" | "classroom" | "organization"
-  >("template");
-
-  // 只在機構模式且選擇了機構時顯示「機構教材」tab
-  const showOrgTab = mode === "organization" && selectedOrganization !== null;
+  >(showOrgTab ? "organization" : "template");
 
   // 分別儲存公版和班級課程
   const [templatePrograms, setTemplatePrograms] = useState<Program[]>([]);
@@ -350,16 +369,16 @@ export function AssignmentDialog({
         show_image: true,
       });
       setCurrentStep(1);
-      setActiveTab("template");
+      setActiveTab(showOrgTab ? "organization" : "template");
     }
-  }, [open, classroomId, students]);
+  }, [open, classroomId, students, showOrgTab]);
 
   const loadQuotaInfo = async () => {
     try {
       // 根據工作區 context 決定查哪個配額
       const params = new URLSearchParams();
-      if (mode === "organization" && selectedOrganization) {
-        params.append("organization_id", selectedOrganization.id);
+      if (effectiveOrganizationId) {
+        params.append("organization_id", effectiveOrganizationId);
       }
       const url = `/api/teachers/subscription${params.toString() ? `?${params.toString()}` : ""}`;
 
@@ -397,8 +416,8 @@ export function AssignmentDialog({
       params.append("is_template", "true");
 
       console.log("[DEBUG] loadTemplatePrograms called with:", {
-        mode,
-        selectedSchool: selectedSchool?.id,
+        mode: workspace?.mode,
+        selectedSchool: workspace?.selectedSchool?.id,
         params: params.toString(),
         url: `/api/teachers/programs?${params.toString()}`,
       });
@@ -449,13 +468,14 @@ export function AssignmentDialog({
   };
 
   // 加載機構教材（機構層級的課程）
+  // 注意：機構 API 已回傳完整階層（lessons → contents → items），不需額外 lazy-load
   const loadOrgPrograms = async () => {
-    if (!selectedOrganization) return;
+    if (!effectiveOrganizationId) return;
 
     try {
       setLoadingOrgPrograms(true);
       const response = await apiClient.get<Program[]>(
-        `/api/organizations/${selectedOrganization.id}/programs`,
+        `/api/organizations/${effectiveOrganizationId}/programs`,
       );
       setOrgPrograms(response);
     } catch (error) {
@@ -474,11 +494,23 @@ export function AssignmentDialog({
       return; // Already loaded
     }
 
+    // 判斷是否為機構教材（org API 已回傳完整階層，理論上不需要再載入）
+    const isOrgProgram = orgPrograms.some((p: Program) => p.id === programId);
+
     try {
       setLoadingLessons((prev) => ({ ...prev, [programId]: true }));
-      const detail = await apiClient.get<Program>(
-        `/api/teachers/programs/${programId}`,
-      );
+
+      let detail: Program;
+      if (isOrgProgram && effectiveOrganizationId) {
+        // 使用機構 API 取得詳情（含 lessons → contents → items）
+        detail = await apiClient.get<Program>(
+          `/api/organizations/${effectiveOrganizationId}/programs/${programId}`,
+        );
+      } else {
+        detail = await apiClient.get<Program>(
+          `/api/teachers/programs/${programId}`,
+        );
+      }
 
       // Update the program with lessons in all lists
       const updatePrograms = (prev: Program[]) =>
@@ -500,15 +532,32 @@ export function AssignmentDialog({
   const loadLessonContents = async (lessonId: number) => {
     // Find the lesson and check if contents already loaded in any list
     let foundLesson: Lesson | undefined;
+    let isOrgLesson = false;
     allPrograms.forEach((program) => {
       const lesson = program.lessons?.find((l) => l.id === lessonId);
       if (lesson) {
         foundLesson = lesson;
+        if (orgPrograms.some((p: Program) => p.id === program.id)) {
+          isOrgLesson = true;
+        }
       }
     });
 
     if (foundLesson?.contents && foundLesson.contents.length > 0) {
       return; // Already loaded
+    }
+
+    // 機構教材的 contents 已在 loadOrgPrograms/loadProgramLessons 時載入
+    // 如果還是沒有，就用機構 API 重新取得整個 program
+    if (isOrgLesson && effectiveOrganizationId) {
+      // 找到此 lesson 所屬的 program，重新載入整個 program
+      const parentProgram = orgPrograms.find((p: Program) =>
+        p.lessons?.some((l) => l.id === lessonId),
+      );
+      if (parentProgram) {
+        await loadProgramLessons(parentProgram.id);
+        return;
+      }
     }
 
     try {
@@ -826,6 +875,11 @@ export function AssignmentDialog({
         show_translation: formData.show_translation,
         show_word: formData.show_word,
         show_image: formData.show_image,
+        // ===== 機構模式：傳遞機構/學校 ID 以供後端授權驗證 =====
+        ...(effectiveOrganizationId && {
+          organization_id: effectiveOrganizationId,
+        }),
+        ...(effectiveSchoolId && { school_id: effectiveSchoolId }),
       };
 
       const result = await apiClient.post<{ student_count: number }>(
@@ -904,7 +958,7 @@ export function AssignmentDialog({
     setExpandedPrograms(new Set());
     setExpandedLessons(new Set());
     setCurrentStep(1);
-    setActiveTab("template");
+    setActiveTab(showOrgTab ? "organization" : "template");
     onClose();
   };
 
@@ -1291,92 +1345,112 @@ export function AssignmentDialog({
                         <div className="space-y-2">
                           {templatePrograms.map((program) => (
                             <Card key={program.id} className="overflow-hidden">
-                              <button
-                                onClick={() => toggleProgram(program.id)}
-                                className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                              >
-                                <div className="flex items-center gap-2">
-                                  {loadingLessons[program.id] ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : expandedPrograms.has(program.id) ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                  )}
-                                  <Package className="h-4 w-4 text-blue-600" />
-                                  <span className="font-medium">
-                                    {program.name}
-                                  </span>
-                                  {program.level && (
-                                    <Badge variant="outline" className="ml-2">
-                                      {program.level}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm text-gray-500">
-                                    {t(
-                                      "dialogs.assignmentDialog.selectContent.units",
-                                      { count: program.lessons?.length || 0 },
+                              {program.lessons && program.lessons.length > 0 ? (
+                                <button
+                                  onClick={() => toggleProgram(program.id)}
+                                  className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {loadingLessons[program.id] ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : expandedPrograms.has(program.id) ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
                                     )}
-                                  </span>
-                                  {loadingLessons[program.id] && (
-                                    <span className="text-xs text-blue-600">
+                                    <Package className="h-4 w-4 text-blue-600" />
+                                    <span className="font-medium">
+                                      {program.name}
+                                    </span>
+                                    {program.level && (
+                                      <Badge variant="outline" className="ml-2">
+                                        {program.level}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-500">
                                       {t(
-                                        "dialogs.assignmentDialog.selectContent.loadingLabel",
+                                        "dialogs.assignmentDialog.selectContent.units",
+                                        { count: program.lessons.length },
                                       )}
                                     </span>
-                                  )}
+                                    {loadingLessons[program.id] && (
+                                      <span className="text-xs text-blue-600">
+                                        {t(
+                                          "dialogs.assignmentDialog.selectContent.loadingLabel",
+                                        )}
+                                      </span>
+                                    )}
+                                  </div>
+                                </button>
+                              ) : (
+                                <div className="w-full p-3 flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <Package className="h-4 w-4 text-gray-400" />
+                                    <span className="font-medium text-gray-500">
+                                      {program.name}
+                                    </span>
+                                    {program.level && (
+                                      <Badge variant="outline" className="ml-2">
+                                        {program.level}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <span className="text-sm text-gray-400">
+                                    {t(
+                                      "dialogs.assignmentDialog.selectContent.noUnits",
+                                    )}
+                                  </span>
                                 </div>
-                              </button>
+                              )}
 
                               {expandedPrograms.has(program.id) &&
                                 program.lessons && (
                                   <div className="border-t bg-gray-50">
                                     {program.lessons.map((lesson) => (
                                       <div key={lesson.id} className="ml-6">
-                                        <button
-                                          onClick={() =>
-                                            toggleLesson(lesson.id)
-                                          }
-                                          className="w-full p-2 flex items-center justify-between hover:bg-gray-100 transition-colors"
-                                        >
-                                          <div className="flex items-center gap-2">
-                                            {loadingLessons[lesson.id] ? (
-                                              <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : expandedLessons.has(
-                                                lesson.id,
-                                              ) ? (
-                                              <ChevronDown className="h-4 w-4" />
-                                            ) : (
-                                              <ChevronRight className="h-4 w-4" />
-                                            )}
-                                            <Layers className="h-4 w-4 text-green-600" />
-                                            <span className="text-sm">
-                                              {lesson.name}
-                                            </span>
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-xs text-gray-500">
-                                              {t(
-                                                "dialogs.assignmentDialog.selectContent.contents",
-                                                {
-                                                  count:
-                                                    lesson.contents?.length ||
-                                                    0,
-                                                },
+                                        {lesson.contents &&
+                                        lesson.contents.length > 0 ? (
+                                          <button
+                                            onClick={() =>
+                                              toggleLesson(lesson.id)
+                                            }
+                                            className="w-full p-2 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              {loadingLessons[lesson.id] ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                              ) : expandedLessons.has(
+                                                  lesson.id,
+                                                ) ? (
+                                                <ChevronDown className="h-4 w-4" />
+                                              ) : (
+                                                <ChevronRight className="h-4 w-4" />
                                               )}
-                                            </span>
-                                            {loadingLessons[lesson.id] && (
-                                              <span className="text-xs text-blue-600">
+                                              <Layers className="h-4 w-4 text-green-600" />
+                                              <span className="text-sm">
+                                                {lesson.name}
+                                              </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-xs text-gray-500">
                                                 {t(
-                                                  "dialogs.assignmentDialog.selectContent.loadingLabel",
+                                                  "dialogs.assignmentDialog.selectContent.contents",
+                                                  {
+                                                    count:
+                                                      lesson.contents.length,
+                                                  },
                                                 )}
                                               </span>
-                                            )}
-                                            {lesson.contents &&
-                                              lesson.contents.length > 0 &&
-                                              !loadingLessons[lesson.id] && (
+                                              {loadingLessons[lesson.id] && (
+                                                <span className="text-xs text-blue-600">
+                                                  {t(
+                                                    "dialogs.assignmentDialog.selectContent.loadingLabel",
+                                                  )}
+                                                </span>
+                                              )}
+                                              {!loadingLessons[lesson.id] && (
                                                 <span
                                                   className="h-6 px-2 text-xs cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-colors inline-flex items-center"
                                                   onClick={(e) => {
@@ -1402,8 +1476,23 @@ export function AssignmentDialog({
                                                       )}
                                                 </span>
                                               )}
+                                            </div>
+                                          </button>
+                                        ) : (
+                                          <div className="w-full p-2 flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                              <Layers className="h-4 w-4 text-gray-400" />
+                                              <span className="text-sm text-gray-500">
+                                                {lesson.name}
+                                              </span>
+                                            </div>
+                                            <span className="text-xs text-gray-400">
+                                              {t(
+                                                "dialogs.assignmentDialog.selectContent.noContents",
+                                              )}
+                                            </span>
                                           </div>
-                                        </button>
+                                        )}
 
                                         {expandedLessons.has(lesson.id) &&
                                           lesson.contents && (
@@ -1531,84 +1620,130 @@ export function AssignmentDialog({
                                 key={program.id}
                                 className="overflow-hidden"
                               >
-                                <button
-                                  onClick={() => toggleProgram(program.id)}
-                                  className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    {loadingLessons[program.id] ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : expandedPrograms.has(program.id) ? (
-                                      <ChevronDown className="h-4 w-4" />
-                                    ) : (
-                                      <ChevronRight className="h-4 w-4" />
-                                    )}
-                                    <Package className="h-4 w-4 text-blue-600" />
-                                    <span className="font-medium">
-                                      {program.name}
-                                    </span>
-                                    {program.level && (
-                                      <Badge variant="outline" className="ml-2">
-                                        {program.level}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm text-gray-500">
-                                      {t(
-                                        "dialogs.assignmentDialog.selectContent.units",
-                                        { count: program.lessons?.length || 0 },
+                                {program.lessons &&
+                                program.lessons.length > 0 ? (
+                                  <button
+                                    onClick={() => toggleProgram(program.id)}
+                                    className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      {loadingLessons[program.id] ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : expandedPrograms.has(program.id) ? (
+                                        <ChevronDown className="h-4 w-4" />
+                                      ) : (
+                                        <ChevronRight className="h-4 w-4" />
                                       )}
-                                    </span>
-                                    {loadingLessons[program.id] && (
-                                      <span className="text-xs text-blue-600">
+                                      <Package className="h-4 w-4 text-blue-600" />
+                                      <span className="font-medium">
+                                        {program.name}
+                                      </span>
+                                      {program.level && (
+                                        <Badge
+                                          variant="outline"
+                                          className="ml-2"
+                                        >
+                                          {program.level}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm text-gray-500">
                                         {t(
-                                          "dialogs.assignmentDialog.selectContent.loadingLabel",
+                                          "dialogs.assignmentDialog.selectContent.units",
+                                          {
+                                            count: program.lessons.length,
+                                          },
                                         )}
                                       </span>
-                                    )}
+                                      {loadingLessons[program.id] && (
+                                        <span className="text-xs text-blue-600">
+                                          {t(
+                                            "dialogs.assignmentDialog.selectContent.loadingLabel",
+                                          )}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </button>
+                                ) : (
+                                  <div className="w-full p-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <Package className="h-4 w-4 text-gray-400" />
+                                      <span className="font-medium text-gray-500">
+                                        {program.name}
+                                      </span>
+                                      {program.level && (
+                                        <Badge
+                                          variant="outline"
+                                          className="ml-2"
+                                        >
+                                          {program.level}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <span className="text-sm text-gray-400">
+                                      {t(
+                                        "dialogs.assignmentDialog.selectContent.noUnits",
+                                      )}
+                                    </span>
                                   </div>
-                                </button>
+                                )}
 
                                 {expandedPrograms.has(program.id) &&
                                   program.lessons && (
                                     <div className="border-t bg-gray-50">
                                       {program.lessons.map((lesson) => (
                                         <div key={lesson.id} className="ml-6">
-                                          <button
-                                            onClick={() =>
-                                              toggleLesson(lesson.id)
-                                            }
-                                            className="w-full p-2 flex items-center justify-between hover:bg-gray-100 transition-colors"
-                                          >
-                                            <div className="flex items-center gap-2">
-                                              {loadingLessons[lesson.id] ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                              ) : expandedLessons.has(
-                                                  lesson.id,
-                                                ) ? (
-                                                <ChevronDown className="h-4 w-4" />
-                                              ) : (
-                                                <ChevronRight className="h-4 w-4" />
-                                              )}
-                                              <Layers className="h-4 w-4 text-green-600" />
-                                              <span className="text-sm">
-                                                {lesson.name}
-                                              </span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                              <span className="text-xs text-gray-500">
+                                          {lesson.contents &&
+                                          lesson.contents.length > 0 ? (
+                                            <button
+                                              onClick={() =>
+                                                toggleLesson(lesson.id)
+                                              }
+                                              className="w-full p-2 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                                            >
+                                              <div className="flex items-center gap-2">
+                                                {loadingLessons[lesson.id] ? (
+                                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : expandedLessons.has(
+                                                    lesson.id,
+                                                  ) ? (
+                                                  <ChevronDown className="h-4 w-4" />
+                                                ) : (
+                                                  <ChevronRight className="h-4 w-4" />
+                                                )}
+                                                <Layers className="h-4 w-4 text-green-600" />
+                                                <span className="text-sm">
+                                                  {lesson.name}
+                                                </span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <span className="text-xs text-gray-500">
+                                                  {t(
+                                                    "dialogs.assignmentDialog.selectContent.contents",
+                                                    {
+                                                      count:
+                                                        lesson.contents.length,
+                                                    },
+                                                  )}
+                                                </span>
+                                              </div>
+                                            </button>
+                                          ) : (
+                                            <div className="w-full p-2 flex items-center justify-between">
+                                              <div className="flex items-center gap-2">
+                                                <Layers className="h-4 w-4 text-gray-400" />
+                                                <span className="text-sm text-gray-500">
+                                                  {lesson.name}
+                                                </span>
+                                              </div>
+                                              <span className="text-xs text-gray-400">
                                                 {t(
-                                                  "dialogs.assignmentDialog.selectContent.contents",
-                                                  {
-                                                    count:
-                                                      lesson.contents?.length ||
-                                                      0,
-                                                  },
+                                                  "dialogs.assignmentDialog.selectContent.noContents",
                                                 )}
                                               </span>
                                             </div>
-                                          </button>
+                                          )}
 
                                           {expandedLessons.has(lesson.id) &&
                                             lesson.contents && (
@@ -1663,8 +1798,21 @@ export function AssignmentDialog({
                                                               variant="outline"
                                                               className="px-1 py-0"
                                                             >
-                                                              {content.type}
+                                                              {getContentTypeLabel(
+                                                                content.type,
+                                                                t,
+                                                              )}
                                                             </Badge>
+                                                            {content.items_count && (
+                                                              <span>
+                                                                {
+                                                                  content.items_count
+                                                                }{" "}
+                                                                {t(
+                                                                  "dialogs.assignmentDialog.selectContent.items",
+                                                                )}
+                                                              </span>
+                                                            )}
                                                           </div>
                                                         </div>
                                                       </button>
@@ -1715,78 +1863,98 @@ export function AssignmentDialog({
                         <div className="space-y-2">
                           {classroomPrograms.map((program) => (
                             <Card key={program.id} className="overflow-hidden">
-                              <button
-                                onClick={() => toggleProgram(program.id)}
-                                className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                              >
-                                <div className="flex items-center gap-2">
-                                  {loadingLessons[program.id] ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : expandedPrograms.has(program.id) ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                  )}
-                                  <Package className="h-4 w-4 text-blue-600" />
-                                  <span className="font-medium">
-                                    {program.name}
-                                  </span>
-                                  {program.level && (
-                                    <Badge variant="outline" className="ml-2">
-                                      {program.level}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm text-gray-500">
+                              {program.lessons && program.lessons.length > 0 ? (
+                                <button
+                                  onClick={() => toggleProgram(program.id)}
+                                  className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {loadingLessons[program.id] ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : expandedPrograms.has(program.id) ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                    <Package className="h-4 w-4 text-blue-600" />
+                                    <span className="font-medium">
+                                      {program.name}
+                                    </span>
+                                    {program.level && (
+                                      <Badge variant="outline" className="ml-2">
+                                        {program.level}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-500">
+                                      {t(
+                                        "dialogs.assignmentDialog.selectContent.units",
+                                        { count: program.lessons.length },
+                                      )}
+                                    </span>
+                                  </div>
+                                </button>
+                              ) : (
+                                <div className="w-full p-3 flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <Package className="h-4 w-4 text-gray-400" />
+                                    <span className="font-medium text-gray-500">
+                                      {program.name}
+                                    </span>
+                                    {program.level && (
+                                      <Badge variant="outline" className="ml-2">
+                                        {program.level}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <span className="text-sm text-gray-400">
                                     {t(
-                                      "dialogs.assignmentDialog.selectContent.units",
-                                      { count: program.lessons?.length || 0 },
+                                      "dialogs.assignmentDialog.selectContent.noUnits",
                                     )}
                                   </span>
                                 </div>
-                              </button>
+                              )}
 
                               {expandedPrograms.has(program.id) &&
                                 program.lessons && (
                                   <div className="border-t bg-gray-50">
                                     {program.lessons.map((lesson) => (
                                       <div key={lesson.id} className="ml-6">
-                                        <button
-                                          onClick={() =>
-                                            toggleLesson(lesson.id)
-                                          }
-                                          className="w-full p-2 flex items-center justify-between hover:bg-gray-100 transition-colors"
-                                        >
-                                          <div className="flex items-center gap-2">
-                                            {loadingLessons[lesson.id] ? (
-                                              <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : expandedLessons.has(
-                                                lesson.id,
-                                              ) ? (
-                                              <ChevronDown className="h-4 w-4" />
-                                            ) : (
-                                              <ChevronRight className="h-4 w-4" />
-                                            )}
-                                            <Layers className="h-4 w-4 text-green-600" />
-                                            <span className="text-sm">
-                                              {lesson.name}
-                                            </span>
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-xs text-gray-500">
-                                              {t(
-                                                "dialogs.assignmentDialog.selectContent.contents",
-                                                {
-                                                  count:
-                                                    lesson.contents?.length ||
-                                                    0,
-                                                },
+                                        {lesson.contents &&
+                                        lesson.contents.length > 0 ? (
+                                          <button
+                                            onClick={() =>
+                                              toggleLesson(lesson.id)
+                                            }
+                                            className="w-full p-2 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              {loadingLessons[lesson.id] ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                              ) : expandedLessons.has(
+                                                  lesson.id,
+                                                ) ? (
+                                                <ChevronDown className="h-4 w-4" />
+                                              ) : (
+                                                <ChevronRight className="h-4 w-4" />
                                               )}
-                                            </span>
-                                            {lesson.contents &&
-                                              lesson.contents.length > 0 &&
-                                              !loadingLessons[lesson.id] && (
+                                              <Layers className="h-4 w-4 text-green-600" />
+                                              <span className="text-sm">
+                                                {lesson.name}
+                                              </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-xs text-gray-500">
+                                                {t(
+                                                  "dialogs.assignmentDialog.selectContent.contents",
+                                                  {
+                                                    count:
+                                                      lesson.contents.length,
+                                                  },
+                                                )}
+                                              </span>
+                                              {!loadingLessons[lesson.id] && (
                                                 <span
                                                   className="h-6 px-2 text-xs cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-colors inline-flex items-center"
                                                   onClick={(e) => {
@@ -1812,8 +1980,23 @@ export function AssignmentDialog({
                                                       )}
                                                 </span>
                                               )}
+                                            </div>
+                                          </button>
+                                        ) : (
+                                          <div className="w-full p-2 flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                              <Layers className="h-4 w-4 text-gray-400" />
+                                              <span className="text-sm text-gray-500">
+                                                {lesson.name}
+                                              </span>
+                                            </div>
+                                            <span className="text-xs text-gray-400">
+                                              {t(
+                                                "dialogs.assignmentDialog.selectContent.noContents",
+                                              )}
+                                            </span>
                                           </div>
-                                        </button>
+                                        )}
 
                                         {expandedLessons.has(lesson.id) &&
                                           lesson.contents && (

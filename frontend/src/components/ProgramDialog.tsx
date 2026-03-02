@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -55,6 +55,7 @@ export function ProgramDialog({
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [tagInput, setTagInput] = useState("");
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (program && (dialogType === "edit" || dialogType === "delete")) {
@@ -128,8 +129,10 @@ export function ProgramDialog({
   };
 
   const handleSubmit = async () => {
+    if (submittingRef.current) return;
     if (!validateForm()) return;
 
+    submittingRef.current = true;
     setLoading(true);
     try {
       if (dialogType === "create") {
@@ -173,13 +176,16 @@ export function ProgramDialog({
       console.error("Failed to save program:", error);
       setErrors({ submit: t("dialogs.programDialog.errors.saveFailed") });
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
     if (!program?.id || !onDelete) return;
+    if (submittingRef.current) return;
 
+    submittingRef.current = true;
     setLoading(true);
     try {
       await apiClient.deleteProgram(program.id);
@@ -189,6 +195,7 @@ export function ProgramDialog({
       console.error("Failed to delete program:", error);
       alert(t("dialogs.programDialog.errors.deleteFailed"));
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,6 +58,7 @@ export function LessonDialog({
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (lesson && (dialogType === "edit" || dialogType === "delete")) {
@@ -89,8 +90,10 @@ export function LessonDialog({
   };
 
   const handleSubmit = async () => {
+    if (submittingRef.current) return;
     if (!validateForm()) return;
 
+    submittingRef.current = true;
     setLoading(true);
     try {
       if (dialogType === "create" && programId) {
@@ -162,6 +165,7 @@ export function LessonDialog({
       toast.error(t("dialogs.lessonDialog.errors.saveFailed"));
       setErrors({ submit: t("dialogs.lessonDialog.errors.saveFailed") });
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };

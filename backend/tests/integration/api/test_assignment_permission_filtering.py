@@ -95,7 +95,7 @@ def test_data():
         # 為兩個老師創建訂閱
         sub1 = SubscriptionPeriod(
             teacher_id=1,
-            quota_total=10000,
+            quota_total=2000,
             quota_used=0,
             start_date=datetime.now(timezone.utc),
             end_date=datetime.now(timezone.utc) + timedelta(days=30),
@@ -104,7 +104,7 @@ def test_data():
         )
         sub2 = SubscriptionPeriod(
             teacher_id=2,
-            quota_total=10000,
+            quota_total=2000,
             quota_used=0,
             start_date=datetime.now(timezone.utc),
             end_date=datetime.now(timezone.utc) + timedelta(days=30),

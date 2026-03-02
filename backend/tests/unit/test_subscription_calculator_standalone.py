@@ -3,6 +3,8 @@
 獨立的訂閱計算器測試
 不依賴資料庫，可直接執行驗證邏輯
 
+測試固定每月訂閱週期：+1 個月，收全額
+
 執行方式：
   cd backend && python3 tests/unit/test_subscription_calculator_standalone.py
 """
@@ -18,189 +20,157 @@ from datetime import datetime, timezone  # noqa: E402
 from services.subscription_calculator import SubscriptionCalculator  # noqa: E402
 
 
+def test_subscription_normal_day():
+    """測試一般日期：3/5 → 4/5"""
+    start_date = datetime(2026, 3, 5, 10, 0, 0, tzinfo=timezone.utc)
+    end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
+        start_date, "Tutor Teachers"
+    )
+
+    assert end_date.date() == datetime(2026, 4, 5, tzinfo=timezone.utc).date()
+    assert amount == 299
+    assert details["pricing_method"] == "fixed_monthly"
+    print("pass test_subscription_normal_day")
+
+
 def test_subscription_on_first_day():
-    """測試 1 號訂閱（完整月）"""
+    """測試 1 號訂閱：10/1 → 11/1"""
     start_date = datetime(2025, 10, 1, 10, 0, 0, tzinfo=timezone.utc)
     end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
         start_date, "Tutor Teachers"
     )
 
-    assert end_date.date() == datetime(2025, 11, 1, 0, 0, 0, tzinfo=timezone.utc).date()
-    assert amount == 230
-    assert details["actual_days"] == 31
-    print("✅ test_subscription_on_first_day")
+    assert end_date.date() == datetime(2025, 11, 1, tzinfo=timezone.utc).date()
+    assert amount == 299
+    print("pass test_subscription_on_first_day")
 
 
-def test_subscription_mid_month_31_days():
-    """測試月中訂閱（1月 31天）"""
-    start_date = datetime(2025, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+def test_subscription_jan_31_to_feb_28():
+    """測試月末邊界：1/31 → 2/28（平年）"""
+    start_date = datetime(2025, 1, 31, 10, 0, 0, tzinfo=timezone.utc)
     end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
         start_date, "Tutor Teachers"
     )
 
-    assert end_date.date() == datetime(2025, 2, 1, 0, 0, 0, tzinfo=timezone.utc).date()
-    assert amount == 126  # 230 × (17/31) = 126.45 → 126
-    assert details["actual_days"] == 17
-    print("✅ test_subscription_mid_month_31_days")
+    assert end_date.date() == datetime(2025, 2, 28, tzinfo=timezone.utc).date()
+    assert amount == 299
+    print("pass test_subscription_jan_31_to_feb_28")
 
 
-def test_subscription_mid_month_28_days():
-    """測試月中訂閱（2月 28天，平年）"""
-    start_date = datetime(2025, 2, 15, 10, 0, 0, tzinfo=timezone.utc)
+def test_subscription_jan_31_to_feb_29_leap_year():
+    """測試閏年：1/31 → 2/29"""
+    start_date = datetime(2024, 1, 31, 10, 0, 0, tzinfo=timezone.utc)
     end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
         start_date, "Tutor Teachers"
     )
 
-    assert end_date.date() == datetime(2025, 3, 1, 0, 0, 0, tzinfo=timezone.utc).date()
-    assert amount == 115  # 230 × (14/28) = 115
-    assert details["actual_days"] == 14
-    print("✅ test_subscription_mid_month_28_days")
+    assert end_date.date() == datetime(2024, 2, 29, tzinfo=timezone.utc).date()
+    assert amount == 299
+    print("pass test_subscription_jan_31_to_feb_29_leap_year")
 
 
-def test_subscription_leap_year_february():
-    """測試閏年 2 月訂閱（29天）"""
-    start_date = datetime(2024, 2, 15, 10, 0, 0, tzinfo=timezone.utc)
+def test_subscription_mar_31_to_apr_30():
+    """測試月末邊界：3/31 → 4/30"""
+    start_date = datetime(2026, 3, 31, 10, 0, 0, tzinfo=timezone.utc)
     end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
         start_date, "Tutor Teachers"
     )
 
-    assert end_date.date() == datetime(2024, 3, 1, 0, 0, 0, tzinfo=timezone.utc).date()
-    assert amount == 119  # 230 × (15/29) = 118.97 → 119
-    assert details["actual_days"] == 15
-    print("✅ test_subscription_leap_year_february")
+    assert end_date.date() == datetime(2026, 4, 30, tzinfo=timezone.utc).date()
+    assert amount == 299
+    print("pass test_subscription_mar_31_to_apr_30")
 
 
-def test_subscription_end_of_month_grace_period():
-    """測試月底訂閱（少於 7 天，觸發優惠期）"""
-    start_date = datetime(2025, 10, 26, 10, 0, 0, tzinfo=timezone.utc)
+def test_subscription_feb_28_to_mar_28():
+    """測試 2/28 → 3/28"""
+    start_date = datetime(2025, 2, 28, 10, 0, 0, tzinfo=timezone.utc)
     end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
         start_date, "Tutor Teachers"
     )
 
-    assert end_date.date() == datetime(2025, 12, 1, 0, 0, 0, tzinfo=timezone.utc).date()
-    assert amount == 230
-    assert details["actual_days"] == 36
-    assert details["bonus_days"] == 6
-    assert details["grace_period_applied"] is True
-    print("✅ test_subscription_end_of_month_grace_period")
-
-
-def test_subscription_grace_period_boundary():
-    """測試優惠期邊界（剛好 7 天）"""
-    start_date = datetime(2025, 10, 25, 10, 0, 0, tzinfo=timezone.utc)
-    end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
-        start_date, "Tutor Teachers"
-    )
-
-    assert end_date.date() == datetime(2025, 11, 1, 0, 0, 0, tzinfo=timezone.utc).date()
-    assert details["grace_period_applied"] is False
-    print("✅ test_subscription_grace_period_boundary")
-
-
-def test_school_teachers_plan():
-    """測試 School Teachers 方案（330元）"""
-    start_date = datetime(2025, 10, 15, 10, 0, 0, tzinfo=timezone.utc)
-    end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
-        start_date, "School Teachers"
-    )
-
-    assert amount == 181  # 330 × (17/31) = 180.6 → 181
-    assert details["full_price"] == 330
-    print("✅ test_school_teachers_plan")
-
-
-def test_renewal_calculation():
-    """測試續訂計算"""
-    current_end_date = datetime(2025, 11, 1, 0, 0, 0, tzinfo=timezone.utc)
-    new_end_date, amount = SubscriptionCalculator.calculate_renewal(
-        current_end_date, "Tutor Teachers"
-    )
-
-    assert (
-        new_end_date.date()
-        == datetime(2025, 12, 1, 0, 0, 0, tzinfo=timezone.utc).date()
-    )
-    assert amount == 230
-    print("✅ test_renewal_calculation")
-
-
-def test_renewal_cross_year():
-    """測試跨年續訂"""
-    current_end_date = datetime(2025, 12, 1, 0, 0, 0, tzinfo=timezone.utc)
-    new_end_date, amount = SubscriptionCalculator.calculate_renewal(
-        current_end_date, "Tutor Teachers"
-    )
-
-    assert (
-        new_end_date.date() == datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc).date()
-    )
-    assert amount == 230
-    print("✅ test_renewal_cross_year")
+    assert end_date.date() == datetime(2025, 3, 28, tzinfo=timezone.utc).date()
+    assert amount == 299
+    print("pass test_subscription_feb_28_to_mar_28")
 
 
 def test_december_to_january():
-    """測試 12 月到 1 月的邊界情況"""
+    """測試跨年：12/15 → 1/15"""
     start_date = datetime(2025, 12, 15, 10, 0, 0, tzinfo=timezone.utc)
     end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
         start_date, "Tutor Teachers"
     )
 
-    assert end_date.date() == datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc).date()
-    assert amount == 126  # 230 × (17/31) = 126
-    assert details["actual_days"] == 17
-    print("✅ test_december_to_january")
+    assert end_date.date() == datetime(2026, 1, 15, tzinfo=timezone.utc).date()
+    assert amount == 299
+    print("pass test_december_to_january")
 
 
-def test_all_months_calculations():
-    """測試所有月份的計算（確保沒有月份被遺漏）"""
-    # 測試每個月的 15 號訂閱
-    months_data = [
-        (1, 31),
-        (2, 28),
-        (3, 31),
-        (4, 30),
-        (5, 31),
-        (6, 30),
-        (7, 31),
-        (8, 31),
-        (9, 30),
-        (10, 31),
-        (11, 30),
-        (12, 31),
-    ]
+def test_school_teachers_plan():
+    """測試 School Teachers 方案（599元）"""
+    start_date = datetime(2025, 10, 15, 10, 0, 0, tzinfo=timezone.utc)
+    end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
+        start_date, "School Teachers"
+    )
 
-    for month, days_in_month in months_data:
-        start_date = datetime(2025, month, 15, 10, 0, 0, tzinfo=timezone.utc)
-        end_date, amount, details = SubscriptionCalculator.calculate_first_subscription(
-            start_date, "Tutor Teachers"
-        )
+    assert end_date.date() == datetime(2025, 11, 15, tzinfo=timezone.utc).date()
+    assert amount == 599
+    assert details["full_price"] == 599
+    print("pass test_school_teachers_plan")
 
-        # 計算預期天數：從 15 號到下個月 1 號
-        expected_days = days_in_month - 15 + 1
-        assert (
-            details["actual_days"] == expected_days
-        ), f"Month {month}: expected {expected_days} days, got {details['actual_days']}"
 
-    print("✅ test_all_months_calculations")
+def test_renewal_calculation():
+    """測試續訂：4/5 → 5/5"""
+    current_end_date = datetime(2026, 4, 5, 0, 0, 0, tzinfo=timezone.utc)
+    new_end_date, amount = SubscriptionCalculator.calculate_renewal(
+        current_end_date, "Tutor Teachers"
+    )
+
+    assert new_end_date.date() == datetime(2026, 5, 5, tzinfo=timezone.utc).date()
+    assert amount == 299
+    print("pass test_renewal_calculation")
+
+
+def test_renewal_cross_year():
+    """測試跨年續訂：12/15 → 1/15"""
+    current_end_date = datetime(2025, 12, 15, 0, 0, 0, tzinfo=timezone.utc)
+    new_end_date, amount = SubscriptionCalculator.calculate_renewal(
+        current_end_date, "Tutor Teachers"
+    )
+
+    assert new_end_date.date() == datetime(2026, 1, 15, tzinfo=timezone.utc).date()
+    assert amount == 299
+    print("pass test_renewal_cross_year")
+
+
+def test_renewal_month_end_boundary():
+    """測試續訂月末邊界：1/31 → 2/28"""
+    current_end_date = datetime(2025, 1, 31, 0, 0, 0, tzinfo=timezone.utc)
+    new_end_date, amount = SubscriptionCalculator.calculate_renewal(
+        current_end_date, "Tutor Teachers"
+    )
+
+    assert new_end_date.date() == datetime(2025, 2, 28, tzinfo=timezone.utc).date()
+    assert amount == 299
+    print("pass test_renewal_month_end_boundary")
 
 
 if __name__ == "__main__":
     print("=" * 70)
-    print("🧪 訂閱計算器獨立測試")
+    print("訂閱計算器獨立測試（固定 +1 個月）")
     print("=" * 70)
 
     tests = [
+        test_subscription_normal_day,
         test_subscription_on_first_day,
-        test_subscription_mid_month_31_days,
-        test_subscription_mid_month_28_days,
-        test_subscription_leap_year_february,
-        test_subscription_end_of_month_grace_period,
-        test_subscription_grace_period_boundary,
+        test_subscription_jan_31_to_feb_28,
+        test_subscription_jan_31_to_feb_29_leap_year,
+        test_subscription_mar_31_to_apr_30,
+        test_subscription_feb_28_to_mar_28,
+        test_december_to_january,
         test_school_teachers_plan,
         test_renewal_calculation,
         test_renewal_cross_year,
-        test_december_to_january,
-        test_all_months_calculations,
+        test_renewal_month_end_boundary,
     ]
 
     passed = 0
@@ -211,18 +181,18 @@ if __name__ == "__main__":
             test_func()
             passed += 1
         except AssertionError as e:
-            print(f"❌ {test_func.__name__}: {e}")
+            print(f"FAIL {test_func.__name__}: {e}")
             failed += 1
         except Exception as e:
-            print(f"❌ {test_func.__name__}: Unexpected error: {e}")
+            print(f"FAIL {test_func.__name__}: Unexpected error: {e}")
             failed += 1
 
     print("=" * 70)
     print(f"結果: {passed}/{len(tests)} 通過")
 
     if failed == 0:
-        print("✅✅✅ 所有測試通過！")
+        print("所有測試通過！")
         exit(0)
     else:
-        print(f"❌ {failed} 個測試失敗")
+        print(f"{failed} 個測試失敗")
         exit(1)

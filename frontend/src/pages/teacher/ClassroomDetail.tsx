@@ -10,6 +10,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import StudentTable, { Student } from "@/components/StudentTable";
 import { StudentDialogs } from "@/components/StudentDialogs";
@@ -37,10 +39,22 @@ import {
   Trash2,
   Sparkles,
   Eye,
+  Archive,
+  ArchiveRestore,
+  Search,
+  StickyNote,
+  Printer,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { getContentTypeIcon } from "@/lib/contentTypeIcon";
 import { apiClient, ApiError } from "@/lib/api";
 import { toast } from "sonner";
+import AssignmentStickyNote from "@/components/AssignmentStickyNote";
+import {
+  buildStickyNotePageHtml,
+  openPrintWindow,
+} from "@/lib/stickyNotePrint";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   Content,
@@ -159,11 +173,155 @@ export default function ClassroomDetail({
   const [assignmentsLoaded, setAssignmentsLoaded] = useState(false);
   const [selectedAssignment] = useState<Assignment | null>(null);
   const [showAssignmentDetails, setShowAssignmentDetails] = useState(false);
+  // Filter states
+  const [filterKeyword, setFilterKeyword] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+  const [filterOverdue, setFilterOverdue] = useState(false);
+
+  // Filter type → practice_mode mapping
+  const filterTypeMap: Record<string, string> = {
+    WORD_READING: "word_reading",
+    WORD_SELECTION: "word_selection",
+    SPEAKING: "reading",
+    REARRANGEMENT: "rearrangement",
+  };
+
+  // Archive states
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivedAssignments, setArchivedAssignments] = useState<Assignment[]>(
+    [],
+  );
+  const filteredAssignments = (
+    showArchived ? archivedAssignments : assignments
+  ).filter((a) => {
+    if (
+      filterKeyword &&
+      !a.title.toLowerCase().includes(filterKeyword.toLowerCase())
+    )
+      return false;
+    if (filterType && a.practice_mode !== filterTypeMap[filterType])
+      return false;
+    if (filterDateFrom && a.created_at) {
+      if (new Date(a.created_at) < new Date(filterDateFrom)) return false;
+    }
+    if (filterDateTo && a.created_at) {
+      const endOfDay = new Date(filterDateTo);
+      endOfDay.setHours(23, 59, 59, 999);
+      if (new Date(a.created_at) > endOfDay) return false;
+    }
+    if (filterOverdue) {
+      if (!a.due_date || new Date(a.due_date) >= new Date()) return false;
+    }
+    return true;
+  });
+
   const [batchGradingModal, setBatchGradingModal] = useState({
     open: false,
     assignmentId: 0,
     classroomId: 0,
   });
+  // Sticky note modal state
+  const [stickyNoteModal, setStickyNoteModal] = useState({
+    open: false,
+    assignmentIndex: 0,
+  });
+  // Batch print selection
+  const [selectedForPrint, setSelectedForPrint] = useState<Set<number>>(
+    new Set(),
+  );
+  const [batchPrinting, setBatchPrinting] = useState(false);
+
+  // Pagination (on filtered results)
+  const [assignmentPage, setAssignmentPage] = useState(1);
+  const assignmentPageSize = 10;
+  const totalAssignmentPages = Math.ceil(
+    filteredAssignments.length / assignmentPageSize,
+  );
+  const paginatedAssignments = filteredAssignments.slice(
+    (assignmentPage - 1) * assignmentPageSize,
+    assignmentPage * assignmentPageSize,
+  );
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setAssignmentPage(1);
+  }, [filterKeyword, filterType, filterDateFrom, filterDateTo, filterOverdue]);
+
+  const togglePrintSelection = (assignmentId: number) => {
+    setSelectedForPrint((prev) => {
+      const next = new Set(prev);
+      if (next.has(assignmentId)) next.delete(assignmentId);
+      else next.add(assignmentId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedForPrint.size === filteredAssignments.length) {
+      setSelectedForPrint(new Set());
+    } else {
+      setSelectedForPrint(new Set(filteredAssignments.map((a) => a.id)));
+    }
+  };
+
+  const handleBatchPrint = async () => {
+    if (selectedForPrint.size === 0) return;
+    setBatchPrinting(true);
+    try {
+      const selected = assignments.filter((a) => selectedForPrint.has(a.id));
+      const progressResults = await Promise.all(
+        selected.map(async (a) => {
+          const response = await apiClient.get(
+            `/api/teachers/assignments/${a.id}/progress`,
+          );
+          const arr = Array.isArray(response)
+            ? response
+            : (response as { data?: unknown[] }).data || [];
+          return {
+            title: a.title,
+            students: arr
+              .filter(
+                (p: Record<string, unknown>) =>
+                  p.status !== "unassigned" && p.is_assigned !== false,
+              )
+              .map((p: Record<string, unknown>) => ({
+                student_number: (p.student_number as number) || 0,
+                student_name:
+                  (p.student_name as string) || (p.name as string) || "",
+                score: (p.score as number) ?? undefined,
+                status: (p.status as string) || "NOT_STARTED",
+              })),
+          };
+        }),
+      );
+
+      const pages = progressResults.map(({ title, students }) => {
+        const counts = students.reduce(
+          (acc: Record<string, number>, s) => {
+            acc[s.status] = (acc[s.status] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>,
+        );
+        return buildStickyNotePageHtml(
+          title,
+          students,
+          counts,
+          { showNumber: true, showName: true, showScore: false },
+          t,
+        );
+      });
+
+      openPrintWindow(pages);
+      setSelectedForPrint(new Set());
+    } catch {
+      toast.error(t("stickyNote.batchPrintError", "列印失敗"));
+    } finally {
+      setBatchPrinting(false);
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -346,13 +504,20 @@ export default function ClassroomDetail({
 
   const fetchAssignments = async () => {
     try {
-      const response = await apiClient.get(
-        `/api/teachers/assignments/?classroom_id=${id}`,
+      const [activeResponse, archivedResponse] = await Promise.all([
+        apiClient.get(`/api/teachers/assignments/?classroom_id=${id}`),
+        apiClient.get(
+          `/api/teachers/assignments/?classroom_id=${id}&is_archived=true`,
+        ),
+      ]);
+      setAssignments(Array.isArray(activeResponse) ? activeResponse : []);
+      setArchivedAssignments(
+        Array.isArray(archivedResponse) ? archivedResponse : [],
       );
-      setAssignments(Array.isArray(response) ? response : []);
     } catch (err) {
       console.error("Failed to fetch assignments:", err);
       setAssignments([]);
+      setArchivedAssignments([]);
     } finally {
       setAssignmentsLoaded(true);
     }
@@ -412,6 +577,56 @@ export default function ClassroomDetail({
         console.error("Failed to delete assignment:", error);
         toast.error(t("classroomDetail.messages.deleteAssignmentFailed"));
       }
+    }
+  };
+
+  const handleArchiveAssignment = async (assignment: Assignment) => {
+    if (
+      confirm(
+        t("classroomDetail.messages.confirmArchiveAssignment", {
+          title: assignment.title,
+        }),
+      )
+    ) {
+      try {
+        await apiClient.patch(
+          `/api/teachers/assignments/${assignment.id}/archive`,
+        );
+        toast.success(
+          t("classroomDetail.messages.assignmentArchived", {
+            title: assignment.title,
+          }),
+        );
+        fetchAssignments();
+      } catch (error) {
+        console.error("Failed to archive assignment:", error);
+        toast.error(t("classroomDetail.messages.archiveAssignmentFailed"));
+      }
+    }
+  };
+
+  const handleUnarchiveAssignment = async (assignment: Assignment) => {
+    if (
+      !confirm(
+        t("classroomDetail.messages.confirmUnarchiveAssignment", {
+          title: assignment.title,
+        }),
+      )
+    )
+      return;
+    try {
+      await apiClient.patch(
+        `/api/teachers/assignments/${assignment.id}/unarchive`,
+      );
+      toast.success(
+        t("classroomDetail.messages.assignmentUnarchived", {
+          title: assignment.title,
+        }),
+      );
+      fetchAssignments();
+    } catch (error) {
+      console.error("Failed to unarchive assignment:", error);
+      toast.error(t("classroomDetail.messages.unarchiveAssignmentFailed"));
     }
   };
 
@@ -544,6 +759,16 @@ export default function ClassroomDetail({
 
   const handleSaveContent = async () => {
     if (!editingContent || !selectedContent) return;
+
+    // VocabularySetPanel / SentenceMakingPanel 已在內部完成 API save，
+    // 這裡不需要再做第二次 PUT，否則會用不完整的 editingContent.items
+    // 覆蓋掉 vocabulary_translation 等欄位 (#366)
+    const contentType = selectedContent.type?.toLowerCase();
+    if (contentType === "vocabulary_set" || contentType === "sentence_making") {
+      await refreshPrograms();
+      closePanel();
+      return;
+    }
 
     try {
       // Update content via API
@@ -1233,7 +1458,13 @@ export default function ClassroomDetail({
                       onClick={handleCreateStudent}
                       className="h-10 bg-blue-500 hover:bg-blue-600 text-white"
                       disabled={isOrgMode}
-                      title={isOrgMode ? "請從學校後台處理學生管理" : ""}
+                      title={
+                        isOrgMode
+                          ? t(
+                              "classroomDetail.messages.manageStudentsFromSchool",
+                            )
+                          : ""
+                      }
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       {t("classroomDetail.buttons.addStudent")}
@@ -1259,7 +1490,9 @@ export default function ClassroomDetail({
                     onResetPassword={handleResetPassword}
                     emptyMessage={t("classroomDetail.messages.noStudents")}
                     disableActions={isOrgMode}
-                    disableReason="請從學校後台處理學生管理"
+                    disableReason={t(
+                      "classroomDetail.messages.manageStudentsFromSchool",
+                    )}
                   />
                 </TabsContent>
               )}
@@ -1349,29 +1582,48 @@ export default function ClassroomDetail({
               {!isTemplateMode && (
                 <TabsContent value="assignments" className="p-3 sm:p-6">
                   <div className="space-y-4 sm:space-y-6">
-                    {/* Header with Create Button */}
+                    {/* Header with Create Button and Archive Toggle */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                      <Button
-                        onClick={() => {
-                          if (!canAssignHomework) {
-                            toast.error(
-                              t("classroomDetail.messages.subscriptionExpired"),
-                            );
-                            return;
+                      {!showArchived && (
+                        <Button
+                          onClick={() => {
+                            if (!canAssignHomework) {
+                              toast.error(
+                                t(
+                                  "classroomDetail.messages.subscriptionExpired",
+                                ),
+                              );
+                              return;
+                            }
+                            setShowAssignmentDialog(true);
+                          }}
+                          disabled={!canAssignHomework}
+                          className={`h-10 ${
+                            canAssignHomework
+                              ? "bg-blue-500 hover:bg-blue-600 text-white"
+                              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          }`}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          {t("classroomDetail.buttons.assignNewHomework")}
+                        </Button>
+                      )}
+                      {assignments.length > 0 && !showArchived && (
+                        <Button
+                          variant="outline"
+                          onClick={handleBatchPrint}
+                          disabled={
+                            selectedForPrint.size === 0 || batchPrinting
                           }
-                          setShowAssignmentDialog(true);
-                        }}
-                        disabled={!canAssignHomework}
-                        className={`h-10 ${
-                          canAssignHomework
-                            ? "bg-blue-500 hover:bg-blue-600 text-white"
-                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        }`}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        {t("classroomDetail.buttons.assignNewHomework")}
-                      </Button>
-                      {!canAssignHomework && teacherData && (
+                          className="h-10"
+                        >
+                          <Printer className="h-4 w-4 mr-2" />
+                          {t("stickyNote.batchPrint")}
+                          {selectedForPrint.size > 0 &&
+                            ` (${selectedForPrint.size})`}
+                        </Button>
+                      )}
+                      {!canAssignHomework && !showArchived && teacherData && (
                         <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded-lg border border-yellow-200 dark:border-yellow-800">
                           <span className="font-medium">
                             {t(
@@ -1389,62 +1641,184 @@ export default function ClassroomDetail({
                           </span>
                         </div>
                       )}
+                      <div className="sm:ml-auto flex">
+                        <button
+                          onClick={() => setShowArchived(false)}
+                          className={`px-4 py-2 text-sm font-medium rounded-l-lg border ${
+                            !showArchived
+                              ? "bg-blue-500 text-white border-blue-500"
+                              : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          {t("classroomDetail.tabs.activeAssignments")}
+                          {assignments.length > 0 && (
+                            <span className="ml-1.5 text-xs">
+                              ({assignments.length})
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setShowArchived(true)}
+                          className={`px-4 py-2 text-sm font-medium rounded-r-lg border-t border-r border-b ${
+                            showArchived
+                              ? "bg-blue-500 text-white border-blue-500"
+                              : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          <Archive className="inline-block w-4 h-4 mr-1 -mt-0.5" />
+                          {t("classroomDetail.tabs.archivedAssignments")}
+                          {archivedAssignments.length > 0 && (
+                            <span className="ml-1.5 text-xs">
+                              ({archivedAssignments.length})
+                            </span>
+                          )}
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Assignment Stats - Using Real Data */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 sm:p-4 border dark:border-blue-800">
-                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          {t("classroomDetail.stats.totalAssignments")}
+                    {/* Assignment Stats - Using Real Data (only for active view) */}
+                    {!showArchived && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 sm:p-4 border dark:border-blue-800">
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            {t("classroomDetail.stats.totalAssignments")}
+                          </div>
+                          <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                            {assignments.length}
+                          </div>
                         </div>
-                        <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
-                          {assignments.length}
+                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 sm:p-4 border dark:border-green-800">
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            {t("classroomDetail.stats.completedAssignments")}
+                          </div>
+                          <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
+                            {
+                              assignments.filter(
+                                (a) => a.status === "completed",
+                              ).length
+                            }
+                          </div>
+                        </div>
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 sm:p-4 border dark:border-yellow-800">
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            {t("classroomDetail.stats.inProgressAssignments")}
+                          </div>
+                          <div className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                            {
+                              assignments.filter(
+                                (a) =>
+                                  a.status === "in_progress" ||
+                                  a.status === "not_started",
+                              ).length
+                            }
+                          </div>
+                        </div>
+                        <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 sm:p-4 border dark:border-red-800">
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            {t("classroomDetail.stats.overdueAssignments")}
+                          </div>
+                          <div className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
+                            {
+                              assignments.filter((a) => a.status === "overdue")
+                                .length
+                            }
+                          </div>
                         </div>
                       </div>
-                      <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 sm:p-4 border dark:border-green-800">
-                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          {t("classroomDetail.stats.completedAssignments")}
+                    )}
+
+                    {/* Filter Bar */}
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        <select
+                          value={filterType}
+                          onChange={(e) => setFilterType(e.target.value)}
+                          className="h-9 rounded-md border border-input bg-background px-3 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+                        >
+                          <option value="">
+                            {t("classroomDetail.filters.allTypes")}
+                          </option>
+                          <option value="WORD_READING">
+                            {t("classroomDetail.contentTypes.WORD_READING")}
+                          </option>
+                          <option value="WORD_SELECTION">
+                            {t("classroomDetail.contentTypes.WORD_SELECTION")}
+                          </option>
+                          <option value="SPEAKING">
+                            {t("classroomDetail.contentTypes.SPEAKING")}
+                          </option>
+                          <option value="REARRANGEMENT">
+                            {t("classroomDetail.contentTypes.REARRANGEMENT")}
+                          </option>
+                        </select>
+                        <div className="relative w-full md:w-[35%]">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <Input
+                            placeholder={t(
+                              "classroomDetail.filters.searchPlaceholder",
+                            )}
+                            value={filterKeyword}
+                            onChange={(e) => setFilterKeyword(e.target.value)}
+                            className="pl-9 h-9"
+                          />
                         </div>
-                        <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
-                          {
-                            assignments.filter((a) => a.status === "completed")
-                              .length
-                          }
-                        </div>
-                      </div>
-                      <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 sm:p-4 border dark:border-yellow-800">
-                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          {t("classroomDetail.stats.inProgressAssignments")}
-                        </div>
-                        <div className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                          {
-                            assignments.filter(
-                              (a) =>
-                                a.status === "in_progress" ||
-                                a.status === "not_started",
-                            ).length
-                          }
-                        </div>
-                      </div>
-                      <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 sm:p-4 border dark:border-red-800">
-                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          {t("classroomDetail.stats.overdueAssignments")}
-                        </div>
-                        <div className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
-                          {
-                            assignments.filter((a) => a.status === "overdue")
-                              .length
-                          }
+                        {/* Row 2 on mobile, same row on desktop */}
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="date"
+                            value={filterDateFrom}
+                            onChange={(e) => setFilterDateFrom(e.target.value)}
+                            className="h-9 rounded-md border border-input bg-background px-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+                            placeholder={t("classroomDetail.filters.startDate")}
+                          />
+                          <span className="text-gray-400 text-sm">~</span>
+                          <input
+                            type="date"
+                            value={filterDateTo}
+                            onChange={(e) => setFilterDateTo(e.target.value)}
+                            className="h-9 rounded-md border border-input bg-background px-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+                            placeholder={t("classroomDetail.filters.endDate")}
+                          />
+                          <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap cursor-pointer">
+                            <Checkbox
+                              checked={filterOverdue}
+                              onCheckedChange={(v) =>
+                                setFilterOverdue(v === true)
+                              }
+                            />
+                            {t("classroomDetail.filters.overdueOnly")}
+                          </label>
+                          {(filterKeyword ||
+                            filterType ||
+                            filterDateFrom ||
+                            filterDateTo ||
+                            filterOverdue) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-9 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 whitespace-nowrap"
+                              onClick={() => {
+                                setFilterKeyword("");
+                                setFilterType("");
+                                setFilterDateFrom("");
+                                setFilterDateTo("");
+                                setFilterOverdue(false);
+                              }}
+                            >
+                              <X className="h-3.5 w-3.5 mr-1" />
+                              {t("classroomDetail.filters.clearAll")}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
 
                     {/* Assignment List */}
-                    {assignments.length > 0 ? (
+                    {filteredAssignments.length > 0 ? (
                       <>
                         {/* Mobile: Card Layout */}
                         <div className="md:hidden space-y-3">
-                          {assignments.map((assignment) => {
+                          {paginatedAssignments.map((assignment) => {
                             const completionRate =
                               assignment.completion_rate || 0;
                             // 🎯 Issue #118: 根據 content_type + practice_mode 決定顯示標籤
@@ -1554,6 +1928,17 @@ export default function ClassroomDetail({
                               >
                                 {/* Title & AI Batch Grade Button */}
                                 <div className="flex items-start justify-between gap-2">
+                                  {!showArchived && (
+                                    <Checkbox
+                                      checked={selectedForPrint.has(
+                                        assignment.id,
+                                      )}
+                                      onCheckedChange={() =>
+                                        togglePrintSelection(assignment.id)
+                                      }
+                                      className="mt-1"
+                                    />
+                                  )}
                                   <div className="flex-1 min-w-0">
                                     <h4 className="font-medium text-gray-900 dark:text-gray-100 truncate">
                                       {assignment.title}
@@ -1627,7 +2012,10 @@ export default function ClassroomDetail({
                                     </div>
                                     <div className="font-medium text-gray-900 dark:text-gray-100 mt-1">
                                       {assignment.student_count
-                                        ? `${assignment.student_count} 人`
+                                        ? t(
+                                            "classroomDetail.labels.studentCountWithUnit",
+                                            { count: assignment.student_count },
+                                          )
                                         : t("classroomDetail.labels.allClass")}
                                     </div>
                                   </div>
@@ -1693,6 +2081,50 @@ export default function ClassroomDetail({
                                   >
                                     {t("classroomDetail.buttons.previewDemo")}
                                   </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-12 min-h-12 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                                    onClick={() =>
+                                      setStickyNoteModal({
+                                        open: true,
+                                        assignmentIndex: assignments.findIndex(
+                                          (a) => a.id === assignment.id,
+                                        ),
+                                      })
+                                    }
+                                  >
+                                    <StickyNote className="h-5 w-5" />
+                                  </Button>
+                                  {showArchived ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-12 min-h-12 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                      onClick={() =>
+                                        handleUnarchiveAssignment(assignment)
+                                      }
+                                    >
+                                      <ArchiveRestore className="w-4 h-4 mr-1" />
+                                      {t(
+                                        "classroomDetail.buttons.unarchiveAssignment",
+                                      )}
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-12 min-h-12 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                      onClick={() =>
+                                        handleArchiveAssignment(assignment)
+                                      }
+                                    >
+                                      <Archive className="w-4 h-4 mr-1" />
+                                      {t(
+                                        "classroomDetail.buttons.archiveAssignment",
+                                      )}
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -1704,6 +2136,18 @@ export default function ClassroomDetail({
                           <table className="w-full">
                             <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
                               <tr>
+                                {!showArchived && (
+                                  <th className="w-10 px-4 py-3">
+                                    <Checkbox
+                                      checked={
+                                        filteredAssignments.length > 0 &&
+                                        selectedForPrint.size ===
+                                          filteredAssignments.length
+                                      }
+                                      onCheckedChange={toggleSelectAll}
+                                    />
+                                  </th>
+                                )}
                                 <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
                                   {t("classroomDetail.labels.assignmentTitle")}
                                 </th>
@@ -1727,7 +2171,7 @@ export default function ClassroomDetail({
                               </tr>
                             </thead>
                             <tbody>
-                              {assignments.map((assignment) => {
+                              {paginatedAssignments.map((assignment) => {
                                 const completionRate =
                                   assignment.completion_rate || 0;
                                 // 🎯 Issue #118: 根據 content_type + practice_mode 決定顯示標籤
@@ -1835,15 +2279,56 @@ export default function ClassroomDetail({
                                     key={assignment.id}
                                     className="border-b hover:bg-gray-50 dark:hover:bg-gray-700/50 dark:border-gray-600"
                                   >
+                                    {!showArchived && (
+                                      <td className="w-10 px-4 py-3">
+                                        <Checkbox
+                                          checked={selectedForPrint.has(
+                                            assignment.id,
+                                          )}
+                                          onCheckedChange={() =>
+                                            togglePrintSelection(assignment.id)
+                                          }
+                                        />
+                                      </td>
+                                    )}
                                     <td className="px-4 py-3">
                                       <div className="font-medium dark:text-gray-100">
                                         {assignment.title}
                                       </div>
-                                      <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">
-                                        {assignment.instructions ||
-                                          t(
-                                            "classroomDetail.labels.noDescription",
-                                          )}
+                                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                        <span
+                                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${typeInfo.color}`}
+                                        >
+                                          {typeInfo.label}
+                                        </span>
+                                        <span>
+                                          {assignment.student_count
+                                            ? t(
+                                                "classroomDetail.labels.studentCountWithUnit",
+                                                {
+                                                  count:
+                                                    assignment.student_count,
+                                                },
+                                              )
+                                            : t(
+                                                "classroomDetail.labels.allClass",
+                                              )}
+                                        </span>
+                                        <span>
+                                          {assignment.created_at
+                                            ? new Date(
+                                                assignment.created_at,
+                                              ).toLocaleDateString("zh-TW")
+                                            : "—"}
+                                          {" ~ "}
+                                          {assignment.due_date
+                                            ? new Date(
+                                                assignment.due_date,
+                                              ).toLocaleDateString("zh-TW")
+                                            : t(
+                                                "classroomDetail.labels.noDeadline",
+                                              )}
+                                        </span>
                                       </div>
                                     </td>
                                     <td className="px-4 py-3">
@@ -1855,7 +2340,12 @@ export default function ClassroomDetail({
                                     </td>
                                     <td className="px-4 py-3 text-sm dark:text-gray-300">
                                       {assignment.student_count
-                                        ? `${assignment.student_count} 人`
+                                        ? t(
+                                            "classroomDetail.labels.studentCountWithUnit",
+                                            {
+                                              count: assignment.student_count,
+                                            },
+                                          )
                                         : t("classroomDetail.labels.allClass")}
                                     </td>
                                     <td className="px-4 py-3 text-sm dark:text-gray-300">
@@ -1952,6 +2442,55 @@ export default function ClassroomDetail({
                                               )}
                                             </Button>
                                           ))}
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-amber-600 hover:text-amber-700 dark:text-amber-400 h-10 min-h-10"
+                                          onClick={() =>
+                                            setStickyNoteModal({
+                                              open: true,
+                                              assignmentIndex:
+                                                assignments.findIndex(
+                                                  (a) => a.id === assignment.id,
+                                                ),
+                                            })
+                                          }
+                                        >
+                                          <StickyNote className="h-5 w-5" />
+                                        </Button>
+                                        {showArchived ? (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-orange-600 hover:text-orange-700 dark:text-orange-400 h-10 min-h-10"
+                                            onClick={() =>
+                                              handleUnarchiveAssignment(
+                                                assignment,
+                                              )
+                                            }
+                                          >
+                                            <ArchiveRestore className="w-4 h-4 mr-1" />
+                                            {t(
+                                              "classroomDetail.buttons.unarchiveAssignment",
+                                            )}
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 h-10 min-h-10"
+                                            onClick={() =>
+                                              handleArchiveAssignment(
+                                                assignment,
+                                              )
+                                            }
+                                          >
+                                            <Archive className="w-4 h-4 mr-1" />
+                                            {t(
+                                              "classroomDetail.buttons.archiveAssignment",
+                                            )}
+                                          </Button>
+                                        )}
                                       </div>
                                     </td>
                                   </tr>
@@ -1960,10 +2499,44 @@ export default function ClassroomDetail({
                             </tbody>
                           </table>
                         </div>
+                        {totalAssignmentPages > 1 && (
+                          <div className="flex items-center justify-center gap-4 pt-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={assignmentPage === 1}
+                              onClick={() =>
+                                setAssignmentPage((p) => Math.max(1, p - 1))
+                              }
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              {t("classroomDetail.pagination.page", {
+                                current: assignmentPage,
+                                total: totalAssignmentPages,
+                              })}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={assignmentPage === totalAssignmentPages}
+                              onClick={() =>
+                                setAssignmentPage((p) =>
+                                  Math.min(totalAssignmentPages, p + 1),
+                                )
+                              }
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div className="border dark:border-gray-700 rounded-lg p-8 text-center text-gray-500 dark:text-gray-400">
-                        {t("classroomDetail.messages.noAssignments")}
+                        {showArchived
+                          ? t("classroomDetail.messages.noArchivedAssignments")
+                          : t("classroomDetail.messages.noAssignments")}
                       </div>
                     )}
                   </div>
@@ -2543,7 +3116,7 @@ export default function ClassroomDetail({
                   setVocabularySetLessonId(null);
                   setVocabularySetContentId(null);
                   await refreshPrograms();
-                  toast.success("內容已成功儲存");
+                  toast.success(t("classroomDetail.messages.contentSaved"));
                 }}
                 onCancel={() => {
                   setShowVocabularySetEditor(false);
@@ -2573,6 +3146,15 @@ export default function ClassroomDetail({
           });
           fetchAssignments();
         }}
+      />
+
+      {/* Sticky Note Modal */}
+      <AssignmentStickyNote
+        open={stickyNoteModal.open}
+        onClose={() => setStickyNoteModal({ open: false, assignmentIndex: 0 })}
+        assignments={assignments}
+        initialAssignmentIndex={stickyNoteModal.assignmentIndex}
+        classroomId={Number(id)}
       />
     </>
   );

@@ -83,31 +83,12 @@ class FrontendErrorLog(BaseModel):
 def check_billing_permission(teacher: Teacher, db: Session) -> None:
     """
     Check if teacher has permission to manage billing.
-    Only org_owner or personal type (no organization) can manage billing.
 
-    Raises HTTPException if permission denied.
+    All payment endpoints handle personal subscriptions, not organization billing.
+    Organization billing is managed via admin_subscriptions endpoints.
+    Therefore, all teachers (with or without org membership) can manage
+    their own personal subscriptions.
     """
-    # Check if teacher has organization relationship
-    teacher_org = (
-        db.query(TeacherOrganization)
-        .filter(
-            TeacherOrganization.teacher_id == teacher.id,
-            TeacherOrganization.is_active.is_(True),
-        )
-        .first()
-    )
-
-    # If teacher has organization, check if they are org_owner
-    if teacher_org:
-        if teacher_org.role != "org_owner":
-            raise HTTPException(
-                status_code=403,
-                detail="Only organization owner can manage billing for organization accounts",
-            )
-        # org_owner can manage billing
-        return
-
-    # Personal teacher (no organization) can manage their own billing
     return
 
 
@@ -123,11 +104,11 @@ async def process_payment(
 
     # 🚫 檢查是否啟用付款功能
     if not ENABLE_PAYMENT:
-        logger.info(f"付款功能未啟用 (ENVIRONMENT={ENVIRONMENT}), 返回免費優惠期提醒")
+        logger.info(f"付款功能未啟用 (ENVIRONMENT={ENVIRONMENT})")
         return PaymentResponse(
             success=False,
             transaction_id=None,
-            message="目前仍在免費優惠期間，未來將會開放儲值功能。感謝您的支持！",
+            message="付款功能尚未開放，敬請期待！",
         )
 
     # 先取得原始請求體來debug
@@ -290,26 +271,8 @@ async def process_payment(
             .first()
         )
 
-        trial_remaining_points = 0
-        trial_metadata = None
-
         if trial_period:
-            # 計算 Trial 剩餘點數
-            trial_remaining_points = trial_period.quota_total - trial_period.quota_used
-
-            # 記錄轉移資訊（如果有剩餘點數）
-            if trial_remaining_points > 0:
-                trial_metadata = {
-                    "trial_credits_transferred": trial_remaining_points,
-                    "from_period_id": trial_period.id,
-                    "transferred_at": now.isoformat(),
-                }
-                logger.info(
-                    f"Trial credits transfer: {current_teacher.email} - "
-                    f"{trial_remaining_points} points from Trial to paid plan"
-                )
-
-            # 取消 Trial period
+            # 取消 Trial period（不轉移剩餘點數）
             trial_period.status = "cancelled"
             trial_period.cancelled_at = now
             trial_period.cancel_reason = "Upgraded to paid plan"
@@ -323,8 +286,9 @@ async def process_payment(
             period.status = "expired"
 
         # ✅ 創建新的訂閱週期記錄（包含 Trial 剩餘點數）
-        quota_total = 25000 if payment_request.plan_name == "School Teachers" else 10000
-        quota_total += trial_remaining_points  # 🔥 加上 Trial 剩餘點數
+        from config.plans import PLAN_QUOTAS
+
+        quota_total = PLAN_QUOTAS.get(payment_request.plan_name, 2000)
         new_period = SubscriptionPeriod(
             teacher_id=current_teacher.id,
             plan_name=payment_request.plan_name,
@@ -337,7 +301,6 @@ async def process_payment(
             payment_id=None,  # 稍後更新
             payment_status="paid",
             status="active",
-            admin_metadata=trial_metadata,  # 🔥 記錄 Trial 點數轉移
         )
         db.add(new_period)
         db.flush()  # 取得 ID 但不 commit

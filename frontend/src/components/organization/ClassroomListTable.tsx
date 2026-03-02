@@ -7,7 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, Edit2, UserPlus, BookOpen } from "lucide-react";
+import { Users, Edit2, UserPlus, BookOpen, Send } from "lucide-react";
 
 export interface Classroom {
   id: string;
@@ -29,6 +29,7 @@ interface ClassroomListTableProps {
   onAssignTeacher?: (classroom: Classroom) => void;
   onViewStudents?: (classroom: Classroom) => void;
   onViewMaterials?: (classroom: Classroom) => void;
+  onAssignHomework?: (classroom: Classroom) => void;
 }
 
 export function ClassroomListTable({
@@ -37,6 +38,7 @@ export function ClassroomListTable({
   onAssignTeacher,
   onViewStudents,
   onViewMaterials,
+  onAssignHomework,
 }: ClassroomListTableProps) {
   const getLevelBadge = (level: string) => {
     const levelColors: Record<string, string> = {
@@ -68,6 +70,7 @@ export function ClassroomListTable({
           <TableHead>導師</TableHead>
           <TableHead>學生數量</TableHead>
           <TableHead>教材清單</TableHead>
+          {onAssignHomework && <TableHead>派發作業</TableHead>}
           <TableHead>狀態</TableHead>
           {onEdit && <TableHead>操作</TableHead>}
         </TableRow>
@@ -114,6 +117,19 @@ export function ClassroomListTable({
                 <span>{classroom.program_count || 0}</span>
               </button>
             </TableCell>
+            {onAssignHomework && (
+              <TableCell>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onAssignHomework(classroom)}
+                  className="gap-1 text-blue-600 hover:text-blue-800"
+                >
+                  <Send className="h-4 w-4" />
+                  派發
+                </Button>
+              </TableCell>
+            )}
             <TableCell>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

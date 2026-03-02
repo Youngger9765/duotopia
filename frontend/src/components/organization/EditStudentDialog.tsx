@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { apiClient } from "@/lib/api";
 import { logError } from "@/utils/errorLogger";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ export function EditStudentDialog({
     is_active: true,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (student) {
@@ -70,6 +71,7 @@ export function EditStudentDialog({
 
   const handleSubmit = async () => {
     if (!student) return;
+    if (submittingRef.current) return;
 
     const trimmedName = formData.name.trim();
     if (!trimmedName) {
@@ -92,6 +94,7 @@ export function EditStudentDialog({
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       await apiClient.updateSchoolStudent(schoolId, student.id, {
@@ -133,6 +136,7 @@ export function EditStudentDialog({
         toast.error("更新學生失敗，請稍後再試");
       }
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };

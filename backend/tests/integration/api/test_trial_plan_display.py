@@ -2,8 +2,8 @@
 測試新註冊用戶的 Trial Plan 在 admin/subscription 頁面正確顯示
 
 測試目標：
-- 新註冊用戶完成 email 驗證後，應建立 "30-Day Trial" subscription period
-- admin/subscription API 應返回 plan_name = "30-Day Trial"
+- 新註冊用戶完成 email 驗證後，應建立 "Free Trial" subscription period
+- admin/subscription API 應返回 plan_name = "Free Trial"
 - end_date 應為註冊日 + 30 天
 """
 
@@ -43,7 +43,7 @@ def test_teacher(db_session: Session):
 def test_email_verification_creates_trial_plan(
     db_session: Session, test_teacher: Teacher
 ):
-    """測試：Email 驗證後應建立 30-Day Trial subscription period"""
+    """測試：Email 驗證後應建立 Free Trial subscription period"""
 
     # 驗證 email
     verified_teacher = email_service.verify_teacher_email_token(
@@ -66,10 +66,10 @@ def test_email_verification_creates_trial_plan(
 
     assert period is not None, "應該要建立 SubscriptionPeriod"
 
-    # ✅ 驗證：plan_name 應該是 "30-Day Trial"
+    # ✅ 驗證：plan_name 應該是 "Free Trial"
     assert (
-        period.plan_name == "30-Day Trial"
-    ), f"Plan name 應該是 '30-Day Trial'，但實際是 '{period.plan_name}'"
+        period.plan_name == "Free Trial"
+    ), f"Plan name 應該是 'Free Trial'，但實際是 '{period.plan_name}'"
 
     # ✅ 驗證：end_date 應該是 start_date + 30 天
     expected_end_date = period.start_date + timedelta(days=30)
@@ -97,10 +97,10 @@ def test_trial_plan_name_and_duration(db_session: Session, test_teacher: Teacher
 
     assert period is not None, "應該要建立 SubscriptionPeriod"
 
-    # ✅ 驗證：plan_name 應該是 "30-Day Trial"
+    # ✅ 驗證：plan_name 應該是 "Free Trial"
     assert (
-        period.plan_name == "30-Day Trial"
-    ), f"Plan name 應該是 '30-Day Trial'，但實際是 '{period.plan_name}'"
+        period.plan_name == "Free Trial"
+    ), f"Plan name 應該是 'Free Trial'，但實際是 '{period.plan_name}'"
 
     # ✅ 驗證：end_date 應該是 start_date + 30 天
     expected_end_date = period.start_date + timedelta(days=30)

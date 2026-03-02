@@ -440,7 +440,7 @@ function DashboardContent({
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    🎉 30天免費試用期
+                    🎉 免費試用
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
                     您的免費試用將在 {dashboardData.days_remaining} 天後到期

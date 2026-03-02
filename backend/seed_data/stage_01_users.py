@@ -75,15 +75,15 @@ def seed_users_and_organizations(db: Session):
     )
     db.add(demo_period)
 
-    # Trial 老師的訂閱週期（30天試用）
+    # Trial 老師的訂閱週期（免費試用，效期一年）
     trial_period = SubscriptionPeriod(
         teacher_id=trial_teacher.id,
-        plan_name="30-Day Trial",
+        plan_name="Free Trial",
         amount_paid=0,
-        quota_total=18000,  # 30天 * 10分鐘/天 * 60秒 = 18000秒
+        quota_total=2000,
         quota_used=0,
         start_date=datetime.now(),
-        end_date=datetime.now() + timedelta(days=30),
+        end_date=datetime.now() + timedelta(days=365),
         payment_method="trial",
         payment_status="completed",
         status="active",
@@ -189,8 +189,8 @@ def seed_users_and_organizations(db: Session):
         period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="School Teachers",  # 使用學校版方案
-            amount_paid=660,  # 學校版金額
-            quota_total=25000,  # 25000 點配額
+            amount_paid=599,  # 學校版金額
+            quota_total=6000,  # 6000 點配額
             quota_used=0,  # 未使用
             start_date=datetime.now(timezone.utc),
             end_date=datetime.now(timezone.utc) + timedelta(days=365),
@@ -200,7 +200,7 @@ def seed_users_and_organizations(db: Session):
         )
         db.add(period)
     db.commit()
-    print("✅ 為機構測試帳號建立訂閱（365天，25000點配額）")
+    print("✅ 為機構測試帳號建立訂閱（365天，6000點配額）")
 
     # 2.3 創建測試機構（3個）
     test_org = Organization(
@@ -589,8 +589,8 @@ def seed_users_and_organizations(db: Session):
         period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="School Teachers",
-            amount_paid=660,
-            quota_total=25000,
+            amount_paid=599,
+            quota_total=6000,
             quota_used=0,
             start_date=datetime.now(timezone.utc),
             end_date=datetime.now(timezone.utc) + timedelta(days=365),

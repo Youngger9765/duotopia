@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -45,6 +45,7 @@ export default function MaterialsPage() {
   const [newProgramName, setNewProgramName] = useState("");
   const [newProgramDescription, setNewProgramDescription] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const creatingRef = useRef(false);
 
   const effectiveOrgId =
     orgId ||
@@ -117,11 +118,13 @@ export default function MaterialsPage() {
 
   // Handle create program
   const handleCreateProgram = async () => {
+    if (creatingRef.current) return;
     if (!newProgramName.trim()) {
       toast.error("請輸入教材名稱");
       return;
     }
 
+    creatingRef.current = true;
     try {
       setIsCreating(true);
       await api.createProgram({
@@ -137,6 +140,7 @@ export default function MaterialsPage() {
       console.error("Failed to create program:", error);
       toast.error("建立教材失敗");
     } finally {
+      creatingRef.current = false;
       setIsCreating(false);
     }
   };

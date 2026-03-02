@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { apiClient } from "@/lib/api";
 import { logError } from "@/utils/errorLogger";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,7 @@ export function EditClassroomDialog({
     is_active: true,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (classroom) {
@@ -66,6 +67,7 @@ export function EditClassroomDialog({
 
   const handleSubmit = async () => {
     if (!classroom) return;
+    if (submittingRef.current) return;
 
     // Validation
     const trimmedName = formData.name.trim();
@@ -79,6 +81,7 @@ export function EditClassroomDialog({
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       await apiClient.updateSchoolClassroom(parseInt(classroom.id), {
@@ -98,6 +101,7 @@ export function EditClassroomDialog({
       });
       toast.error("更新班級失敗，請稍後再試");
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };

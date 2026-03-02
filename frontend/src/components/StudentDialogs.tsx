@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -70,6 +70,7 @@ export function StudentDialogs({
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (student && (dialogType === "edit" || dialogType === "view")) {
@@ -120,8 +121,10 @@ export function StudentDialogs({
   };
 
   const handleSubmit = async () => {
+    if (submittingRef.current) return;
     if (!validateForm()) return;
 
+    submittingRef.current = true;
     setLoading(true);
     try {
       if (dialogType === "create") {
@@ -298,13 +301,16 @@ export function StudentDialogs({
         toast.error(finalErrorMessage);
       }
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
     if (!student) return;
+    if (submittingRef.current) return;
 
+    submittingRef.current = true;
     setLoading(true);
     try {
       await apiClient.deleteStudent(student.id);
@@ -319,6 +325,7 @@ export function StudentDialogs({
       toast.error(t("studentDialogs.errors.deleteFailed"));
       setErrors({ submit: t("studentDialogs.errors.deleteRetry") });
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };

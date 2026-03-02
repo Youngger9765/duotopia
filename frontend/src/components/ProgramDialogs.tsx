@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -67,6 +67,7 @@ export function ProgramDialogs({
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (program && (dialogType === "edit" || dialogType === "view")) {
@@ -106,8 +107,10 @@ export function ProgramDialogs({
   };
 
   const handleSubmit = async () => {
+    if (submittingRef.current) return;
     if (!validateForm()) return;
 
+    submittingRef.current = true;
     setLoading(true);
     try {
       if (dialogType === "create") {
@@ -135,13 +138,16 @@ export function ProgramDialogs({
       toast.error(t("dialogs.programDialogs.errors.saveFailed"));
       setErrors({ submit: "儲存失敗，請稍後再試" });
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
     if (!program) return;
+    if (submittingRef.current) return;
 
+    submittingRef.current = true;
     setLoading(true);
     try {
       await apiClient.deleteProgram(program.id);
@@ -155,6 +161,7 @@ export function ProgramDialogs({
       toast.error(t("dialogs.programDialogs.errors.deleteFailed"));
       setErrors({ submit: "刪除失敗，請稍後再試" });
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };

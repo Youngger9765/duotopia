@@ -363,7 +363,7 @@ export default function TestSubscription() {
                     disabled={loading}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
                   >
-                    重置為新帳號（30天試用）
+                    重置為新帳號（免費試用）
                   </button>
                   <button
                     onClick={() => updateStatus("expire_tomorrow")}

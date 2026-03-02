@@ -24,6 +24,7 @@ import {
   Image as ImageIcon,
   X,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api";
@@ -198,6 +199,8 @@ interface ContentRow {
   example_sentence_translation?: string; // 例句中文翻譯
   example_sentence_japanese?: string; // 例句日文翻譯
   example_sentence_korean?: string; // 例句韓文翻譯
+  // 干擾項（單字選擇題用）
+  distractors?: string[];
 }
 
 interface TTSModalProps {
@@ -969,6 +972,7 @@ interface SortableRowInnerProps {
   isActive?: boolean;
   onRowFocus?: () => void;
   onWordLanguageChange?: (lang: WordTranslationLanguage) => void;
+  isAssignmentCopy?: boolean; // 是否為作業副本（顯示干擾項編輯）
 }
 
 function SortableRowInner({
@@ -991,6 +995,7 @@ function SortableRowInner({
   isActive = false,
   onRowFocus,
   onWordLanguageChange,
+  isAssignmentCopy = false,
 }: SortableRowInnerProps) {
   const { t } = useTranslation();
   const {
@@ -1387,6 +1392,39 @@ function SortableRowInner({
           )}
         </div>
       </div>
+
+      {/* 干擾項編輯區塊（僅在作業副本模式 + 有干擾項時顯示） */}
+      {isAssignmentCopy && row.distractors && row.distractors.length > 0 && (
+        <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-4 w-4 text-orange-600" />
+            <span className="text-xs font-semibold text-orange-800">
+              {t("vocabularySet.distractors.label", {
+                defaultValue: "AI 干擾項（單字選擇題的錯誤選項）",
+              })}
+            </span>
+          </div>
+          <div className="flex gap-2">
+            {row.distractors.map((distractor, dIdx) => (
+              <input
+                key={dIdx}
+                type="text"
+                value={distractor}
+                onChange={(e) => {
+                  const newDistractors = [...(row.distractors || [])];
+                  newDistractors[dIdx] = e.target.value;
+                  handleUpdateRow(index, "distractors", newDistractors);
+                }}
+                className="flex-1 px-2 py-1.5 border border-gray-300 rounded-md text-sm bg-white"
+                placeholder={t("vocabularySet.distractors.placeholder", {
+                  defaultValue: `干擾項 ${dIdx + 1}`,
+                  number: dIdx + 1,
+                })}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1402,6 +1440,7 @@ interface VocabularySetPanelProps {
   onCancel?: () => void;
   isOpen?: boolean;
   isCreating?: boolean; // 是否為新增模式
+  isAssignmentCopy?: boolean; // 是否為作業副本（顯示干擾項編輯）
 }
 
 export default function VocabularySetPanel({
@@ -1412,6 +1451,7 @@ export default function VocabularySetPanel({
   lessonId,
   programLevel,
   isCreating = false,
+  isAssignmentCopy = false,
 }: VocabularySetPanelProps) {
   const { t } = useTranslation();
 
@@ -1604,24 +1644,26 @@ export default function VocabularySetPanel({
           (
             item: {
               text?: string;
-              translation?: string;
               definition?: string;
-              english_definition?: string;
-              japanese_translation?: string;
-              korean_translation?: string;
               audio_url?: string;
               image_url?: string;
-              selectedWordLanguage?: WordTranslationLanguage;
-              selectedSentenceLanguage?: SentenceTranslationLanguage;
               example_sentence?: string;
               example_sentence_translation?: string;
-              example_sentence_japanese?: string;
-              example_sentence_korean?: string;
               parts_of_speech?: string[];
-              // 新的統一欄位
+              distractors?: string[];
+              // 統一翻譯欄位（canonical）
               vocabulary_translation?: string;
               vocabulary_translation_lang?: WordTranslationLanguage;
               example_sentence_translation_lang?: SentenceTranslationLanguage;
+              // 向後相容（ReadingAssessmentPanel 仍使用，VocabularySetPanel 不讀取）
+              english_definition?: string;
+              selectedWordLanguage?: WordTranslationLanguage;
+              translation?: string;
+              japanese_translation?: string;
+              korean_translation?: string;
+              example_sentence_japanese?: string;
+              example_sentence_korean?: string;
+              selectedSentenceLanguage?: SentenceTranslationLanguage;
             },
             index: number,
           ) => {
@@ -1638,22 +1680,21 @@ export default function VocabularySetPanel({
             ) {
               // 使用新的統一欄位格式
               selectedWordLanguage = item.vocabulary_translation_lang;
-              if (item.vocabulary_translation_lang === "chinese") {
+              // 永遠先載入中文翻譯，避免切換其他語言後中文遺失 (#366)
+              definition = item.definition || "";
+              // 再把 vocabulary_translation 放到對應語言欄位
+              if (selectedWordLanguage === "chinese") {
                 definition = item.vocabulary_translation;
-              } else if (item.vocabulary_translation_lang === "english") {
+              } else if (selectedWordLanguage === "english") {
                 translation = item.vocabulary_translation;
-              } else if (item.vocabulary_translation_lang === "japanese") {
+              } else if (selectedWordLanguage === "japanese") {
                 japanese_translation = item.vocabulary_translation;
-              } else if (item.vocabulary_translation_lang === "korean") {
+              } else if (selectedWordLanguage === "korean") {
                 korean_translation = item.vocabulary_translation;
               }
             } else {
-              // 向後相容：使用舊的欄位格式
+              // Fallback：vocabulary_translation 不存在時，從 definition 讀取中文
               definition = item.definition || "";
-              translation = item.english_definition || "";
-              japanese_translation = item.japanese_translation || "";
-              korean_translation = item.korean_translation || "";
-              selectedWordLanguage = item.selectedWordLanguage || "chinese";
             }
 
             // 處理例句翻譯：優先使用新的統一欄位
@@ -1705,10 +1746,17 @@ export default function VocabularySetPanel({
               example_sentence_japanese,
               example_sentence_korean,
               partsOfSpeech: item.parts_of_speech || [],
+              distractors: item.distractors || undefined,
             };
           },
         );
         setRows(convertedRows);
+
+        // 從既有資料初始化翻譯語言，避免儲存時被預設的 "chinese" 覆蓋（#366）
+        const firstLang = convertedRows[0]?.selectedWordLanguage;
+        if (firstLang) {
+          setLastSelectedWordLang(firstLang);
+        }
       }
     } catch (error) {
       console.error("Failed to load content:", error);
@@ -1732,6 +1780,7 @@ export default function VocabularySetPanel({
       example_sentence: row.example_sentence,
       example_sentence_translation: row.example_sentence_translation,
       parts_of_speech: row.partsOfSpeech || [],
+      ...(row.distractors ? { distractors: row.distractors } : {}),
     }));
 
     onUpdateContent({
@@ -1810,6 +1859,46 @@ export default function VocabularySetPanel({
     setRows(newRows);
   };
 
+  // 共用 helper：將 ContentRow 轉成完整的 API payload，避免次要儲存路徑遺漏欄位 (#366)
+  const buildItemPayload = (row: ContentRow) => {
+    const wordLang = row.selectedWordLanguage || "chinese";
+    let vocabularyTranslation = "";
+    if (wordLang === "chinese") {
+      vocabularyTranslation = row.definition || "";
+    } else if (wordLang === "english") {
+      vocabularyTranslation = row.translation || "";
+    } else if (wordLang === "japanese") {
+      vocabularyTranslation = row.japanese_translation || "";
+    } else if (wordLang === "korean") {
+      vocabularyTranslation = row.korean_translation || "";
+    }
+
+    const sentenceLang = row.selectedSentenceLanguage || "chinese";
+    let exampleTranslation = "";
+    if (sentenceLang === "chinese") {
+      exampleTranslation = row.example_sentence_translation || "";
+    } else if (sentenceLang === "japanese") {
+      exampleTranslation = row.example_sentence_japanese || "";
+    } else if (sentenceLang === "korean") {
+      exampleTranslation = row.example_sentence_korean || "";
+    }
+
+    return {
+      text: (row.text || "").trim(),
+      vocabulary_translation: vocabularyTranslation,
+      vocabulary_translation_lang: wordLang,
+      definition:
+        wordLang === "chinese" ? vocabularyTranslation : row.definition || "",
+      audio_url: row.audioUrl || row.audio_url || "",
+      image_url: row.imageUrl || "",
+      example_sentence: row.example_sentence || "",
+      example_sentence_translation: exampleTranslation,
+      example_sentence_translation_lang: sentenceLang,
+      parts_of_speech: row.partsOfSpeech || [],
+      ...(row.distractors ? { distractors: row.distractors } : {}),
+    };
+  };
+
   const handleRemoveAudio = async (index: number) => {
     const newRows = [...rows];
     newRows[index] = { ...newRows[index], audioUrl: "" };
@@ -1818,13 +1907,7 @@ export default function VocabularySetPanel({
     // 如果是編輯模式，立即更新到後端
     if (!isCreating && editingContent?.id) {
       try {
-        const items = newRows.map((row) => ({
-          text: row.text,
-          definition: row.definition,
-          translation: row.translation,
-          audio_url: row.audioUrl || "",
-          selectedWordLanguage: row.selectedWordLanguage,
-        }));
+        const items = newRows.map(buildItemPayload);
 
         await apiClient.updateContent(editingContent.id, {
           title: title || editingContent.title,
@@ -1988,13 +2071,7 @@ export default function VocabularySetPanel({
         setRows(newRows);
 
         // 立即更新 content 並儲存到後端
-        const items = newRows.map((row) => ({
-          text: row.text,
-          definition: row.definition, // 中文翻譯
-          translation: row.translation, // 英文釋義
-          audio_url: row.audioUrl || "",
-          selectedWordLanguage: row.selectedWordLanguage, // 記錄最後選擇的語言
-        }));
+        const items = newRows.map(buildItemPayload);
 
         // 新增模式：只更新本地狀態
         if (isCreating) {
@@ -2331,13 +2408,7 @@ export default function VocabularySetPanel({
         setRows(newRows);
 
         // 立即更新 content 並儲存到後端（不要用 onSave 避免關閉 panel）
-        const items = newRows.map((row) => ({
-          text: row.text,
-          definition: row.definition, // 中文翻譯
-          translation: row.translation, // 英文釋義
-          audio_url: row.audioUrl || "",
-          selectedWordLanguage: row.selectedWordLanguage, // 記錄最後選擇的語言
-        }));
+        const items = newRows.map(buildItemPayload);
 
         // 新增模式：只更新本地狀態，不呼叫 API
         if (isCreating) {
@@ -3140,6 +3211,7 @@ export default function VocabularySetPanel({
                   isActive={activeRowIndex === index}
                   onRowFocus={() => setActiveRowIndex(index)}
                   onWordLanguageChange={setLastSelectedWordLang}
+                  isAssignmentCopy={isAssignmentCopy}
                 />
               );
             })}
@@ -3571,53 +3643,7 @@ export default function VocabularySetPanel({
                 // 注意：例句為選填，不檢查是否缺少
                 const saveData = {
                   title: title,
-                  items: validRows.map((row) => {
-                    // 根據選擇的語言取得對應的單字翻譯
-                    const wordLang = row.selectedWordLanguage || "chinese";
-                    let vocabularyTranslation = "";
-                    if (wordLang === "chinese") {
-                      vocabularyTranslation = row.definition || "";
-                    } else if (wordLang === "english") {
-                      vocabularyTranslation = row.translation || "";
-                    } else if (wordLang === "japanese") {
-                      vocabularyTranslation = row.japanese_translation || "";
-                    } else if (wordLang === "korean") {
-                      vocabularyTranslation = row.korean_translation || "";
-                    }
-
-                    // 根據選擇的語言取得對應的例句翻譯
-                    const sentenceLang =
-                      row.selectedSentenceLanguage || "chinese";
-                    let exampleTranslation = "";
-                    if (sentenceLang === "chinese") {
-                      exampleTranslation =
-                        row.example_sentence_translation || "";
-                    } else if (sentenceLang === "japanese") {
-                      exampleTranslation = row.example_sentence_japanese || "";
-                    } else if (sentenceLang === "korean") {
-                      exampleTranslation = row.example_sentence_korean || "";
-                    }
-
-                    return {
-                      text: row.text.trim(),
-                      // 統一翻譯欄位（新格式）
-                      vocabulary_translation: vocabularyTranslation,
-                      vocabulary_translation_lang: wordLang,
-                      // 向後相容欄位（讓學生 API 能讀到 ContentItem.translation）
-                      definition: vocabularyTranslation,
-                      // 英文釋義向後相容
-                      english_definition:
-                        wordLang === "english"
-                          ? vocabularyTranslation
-                          : row.translation || "",
-                      audio_url: row.audioUrl || row.audio_url || "",
-                      image_url: row.imageUrl || "",
-                      example_sentence: row.example_sentence || "",
-                      example_sentence_translation: exampleTranslation,
-                      example_sentence_translation_lang: sentenceLang,
-                      parts_of_speech: row.partsOfSpeech || [],
-                    };
-                  }),
+                  items: validRows.map(buildItemPayload),
                   target_wpm: 60,
                   target_accuracy: 0.8,
                   time_limit_seconds: 180,

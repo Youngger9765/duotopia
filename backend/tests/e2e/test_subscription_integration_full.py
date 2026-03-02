@@ -54,7 +54,7 @@ def create_teacher_with_subscription(
     email: str,
     name: str,
     plan: str = "Tutor Teachers",
-    quota_total: int = 10000,
+    quota_total: int = 2000,
     days: int = 30,
 ) -> Dict[str, Any]:
     """創建有訂閱的老師"""
@@ -73,7 +73,7 @@ def create_teacher_with_subscription(
     period = SubscriptionPeriod(
         teacher_id=teacher.id,
         plan_name=plan,
-        amount_paid=330 if plan == "Tutor Teachers" else 660,
+        amount_paid=299 if plan == "Tutor Teachers" else 599,
         quota_total=quota_total,
         quota_used=0,
         start_date=now,
@@ -106,7 +106,7 @@ def create_expired_teacher(db: Session, email: str, name: str) -> Teacher:
         teacher_id=teacher.id,
         plan_name="Tutor Teachers",
         amount_paid=0,
-        quota_total=10000,
+        quota_total=2000,
         quota_used=0,
         start_date=now - timedelta(days=60),
         end_date=now - timedelta(days=1),  # 昨天過期
@@ -183,7 +183,7 @@ class TestTeacherSubscriptionLifecycle:
         # Then: 應該有 30 天試用
         assert teacher.subscription_status == "subscribed"
         assert teacher.days_remaining >= 29
-        assert period.quota_total == 10000
+        assert period.quota_total == 2000
         assert period.quota_used == 0
 
     def test_02_active_teacher_can_create_class(self, db_session):
@@ -379,8 +379,8 @@ class TestEdgeCases:
         new_period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=330,
-            quota_total=10000,
+            amount_paid=299,
+            quota_total=2000,
             quota_used=0,
             start_date=now,
             end_date=now + timedelta(days=30),
@@ -394,7 +394,7 @@ class TestEdgeCases:
         db_session.refresh(teacher)
         assert teacher.current_period.id == new_period.id
         assert teacher.current_period.quota_used == 0
-        assert teacher.current_period.quota_total == 10000
+        assert teacher.current_period.quota_total == 2000
 
     def test_14_multiple_periods_only_one_active(self, db_session):
         """✅ 測試 14：多個 period 只有一個 active"""
@@ -411,8 +411,8 @@ class TestEdgeCases:
         new_period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=330,
-            quota_total=10000,
+            amount_paid=299,
+            quota_total=2000,
             quota_used=0,
             start_date=now,
             end_date=now + timedelta(days=30),
@@ -463,7 +463,7 @@ class TestCompleteHappyPath:
         # Then: 配額應該減少
         db_session.refresh(period)
         assert period.quota_used == 30
-        assert period.quota_total - period.quota_used == 9970
+        assert period.quota_total - period.quota_used == 1970
 
 
 # ============ Test Summary ============

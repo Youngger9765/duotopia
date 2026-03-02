@@ -115,9 +115,9 @@ def test_payment_enabled():
         # 因為我們用的是無效的 prime token，應該會失敗（這是預期的）
         if data.get("success") is False:
             # 檢查是否為免費優惠期訊息
-            if "免費優惠期間" in data.get("message", ""):
+            if "付款功能尚未開放" in data.get("message", ""):
                 print("   ❌ 測試失敗！")
-                print("   ❌ ENABLE_PAYMENT=true 但仍然返回免費優惠期訊息")
+                print("   ❌ ENABLE_PAYMENT=true 但仍然返回付款未開放訊息")
             else:
                 print("   ✅ 測試通過！")
                 print("   ✅ Payment API 嘗試處理付款（如預期失敗，因為使用無效 prime）")

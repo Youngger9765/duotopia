@@ -521,7 +521,7 @@
       "subtitle": "管理您的班級、課程與學生學習進度"
     },
     "subscription": {
-      "trialTitle": "🎉 30天免費試用期",
+      "trialTitle": "🎉 免費試用",
       "trialDescription": "您的免費試用將在 {{days}} 天後到期",
       "expiryDate": "到期日:",
       "days": "天",
@@ -689,7 +689,7 @@
         "planNoChange": "— No change —",
         "planSelect": "Select a plan",
         "plans": {
-          "trial": "30-Day Trial",
+          "trial": "Free Trial",
           "tutor": "Tutor Teachers",
           "school": "School Teachers",
           "demo": "Demo Unlimited Plan",
@@ -1077,13 +1077,13 @@
       "separator": "測試帳號快速登入",
       "demoTeacher": "Demo 教師（已充值300天）",
       "demoEmail": "demo@duotopia.com",
-      "trialTeacher": "試用教師（30天試用期）",
+      "trialTeacher": "試用教師（免費試用）",
       "trialEmail": "trial@duotopia.com",
       "expiredTeacher": "過期教師（未訂閱）",
       "expiredEmail": "expired@duotopia.com",
       "passwordHint": "🔐 測試帳號密碼均為：demo123",
       "demoDescription": "demo@duotopia.com - 已充值300天",
-      "trialDescription": "trial@duotopia.com - 30天試用期",
+      "trialDescription": "trial@duotopia.com - 免費試用",
       "expiredDescription": "expired@duotopia.com - 未訂閱/已過期"
     },
     "footer": {
@@ -1455,7 +1455,9 @@
         "empty": "尚無可用的課程內容",
         "emptyDesc": "請先建立課程計畫和內容",
         "units": "{{count}} 個單元",
+        "noUnits": "沒有單元內容",
         "contents": "{{count}} 個內容",
+        "noContents": "沒有內容",
         "loadingLabel": "載入中...",
         "selectAll": "全選",
         "deselectAll": "取消全選",
@@ -2061,6 +2063,30 @@
       }
     }
   },
+  "stickyNote": {
+    "submissionStatus": "繳交狀態",
+    "noStudents": "此作業尚無指派學生",
+    "display": "顯示",
+    "seatNumber": "座號",
+    "studentName": "姓名",
+    "score": "成績",
+    "sortByNumber": "座號排序",
+    "sortByName": "姓名排序",
+    "sortByScore": "成績排序",
+    "downloadImage": "下載圖片",
+    "print": "列印",
+    "batchPrint": "批次列印",
+    "batchPrintError": "批次列印失敗",
+    "copyright": "由 Duotopia 產生 \u00a9 duotopia.com",
+    "status": {
+      "notStarted": "未開始",
+      "inProgress": "待完成",
+      "submitted": "已提交",
+      "returned": "待訂正",
+      "resubmitted": "已訂正",
+      "graded": "已完成"
+    }
+  },
   "studentCompletionDashboard": {
     "summary": {
       "total": "總人數",
@@ -2432,7 +2458,27 @@
       "resetPasswordFailed": "重設密碼失敗，請稍後再試",
       "viewSubmissionsInDevelopment": "查看學生提交功能尚在開發中",
       "contentSaved": "內容已成功儲存",
-      "noAssignments": "尚未指派任何作業"
+      "noAssignments": "尚未指派任何作業",
+      "manageStudentsFromSchool": "請從學校後台處理學生管理",
+      "contentSavedSuccessfully": "內容已成功儲存",
+      "confirmArchiveAssignment": "確定要封存作業「{{title}}」嗎？封存後，所有學生成績將結算為當下成績，作業將移至封存區。",
+      "assignmentArchived": "作業「{{title}}」已封存",
+      "archiveAssignmentFailed": "封存作業失敗，請稍後再試",
+      "confirmUnarchiveAssignment": "確定要解除封存作業「{{title}}」嗎？作業將恢復到進行中的作業列表。",
+      "assignmentUnarchived": "作業「{{title}}」已解除封存",
+      "unarchiveAssignmentFailed": "解除封存失敗，請稍後再試",
+      "noArchivedAssignments": "尚無封存作業"
+    },
+    "pagination": {
+      "page": "第 {{current}} 頁 / 共 {{total}} 頁"
+    },
+    "filters": {
+      "searchPlaceholder": "搜尋作業名稱...",
+      "allTypes": "所有類型",
+      "startDate": "開始日期",
+      "endDate": "結束日期",
+      "overdueOnly": "已逾期",
+      "clearAll": "清除"
     },
     "buttons": {
       "backToList": "返回班級列表",
@@ -2446,6 +2492,8 @@
       "viewSubmissions": "查看學生提交",
       "editAssignment": "編輯作業",
       "deleteAssignment": "刪除作業",
+      "archiveAssignment": "封存",
+      "unarchiveAssignment": "解除封存",
       "cancel": "取消",
       "saveChanges": "儲存變更",
       "addItem": "新增項目",
@@ -2466,7 +2514,9 @@
       "programs": "課程",
       "programList": "班級教材",
       "assignments": "作業",
-      "assignmentManagement": "作業管理"
+      "assignmentManagement": "作業管理",
+      "activeAssignments": "進行中",
+      "archivedAssignments": "封存區"
     },
     "sections": {
       "classStudents": "班級學生",
@@ -2493,6 +2543,7 @@
       "noContentItems": "尚無內容項目",
       "enterTitle": "輸入標題",
       "allClass": "全班",
+      "studentCountWithUnit": "{{count}} 人",
       "noDeadline": "無期限",
       "noDescription": "無說明",
       "unknownType": "未知類型",
@@ -2798,7 +2849,8 @@
       "delete": "刪除",
       "confirmDelete": "確認刪除",
       "create": "建立",
-      "createFirst": "建立第一個班級"
+      "createFirst": "建立第一個班級",
+      "dispatchAssignment": "派發作業"
     },
     "stats": {
       "totalClassrooms": "總班級數",
@@ -2815,7 +2867,8 @@
       "programCount": "課程數",
       "createdAt": "建立時間",
       "actions": "操作",
-      "grade": "級別"
+      "grade": "級別",
+      "school": "所屬學校"
     },
     "messages": {
       "totalCount": "共 {{count}} 個班級",
@@ -2838,7 +2891,19 @@
     },
     "placeholders": {
       "classroomName": "例如：五年級A班",
-      "description": "班級描述（選填）"
+      "description": "班級描述（選填）",
+      "searchName": "搜尋班級名稱..."
+    },
+    "filters": {
+      "allLevels": "所有等級"
+    },
+    "sort": {
+      "default": "預設排序",
+      "nameAsc": "名稱 A→Z",
+      "nameDesc": "名稱 Z→A",
+      "studentCountDesc": "學生數 多→少",
+      "createdAtDesc": "最新建立",
+      "createdAtAsc": "最早建立"
     }
   },
   "teacherStudents": {
@@ -2947,11 +3012,11 @@
       "unknownPlan": "未知方案",
       "trial": "試用中",
       "active": "有效",
-      "trialDescription": "試用期間，剩餘點數可帶入付費方案",
+      "trialDescription": "免費試用期間，剩餘點數可帶入付費方案",
       "statusGood": "訂閱狀態良好",
-      "quotaSchool": "25000 點 AI 評估配額/月 (約 416 分鐘口說評估)",
-      "quotaTrial": "10000 點 AI 評估配額 (試用期 30 天)",
-      "quotaTutor": "10000 點 AI 評估配額/月 (約 166 分鐘口說評估)",
+      "quotaSchool": "6000 點 AI 配額/月",
+      "quotaTrial": "2000 點 AI 配額（免費試用，效期一年）",
+      "quotaTutor": "2000 點 AI 配額/月",
       "noSubscription": "尚未訂閱",
       "choosePlan": "選擇適合您的訂閱方案"
     },

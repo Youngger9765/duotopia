@@ -81,6 +81,10 @@ class Assignment(Base):
     # 軟刪除標記
     is_active = Column(Boolean, default=True)
 
+    # 封存標記
+    is_archived = Column(Boolean, default=False)
+    archived_at = Column(DateTime(timezone=True), nullable=True)
+
     # Relationships
     classroom = relationship("Classroom", back_populates="assignments")
     teacher = relationship("Teacher", back_populates="assignments")

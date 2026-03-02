@@ -68,8 +68,8 @@ class TestMonthlyRenewalCron:
         period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=330,
-            quota_total=10000,
+            amount_paid=299,
+            quota_total=2000,
             quota_used=0,
             start_date=date(2025, 11, 1),
             end_date=date(2025, 11, 30),
@@ -116,8 +116,8 @@ class TestMonthlyRenewalCron:
             SubscriptionPeriod(
                 teacher_id=teacher.id,
                 plan_name="Tutor Teachers",
-                amount_paid=330,
-                quota_total=10000,
+                amount_paid=299,
+                quota_total=2000,
                 start_date=date(2025, 10, 1),
                 end_date=date(2025, 10, 31),
                 payment_method="manual",
@@ -126,8 +126,8 @@ class TestMonthlyRenewalCron:
             SubscriptionPeriod(
                 teacher_id=teacher.id,
                 plan_name="Tutor Teachers",
-                amount_paid=330,
-                quota_total=10000,
+                amount_paid=299,
+                quota_total=2000,
                 start_date=date(2025, 9, 1),
                 end_date=date(2025, 9, 30),
                 payment_method="manual",
@@ -175,8 +175,8 @@ class TestMonthlyRenewalCron:
         period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=330,
-            quota_total=10000,
+            amount_paid=299,
+            quota_total=2000,
             start_date=date(2025, 12, 1),
             end_date=date(2025, 12, 31),
             payment_method="manual",
@@ -240,8 +240,8 @@ class TestMonthlyRenewalCron:
         old_period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=330,
-            quota_total=10000,
+            amount_paid=299,
+            quota_total=2000,
             quota_used=0,
             start_date=date(2025, 11, 1),
             end_date=date(2025, 11, 30),
@@ -274,7 +274,7 @@ class TestMonthlyRenewalCron:
         assert new_period.end_date.date() == date(2025, 12, 31)
         assert new_period.status == "active"
         assert new_period.payment_method == "auto_renew"
-        assert new_period.quota_total == 10000
+        assert new_period.quota_total == 2000
 
         # Then: card_token 被更新
         db.refresh(teacher)
@@ -283,7 +283,7 @@ class TestMonthlyRenewalCron:
         # Then: TapPay 被正確呼叫
         mock_tappay.pay_by_token.assert_called_once()
         call_args = mock_tappay.pay_by_token.call_args[1]
-        assert call_args["amount"] == 330
+        assert call_args["amount"] == 299
         assert call_args["card_key"] == "card_key_123"
 
     @freeze_time("2025-12-01 02:00:00")
@@ -294,9 +294,9 @@ class TestMonthlyRenewalCron:
         """
         情境 2.2: School Teachers 方案自動續訂
 
-        Given: School Teachers 方案（660元，25000點）
+        Given: School Teachers 方案（599元，6000點）
         When: 12/1 Cron 執行
-        Then: 扣款 660 元，配額 25000 點
+        Then: 扣款 599 元，配額 6000 點
         """
         db = setup_test_data
 
@@ -324,8 +324,8 @@ class TestMonthlyRenewalCron:
         old_period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="School Teachers",  # School 方案
-            amount_paid=660,
-            quota_total=25000,
+            amount_paid=599,
+            quota_total=6000,
             start_date=date(2025, 11, 1),
             end_date=date(2025, 11, 30),
             payment_method="auto_renew",
@@ -339,11 +339,11 @@ class TestMonthlyRenewalCron:
             "/api/cron/monthly-renewal", headers={"x-cron-secret": "test-secret"}
         )
 
-        # Then: 扣款 660 元
+        # Then: 扣款 599 元
         call_args = mock_tappay.pay_by_token.call_args[1]
-        assert call_args["amount"] == 660
+        assert call_args["amount"] == 599
 
-        # Then: 新訂閱配額 25000
+        # Then: 新訂閱配額 6000
         new_period = (
             db.query(SubscriptionPeriod)
             .filter(
@@ -352,7 +352,7 @@ class TestMonthlyRenewalCron:
             )
             .first()
         )
-        assert new_period.quota_total == 25000
+        assert new_period.quota_total == 6000
 
     # ============================================
     # 階段 2: 自動續訂 - 失敗情境
@@ -396,8 +396,8 @@ class TestMonthlyRenewalCron:
         old_period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=330,
-            quota_total=10000,
+            amount_paid=299,
+            quota_total=2000,
             start_date=date(2025, 11, 1),
             end_date=date(2025, 11, 30),
             payment_method="auto_renew",
@@ -468,8 +468,8 @@ class TestMonthlyRenewalCron:
             end_date=date(2025, 11, 30),
             payment_method="auto_renew",
             status="active",
-            amount_paid=330,
-            quota_total=10000,
+            amount_paid=299,
+            quota_total=2000,
         )
         db.add(old_period)
 
@@ -477,8 +477,8 @@ class TestMonthlyRenewalCron:
         current_period = SubscriptionPeriod(
             teacher_id=teacher.id,
             plan_name="Tutor Teachers",
-            amount_paid=330,
-            quota_total=10000,
+            amount_paid=299,
+            quota_total=2000,
             start_date=date(2025, 12, 1),
             end_date=date(2025, 12, 31),
             payment_method="manual",  # 手動付的
@@ -535,8 +535,8 @@ class TestMonthlyRenewalCron:
             end_date=date(2025, 11, 30),
             payment_method="auto_renew",
             status="active",
-            amount_paid=330,
-            quota_total=10000,
+            amount_paid=299,
+            quota_total=2000,
         )
         db.add(old_period)
         db.commit()
@@ -689,8 +689,8 @@ class TestMonthlyRenewalCron:
             end_date=date(2025, 11, 30),
             payment_method="manual",
             status="active",
-            amount_paid=330,
-            quota_total=10000,
+            amount_paid=299,
+            quota_total=2000,
         )
         db.add(old_period)
         db.commit()
@@ -739,8 +739,8 @@ class TestMonthlyRenewalCron:
             end_date=date(2025, 11, 30),
             payment_method="manual",
             status="active",
-            amount_paid=330,
-            quota_total=10000,
+            amount_paid=299,
+            quota_total=2000,
         )
         db.add(old_period)
         db.commit()
@@ -788,8 +788,8 @@ class TestMonthlyRenewalCron:
             end_date=date(2025, 11, 30),
             payment_method="auto_renew",
             status="active",
-            amount_paid=330,
-            quota_total=10000,
+            amount_paid=299,
+            quota_total=2000,
         )
         db.add(old_period)
         db.commit()
@@ -888,8 +888,8 @@ class TestMonthlyRenewalCron:
             end_date=date(2025, 12, 31),
             payment_method="auto_renew",
             status="active",
-            amount_paid=330,
-            quota_total=10000,
+            amount_paid=299,
+            quota_total=2000,
         )
         db.add(old_period)
         db.commit()

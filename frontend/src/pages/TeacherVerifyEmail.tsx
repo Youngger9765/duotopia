@@ -136,7 +136,7 @@ export function TeacherVerifyEmail() {
 
             <div className="pt-4 border-t">
               <p className="text-xs text-gray-500 text-center">
-                驗證後您將獲得 30 天免費試用期
+                驗證後您將獲得 2,000 點免費 AI 配額
               </p>
             </div>
           </CardContent>

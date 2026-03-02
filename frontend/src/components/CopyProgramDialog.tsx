@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -49,6 +49,7 @@ export default function CopyProgramDialog({
   const [programs, setPrograms] = useState<TeacherProgram[]>([]);
   const [loading, setLoading] = useState(true);
   const [copying, setCopying] = useState(false);
+  const copyingRef = useRef(false);
   const [selectedPrograms, setSelectedPrograms] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -90,7 +91,9 @@ export default function CopyProgramDialog({
 
   const handleCopyPrograms = async () => {
     if (selectedPrograms.length === 0) return;
+    if (copyingRef.current) return;
 
+    copyingRef.current = true;
     setCopying(true);
     try {
       await apiClient.copyProgramToClassroom(classroomId, selectedPrograms);
@@ -105,6 +108,7 @@ export default function CopyProgramDialog({
       logError("Failed to copy programs:", error);
       toast.error(t("dialogs.copyProgramDialog.copyError"));
     } finally {
+      copyingRef.current = false;
       setCopying(false);
     }
   };

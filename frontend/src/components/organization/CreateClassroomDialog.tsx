@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { apiClient } from "@/lib/api";
 import { logError } from "@/utils/errorLogger";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ export function CreateClassroomDialog({
     level: "A1",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleClose = () => {
     setFormData({ name: "", description: "", level: "A1" });
@@ -49,6 +50,8 @@ export function CreateClassroomDialog({
   };
 
   const handleSubmit = async () => {
+    if (submittingRef.current) return;
+
     // Validation
     const trimmedName = formData.name.trim();
     if (!trimmedName) {
@@ -66,6 +69,7 @@ export function CreateClassroomDialog({
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       await apiClient.createSchoolClassroom(schoolId, {
@@ -81,6 +85,7 @@ export function CreateClassroomDialog({
       logError("Failed to create classroom", error, { schoolId, formData });
       toast.error("建立班級失敗，請稍後再試");
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };

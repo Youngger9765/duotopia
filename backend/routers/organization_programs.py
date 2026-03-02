@@ -14,7 +14,7 @@ Endpoints:
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from pydantic import BaseModel, Field, field_serializer, model_validator
+from pydantic import BaseModel, Field, computed_field, field_serializer, model_validator
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone
@@ -93,6 +93,11 @@ class ContentResponse(BaseModel):
     order_index: int
     is_active: bool
     items: List[ContentItemResponse] = []
+
+    @computed_field
+    @property
+    def items_count(self) -> int:
+        return len(self.items)
 
     class Config:
         from_attributes = True

@@ -70,7 +70,7 @@ def teacher_with_subscription(db_session: Session):
         teacher_id=teacher.id,
         plan_name="School Teachers",
         amount_paid=0,
-        quota_total=25000,
+        quota_total=6000,
         quota_used=5000,
         start_date=now,
         end_date=datetime(2025, 12, 31, 23, 59, 59, 999999, tzinfo=timezone.utc),
@@ -125,7 +125,7 @@ class TestCreateSubscription:
         data = response.json()
         assert data["teacher_email"] == regular_teacher.email
         assert data["plan_name"] == "School Teachers"
-        assert data["quota_total"] == 25000
+        assert data["quota_total"] == 6000
 
         # 檢查資料庫
         period = (
@@ -135,7 +135,7 @@ class TestCreateSubscription:
         )
         assert period is not None
         assert period.plan_name == "School Teachers"
-        assert period.quota_total == 25000
+        assert period.quota_total == 6000
         assert period.status == "active"
         assert period.payment_method == "admin_create"
         assert period.end_date.year == 2025
@@ -225,7 +225,7 @@ class TestEditSubscription:
         assert response.status_code == 200
         data = response.json()
         assert data["plan_name"] == "Tutor Teachers"
-        assert data["quota_total"] == 10000  # Tutor Teachers 的 quota
+        assert data["quota_total"] == 2000  # Tutor Teachers 的 quota
 
         # 檢查資料庫
         period = (
@@ -234,7 +234,7 @@ class TestEditSubscription:
             .first()
         )
         assert period.plan_name == "Tutor Teachers"
-        assert period.quota_total == 10000
+        assert period.quota_total == 2000
         assert period.payment_method == "admin_edit"  # ✅ 檢查 payment_method
 
     def test_edit_subscription_change_quota(

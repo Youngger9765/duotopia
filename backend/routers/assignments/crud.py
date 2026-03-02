@@ -2,6 +2,7 @@
 Assignment CRUD operations
 """
 
+import uuid
 from typing import Optional, List
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -14,6 +15,8 @@ from models import (
     Student,
     Classroom,
     ClassroomStudent,
+    ClassroomSchool,
+    School,
     Content,
     ContentItem,
     Lesson,
@@ -25,6 +28,7 @@ from models import (
     StudentItemProgress,
     AssignmentStatus,
 )
+from utils.permissions import has_read_org_materials_permission
 from .validators import (
     CreateAssignmentRequest,
     UpdateAssignmentRequest,
@@ -57,13 +61,15 @@ async def create_assignment(
                 detail="Your subscription has expired. Please recharge to create assignments.",
             )
 
-    # 驗證班級存在且屬於當前教師
+    # 驗證班級存在且當前教師有權限
+    # 支援兩種授權路徑：
+    # 1. 班級導師（teacher_id == current_teacher.id）
+    # 2. 機構管理員（透過 organization_id 驗證角色）
     classroom = (
         db.query(Classroom)
         .filter(
             and_(
                 Classroom.id == request.classroom_id,
-                Classroom.teacher_id == current_teacher.id,
                 Classroom.is_active.is_(True),
             )
         )
@@ -71,6 +77,42 @@ async def create_assignment(
     )
 
     if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+
+    # 授權檢查
+    is_classroom_teacher = classroom.teacher_id == current_teacher.id
+    is_org_admin = False
+
+    if not is_classroom_teacher and request.organization_id:
+        # 機構管理員路徑：驗證班級屬於該機構的學校，且教師有機構權限
+        org_id = uuid.UUID(request.organization_id)
+
+        # 檢查班級是否屬於該機構的學校
+        classroom_school = (
+            db.query(ClassroomSchool)
+            .filter(
+                ClassroomSchool.classroom_id == request.classroom_id,
+                ClassroomSchool.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if classroom_school:
+            school = (
+                db.query(School)
+                .filter(
+                    School.id == classroom_school.school_id,
+                    School.organization_id == org_id,
+                )
+                .first()
+            )
+
+            if school and has_read_org_materials_permission(
+                current_teacher.id, org_id, db
+            ):
+                is_org_admin = True
+
+    if not is_classroom_teacher and not is_org_admin:
         raise HTTPException(
             status_code=404, detail="Classroom not found or you don't have permission"
         )
@@ -158,6 +200,10 @@ async def create_assignment(
                 item_metadata=original_item.item_metadata.copy()
                 if original_item.item_metadata
                 else {},
+                # 例句欄位
+                example_sentence=original_item.example_sentence,
+                example_sentence_translation=original_item.example_sentence_translation,
+                example_sentence_definition=original_item.example_sentence_definition,
                 # Phase 2 欄位
                 image_url=original_item.image_url,
                 part_of_speech=original_item.part_of_speech,
@@ -289,6 +335,7 @@ async def create_assignment(
 async def get_assignments(
     classroom_id: Optional[int] = Query(None, description="Filter by classroom"),
     status: Optional[str] = Query(None, description="Filter by status"),
+    is_archived: Optional[bool] = Query(False, description="Filter by archive status"),
     db: Session = Depends(get_db),
     current_teacher: Teacher = Depends(get_current_teacher),
 ):
@@ -296,11 +343,18 @@ async def get_assignments(
     取得作業列表（新架構）
     - 教師看到自己建立的作業
     - 可依班級和狀態篩選
+    - 預設只顯示未封存作業，is_archived=true 顯示封存作業
     """
     # 建立查詢
     query = db.query(Assignment).filter(
         Assignment.teacher_id == current_teacher.id, Assignment.is_active.is_(True)
     )
+
+    # 封存篩選
+    if is_archived:
+        query = query.filter(Assignment.is_archived.is_(True))
+    else:
+        query = query.filter(Assignment.is_archived.is_(False))
 
     # 套用篩選
     if classroom_id:
@@ -403,6 +457,13 @@ async def get_assignments(
                 "content_type": content_type,
                 "practice_mode": assignment.practice_mode,
                 "answer_mode": assignment.answer_mode,
+                # 封存狀態
+                "is_archived": assignment.is_archived or False,
+                "archived_at": (
+                    assignment.archived_at.isoformat()
+                    if assignment.archived_at
+                    else None
+                ),
             }
         )
 
@@ -668,6 +729,87 @@ async def delete_assignment(
     db.commit()
 
     return {"success": True, "message": "Assignment deleted successfully"}
+
+
+@router.patch("/{assignment_id}/archive")
+async def archive_assignment(
+    assignment_id: int,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    封存作業
+    - 將作業標記為已封存
+    - 所有學生成績結算為當下成績（狀態不變）
+    - 封存後不會顯示在作業管理列表中
+    """
+    assignment = (
+        db.query(Assignment)
+        .filter(
+            Assignment.id == assignment_id,
+            Assignment.teacher_id == current_teacher.id,
+            Assignment.is_active.is_(True),
+            Assignment.is_archived.is_(False),
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(
+            status_code=404,
+            detail="Assignment not found, already archived, or you don't have permission",
+        )
+
+    assignment.is_archived = True
+    assignment.archived_at = datetime.now(timezone.utc)
+
+    db.commit()
+
+    return {
+        "success": True,
+        "assignment_id": assignment_id,
+        "archived_at": assignment.archived_at.isoformat(),
+        "message": "Assignment archived successfully",
+    }
+
+
+@router.patch("/{assignment_id}/unarchive")
+async def unarchive_assignment(
+    assignment_id: int,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    解除封存作業
+    - 將作業從封存區恢復到作業管理列表
+    """
+    assignment = (
+        db.query(Assignment)
+        .filter(
+            Assignment.id == assignment_id,
+            Assignment.teacher_id == current_teacher.id,
+            Assignment.is_active.is_(True),
+            Assignment.is_archived.is_(True),
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(
+            status_code=404,
+            detail="Assignment not found, not archived, or you don't have permission",
+        )
+
+    assignment.is_archived = False
+    assignment.archived_at = None
+
+    db.commit()
+
+    return {
+        "success": True,
+        "assignment_id": assignment_id,
+        "message": "Assignment unarchived successfully",
+    }
 
 
 @router.get("/classrooms/{classroom_id}/students", response_model=List[StudentResponse])
