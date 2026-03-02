@@ -239,8 +239,7 @@ async def create_assignment(
                     candidates = [
                         t
                         for t in all_translations
-                        if t.lower().strip()
-                        != item.translation.lower().strip()
+                        if t.lower().strip() != item.translation.lower().strip()
                     ]
                     random.shuffle(candidates)
                     item.distractors = candidates[:3]
