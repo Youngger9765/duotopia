@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RecursiveTreeAccordion } from "./RecursiveTreeAccordion";
 import { programTreeConfig } from "./programTreeConfig";
 import ReadingAssessmentPanel from "@/components/ReadingAssessmentPanel";
@@ -200,6 +200,10 @@ export function ProgramTreeView({
     lesson: ProgramTreeLesson | null;
     programId: number | null;
   }>({ open: false, lesson: null, programId: null });
+  const [isSavingLesson, setIsSavingLesson] = useState(false);
+  const savingLessonRef = useRef(false);
+  const [isSavingProgram, setIsSavingProgram] = useState(false);
+  const savingProgramRef = useRef(false);
 
   // Notify parent of changes (one-way: child -> parent)
   // Note: We do NOT sync externalPrograms back to avoid infinite loop
@@ -1084,12 +1088,17 @@ export function ProgramTreeView({
               onClick={() =>
                 setProgramEditDialog({ open: false, program: null })
               }
+              disabled={isSavingProgram}
             >
               取消
             </Button>
             <Button
+              disabled={isSavingProgram}
               onClick={async () => {
                 if (!programEditDialog.program) return;
+                if (savingProgramRef.current) return;
+                savingProgramRef.current = true;
+                setIsSavingProgram(true);
 
                 try {
                   if (programEditDialog.program.id) {
@@ -1137,10 +1146,17 @@ export function ProgramTreeView({
                       ? "更新教材失敗"
                       : "建立教材失敗",
                   );
+                } finally {
+                  savingProgramRef.current = false;
+                  setIsSavingProgram(false);
                 }
               }}
             >
-              {programEditDialog.program?.id ? "儲存" : "建立"}
+              {isSavingProgram
+                ? "處理中..."
+                : programEditDialog.program?.id
+                  ? "儲存"
+                  : "建立"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1206,6 +1222,7 @@ export function ProgramTreeView({
           <DialogFooter>
             <Button
               variant="outline"
+              disabled={isSavingLesson}
               onClick={() =>
                 setLessonEditDialog({
                   open: false,
@@ -1217,10 +1234,14 @@ export function ProgramTreeView({
               取消
             </Button>
             <Button
+              disabled={isSavingLesson}
               onClick={async () => {
+                if (savingLessonRef.current) return;
                 if (!lessonEditDialog.lesson || !lessonEditDialog.programId)
                   return;
 
+                savingLessonRef.current = true;
+                setIsSavingLesson(true);
                 try {
                   if (lessonEditDialog.lesson.id) {
                     // Update existing lesson
@@ -1290,10 +1311,17 @@ export function ProgramTreeView({
                       ? "更新課程失敗"
                       : "建立課程失敗",
                   );
+                } finally {
+                  savingLessonRef.current = false;
+                  setIsSavingLesson(false);
                 }
               }}
             >
-              {lessonEditDialog.lesson?.id ? "儲存" : "建立"}
+              {isSavingLesson
+                ? "處理中..."
+                : lessonEditDialog.lesson?.id
+                  ? "儲存"
+                  : "建立"}
             </Button>
           </DialogFooter>
         </DialogContent>

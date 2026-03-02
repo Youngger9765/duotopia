@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { API_URL } from "@/config/api";
 import {
@@ -49,6 +49,7 @@ export function MaterialCreateDialog({
 }: MaterialCreateDialogProps) {
   const token = useTeacherAuthStore((state) => state.token);
   const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -67,12 +68,14 @@ export function MaterialCreateDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
 
     if (!formData.name.trim()) {
       toast.error("請填寫教材名稱");
       return;
     }
 
+    submittingRef.current = true;
     setLoading(true);
     try {
       const requestData: {
@@ -125,6 +128,7 @@ export function MaterialCreateDialog({
       console.error("Failed to create program:", error);
       toast.error("網路連線錯誤");
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
