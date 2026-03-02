@@ -937,11 +937,41 @@ async def get_subscription_status(
             logger.error(f"Error fetching current_period: {e}")
             # Continue without period data
 
-        quota_used = current_period.quota_used if current_period else 0
-        quota_total = current_period.quota_total if current_period else None
-        quota_remaining = (
-            (quota_total - quota_used) if quota_total is not None else None
+        # Aggregated quota (subscription + credit packages)
+        from services.quota_service import QuotaService
+
+        quota_info = QuotaService.get_quota_info(current_teacher, db)
+
+        # Credit packages detail
+        from models.credit_package import CreditPackage
+
+        credit_packages = (
+            db.query(CreditPackage)
+            .filter(
+                CreditPackage.teacher_id == current_teacher.id,
+                CreditPackage.status.in_(["active", "expired"]),
+            )
+            .order_by(CreditPackage.expires_at.asc())
+            .all()
         )
+
+        now = datetime.now(timezone.utc)
+        credit_packages_list = [
+            {
+                "id": pkg.id,
+                "package_id": pkg.package_id,
+                "points_total": pkg.points_total,
+                "points_used": pkg.points_used,
+                "points_remaining": pkg.points_remaining,
+                "price_paid": pkg.price_paid,
+                "purchased_at": pkg.purchased_at.isoformat() if pkg.purchased_at else None,
+                "expires_at": pkg.expires_at.isoformat() if pkg.expires_at else None,
+                "status": pkg.status,
+                "source": pkg.source,
+                "is_expired": pkg.expires_at <= now if pkg.expires_at else True,
+            }
+            for pkg in credit_packages
+        ]
 
         return {
             "status": current_teacher.subscription_status or "INACTIVE",
@@ -963,9 +993,18 @@ async def get_subscription_status(
                 if current_teacher.subscription_cancelled_at
                 else None
             ),
-            "quota_used": quota_used,
-            "quota_total": quota_total,
-            "quota_remaining": quota_remaining,
+            # Aggregated totals
+            "quota_used": quota_info["quota_used"],
+            "quota_total": quota_info["quota_total"],
+            "quota_remaining": quota_info["quota_remaining"],
+            # Subscription breakdown
+            "subscription_total": quota_info.get("subscription_total", 0),
+            "subscription_used": quota_info.get("subscription_used", 0),
+            "subscription_remaining": quota_info.get("subscription_remaining", 0),
+            # Credit packages breakdown
+            "credit_packages_total": quota_info.get("credit_packages_total", 0),
+            "credit_packages_remaining": quota_info.get("credit_packages_remaining", 0),
+            "credit_packages": credit_packages_list,
         }
     except Exception as e:
         logger.error(f"Error in get_subscription_status: {e}", exc_info=True)

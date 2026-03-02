@@ -1155,6 +1155,62 @@ async def recording_error_report_cron(
         )
 
 
+@router.post("/expire-credit-packages")
+async def expire_credit_packages_cron(
+    x_cron_secret: str = Header(None), db: Session = Depends(get_db)
+):
+    """
+    定期將過期的 CreditPackage 標記為 expired
+
+    執行時間：每日凌晨 3:00（由 Cloud Scheduler 觸發）
+
+    功能：
+    1. 查詢所有 status='active' 且 expires_at < now 的 CreditPackage
+    2. 將 status 設為 'expired'
+    3. 記錄過期處理結果
+    """
+    if x_cron_secret != CRON_SECRET:
+        logger.warning(f"Unauthorized cron request. Secret: {x_cron_secret[:10]}...")
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    from models.credit_package import CreditPackage
+
+    now = datetime.now(timezone.utc)
+
+    try:
+        expired_packages = (
+            db.query(CreditPackage)
+            .filter(
+                CreditPackage.status == "active",
+                CreditPackage.expires_at <= now,
+            )
+            .all()
+        )
+
+        expired_count = len(expired_packages)
+        for pkg in expired_packages:
+            pkg.status = "expired"
+            logger.info(
+                f"CreditPackage {pkg.id} expired: "
+                f"teacher_id={pkg.teacher_id}, org_id={pkg.organization_id}, "
+                f"points_remaining={pkg.points_remaining}, expires_at={pkg.expires_at}"
+            )
+
+        db.commit()
+
+        logger.info(f"Credit package expiry cron completed: {expired_count} packages expired")
+
+        return {
+            "success": True,
+            "expired_count": expired_count,
+            "timestamp": now.isoformat(),
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Credit package expiry cron failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Cron job failed: {str(e)}")
+
+
 @router.get("/health")
 async def cron_health_check():
     """

@@ -112,7 +112,12 @@ class PointUsageLog(Base):
     subscription_period_id = Column(
         Integer,
         ForeignKey("subscription_periods.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,  # nullable for credit-package-only users
+    )
+    credit_package_id = Column(
+        Integer,
+        ForeignKey("credit_packages.id", ondelete="SET NULL"),
+        nullable=True,
     )
     teacher_id = Column(
         Integer, ForeignKey("teachers.id", ondelete="CASCADE"), nullable=False

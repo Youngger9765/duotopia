@@ -40,6 +40,7 @@ from routers import (
     teacher_review,
     subscription,
     payment,
+    credit_packages,
     cron,
     organizations,
     schools,
@@ -243,6 +244,7 @@ app.include_router(logs.router)  # 日誌路由（無需認證）
 app.include_router(auth.router)
 app.include_router(subscription.router)  # 訂閱路由
 app.include_router(payment.router, prefix="/api", tags=["payment"])  # 金流路由
+app.include_router(credit_packages.router)  # 點數包購買路由
 
 # 測試路由 - 僅在開發和 Staging 環境啟用
 if environment in ["development", "staging"]:

@@ -106,6 +106,13 @@ class Teacher(Base):
         back_populates="teacher",
         cascade="all, delete-orphan",
     )
+    # Credit packages
+    credit_packages = relationship(
+        "CreditPackage",
+        back_populates="teacher",
+        cascade="all, delete-orphan",
+        order_by="CreditPackage.expires_at.asc()",
+    )
 
     @property
     def current_period(self):
@@ -140,40 +147,57 @@ class Teacher(Base):
         )
         return session.execute(stmt).scalar_one_or_none()
 
-    @property
-    def quota_total(self) -> int:
-        """當前週期的總配額"""
-        period = self.current_period
-        return period.quota_total if period else 0
-
-    @property
-    def quota_remaining(self) -> int:
-        """當前週期的剩餘配額"""
-        period = self.current_period
-        if not period:
-            return 0
-        return max(0, period.quota_total - period.quota_used)
-
-    @property
-    def subscription_status(self):
-        """獲取訂閱狀態 - 從 subscription_periods 計算"""
-        period = self.current_period
-        if not period:
-            return "expired"
-
+    def _active_credit_packages(self):
+        """取得所有 active 且未過期的點數包"""
         from datetime import datetime, timezone
 
         now = datetime.now(timezone.utc)
+        return [
+            pkg
+            for pkg in (self.credit_packages or [])
+            if pkg.status == "active" and pkg.expires_at and pkg.expires_at > now
+        ]
 
-        # 確保 end_date 有 timezone
-        end_date = period.end_date
-        if end_date.tzinfo is None:
-            end_date = end_date.replace(tzinfo=timezone.utc)
+    @property
+    def quota_total(self) -> int:
+        """訂閱配額 + 所有 active 點數包的加總"""
+        total = 0
+        period = self.current_period
+        if period:
+            total += period.quota_total
+        total += sum(pkg.points_total for pkg in self._active_credit_packages())
+        return total
 
-        if end_date > now:
-            return "subscribed"
-        else:
-            return "expired"
+    @property
+    def quota_remaining(self) -> int:
+        """所有來源的剩餘加總"""
+        remaining = 0
+        period = self.current_period
+        if period:
+            remaining += max(0, period.quota_total - period.quota_used)
+        remaining += sum(pkg.points_remaining for pkg in self._active_credit_packages())
+        return remaining
+
+    @property
+    def subscription_status(self):
+        """獲取訂閱狀態 - 從 subscription_periods + credit packages 計算"""
+        period = self.current_period
+        if period:
+            from datetime import datetime, timezone
+
+            now = datetime.now(timezone.utc)
+            end_date = period.end_date
+            if end_date.tzinfo is None:
+                end_date = end_date.replace(tzinfo=timezone.utc)
+
+            if end_date > now:
+                return "subscribed"
+
+        # No active subscription, check credit packages
+        if self._active_credit_packages():
+            return "free"
+
+        return "expired"
 
     @property
     def days_remaining(self):
@@ -206,21 +230,21 @@ class Teacher(Base):
 
     @property
     def can_assign_homework(self):
-        """是否可以分派作業 - 檢查是否有有效的 subscription_period"""
+        """是否可以分派作業 - 有效訂閱或有 active 點數包"""
         period = self.current_period
-        if not period:
-            return False
+        if period:
+            from datetime import datetime, timezone
 
-        from datetime import datetime, timezone
+            now = datetime.now(timezone.utc)
+            end_date = period.end_date
+            if end_date.tzinfo is None:
+                end_date = end_date.replace(tzinfo=timezone.utc)
 
-        now = datetime.now(timezone.utc)
+            if end_date > now:
+                return True
 
-        # 確保 end_date 有 timezone
-        end_date = period.end_date
-        if end_date.tzinfo is None:
-            end_date = end_date.replace(tzinfo=timezone.utc)
-
-        return end_date > now
+        # Also allow if teacher has active credit packages with remaining points
+        return any(pkg.points_remaining > 0 for pkg in self._active_credit_packages())
 
     def __repr__(self):
         return f"<Teacher {self.name} ({self.email})>"
