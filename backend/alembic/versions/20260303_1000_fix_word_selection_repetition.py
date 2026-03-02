@@ -24,9 +24,7 @@ depends_on = None
 def upgrade() -> None:
     # DROP + CREATE because CREATE OR REPLACE is safer only when
     # we're certain the signature hasn't changed across environments
-    op.execute(
-        "DROP FUNCTION IF EXISTS get_words_for_practice(INTEGER, INTEGER)"
-    )
+    op.execute("DROP FUNCTION IF EXISTS get_words_for_practice(INTEGER, INTEGER)")
 
     op.execute(
         """
@@ -112,9 +110,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Restore previous version of the function
-    op.execute(
-        "DROP FUNCTION IF EXISTS get_words_for_practice(INTEGER, INTEGER)"
-    )
+    op.execute("DROP FUNCTION IF EXISTS get_words_for_practice(INTEGER, INTEGER)")
 
     op.execute(
         """
