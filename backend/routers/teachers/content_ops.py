@@ -639,9 +639,7 @@ async def update_content(
             .order_by(ContentItem.order_index)
             .all()
         )
-        items_needing_distractors = [
-            item for item in all_items if item.distractors is None
-        ]
+        items_needing_distractors = [item for item in all_items if not item.distractors]
         if items_needing_distractors:
             all_translations = [item.translation for item in all_items]
             for item in items_needing_distractors:

@@ -2,10 +2,12 @@
 Assignment CRUD operations
 """
 
+import logging
 import random
 import uuid
 from typing import Optional, List
 from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import and_, func
@@ -37,8 +39,6 @@ from .validators import (
     ContentResponse,
 )
 from .dependencies import get_current_teacher
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -234,8 +234,9 @@ async def create_assignment(
                 .all()
             )
             all_translations = [item.translation for item in copy_items]
+            generated_count = 0
             for item in copy_items:
-                if item.distractors is None:
+                if not item.distractors:
                     candidates = [
                         t
                         for t in all_translations
@@ -243,10 +244,12 @@ async def create_assignment(
                     ]
                     random.shuffle(candidates)
                     item.distractors = candidates[:3]
-            logger.info(
-                f"Auto-generated word-set distractors for "
-                f"content copy {copy_content_id}"
-            )
+                    generated_count += 1
+            if generated_count > 0:
+                logger.info(
+                    f"Auto-generated word-set distractors for "
+                    f"{generated_count} items in content copy {copy_content_id}"
+                )
 
     # 建立 AssignmentContent 關聯（指向副本）
     for idx, original_content_id in enumerate(request.content_ids, 1):
