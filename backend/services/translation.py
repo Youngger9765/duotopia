@@ -641,12 +641,19 @@ Level guidelines:
 - A1: Simple present/past, basic vocabulary, short sentences (5-8 words)
 - A2: Simple sentences with common phrases, everyday topics (8-12 words)
 - B1: Compound sentences, wider vocabulary, various tenses (12-20 words)
-- B2: Complex sentences, idiomatic expressions, abstract topics (15-25 words). FORBIDDEN: Do NOT use simple present or simple past for more than 30% of the sentences.
-- C1: Sophisticated vocabulary, nuanced meaning, formal/informal register (18-30 words). FORBIDDEN: Do NOT use simple present or simple past for more than 20% of the sentences.
-- C2: Near-native fluency, literary style, rare vocabulary acceptable. FORBIDDEN: Do NOT use simple present or simple past for more than 10% of the sentences.
+- B2: Complex sentences, idiomatic expressions, abstract topics (15-25 words).
+  FORBIDDEN: Do NOT use simple present or simple past for more than 30%.
+- C1: Sophisticated vocabulary, nuanced meaning, formal/informal register (18-30 words).
+  FORBIDDEN: Do NOT use simple present or simple past for more than 20%.
+- C2: Near-native fluency, literary style, rare vocabulary acceptable.
+  FORBIDDEN: Do NOT use simple present or simple past for more than 10%.
 
-6. **GRAMMAR VARIETY (MANDATORY)**: You MUST distribute grammar patterns across ALL sentences — even when generating a single sentence, pick a grammar point from the list below that is NOT simple present or simple past (for B1 and above).
-   When generating multiple sentences (batch), each sentence MUST use a DIFFERENT grammar pattern. Do NOT default to simple present/past tense — actively choose varied structures from this list for level {level}:
+6. **GRAMMAR VARIETY (MANDATORY)**:
+   You MUST distribute grammar patterns across ALL sentences.
+   Even for a single sentence, pick a grammar point that is NOT simple present
+   or simple past (for B1 and above).
+   For batch generation, each sentence MUST use a DIFFERENT grammar pattern.
+   Do NOT default to simple present/past — actively choose from this list for {level}:
 {chr(10).join(f'   - {g}' for g in GRAMMAR_BY_LEVEL.get(level, GRAMMAR_BY_LEVEL.get("B1", [])))}
 
 7. **SUBJECT VARIETY**: Do NOT start every sentence with pronouns \
