@@ -202,6 +202,8 @@ export function ProgramTreeView({
   }>({ open: false, lesson: null, programId: null });
   const [isSavingLesson, setIsSavingLesson] = useState(false);
   const savingLessonRef = useRef(false);
+  const [isSavingProgram, setIsSavingProgram] = useState(false);
+  const savingProgramRef = useRef(false);
 
   // Notify parent of changes (one-way: child -> parent)
   // Note: We do NOT sync externalPrograms back to avoid infinite loop
@@ -1086,12 +1088,17 @@ export function ProgramTreeView({
               onClick={() =>
                 setProgramEditDialog({ open: false, program: null })
               }
+              disabled={isSavingProgram}
             >
               取消
             </Button>
             <Button
+              disabled={isSavingProgram}
               onClick={async () => {
                 if (!programEditDialog.program) return;
+                if (savingProgramRef.current) return;
+                savingProgramRef.current = true;
+                setIsSavingProgram(true);
 
                 try {
                   if (programEditDialog.program.id) {
@@ -1139,10 +1146,17 @@ export function ProgramTreeView({
                       ? "更新教材失敗"
                       : "建立教材失敗",
                   );
+                } finally {
+                  savingProgramRef.current = false;
+                  setIsSavingProgram(false);
                 }
               }}
             >
-              {programEditDialog.program?.id ? "儲存" : "建立"}
+              {isSavingProgram
+                ? "處理中..."
+                : programEditDialog.program?.id
+                  ? "儲存"
+                  : "建立"}
             </Button>
           </DialogFooter>
         </DialogContent>
