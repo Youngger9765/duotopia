@@ -213,7 +213,8 @@ async def create_assignment(
                 image_url=original_item.image_url,
                 part_of_speech=original_item.part_of_speech,
                 distractors=original_item.distractors.copy()
-                if original_item.distractors
+                if isinstance(original_item.distractors, list)
+                and len(original_item.distractors) > 0
                 else None,
                 word_count=original_item.word_count,
                 max_errors=original_item.max_errors,
@@ -238,7 +239,7 @@ async def create_assignment(
 
         generated_count = 0
         for item in all_items_in_assignment:
-            if not item.distractors:
+            if not isinstance(item.distractors, list) or len(item.distractors) == 0:
                 candidates = [
                     t
                     for t in all_translations

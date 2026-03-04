@@ -381,7 +381,7 @@ async def preview_word_selection_start(
         correct_answer = item.translation or ""
         stored_distractors = item.distractors
 
-        if stored_distractors and len(stored_distractors) >= 3:
+        if isinstance(stored_distractors, list) and len(stored_distractors) >= 3:
             # 使用已儲存的干擾項（來自同作業其他單字翻譯，需至少 3 個）
             final_distractors = list(stored_distractors[:3])
         else:
