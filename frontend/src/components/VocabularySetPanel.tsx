@@ -1400,7 +1400,7 @@ function SortableRowInner({
             <Sparkles className="h-4 w-4 text-orange-600" />
             <span className="text-xs font-semibold text-orange-800">
               {t("vocabularySet.distractors.label", {
-                defaultValue: "AI 干擾項（單字選擇題的錯誤選項）",
+                defaultValue: "干擾項（單字選擇題的錯誤選項）",
               })}
             </span>
           </div>
