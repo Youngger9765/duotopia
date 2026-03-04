@@ -19,6 +19,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Query,
     status,
     Request,
     Header,
@@ -581,12 +582,16 @@ async def demo_vocabulary_activities(
 async def demo_word_selection_start(
     request: Request,
     assignment_id: int,
+    exclude_ids: str = Query(
+        default="", description="Already-practiced content_item_ids, comma-separated"
+    ),
     db: Session = Depends(get_db),
 ):
     """
     Demo mode: Start word selection practice.
 
     Rate limit: 60 requests per minute per IP.
+    exclude_ids: Previously practiced word IDs to avoid repetition (#379)
 
     Returns:
         Same format as teacher preview API for word selection practice.
@@ -620,12 +625,28 @@ async def demo_word_selection_start(
     # Record total words before limiting
     total_words_in_assignment = len(content_items)
 
+    # (#379) Exclude already-practiced words to avoid repetition per round
+    exclude_id_set = set()
+    if exclude_ids:
+        try:
+            exclude_id_set = {
+                int(x.strip()) for x in exclude_ids.split(",") if x.strip()
+            }
+        except ValueError:
+            pass  # Ignore invalid IDs
+
+    remaining_items = [item for item in content_items if item.id not in exclude_id_set]
+
+    # If remaining < 10, reset cycle (start over from all words)
+    if len(remaining_items) < 10:
+        remaining_items = list(content_items)
+
     # Shuffle if needed
     if assignment.shuffle_questions:
-        random.shuffle(content_items)
+        random.shuffle(remaining_items)
 
     # Limit to 10 words (consistent with student API)
-    content_items = content_items[:10]
+    content_items = remaining_items[:10]
 
     # NOTE: AI distractor generation is temporarily disabled (#303).
     # All distractors now come from other words in the assignment.
