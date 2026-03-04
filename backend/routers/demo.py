@@ -626,14 +626,16 @@ async def demo_word_selection_start(
     total_words_in_assignment = len(content_items)
 
     # (#379) Exclude already-practiced words to avoid repetition per round
+    # Per-token parsing: a single invalid value won't drop all exclusions
     exclude_id_set = set()
     if exclude_ids:
-        try:
-            exclude_id_set = {
-                int(x.strip()) for x in exclude_ids.split(",") if x.strip()
-            }
-        except ValueError:
-            pass  # Ignore invalid IDs
+        for x in exclude_ids.split(","):
+            x = x.strip()
+            if x:
+                try:
+                    exclude_id_set.add(int(x))
+                except ValueError:
+                    pass  # Skip individual invalid token
 
     remaining_items = [item for item in content_items if item.id not in exclude_id_set]
 

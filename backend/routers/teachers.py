@@ -4566,15 +4566,16 @@ async def preview_word_selection_start(
     # 記錄作業總單字數（在限制之前）
     total_words_in_assignment = len(content_items)
 
-    # (#379) 排除已練過的單字，確保每輪不重複
+    # (#379) 排除已練過的單字，確保每輪不重複（per-token 解析避免單一無效值丟失全部）
     exclude_id_set = set()
     if exclude_ids:
-        try:
-            exclude_id_set = {
-                int(x.strip()) for x in exclude_ids.split(",") if x.strip()
-            }
-        except ValueError:
-            pass  # 忽略無效的 ID
+        for x in exclude_ids.split(","):
+            x = x.strip()
+            if x:
+                try:
+                    exclude_id_set.add(int(x))
+                except ValueError:
+                    pass  # 跳過個別無效的 ID
 
     remaining_items = [item for item in content_items if item.id not in exclude_id_set]
 
