@@ -1,16 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { ChatContainer } from "../chat/ChatContainer";
 import { useAiAssistant } from "../useAiAssistant";
-import { AddStudentsFlow, type FlowState } from "./add-students-flow";
+import { ManageStudentsFlow, type FlowState } from "./add-students-flow";
 import type { ChatMessage } from "../chat/types";
 
 export function AddStudentsChat() {
-  const { exitFlow } = useAiAssistant();
+  const { t } = useTranslation();
+  const { exitFlow, initialFlowData, clearInitialData } = useAiAssistant();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [flowState, setFlowState] = useState<Partial<FlowState>>({
-    inputDisabled: true,
-  });
-  const flowRef = useRef<AddStudentsFlow | null>(null);
+  const [, setFlowState] = useState<Partial<FlowState>>({});
+  const flowRef = useRef<ManageStudentsFlow | null>(null);
 
   const pushMsg = useCallback((msgs: ChatMessage[]) => {
     setMessages([...msgs]);
@@ -20,21 +20,34 @@ export function AddStudentsChat() {
     setFlowState((prev) => ({ ...prev, ...partial }));
   }, []);
 
-  // Initialize flow once
+  // Initialize flow — pass initialData if coming from HubChat intent detection
   useEffect(() => {
+    const initData = initialFlowData
+      ? { subIntent: initialFlowData.subIntent }
+      : undefined;
+
     if (!flowRef.current) {
-      flowRef.current = new AddStudentsFlow(pushMsg, updateState);
+      flowRef.current = new ManageStudentsFlow(pushMsg, updateState, initData);
+    } else if (initData) {
+      flowRef.current = new ManageStudentsFlow(pushMsg, updateState, initData);
     }
+
+    if (initialFlowData) clearInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialFlowData]);
 
   const handleSend = useCallback((text: string) => {
-    flowRef.current?.handleUserInput(text);
+    const flow = flowRef.current;
+    if (!flow) return;
+
+    // Pass all text input to the flow for processing
+    flow.handleUserInput(text);
   }, []);
 
   const handleButtonSelect = useCallback(
-    (_messageId: string, value: string) => {
+    async (_messageId: string, value: string) => {
       if (value === "_disabled") return;
+
       if (value.startsWith("navigate:")) {
         const path = value.replace("navigate:", "");
         window.open(path, "_blank");
@@ -47,13 +60,13 @@ export function AddStudentsChat() {
 
   return (
     <ChatContainer
-      title="新增班級學生"
+      title={t("aiAssistant.students.chatTitle")}
       messages={messages}
       onSend={handleSend}
       onButtonSelect={handleButtonSelect}
       onBack={exitFlow}
-      inputDisabled={flowState.inputDisabled ?? true}
-      inputPlaceholder="輸入學生資料..."
+      inputDisabled={false}
+      inputPlaceholder={t("aiAssistant.students.inputPlaceholder")}
     />
   );
 }

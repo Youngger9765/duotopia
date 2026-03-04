@@ -14,6 +14,7 @@
 import { apiClient } from "@/lib/api";
 import { API_URL } from "@/config/api";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import i18n from "@/i18n/config";
 import type { ChatMessage, QuickButton, TableColumn } from "../chat/types";
 
 // ─── Types ───
@@ -95,29 +96,50 @@ function orgDisplayName(org: OrgInfo) {
 // ─── Navigation helpers ───
 
 /** Map of page keywords to path templates. orgId/schoolId are filled at runtime. */
-const PAGE_NAV_MAP: Record<string, { label: string; pathTemplate: string }> = {
-  教師清單: {
-    label: "前往教師清單 →",
-    pathTemplate: "/organization/{orgId}/teachers",
-  },
-  分校清單: {
-    label: "前往分校清單 →",
-    pathTemplate: "/organization/{orgId}/schools",
-  },
-  教材管理: {
-    label: "前往教材管理 →",
-    pathTemplate: "/organization/{orgId}/materials",
-  },
-  我的班級: { label: "前往我的班級 →", pathTemplate: "/teacher/classrooms" },
-  所有學生: { label: "前往所有學生 →", pathTemplate: "/teacher/students" },
-  我的教材: { label: "前往我的教材 →", pathTemplate: "/teacher/programs" },
-  個人資料: { label: "前往個人資料 →", pathTemplate: "/teacher/profile" },
-  訂閱管理: { label: "前往訂閱管理 →", pathTemplate: "/teacher/subscription" },
-};
+function getPageNavMap(): Record<
+  string,
+  { label: string; pathTemplate: string }
+> {
+  return {
+    [i18n.t("aiAssistant.teacher.nav.teacherList.label")]: {
+      label: i18n.t("aiAssistant.teacher.nav.teacherList.button"),
+      pathTemplate: "/organization/{orgId}/teachers",
+    },
+    [i18n.t("aiAssistant.teacher.nav.schoolList.label")]: {
+      label: i18n.t("aiAssistant.teacher.nav.schoolList.button"),
+      pathTemplate: "/organization/{orgId}/schools",
+    },
+    [i18n.t("aiAssistant.teacher.nav.materials.label")]: {
+      label: i18n.t("aiAssistant.teacher.nav.materials.button"),
+      pathTemplate: "/organization/{orgId}/materials",
+    },
+    [i18n.t("aiAssistant.teacher.nav.myClassrooms.label")]: {
+      label: i18n.t("aiAssistant.teacher.nav.myClassrooms.button"),
+      pathTemplate: "/teacher/classrooms",
+    },
+    [i18n.t("aiAssistant.teacher.nav.allStudents.label")]: {
+      label: i18n.t("aiAssistant.teacher.nav.allStudents.button"),
+      pathTemplate: "/teacher/students",
+    },
+    [i18n.t("aiAssistant.teacher.nav.myMaterials.label")]: {
+      label: i18n.t("aiAssistant.teacher.nav.myMaterials.button"),
+      pathTemplate: "/teacher/programs",
+    },
+    [i18n.t("aiAssistant.teacher.nav.profile.label")]: {
+      label: i18n.t("aiAssistant.teacher.nav.profile.button"),
+      pathTemplate: "/teacher/profile",
+    },
+    [i18n.t("aiAssistant.teacher.nav.subscription.label")]: {
+      label: i18n.t("aiAssistant.teacher.nav.subscription.button"),
+      pathTemplate: "/teacher/subscription",
+    },
+  };
+}
 
 function buildNavButtons(message: string, orgId?: string): QuickButton[] {
   const buttons: QuickButton[] = [];
-  for (const [keyword, nav] of Object.entries(PAGE_NAV_MAP)) {
+  const pageNavMap = getPageNavMap();
+  for (const [keyword, nav] of Object.entries(pageNavMap)) {
     if (message.includes(keyword)) {
       const path = orgId
         ? nav.pathTemplate.replace("{orgId}", orgId)
@@ -130,16 +152,20 @@ function buildNavButtons(message: string, orgId?: string): QuickButton[] {
 
 // ─── Table helpers ───
 
-const TEACHER_TABLE_COLUMNS: TableColumn[] = [
-  { key: "index", label: "#" },
-  { key: "name", label: "姓名" },
-  { key: "email", label: "Email" },
-  { key: "role", label: "角色" },
-  { key: "status", label: "狀態" },
-];
+function getTeacherTableColumns(): TableColumn[] {
+  return [
+    { key: "index", label: "#" },
+    { key: "name", label: i18n.t("aiAssistant.teacher.table.name") },
+    { key: "email", label: i18n.t("aiAssistant.teacher.table.email") },
+    { key: "role", label: i18n.t("aiAssistant.teacher.table.role") },
+    { key: "status", label: i18n.t("aiAssistant.teacher.table.status") },
+  ];
+}
 
 function roleLabel(role: string) {
-  return role === "org_admin" ? "機構管理員" : "教師";
+  return role === "org_admin"
+    ? i18n.t("aiAssistant.teacher.roles.orgAdmin")
+    : i18n.t("aiAssistant.teacher.roles.teacher");
 }
 
 function teacherTableRows(teachers: ParsedTeacher[]) {
@@ -159,7 +185,7 @@ async function fetchOrganizations(): Promise<OrgInfo[]> {
   const res = await fetch(`${API_URL}/api/organizations`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error("無法取得組織列表");
+  if (!res.ok) throw new Error(i18n.t("aiAssistant.teacher.fetchOrgsFailed"));
   const data = await res.json();
   return data.map((o: Record<string, unknown>) => ({
     id: String(o.id),
@@ -199,7 +225,7 @@ async function callParseTeachers(
     },
     body: JSON.stringify({ user_input: userInput }),
   });
-  if (!res.ok) throw new Error("AI 解析失敗");
+  if (!res.ok) throw new Error(i18n.t("aiAssistant.teacher.parseFailed"));
   return res.json();
 }
 
@@ -219,7 +245,8 @@ async function callProcessModification(
       current_teachers: currentTeachers,
     }),
   });
-  if (!res.ok) throw new Error("AI 處理失敗");
+  if (!res.ok)
+    throw new Error(i18n.t("aiAssistant.teacher.modifyProcessFailed"));
   return res.json();
 }
 
@@ -266,7 +293,7 @@ export class AddTeacherFlow {
       this.state.orgs = orgs;
 
       if (orgs.length === 0) {
-        this.emit([assistantMsg("您目前沒有可管理的組織，無法新增教師。")]);
+        this.emit([assistantMsg(i18n.t("aiAssistant.teacher.noOrgs"))]);
         return;
       }
 
@@ -282,11 +309,19 @@ export class AddTeacherFlow {
         if (found) {
           this.emit([
             assistantMsg(
-              `您目前在【${orgDisplayName(found)}】，要在此組織新增教師嗎？`,
+              i18n.t("aiAssistant.teacher.confirmOrg", {
+                orgName: orgDisplayName(found),
+              }),
               {
                 buttons: [
-                  { label: "是", value: `select_org:${found.id}` },
-                  { label: "選擇其他組織", value: "pick_org" },
+                  {
+                    label: i18n.t("aiAssistant.common.yes"),
+                    value: `select_org:${found.id}`,
+                  },
+                  {
+                    label: i18n.t("aiAssistant.common.selectOtherOrg"),
+                    value: "pick_org",
+                  },
                 ],
               },
             ),
@@ -301,18 +336,29 @@ export class AddTeacherFlow {
         label: orgDisplayName(o),
         value: `select_org:${o.id}`,
       }));
-      this.emit([assistantMsg("請選擇要新增教師的組織：", { buttons })]);
+      this.emit([
+        assistantMsg(i18n.t("aiAssistant.teacher.selectOrg"), { buttons }),
+      ]);
     } catch (e) {
-      this.emit([assistantMsg(`取得組織資料失敗：${(e as Error).message}`)]);
+      this.emit([
+        assistantMsg(
+          i18n.t("aiAssistant.teacher.fetchOrgDataFailed", {
+            error: (e as Error).message,
+          }),
+        ),
+      ]);
     }
   }
 
   private async selectOrg(org: OrgInfo) {
     this.state.selectedOrg = org;
     this.emit([
-      assistantMsg(`已選擇【${orgDisplayName(org)}】，正在檢查教師額度...`, {
-        loading: true,
-      }),
+      assistantMsg(
+        i18n.t("aiAssistant.teacher.orgSelected", {
+          orgName: orgDisplayName(org),
+        }),
+        { loading: true },
+      ),
     ]);
     this.set({ step: "check_quota", selectedOrg: org });
     await this.checkQuota();
@@ -339,7 +385,11 @@ export class AddTeacherFlow {
       if (org.teacher_limit !== null && count >= org.teacher_limit) {
         this.emit([
           assistantMsg(
-            `⚠️ ${orgDisplayName(org)} 教師名額已滿（${count}/${org.teacher_limit}），無法新增。請聯繫管理員調整授權數。`,
+            i18n.t("aiAssistant.teacher.quotaFull", {
+              orgName: orgDisplayName(org),
+              count,
+              limit: org.teacher_limit,
+            }),
           ),
         ]);
         return;
@@ -347,17 +397,27 @@ export class AddTeacherFlow {
 
       const quotaInfo =
         org.teacher_limit !== null
-          ? `目前教師 ${count}/${org.teacher_limit} 位，還可新增 ${org.teacher_limit - count} 位。\n\n`
+          ? i18n.t("aiAssistant.teacher.quotaInfo", {
+              count,
+              limit: org.teacher_limit,
+              remaining: org.teacher_limit - count,
+            })
           : "";
 
       this.emit([
         assistantMsg(
-          `${quotaInfo}請提供教師的姓名和 Email。\n也可以標註角色（不標註預設為「教師」）。\n可一次提供多位，例如：\n\n王小明 wang@gmail.com 管理員\n李大華 lee@gmail.com\n陳美玲 chen@gmail.com`,
+          quotaInfo + i18n.t("aiAssistant.teacher.collectInstructions"),
         ),
       ]);
       this.set({ step: "collect_data", inputDisabled: false });
     } catch (e) {
-      this.emit([assistantMsg(`取得額度資訊失敗：${(e as Error).message}`)]);
+      this.emit([
+        assistantMsg(
+          i18n.t("aiAssistant.teacher.fetchQuotaFailed", {
+            error: (e as Error).message,
+          }),
+        ),
+      ]);
     }
   }
 
@@ -367,7 +427,7 @@ export class AddTeacherFlow {
     this.set({ step: "parse_input", inputDisabled: true });
     this.emit([
       userMsg(text),
-      assistantMsg("正在解析教師資料...", { loading: true }),
+      assistantMsg(i18n.t("aiAssistant.teacher.parsing"), { loading: true }),
     ]);
 
     try {
@@ -391,7 +451,11 @@ export class AddTeacherFlow {
       }
     } catch (e) {
       this.emit([
-        assistantMsg(`解析失敗：${(e as Error).message}\n請重新輸入教師資料。`),
+        assistantMsg(
+          i18n.t("aiAssistant.teacher.parseFailedRetry", {
+            error: (e as Error).message,
+          }),
+        ),
       ]);
       this.set({ step: "collect_data", inputDisabled: false });
     }
@@ -410,13 +474,20 @@ export class AddTeacherFlow {
     if (org.teacher_limit !== null) {
       const remaining = org.teacher_limit - this.state.currentTeacherCount;
       if (validCount > remaining) {
-        quotaWarning = `\n\n⚠️ 目前教師 ${this.state.currentTeacherCount}/${org.teacher_limit} 位，剩餘額度 ${remaining} 位，但清單有 ${validCount} 位。\n請移除部分教師，或聯繫管理員調整授權數。`;
+        quotaWarning = i18n.t("aiAssistant.teacher.quotaWarning", {
+          count: this.state.currentTeacherCount,
+          limit: org.teacher_limit,
+          remaining,
+          validCount,
+        });
       }
     }
 
     const canConfirm = allValid && !quotaWarning;
 
-    const header = `即將在【${orgDisplayName(org)}】新增以下教師：`;
+    const header = i18n.t("aiAssistant.teacher.confirmHeader", {
+      orgName: orgDisplayName(org),
+    });
     const footer = aiMessage ? `\n${aiMessage}` : "";
 
     // Role toggle buttons — for each valid teacher, offer to switch role
@@ -427,11 +498,19 @@ export class AddTeacherFlow {
       const idx = teachers.indexOf(t);
       if (t.role === "teacher") {
         const label =
-          validTeachers.length === 1 ? "改為管理員" : `${t.name} 改為管理員`;
+          validTeachers.length === 1
+            ? i18n.t("aiAssistant.teacher.changeToAdmin")
+            : i18n.t("aiAssistant.teacher.changeToAdminNamed", {
+                name: t.name,
+              });
         roleButtons.push({ label, value: `toggle_role:${idx}:org_admin` });
       } else {
         const label =
-          validTeachers.length === 1 ? "改為教師" : `${t.name} 改為教師`;
+          validTeachers.length === 1
+            ? i18n.t("aiAssistant.teacher.changeToTeacher")
+            : i18n.t("aiAssistant.teacher.changeToTeacherNamed", {
+                name: t.name,
+              });
         roleButtons.push({ label, value: `toggle_role:${idx}:teacher` });
       }
     }
@@ -440,25 +519,28 @@ export class AddTeacherFlow {
 
     if (canConfirm) {
       buttons.push({
-        label: "確認新增",
+        label: i18n.t("aiAssistant.common.confirm"),
         value: "confirm_execute",
         variant: "default",
       });
     } else if (!quotaWarning) {
       buttons.push({
-        label: "⚠️ 請修正錯誤後才能確認",
+        label: i18n.t("aiAssistant.common.fixErrors"),
         value: "_disabled",
         variant: "secondary",
       });
     }
 
     buttons.push(...roleButtons);
-    buttons.push({ label: "我要修改", value: "edit_table" });
+    buttons.push({
+      label: i18n.t("aiAssistant.common.modify"),
+      value: "edit_table",
+    });
 
     this.emit([
       assistantMsg(`${header}${footer}${quotaWarning}`, {
         table: {
-          columns: TEACHER_TABLE_COLUMNS,
+          columns: getTeacherTableColumns(),
           rows: teacherTableRows(teachers),
         },
         buttons,
@@ -484,9 +566,13 @@ export class AddTeacherFlow {
       this.state.executingIndex = i;
 
       this.emit([
-        assistantMsg(`正在新增教師 (${i + 1}/${teachers.length})...`, {
-          loading: true,
-        }),
+        assistantMsg(
+          i18n.t("aiAssistant.teacher.inviting", {
+            current: i + 1,
+            total: teachers.length,
+          }),
+          { loading: true },
+        ),
       ]);
 
       try {
@@ -505,13 +591,17 @@ export class AddTeacherFlow {
             value: `assign_school:${i}:${s.id}`,
           }));
           schoolButtons.push({
-            label: "略過",
+            label: i18n.t("aiAssistant.common.skip"),
             value: `assign_school:${i}:skip`,
           });
 
           this.emit([
             assistantMsg(
-              `✅ ${t.name} (${t.email}) 已新增為${roleLabel(t.role)}\n→ 是否指派到分校？`,
+              i18n.t("aiAssistant.teacher.inviteSuccessWithSchool", {
+                name: t.name,
+                email: t.email,
+                role: roleLabel(t.role),
+              }),
               { buttons: schoolButtons },
             ),
           ]);
@@ -530,7 +620,11 @@ export class AddTeacherFlow {
           results.push({ teacher: t, success: true, teacher_id: teacherId });
           this.emit([
             assistantMsg(
-              `✅ ${t.name} (${t.email}) 已新增為${roleLabel(t.role)}`,
+              i18n.t("aiAssistant.teacher.inviteSuccess", {
+                name: t.name,
+                email: t.email,
+                role: roleLabel(t.role),
+              }),
             ),
           ]);
         }
@@ -542,7 +636,13 @@ export class AddTeacherFlow {
           error: errMsg,
         });
         this.emit([
-          assistantMsg(`⚠️ ${t.name} (${t.email}) 新增失敗：${errMsg}`),
+          assistantMsg(
+            i18n.t("aiAssistant.teacher.inviteFailed", {
+              name: t.name,
+              email: t.email,
+              error: errMsg,
+            }),
+          ),
         ]);
       }
     }
@@ -563,9 +663,13 @@ export class AddTeacherFlow {
       this.state.executingIndex = i;
 
       this.emit([
-        assistantMsg(`正在新增教師 (${i + 1}/${teachers.length})...`, {
-          loading: true,
-        }),
+        assistantMsg(
+          i18n.t("aiAssistant.teacher.inviting", {
+            current: i + 1,
+            total: teachers.length,
+          }),
+          { loading: true },
+        ),
       ]);
 
       try {
@@ -583,13 +687,17 @@ export class AddTeacherFlow {
             value: `assign_school:${i}:${s.id}`,
           }));
           schoolButtons.push({
-            label: "略過",
+            label: i18n.t("aiAssistant.common.skip"),
             value: `assign_school:${i}:skip`,
           });
 
           this.emit([
             assistantMsg(
-              `✅ ${t.name} (${t.email}) 已新增為${roleLabel(t.role)}\n→ 是否指派到分校？`,
+              i18n.t("aiAssistant.teacher.inviteSuccessWithSchool", {
+                name: t.name,
+                email: t.email,
+                role: roleLabel(t.role),
+              }),
               { buttons: schoolButtons },
             ),
           ]);
@@ -611,7 +719,11 @@ export class AddTeacherFlow {
           });
           this.emit([
             assistantMsg(
-              `✅ ${t.name} (${t.email}) 已新增為${roleLabel(t.role)}`,
+              i18n.t("aiAssistant.teacher.inviteSuccess", {
+                name: t.name,
+                email: t.email,
+                role: roleLabel(t.role),
+              }),
             ),
           ]);
         }
@@ -623,7 +735,13 @@ export class AddTeacherFlow {
           error: errMsg,
         });
         this.emit([
-          assistantMsg(`⚠️ ${t.name} (${t.email}) 新增失敗：${errMsg}`),
+          assistantMsg(
+            i18n.t("aiAssistant.teacher.inviteFailed", {
+              name: t.name,
+              email: t.email,
+              error: errMsg,
+            }),
+          ),
         ]);
       }
     }
@@ -639,10 +757,13 @@ export class AddTeacherFlow {
     const successes = results.filter((r) => r.success);
     const failures = results.filter((r) => !r.success);
 
-    let summary = "新增完成！\n\n";
+    let summary = i18n.t("aiAssistant.teacher.complete") + "\n\n";
 
     if (successes.length > 0) {
-      summary += `✅ 成功：${successes.length} 位\n`;
+      summary +=
+        i18n.t("aiAssistant.teacher.successCount", {
+          count: successes.length,
+        }) + "\n";
       for (const r of successes) {
         const schoolInfo = r.school ? ` → ${r.school}` : "";
         summary += `  - ${r.teacher.name} (${r.teacher.email}) → ${roleLabel(r.teacher.role)}${schoolInfo}\n`;
@@ -650,20 +771,28 @@ export class AddTeacherFlow {
     }
 
     if (failures.length > 0) {
-      summary += `\n⚠️ 略過：${failures.length} 位\n`;
+      summary +=
+        "\n" +
+        i18n.t("aiAssistant.teacher.failureCount", {
+          count: failures.length,
+        }) +
+        "\n";
       for (const r of failures) {
         summary += `  - ${r.teacher.name} (${r.teacher.email}) → ${r.error}\n`;
       }
     }
 
-    summary +=
-      "\n📧 新帳號的教師會收到認證信和密碼設定信。\n   已有帳號的教師下次登入即可看到機構。";
+    summary += "\n" + i18n.t("aiAssistant.teacher.emailNotice");
 
     this.emit([
       assistantMsg(summary, {
         buttons: [
-          { label: "繼續新增", value: "restart_flow", variant: "default" },
-          { label: "結束", value: "close_panel" },
+          {
+            label: i18n.t("aiAssistant.common.continueAdd"),
+            value: "restart_flow",
+            variant: "default",
+          },
+          { label: i18n.t("aiAssistant.common.end"), value: "close_panel" },
         ],
       }),
     ]);
@@ -684,7 +813,7 @@ export class AddTeacherFlow {
       // Quick fix: if there's exactly one teacher missing a name, and user
       // provides something that looks like a name (no @), fill it in directly
       const missingName = this.state.teachers.filter(
-        (t) => !t.name && t.error === "缺少姓名",
+        (t) => !t.name && t.error === i18n.t("aiAssistant.teacher.missingName"),
       );
       if (
         missingName.length === 1 &&
@@ -695,14 +824,18 @@ export class AddTeacherFlow {
         missingName[0].name = text.trim();
         missingName[0].valid = true;
         missingName[0].error = null;
-        this.showConfirmTable(`已補充姓名：${text.trim()}`);
+        this.showConfirmTable(
+          i18n.t("aiAssistant.teacher.nameFilled", { name: text.trim() }),
+        );
         return;
       }
 
       // User is providing modification instructions
       this.emit([
         userMsg(text),
-        assistantMsg("正在處理修改...", { loading: true }),
+        assistantMsg(i18n.t("aiAssistant.teacher.modifying"), {
+          loading: true,
+        }),
       ]);
       this.set({ inputDisabled: true });
 
@@ -724,7 +857,9 @@ export class AddTeacherFlow {
         } catch (e2) {
           this.emit([
             assistantMsg(
-              `處理失敗：${(e2 as Error).message}\n請重新描述要修改的內容，例如「email 改成 xxx@gmail.com」`,
+              i18n.t("aiAssistant.teacher.modifyFailed", {
+                error: (e2 as Error).message,
+              }),
             ),
           ]);
           this.set({ inputDisabled: false });
@@ -743,22 +878,26 @@ export class AddTeacherFlow {
 
     // Restart flow — continue adding more teachers
     if (value === "restart_flow") {
-      this.emit([userMsg("繼續新增")]);
+      this.emit([userMsg(i18n.t("aiAssistant.common.continueAdd"))]);
       // Reset state for a new round, keep the same org
       this.state.teachers = [];
       this.state.executionResults = [];
       this.state.executingIndex = 0;
       this.state.awaitingSchoolAssignment = false;
       // Re-check quota then go to collect_data
-      this.emit([assistantMsg("正在更新額度資訊...", { loading: true })]);
+      this.emit([
+        assistantMsg(i18n.t("aiAssistant.teacher.quotaChecking"), {
+          loading: true,
+        }),
+      ]);
       await this.checkQuota();
       return;
     }
 
     // Close panel
     if (value === "close_panel") {
-      this.emit([userMsg("結束")]);
-      this.emit([assistantMsg("感謝使用！如需再新增教師，隨時點選 AI 助手。")]);
+      this.emit([userMsg(i18n.t("aiAssistant.common.end"))]);
+      this.emit([assistantMsg(i18n.t("aiAssistant.teacher.thankYou"))]);
       return;
     }
 
@@ -779,15 +918,15 @@ export class AddTeacherFlow {
         value: `select_org:${o.id}`,
       }));
       this.emit([
-        userMsg("選擇其他組織"),
-        assistantMsg("請選擇組織：", { buttons }),
+        userMsg(i18n.t("aiAssistant.common.selectOtherOrg")),
+        assistantMsg(i18n.t("aiAssistant.teacher.selectOrgs"), { buttons }),
       ]);
       return;
     }
 
     // Confirm execute
     if (value === "confirm_execute") {
-      this.emit([userMsg("確認新增")]);
+      this.emit([userMsg(i18n.t("aiAssistant.common.confirm"))]);
       await this.executeInvites();
       return;
     }
@@ -800,9 +939,19 @@ export class AddTeacherFlow {
       const t = this.state.teachers[idx];
       if (t) {
         t.role = newRole;
-        this.emit([userMsg(`${t.name} 改為${roleLabel(newRole)}`)]);
+        this.emit([
+          userMsg(
+            i18n.t("aiAssistant.teacher.roleChangeEcho", {
+              name: t.name,
+              role: roleLabel(newRole),
+            }),
+          ),
+        ]);
         this.showConfirmTable(
-          `已將 ${t.name} 的角色改為${roleLabel(newRole)}。`,
+          i18n.t("aiAssistant.teacher.roleChanged", {
+            name: t.name,
+            role: roleLabel(newRole),
+          }),
         );
       }
       return;
@@ -811,10 +960,8 @@ export class AddTeacherFlow {
     // Edit table — just enable input
     if (value === "edit_table") {
       this.emit([
-        userMsg("我要修改"),
-        assistantMsg(
-          "請告訴我要怎麼修改，例如：\n- 「李大華改成管理員」\n- 「把陳美玲移除」\n- 「再加一個 林志明 lin@gmail.com」",
-        ),
+        userMsg(i18n.t("aiAssistant.common.modify")),
+        assistantMsg(i18n.t("aiAssistant.teacher.modifyInstructions")),
       ]);
       this.set({ inputDisabled: false });
       return;
@@ -829,7 +976,7 @@ export class AddTeacherFlow {
       const resultEntry = results[results.length - 1]; // Most recent
 
       if (schoolId === "skip") {
-        this.emit([userMsg("略過")]);
+        this.emit([userMsg(i18n.t("aiAssistant.common.skip"))]);
       } else {
         const school = this.state.schools.find((s) => s.id === schoolId);
         const schoolName = school?.name ?? schoolId;
@@ -847,11 +994,20 @@ export class AddTeacherFlow {
               ],
             });
             resultEntry.school = schoolName;
-            this.emit([assistantMsg(`已指派到 ${schoolName}`)]);
+            this.emit([
+              assistantMsg(
+                i18n.t("aiAssistant.teacher.assignedToSchool", {
+                  school: schoolName,
+                }),
+              ),
+            ]);
           } catch (e) {
             this.emit([
               assistantMsg(
-                `指派到 ${schoolName} 失敗：${(e as Error).message}`,
+                i18n.t("aiAssistant.teacher.assignFailed", {
+                  school: schoolName,
+                  error: (e as Error).message,
+                }),
               ),
             ]);
           }

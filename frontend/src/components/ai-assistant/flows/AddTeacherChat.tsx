@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ChatContainer } from "../chat/ChatContainer";
 import { useAiAssistant } from "../useAiAssistant";
@@ -7,6 +8,7 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import type { ChatMessage } from "../chat/types";
 
 export function AddTeacherChat() {
+  const { t } = useTranslation();
   const { exitFlow } = useAiAssistant();
   const location = useLocation();
   const navigate = useNavigate();
@@ -63,13 +65,13 @@ export function AddTeacherChat() {
 
   return (
     <ChatContainer
-      title="新增機構教師"
+      title={t("aiAssistant.teacher.chatTitle")}
       messages={messages}
       onSend={handleSend}
       onButtonSelect={handleButtonSelect}
       onBack={exitFlow}
       inputDisabled={flowState.inputDisabled ?? true}
-      inputPlaceholder="輸入教師資料或修改指令..."
+      inputPlaceholder={t("aiAssistant.teacher.inputPlaceholder")}
     />
   );
 }

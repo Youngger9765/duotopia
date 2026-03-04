@@ -9,14 +9,22 @@ export type FlowId =
   | "find-feature"
   | "quick-start";
 
+export interface InitialFlowData {
+  parsedData?: Record<string, unknown>;
+  subIntent?: string;
+}
+
 interface AiAssistantState {
   isOpen: boolean;
   activeFlow: FlowId | null;
+  initialFlowData: InitialFlowData | null;
   open: () => void;
   close: () => void;
   toggle: () => void;
   startFlow: (flowId: FlowId) => void;
+  startFlowWithData: (flowId: FlowId, data: InitialFlowData) => void;
   exitFlow: () => void;
+  clearInitialData: () => void;
 }
 
 export const useAiAssistant = create<AiAssistantState>((set) => {
@@ -30,10 +38,14 @@ export const useAiAssistant = create<AiAssistantState>((set) => {
   return {
     isOpen: initialOpen,
     activeFlow: null,
+    initialFlowData: null,
     open: () => set({ isOpen: true }),
     close: () => set({ isOpen: false }),
     toggle: () => set((state) => ({ isOpen: !state.isOpen })),
     startFlow: (flowId: FlowId) => set({ activeFlow: flowId }),
-    exitFlow: () => set({ activeFlow: null }),
+    startFlowWithData: (flowId: FlowId, data: InitialFlowData) =>
+      set({ activeFlow: flowId, initialFlowData: data }),
+    exitFlow: () => set({ activeFlow: null, initialFlowData: null }),
+    clearInitialData: () => set({ initialFlowData: null }),
   };
 });

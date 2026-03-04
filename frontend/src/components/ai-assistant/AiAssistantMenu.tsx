@@ -1,4 +1,5 @@
 import { useContext } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { HelpCircle, Rocket, School, UserPlus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,7 @@ function MenuItem({
 }
 
 export function AiAssistantMenu() {
+  const { t } = useTranslation();
   const location = useLocation();
   const { startFlow } = useAiAssistant();
   const workspace = useContext(WorkspaceContext);
@@ -63,34 +65,34 @@ export function AiAssistantMenu() {
     return (
       <div className="space-y-3">
         <p className="text-sm text-gray-500 mb-4">
-          選擇您想要執行的功能，AI 助手將引導您完成操作。
+          {t("aiAssistant.menu.prompt")}
         </p>
 
         <MenuItem
           icon={<School className={cn("h-5 w-5", iconColor)} />}
-          title="新增機構班級"
-          description="在分校下建立新班級"
+          title={t("aiAssistant.menu.addOrgClassroom.title")}
+          description={t("aiAssistant.menu.addOrgClassroom.description")}
           disabled
         />
 
         <MenuItem
           icon={<Users className={cn("h-5 w-5", iconColor)} />}
-          title="新增班級學生"
-          description="將學生加入班級"
+          title={t("aiAssistant.menu.addOrgStudents.title")}
+          description={t("aiAssistant.menu.addOrgStudents.description")}
           disabled
         />
 
         <MenuItem
           icon={<UserPlus className={cn("h-5 w-5", iconColor)} />}
-          title="新增機構教師"
-          description="透過對話方式快速新增教師到機構中"
+          title={t("aiAssistant.menu.addTeacher.title")}
+          description={t("aiAssistant.menu.addTeacher.description")}
           onClick={() => startFlow("add-teacher")}
         />
 
         <MenuItem
           icon={<HelpCircle className={cn("h-5 w-5", iconColor)} />}
-          title="找功能"
-          description="告訴我您想做什麼，我幫您找到對應的頁面"
+          title={t("aiAssistant.menu.findFeature.title")}
+          description={t("aiAssistant.menu.findFeature.description")}
           onClick={() => startFlow("find-feature")}
         />
       </div>
@@ -102,13 +104,13 @@ export function AiAssistantMenu() {
     return (
       <div className="space-y-3">
         <p className="text-sm text-gray-500 mb-4">
-          選擇您想要執行的功能，AI 助手將引導您完成操作。
+          {t("aiAssistant.menu.prompt")}
         </p>
 
         <MenuItem
           icon={<HelpCircle className={cn("h-5 w-5", iconColor)} />}
-          title="找功能"
-          description="告訴我您想做什麼，我幫您找到對應的頁面"
+          title={t("aiAssistant.menu.findFeature.title")}
+          description={t("aiAssistant.menu.findFeature.description")}
           onClick={() => startFlow("find-feature")}
         />
       </div>
@@ -119,34 +121,34 @@ export function AiAssistantMenu() {
   return (
     <div className="space-y-3">
       <p className="text-sm text-gray-500 mb-4">
-        選擇您想要執行的功能，AI 助手將引導您完成操作。
+        {t("aiAssistant.menu.prompt")}
       </p>
 
       <MenuItem
         icon={<Rocket className={cn("h-5 w-5", iconColor)} />}
-        title="新手快速指引"
-        description="第一次使用？按照步驟快速上手"
+        title={t("aiAssistant.menu.quickStart.title")}
+        description={t("aiAssistant.menu.quickStart.description")}
         onClick={() => startFlow("quick-start")}
       />
 
       <MenuItem
         icon={<School className={cn("h-5 w-5", iconColor)} />}
-        title="新增班級"
-        description="建立新的班級"
+        title={t("aiAssistant.menu.addClassroom.title")}
+        description={t("aiAssistant.menu.addClassroom.description")}
         onClick={() => startFlow("add-classroom")}
       />
 
       <MenuItem
         icon={<Users className={cn("h-5 w-5", iconColor)} />}
-        title="新增班級學生"
-        description="將學生加入現有班級"
+        title={t("aiAssistant.menu.addStudents.title")}
+        description={t("aiAssistant.menu.addStudents.description")}
         onClick={() => startFlow("add-students")}
       />
 
       <MenuItem
         icon={<HelpCircle className={cn("h-5 w-5", iconColor)} />}
-        title="找功能"
-        description="告訴我您想做什麼，我幫您找到對應的頁面"
+        title={t("aiAssistant.menu.findFeature.title")}
+        description={t("aiAssistant.menu.findFeature.description")}
         onClick={() => startFlow("find-feature")}
       />
     </div>

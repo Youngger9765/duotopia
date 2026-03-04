@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, type KeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,8 +13,11 @@ interface ChatInputProps {
 export function ChatInput({
   onSend,
   disabled = false,
-  placeholder = "輸入訊息...",
+  placeholder,
 }: ChatInputProps) {
+  const { t } = useTranslation();
+  const defaultPlaceholder = t("aiAssistant.chat.inputPlaceholder");
+  const resolvedPlaceholder = placeholder || defaultPlaceholder;
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -55,7 +59,7 @@ export function ChatInput({
             autoResize();
           }}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           disabled={disabled}
           rows={2}
           className="min-h-[60px] max-h-[200px] resize-none text-sm"
