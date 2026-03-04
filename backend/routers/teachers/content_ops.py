@@ -281,39 +281,8 @@ async def create_content(
                 }
             )
 
-    # 單字集建立時預先生成干擾選項
-    if content_type == ContentType.VOCABULARY_SET and content_data.items:
-        db.flush()
-        items_for_distractors = (
-            db.query(ContentItem)
-            .filter(ContentItem.content_id == content.id)
-            .filter(ContentItem.translation.isnot(None))
-            .filter(ContentItem.translation != "")
-            .order_by(ContentItem.order_index)
-            .all()
-        )
-        if items_for_distractors:
-            from services.translation import translation_service
-
-            words_data_for_ai = [
-                {"word": item.text, "translation": item.translation}
-                for item in items_for_distractors
-            ]
-            try:
-                all_distractors = await translation_service.batch_generate_distractors(
-                    words_data_for_ai, count=3
-                )
-                for i, item in enumerate(items_for_distractors):
-                    if i < len(all_distractors):
-                        item.distractors = all_distractors[i]
-                logger.info(
-                    f"Generated distractors for {len(items_for_distractors)} "
-                    f"vocabulary items in content {content.id}"
-                )
-            except Exception as e:
-                logger.error(
-                    f"Failed to generate distractors for content {content.id}: {e}"
-                )
+    # 干擾項不在 content 建立時生成，而是在建立作業時跨 content 生成
+    # 見 crud.py create_assignment 中的 word_selection 區塊
 
     db.commit()
 
