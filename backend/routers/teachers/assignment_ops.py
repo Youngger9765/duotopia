@@ -3,7 +3,16 @@ Assignment Ops operations for teachers.
 """
 import logging
 import random
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    status,
+    UploadFile,
+    File,
+    Form,
+)
 from sqlalchemy.orm import Session, selectinload, joinedload
 from sqlalchemy import func
 from typing import List, Optional, Dict, Any
@@ -287,6 +296,9 @@ async def preview_vocabulary_activities(
 @router.get("/assignments/{assignment_id}/preview/word-selection-start")
 async def preview_word_selection_start(
     assignment_id: int,
+    exclude_ids: str = Query(
+        default="", description="Already-practiced content_item_ids, comma-separated"
+    ),
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
@@ -296,6 +308,7 @@ async def preview_word_selection_start(
     - For teacher preview/demo purposes
     - No StudentAssignment needed, reads directly from Assignment
     - Uses pre-generated distractors if available
+    - exclude_ids: Previously practiced word IDs to avoid repetition (#379)
     """
     # from services.translation import translation_service  # disabled (#303)
 
@@ -337,12 +350,30 @@ async def preview_word_selection_start(
     # Record total word count (before limiting)
     total_words_in_assignment = len(content_items)
 
+    # (#379) Exclude already-practiced words to avoid repetition per round
+    # Per-token parsing: a single invalid value won't drop all exclusions
+    exclude_id_set = set()
+    if exclude_ids:
+        for x in exclude_ids.split(","):
+            x = x.strip()
+            if x:
+                try:
+                    exclude_id_set.add(int(x))
+                except ValueError:
+                    pass  # Skip individual invalid token
+
+    remaining_items = [item for item in content_items if item.id not in exclude_id_set]
+
+    # If remaining < 10, reset cycle (start over from all words)
+    if len(remaining_items) < 10:
+        remaining_items = list(content_items)
+
     # Shuffle if needed
     if assignment.shuffle_questions:
-        random.shuffle(content_items)
+        random.shuffle(remaining_items)
 
     # Limit to 10 words (consistent with student API)
-    content_items = content_items[:10]
+    content_items = remaining_items[:10]
 
     # NOTE: AI distractor generation is temporarily disabled (#303).
     # All distractors now come from other words in the assignment.

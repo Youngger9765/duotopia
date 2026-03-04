@@ -1,6 +1,15 @@
 import random
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    status,
+    UploadFile,
+    File,
+    Form,
+)
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session, selectinload, joinedload
 from sqlalchemy import func, text
@@ -4505,6 +4514,7 @@ async def preview_vocabulary_activities(
 @router.get("/assignments/{assignment_id}/preview/word-selection-start")
 async def preview_word_selection_start(
     assignment_id: int,
+    exclude_ids: str = Query(default="", description="已練過的 content_item_id，逗號分隔"),
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
@@ -4514,6 +4524,7 @@ async def preview_word_selection_start(
     - 供老師預覽示範用
     - 不需要 StudentAssignment，直接從 Assignment 讀取
     - 使用預生成的干擾選項（如果有的話）
+    - exclude_ids: 已練過的單字 ID，避免每輪重複 (#379)
     """
     # from services.translation import translation_service  # disabled (#303)
 
@@ -4555,12 +4566,29 @@ async def preview_word_selection_start(
     # 記錄作業總單字數（在限制之前）
     total_words_in_assignment = len(content_items)
 
+    # (#379) 排除已練過的單字，確保每輪不重複（per-token 解析避免單一無效值丟失全部）
+    exclude_id_set = set()
+    if exclude_ids:
+        for x in exclude_ids.split(","):
+            x = x.strip()
+            if x:
+                try:
+                    exclude_id_set.add(int(x))
+                except ValueError:
+                    pass  # 跳過個別無效的 ID
+
+    remaining_items = [item for item in content_items if item.id not in exclude_id_set]
+
+    # 如果剩餘不夠一輪（< 10），重新從全部單字開始
+    if len(remaining_items) < 10:
+        remaining_items = list(content_items)
+
     # 如果需要打亂順序
     if assignment.shuffle_questions:
-        random.shuffle(content_items)
+        random.shuffle(remaining_items)
 
     # 限制為 10 個單字（與學生端一致）
-    content_items = content_items[:10]
+    content_items = remaining_items[:10]
 
     # NOTE: AI distractor generation is temporarily disabled (#303).
     # All distractors now come from other words in the assignment.
