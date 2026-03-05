@@ -761,9 +761,7 @@ export default function SchoolMaterialsPage() {
                       id: vocabularySetContentId || undefined,
                     }}
                     lessonId={vocabularySetLessonId}
-                    onUpdateContent={(updatedContent) => {
-                      console.log("Content updated:", updatedContent);
-                    }}
+                    onUpdateContent={() => {}}
                     onSave={async (
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       newContent?: any,
@@ -844,9 +842,7 @@ export default function SchoolMaterialsPage() {
                     content={{ id: vocabularySetContentId }}
                     editingContent={{ id: vocabularySetContentId }}
                     lessonId={vocabularySetLessonId}
-                    onUpdateContent={(updatedContent) => {
-                      console.log("Content updated:", updatedContent);
-                    }}
+                    onUpdateContent={() => {}}
                     onSave={async (
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       updatedContent?: any,
