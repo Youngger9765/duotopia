@@ -459,9 +459,7 @@ function ResourceMaterialsInner() {
       <div className="flex items-center gap-3">
         <Package className="w-6 h-6 text-orange-500" />
         <div>
-          <h1 className="text-2xl font-bold">
-            {t("resourceMaterials.title")}
-          </h1>
+          <h1 className="text-2xl font-bold">{t("resourceMaterials.title")}</h1>
           <p className="text-muted-foreground text-sm">
             {t("resourceMaterials.subtitle")}
           </p>
@@ -523,8 +521,7 @@ function ResourceMaterialsInner() {
               <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                 <span className="flex items-center gap-1">
                   <Layers className="w-3.5 h-3.5" />
-                  {material.lesson_count}{" "}
-                  {t("resourceMaterials.card.units")}
+                  {material.lesson_count} {t("resourceMaterials.card.units")}
                 </span>
                 <span className="flex items-center gap-1">
                   <FileText className="w-3.5 h-3.5" />
