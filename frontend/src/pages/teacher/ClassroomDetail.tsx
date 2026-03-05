@@ -774,7 +774,7 @@ export default function ClassroomDetail({
               ...lesson,
               contents: lesson.contents?.map((content) =>
                 content.id === selectedContent.id
-                  ? { ...content, title: editingContent.title }
+                  ? { ...content, ...editingContent }
                   : content,
               ),
             })),
@@ -3139,7 +3139,7 @@ export default function ClassroomDetail({
                             ...lesson,
                             contents: lesson.contents?.map((content) =>
                               content.id === vocabularySetContentId
-                                ? { ...content, title: savedContent.title }
+                                ? { ...content, ...savedContent }
                                 : content,
                             ),
                           })),

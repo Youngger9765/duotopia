@@ -698,7 +698,7 @@ export default function OrgMaterialsPage() {
                               ...lesson,
                               contents: lesson.contents?.map((content) =>
                                 content.id === editorContentId
-                                  ? { ...content, title: updatedContent.title }
+                                  ? { ...content, ...updatedContent }
                                   : content,
                               ),
                             })),
@@ -845,7 +845,7 @@ export default function OrgMaterialsPage() {
                               ...lesson,
                               contents: lesson.contents?.map((content) =>
                                 content.id === vocabularySetContentId
-                                  ? { ...content, title: updatedContent.title }
+                                  ? { ...content, ...updatedContent }
                                   : content,
                               ),
                             })),

@@ -984,7 +984,10 @@ export function ProgramTreeView({
                     isCreating={false}
                     onSave={async (updatedContent?: Content) => {
                       if (updatedContent && vocabularySetContentId) {
-                        updateProgramContent(vocabularySetContentId, updatedContent);
+                        updateProgramContent(
+                          vocabularySetContentId,
+                          updatedContent,
+                        );
                       }
                       closeVocabularySetEditor();
                       toast.success("內容已儲存");
