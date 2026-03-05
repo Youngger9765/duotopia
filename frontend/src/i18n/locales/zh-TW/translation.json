@@ -4393,5 +4393,62 @@
       "willActivate": "設定密碼後，您的帳號將立即啟用",
       "useAllFeatures": "可以開始使用 Duotopia 的所有功能"
     }
+  },
+  "resourceMaterials": {
+    "title": "資源教材包",
+    "subtitle": "瀏覽並複製公開的教材資源到你的教材庫",
+    "subtitleOrg": "瀏覽並複製教材資源到組織教材庫",
+    "loading": "載入中...",
+    "empty": {
+      "title": "目前沒有可用的資源教材",
+      "subtitle": "稍後再來看看吧"
+    },
+    "card": {
+      "units": "單元",
+      "contents": "內容",
+      "copyToMy": "複製到我的教材",
+      "copyToOrg": "複製到組織教材",
+      "copiedToday": "今日已複製"
+    },
+    "detail": {
+      "backToList": "返回列表",
+      "back": "返回",
+      "noContent": "暫無內容",
+      "noUnits": "暫無單元",
+      "hours": "小時",
+      "contentCount": "{{count}} 內容",
+      "itemCount": "{{count}} 項目",
+      "noItems": "暫無項目",
+      "tableHeader": {
+        "content": "內容",
+        "translation": "翻譯"
+      }
+    },
+    "contentTypes": {
+      "reading_assessment": "閱讀評量",
+      "example_sentences": "例句集",
+      "vocabulary_set": "單字集",
+      "sentence_making": "造句"
+    },
+    "copyDialog": {
+      "title": "確認複製教材",
+      "titleOrg": "確認複製教材到組織",
+      "description": "將「{{name}}」複製到你的教材庫中。複製後你可以自由編輯內容。",
+      "descriptionOrg": "將「{{name}}」複製到組織教材中。複製後組織管理者可以自由編輯內容。",
+      "orgLimit": "每個組織每個課程每天最多可複製 1 次",
+      "courseName": "課程名稱：",
+      "includes": "包含：",
+      "units": "{{count}} 個單元、",
+      "contents": "{{count}} 個內容",
+      "limitReached": "此課程今日已達複製上限（10 次），請明天再試",
+      "copying": "複製中...",
+      "confirmCopy": "確認複製",
+      "cancel": "取消"
+    },
+    "toast": {
+      "copySuccess": "已複製「{{name}}」到我的教材",
+      "copySuccessOrg": "已複製「{{name}}」到組織教材",
+      "copyFailed": "複製失敗，請稍後再試"
+    }
   }
 }
