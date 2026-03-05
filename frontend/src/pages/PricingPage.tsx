@@ -114,6 +114,8 @@ export default function PricingPage() {
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(
     null,
   );
+  const [selectedPointPackage, setSelectedPointPackage] =
+    useState<PointPackage | null>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [userInfo, setUserInfo] = useState<{
     isLoggedIn: boolean;
@@ -145,7 +147,7 @@ export default function PricingPage() {
     setShowPaymentDialog(true);
   };
 
-  const handleSelectPointPackage = (_pkg: PointPackage) => {
+  const handleSelectPointPackage = (pkg: PointPackage) => {
     const teacherAuth = useTeacherAuthStore.getState();
 
     if (!teacherAuth.isAuthenticated) {
@@ -154,16 +156,27 @@ export default function PricingPage() {
       return;
     }
 
-    // Point package payment will be handled by backend engineer later
-    toast.info(t("pricing.pointPackages.comingSoon"));
+    setSelectedPointPackage(pkg);
+    setSelectedPlan(null);
+    setShowPaymentDialog(true);
   };
 
   const handlePaymentSuccess = (_transactionId: string) => {
     try {
-      toast.success(
-        t("pricing.payment.success", { planName: selectedPlan?.name }),
-      );
+      if (selectedPointPackage) {
+        toast.success(
+          t("pricing.pointPackages.purchaseSuccess", {
+            points: selectedPointPackage.points.toLocaleString(),
+          }),
+        );
+      } else {
+        toast.success(
+          t("pricing.payment.success", { planName: selectedPlan?.name }),
+        );
+      }
       setShowPaymentDialog(false);
+      setSelectedPlan(null);
+      setSelectedPointPackage(null);
       setTimeout(() => {
         navigate("/teacher/dashboard");
       }, 2000);
@@ -563,13 +576,30 @@ export default function PricingPage() {
             <DialogDescription className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-green-600" />
               {t("pricing.payment.securePayment")} -{" "}
-              {t("pricing.payment.selectedPlan", {
-                planName: selectedPlan?.name,
-              })}
+              {selectedPointPackage
+                ? t("pricing.pointPackages.purchaseTitle", {
+                    points: selectedPointPackage.points.toLocaleString(),
+                  })
+                : t("pricing.payment.selectedPlan", {
+                    planName: selectedPlan?.name,
+                  })}
             </DialogDescription>
           </DialogHeader>
 
-          {selectedPlan && (
+          {selectedPointPackage ? (
+            <TapPayPayment
+              amount={selectedPointPackage.price}
+              planName={`${selectedPointPackage.points.toLocaleString()} ${t("pricing.pointPackages.points")}`}
+              apiEndpoint="/api/credit-packages/purchase"
+              customPayload={{ package_id: selectedPointPackage.id }}
+              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentError={handlePaymentError}
+              onCancel={() => {
+                setShowPaymentDialog(false);
+                setSelectedPointPackage(null);
+              }}
+            />
+          ) : selectedPlan ? (
             <TapPayPayment
               amount={selectedPlan.monthlyPrice}
               planName={selectedPlan.name}
@@ -577,7 +607,7 @@ export default function PricingPage() {
               onPaymentError={handlePaymentError}
               onCancel={() => setShowPaymentDialog(false)}
             />
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
 

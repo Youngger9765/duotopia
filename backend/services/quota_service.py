@@ -10,9 +10,11 @@
 
 from sqlalchemy.orm import Session
 from models import Teacher, PointUsageLog
+from models.credit_package import CreditPackage
 from models.organization import Organization, TeacherOrganization
 from fastapi import HTTPException
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
+from datetime import datetime, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -59,53 +61,126 @@ class QuotaService:
         return seconds
 
     @staticmethod
-    def check_quota(teacher: Teacher, required_seconds: int) -> bool:
+    def _get_active_credit_packages(
+        teacher: Teacher, db: Session
+    ) -> List[CreditPackage]:
+        """Get active, non-expired credit packages ordered by earliest expiry"""
+        now = datetime.now(timezone.utc)
+        return (
+            db.query(CreditPackage)
+            .filter(
+                CreditPackage.teacher_id == teacher.id,
+                CreditPackage.status == "active",
+                CreditPackage.expires_at > now,
+            )
+            .order_by(CreditPackage.expires_at.asc())
+            .all()
+        )
+
+    @staticmethod
+    def _get_total_remaining(teacher: Teacher, db: Session) -> int:
+        """Get total remaining quota across subscription + credit packages"""
+        remaining = 0
+
+        # Subscription quota
+        current_period = teacher.current_period
+        if current_period:
+            remaining += max(0, current_period.quota_total - current_period.quota_used)
+
+        # Credit packages
+        for pkg in QuotaService._get_active_credit_packages(teacher, db):
+            remaining += pkg.points_remaining
+
+        return remaining
+
+    @staticmethod
+    def check_quota(
+        teacher: Teacher, required_seconds: int, db: Session = None
+    ) -> bool:
         """
-        檢查配額是否足夠
+        檢查配額是否足夠（訂閱 + 點數包加總）
 
         Args:
             teacher: 教師物件
             required_seconds: 需要的秒數
+            db: 資料庫 session（需要查詢 credit packages）
 
         Returns:
             True if 配額足夠
         """
+        # Subscription quota
+        remaining = 0
         current_period = teacher.current_period
-        if not current_period:
-            return False
+        if current_period:
+            remaining += max(0, current_period.quota_total - current_period.quota_used)
 
-        remaining = current_period.quota_total - current_period.quota_used
+        if remaining >= required_seconds:
+            return True
+
+        # Credit packages (need db session)
+        if db:
+            for pkg in QuotaService._get_active_credit_packages(teacher, db):
+                remaining += pkg.points_remaining
+                if remaining >= required_seconds:
+                    return True
+
         return remaining >= required_seconds
 
     @staticmethod
-    def get_quota_info(teacher: Teacher) -> Dict[str, Any]:
+    def get_quota_info(teacher: Teacher, db: Session = None) -> Dict[str, Any]:
         """
-        取得配額資訊
+        取得配額資訊（訂閱 + 點數包加總）
 
         Returns:
             {
-                "quota_total": 1800,
-                "quota_used": 500,
-                "quota_remaining": 1300,
-                "status": "active"
+                "quota_total": 7200,
+                "quota_used": 2500,
+                "quota_remaining": 4700,
+                "status": "active",
+                "subscription_total": 2000,
+                "subscription_used": 2000,
+                "subscription_remaining": 0,
+                "credit_packages_total": 5200,
+                "credit_packages_used": 500,
+                "credit_packages_remaining": 4700,
             }
         """
         current_period = teacher.current_period
-        if not current_period:
-            return {
-                "quota_total": 0,
-                "quota_used": 0,
-                "quota_remaining": 0,
-                "status": "no_subscription",
-            }
+
+        sub_total = current_period.quota_total if current_period else 0
+        sub_used = current_period.quota_used if current_period else 0
+        sub_remaining = max(0, sub_total - sub_used)
+
+        pkg_total = 0
+        pkg_used = 0
+        if db:
+            for pkg in QuotaService._get_active_credit_packages(teacher, db):
+                pkg_total += pkg.points_total
+                pkg_used += pkg.points_used
+
+        total = sub_total + pkg_total
+        used = sub_used + pkg_used
+        remaining = sub_remaining + max(0, pkg_total - pkg_used)
+
+        # Determine status
+        if current_period and current_period.status == "active":
+            status = "active"
+        elif pkg_total > 0:
+            status = "credit_packages_only"
+        else:
+            status = "no_subscription"
 
         return {
-            "quota_total": current_period.quota_total,
-            "quota_used": current_period.quota_used,
-            "quota_remaining": max(
-                0, current_period.quota_total - current_period.quota_used
-            ),
-            "status": current_period.status,
+            "quota_total": total,
+            "quota_used": used,
+            "quota_remaining": remaining,
+            "status": status,
+            "subscription_total": sub_total,
+            "subscription_used": sub_used,
+            "subscription_remaining": sub_remaining,
+            "credit_packages_total": pkg_total,
+            "credit_packages_used": pkg_used,
+            "credit_packages_remaining": max(0, pkg_total - pkg_used),
         }
 
     @staticmethod
@@ -143,7 +218,7 @@ class QuotaService:
                 remaining = org.total_points - org.used_points
                 return remaining > 0
 
-        return teacher.quota_remaining > 0
+        return QuotaService._get_total_remaining(teacher, db) > 0
 
     @staticmethod
     def check_ai_analysis_availability_by_assignment(assignment, db: Session) -> bool:
@@ -182,8 +257,8 @@ class QuotaService:
                 return remaining > 0
             # org 不 active → fall through 到個人配額
 
-        # 個人班級 → 查教師配額
-        return teacher.quota_remaining > 0
+        # 個人班級 → 查教師配額（subscription + credit packages）
+        return QuotaService._get_total_remaining(teacher, db) > 0
 
     @staticmethod
     def _get_org_id_from_classroom(classroom) -> Optional[str]:
@@ -212,7 +287,7 @@ class QuotaService:
         feature_detail: Optional[Dict[str, Any]] = None,
     ) -> PointUsageLog:
         """
-        扣除配額並記錄
+        扣除配額並記錄（Waterfall: 訂閱配額 → 點數包按到期日排序）
 
         Args:
             db: 資料庫 session
@@ -229,46 +304,48 @@ class QuotaService:
 
         Raises:
             HTTPException(402): 配額不足
-            HTTPException(404): 無有效訂閱
         """
-        # 1. 檢查是否有有效訂閱
+        # 1. 換算為秒數
+        points_used = QuotaService.convert_unit_to_seconds(unit_count, unit_type)
+        remaining_to_deduct = points_used
+
+        # 2. 記錄扣除前的總用量（用於 usage log）
         current_period = teacher.current_period
-        if not current_period:
+        active_packages = QuotaService._get_active_credit_packages(teacher, db)
+
+        # Calculate total quota for buffer
+        total_quota = 0
+        total_used_before = 0
+        if current_period:
+            total_quota += current_period.quota_total
+            total_used_before += current_period.quota_used
+        for pkg in active_packages:
+            total_quota += pkg.points_total
+            total_used_before += pkg.points_used
+
+        # 3. Check if there's any quota at all
+        if total_quota == 0:
             raise HTTPException(
                 status_code=402,
                 detail={
                     "error": "NO_SUBSCRIPTION",
-                    "message": "您目前沒有有效的訂閱，請先訂閱方案",
+                    "message": "您目前沒有有效的訂閱或點數包，請先訂閱方案或購買點數包",
                 },
             )
 
-        # 2. 換算為秒數
-        points_used = QuotaService.convert_unit_to_seconds(unit_count, unit_type)
+        # 4. Check hard limit (total quota + 20% buffer)
+        effective_limit = total_quota * (1 + QuotaService.QUOTA_BUFFER_PERCENTAGE)
+        total_used_after = total_used_before + points_used
 
-        # 3. 計算配額狀態
-        quota_before = current_period.quota_used
-        quota_after = quota_before + points_used
-        quota_remaining = current_period.quota_total - quota_after
-
-        # 4. 計算硬限制（基本配額 + 20% 緩衝）
-        effective_limit = current_period.quota_total * (
-            1 + QuotaService.QUOTA_BUFFER_PERCENTAGE
-        )
-        buffer_amount = (
-            current_period.quota_total * QuotaService.QUOTA_BUFFER_PERCENTAGE
-        )
-
-        # 5. 檢查是否超過硬限制
-        if quota_after > effective_limit:
-            # ❌ 超過硬限制，拒絕操作
-            over_limit = quota_after - effective_limit
+        if total_used_after > effective_limit:
+            over_limit = total_used_after - effective_limit
             raise HTTPException(
                 status_code=402,
                 detail={
                     "error": "QUOTA_HARD_LIMIT_EXCEEDED",
-                    "message": "老師的配額已用完（含緩衝額度），請聯繫老師續費後再繼續使用",
-                    "quota_used": quota_before,
-                    "quota_total": current_period.quota_total,
+                    "message": "老師的配額已用完（含緩衝額度），請聯繫老師續費或購買點數包",
+                    "quota_used": total_used_before,
+                    "quota_total": total_quota,
                     "quota_limit": int(effective_limit),
                     "buffer_percentage": int(
                         QuotaService.QUOTA_BUFFER_PERCENTAGE * 100
@@ -277,35 +354,50 @@ class QuotaService:
                 },
             )
 
-        # 6. 檢查是否在緩衝區間（超過基本配額但未超過硬限制）
-        if quota_after > current_period.quota_total:
-            buffer_used = quota_after - current_period.quota_total
+        # 5. Waterfall deduction: subscription first
+        subscription_period_id = None
+        if current_period:
+            sub_remaining = current_period.quota_total - current_period.quota_used
+            if sub_remaining > 0:
+                deduct_from_sub = min(remaining_to_deduct, sub_remaining)
+                current_period.quota_used += deduct_from_sub
+                remaining_to_deduct -= deduct_from_sub
+                subscription_period_id = current_period.id
+
+        # 6. Waterfall deduction: credit packages by earliest expiry
+        if remaining_to_deduct > 0:
+            for pkg in active_packages:
+                if remaining_to_deduct <= 0:
+                    break
+                pkg_remaining = pkg.points_total - pkg.points_used
+                if pkg_remaining <= 0:
+                    continue
+                deduct_from_pkg = min(remaining_to_deduct, pkg_remaining)
+                pkg.points_used += deduct_from_pkg
+                remaining_to_deduct -= deduct_from_pkg
+
+        # 7. Log buffer usage warning
+        if total_used_after > total_quota:
+            buffer_amount = total_quota * QuotaService.QUOTA_BUFFER_PERCENTAGE
+            buffer_used = total_used_after - total_quota
             buffer_remaining = buffer_amount - buffer_used
             logger.warning(
-                f"⚠️ Teacher {teacher.id} using buffer quota: "
+                f"Teacher {teacher.id} using buffer quota: "
                 f"{int(buffer_used)}s/{int(buffer_amount)}s used, "
                 f"{int(buffer_remaining)}s remaining before hard limit"
             )
-        elif quota_remaining < 0:
-            # 理論上不會進入（上面已經處理超額情況）
-            logger.warning(
-                f"⚠️ Teacher {teacher.id} quota exceeded: {abs(quota_remaining)}s over limit"
-            )
 
-        # 7. 扣除配額
-        current_period.quota_used = quota_after
-
-        # 8. 記錄使用明細
+        # 8. Create usage log
         usage_log = PointUsageLog(
-            subscription_period_id=current_period.id,
+            subscription_period_id=subscription_period_id,  # None if no subscription
             teacher_id=teacher.id,
             student_id=student_id,
             assignment_id=assignment_id,
             feature_type=feature_type,
             feature_detail=feature_detail or {},
             points_used=points_used,
-            quota_before=quota_before,
-            quota_after=quota_after,
+            quota_before=total_used_before,
+            quota_after=total_used_after,
             unit_count=unit_count,
             unit_type=unit_type,
         )

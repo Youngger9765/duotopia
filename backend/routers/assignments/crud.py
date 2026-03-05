@@ -2,9 +2,12 @@
 Assignment CRUD operations
 """
 
+import logging
+import random
 import uuid
 from typing import Optional, List
 from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import and_, func
@@ -36,6 +39,8 @@ from .validators import (
     ContentResponse,
 )
 from .dependencies import get_current_teacher
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -208,7 +213,8 @@ async def create_assignment(
                 image_url=original_item.image_url,
                 part_of_speech=original_item.part_of_speech,
                 distractors=original_item.distractors.copy()
-                if original_item.distractors
+                if isinstance(original_item.distractors, list)
+                and len(original_item.distractors) > 0
                 else None,
                 word_count=original_item.word_count,
                 max_errors=original_item.max_errors,
@@ -216,6 +222,37 @@ async def create_assignment(
             db.add(item_copy)
             db.flush()
             content_items_copy_map[original_item.id] = item_copy.id
+
+    # word_selection 模式：為缺少干擾項的 items 從作業內所有 content 的單字翻譯生成
+    if request.practice_mode == "word_selection":
+        # 收集作業內所有 content copies 的翻譯（跨 content）
+        all_copy_content_ids = list(content_copy_map.values())
+        all_items_in_assignment = (
+            db.query(ContentItem)
+            .filter(ContentItem.content_id.in_(all_copy_content_ids))
+            .filter(ContentItem.translation.isnot(None))
+            .filter(ContentItem.translation != "")
+            .order_by(ContentItem.order_index)
+            .all()
+        )
+        all_translations = [item.translation for item in all_items_in_assignment]
+
+        generated_count = 0
+        for item in all_items_in_assignment:
+            if not isinstance(item.distractors, list) or len(item.distractors) == 0:
+                candidates = [
+                    t
+                    for t in all_translations
+                    if t.lower().strip() != item.translation.lower().strip()
+                ]
+                random.shuffle(candidates)
+                item.distractors = candidates[:3]
+                generated_count += 1
+        if generated_count > 0:
+            logger.info(
+                f"Auto-generated cross-content distractors for "
+                f"{generated_count} items in assignment {assignment.id}"
+            )
 
     # 建立 AssignmentContent 關聯（指向副本）
     for idx, original_content_id in enumerate(request.content_ids, 1):

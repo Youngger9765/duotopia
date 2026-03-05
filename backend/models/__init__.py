@@ -31,6 +31,9 @@ from .subscription import (
     InvoiceStatusHistory,
 )
 
+# Credit package models
+from .credit_package import CreditPackage
+
 # Organization models
 from .organization import (
     Organization,
@@ -86,6 +89,8 @@ __all__ = [
     "PointUsageLog",
     "TeacherSubscriptionTransaction",
     "InvoiceStatusHistory",
+    # Credit packages
+    "CreditPackage",
     # Organizations
     "Organization",
     "School",

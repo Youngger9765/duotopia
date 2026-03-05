@@ -101,6 +101,9 @@ export default function WordSelectionActivity({
   // Round tracking
   const [roundCompleted, setRoundCompleted] = useState(false);
 
+  // (#379) Preview/demo mode: track practiced word IDs to avoid repetition
+  const practicedWordIdsRef = useRef<number[]>([]);
+
   // Preview mode local proficiency tracking (不存入資料庫，離開後重置)
   // 模擬學生模式的 SM-2 算法：追蹤每個單字的 memory_strength
   const [previewWordStrengths, setPreviewWordStrengths] = useState<
@@ -168,10 +171,16 @@ export default function WordSelectionActivity({
       setLoading(true);
 
       // 根據模式選擇不同的 API
+      // (#379) Preview/demo 模式帶 exclude_ids 避免每輪重複
+      const excludeParam =
+        (isPreviewMode || isDemoMode) && practicedWordIdsRef.current.length > 0
+          ? `?exclude_ids=${practicedWordIdsRef.current.join(",")}`
+          : "";
+
       const apiEndpoint = isDemoMode
-        ? `/api/demo/assignments/${assignmentId}/preview/word-selection-start`
+        ? `/api/demo/assignments/${assignmentId}/preview/word-selection-start${excludeParam}`
         : isPreviewMode
-          ? `/api/teachers/assignments/${assignmentId}/preview/word-selection-start`
+          ? `/api/teachers/assignments/${assignmentId}/preview/word-selection-start${excludeParam}`
           : `/api/students/assignments/${assignmentId}/vocabulary/selection/start`;
 
       const data = await apiClient.get<{
@@ -206,6 +215,27 @@ export default function WordSelectionActivity({
       setRoundCompleted(false);
       setSelectedAnswer(null);
       setShowResult(false);
+
+      // (#379) Preview/demo 模式：累積已練習的單字 ID，避免下一輪重複
+      if (isPreviewMode || isDemoMode) {
+        const newWordIds = (data.words || []).map(
+          (w: WordOption) => w.content_item_id,
+        );
+        // 如果後端回傳的單字與已練習清單有重疊，表示循環已重置
+        const hasOverlap = newWordIds.some((id: number) =>
+          practicedWordIdsRef.current.includes(id),
+        );
+        if (hasOverlap && practicedWordIdsRef.current.length > 0) {
+          // 循環重置：僅保留本輪的單字 ID
+          practicedWordIdsRef.current = [...newWordIds];
+        } else {
+          // 正常累積
+          practicedWordIdsRef.current = [
+            ...practicedWordIdsRef.current,
+            ...newWordIds,
+          ];
+        }
+      }
     } catch (error) {
       console.error("Error starting practice:", error);
       toast.error(

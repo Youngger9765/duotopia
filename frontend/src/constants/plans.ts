@@ -27,3 +27,17 @@ export const PLAN_QUOTAS = {
   [PLAN_NAMES.TUTOR]: 2000,
   [PLAN_NAMES.SCHOOL]: 6000,
 } as const;
+
+// === 點數包定義 ===
+export const CREDIT_PACKAGES = {
+  "pkg-1000": { points: 1000, bonus: 0, price: 180 },
+  "pkg-2000": { points: 2000, bonus: 0, price: 320 },
+  "pkg-5000": { points: 5000, bonus: 200, price: 700 },
+  "pkg-10000": { points: 10000, bonus: 500, price: 1200 },
+  "pkg-20000": { points: 20000, bonus: 800, price: 2000 },
+} as const;
+
+export type CreditPackageId = keyof typeof CREDIT_PACKAGES;
+
+// 點數包效期（天）
+export const CREDIT_PACKAGE_VALIDITY_DAYS = 365;

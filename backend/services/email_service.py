@@ -3,7 +3,7 @@
 import os
 import secrets
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -11,7 +11,7 @@ import smtplib
 
 from sqlalchemy.orm import Session
 
-from models import Student, Teacher, SubscriptionPeriod
+from models import Student, Teacher
 
 logger = logging.getLogger(__name__)
 
@@ -437,24 +437,24 @@ class EmailService:
             teacher.email_verification_token = None
             teacher.is_active = True
 
-            # 🎯 重要：啟動免費試用訂閱！創建 SubscriptionPeriod
-            from config.plans import PLAN_FREE_TRIAL, TRIAL_QUOTA, TRIAL_DAYS
+            # 🎯 重要：啟動免費試用！創建 CreditPackage（trial_bonus）
+            from config.plans import TRIAL_QUOTA, TRIAL_DAYS
+            from models.credit_package import CreditPackage
 
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
 
-            new_period = SubscriptionPeriod(
+            trial_package = CreditPackage(
                 teacher_id=teacher.id,
-                plan_name=PLAN_FREE_TRIAL,
-                amount_paid=0,
-                quota_total=TRIAL_QUOTA,
-                quota_used=0,
-                start_date=now,
-                end_date=now + timedelta(days=TRIAL_DAYS),
-                payment_method="trial",
-                payment_status="completed",
+                package_id="trial-bonus",
+                points_total=TRIAL_QUOTA,
+                points_used=0,
+                price_paid=0,
+                purchased_at=now,
+                expires_at=now + timedelta(days=TRIAL_DAYS),
                 status="active",
+                source="trial_bonus",
             )
-            db.add(new_period)
+            db.add(trial_package)
 
             db.commit()
 

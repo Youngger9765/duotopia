@@ -82,6 +82,12 @@ class Organization(Base):
         back_populates="organization",
         cascade="all, delete-orphan",
     )
+    credit_packages = relationship(
+        "CreditPackage",
+        back_populates="organization",
+        cascade="all, delete-orphan",
+        order_by="CreditPackage.expires_at.asc()",
+    )
 
     def __repr__(self):
         return f"<Organization(id={self.id}, name={self.name})>"

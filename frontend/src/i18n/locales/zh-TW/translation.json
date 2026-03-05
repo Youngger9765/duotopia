@@ -431,7 +431,9 @@
       "bonusPoints": "+{{count, number}} 點贈送",
       "unitCost": "元/點",
       "discount": "省 {{percent}}%",
-      "validity": "有效期限：1 年"
+      "validity": "有效期限：1 年",
+      "purchaseSuccess": "成功購買 {{points}} 點數包！交易編號：{{transactionId}}",
+      "purchaseTitle": "購買 {{points}} 點數包"
     },
     "payment": {
       "title": "完成付款",
@@ -3117,6 +3119,15 @@
       "schoolFeature2": "所有 Tutor Teachers 功能",
       "schoolFeature3": "進階班級管理",
       "schoolFeature4": "批次作業功能"
+    },
+    "creditPackages": {
+      "title": "點數包明細",
+      "trialBonus": "免費試用贈點",
+      "purchased": "{{points}} 點數包",
+      "active": "使用中",
+      "expired": "已過期",
+      "expiresAt": "到期日：{{date}}",
+      "creditOnly": "點數包配額"
     }
   },
   "subscriptionCardManagement": {
