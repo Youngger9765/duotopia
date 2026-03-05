@@ -789,11 +789,33 @@ function TeacherTemplateProgramsInner() {
                     vocabularySetLessonId,
                   )}
                   onUpdateContent={() => {}}
-                  onSave={async () => {
+                  onSave={async (
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    newContent?: any,
+                  ) => {
+                    // 即時更新前端狀態，不重整頁面
+                    if (newContent && vocabularySetLessonId) {
+                      setPrograms((prevPrograms) =>
+                        prevPrograms.map((program) => ({
+                          ...program,
+                          lessons: program.lessons?.map((lesson) => {
+                            if (lesson.id === vocabularySetLessonId) {
+                              return {
+                                ...lesson,
+                                contents: [
+                                  ...(lesson.contents || []),
+                                  newContent,
+                                ],
+                              };
+                            }
+                            return lesson;
+                          }),
+                        })),
+                      );
+                    }
                     setShowVocabularySetEditor(false);
                     setVocabularySetLessonId(null);
                     setVocabularySetContentId(null);
-                    await fetchTemplatePrograms();
                     toast.success("內容已成功儲存");
                   }}
                   onCancel={() => {
@@ -852,11 +874,29 @@ function TeacherTemplateProgramsInner() {
                     vocabularySetLessonId,
                   )}
                   onUpdateContent={() => {}}
-                  onSave={async () => {
+                  onSave={async (
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    updatedContent?: any,
+                  ) => {
+                    // 直接更新前端 state，不重新載入整個 tree
+                    if (updatedContent && vocabularySetContentId) {
+                      setPrograms((prevPrograms) =>
+                        prevPrograms.map((program) => ({
+                          ...program,
+                          lessons: program.lessons?.map((lesson) => ({
+                            ...lesson,
+                            contents: lesson.contents?.map((content) =>
+                              content.id === vocabularySetContentId
+                                ? { ...content, title: updatedContent.title }
+                                : content,
+                            ),
+                          })),
+                        })),
+                      );
+                    }
                     setShowVocabularySetEditor(false);
                     setVocabularySetLessonId(null);
                     setVocabularySetContentId(null);
-                    await fetchTemplatePrograms();
                     toast.success("內容已成功儲存");
                   }}
                   onCancel={() => {
