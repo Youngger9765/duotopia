@@ -766,7 +766,7 @@ export default function ClassroomDetail({
     const contentType = selectedContent.type?.toLowerCase();
     if (contentType === "vocabulary_set" || contentType === "sentence_making") {
       // 直接更新前端 state，不重新載入整個 tree
-      if (editingContent.title && selectedContent.id) {
+      if (selectedContent.id) {
         setPrograms((prevPrograms) =>
           prevPrograms.map((program) => ({
             ...program,
