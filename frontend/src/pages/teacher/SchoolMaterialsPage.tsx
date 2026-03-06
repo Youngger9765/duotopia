@@ -716,6 +716,10 @@ export default function SchoolMaterialsPage() {
                           })),
                         );
                       }
+                      setShowReadingEditor(false);
+                      setEditorLessonId(null);
+                      setEditorContentId(null);
+                      setSelectedContent(null);
                       toast.success(
                         t("teacherTemplatePrograms.messages.contentSaved"),
                       );
