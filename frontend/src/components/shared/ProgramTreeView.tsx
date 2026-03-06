@@ -770,9 +770,8 @@ export function ProgramTreeView({
                       if (updatedContent && editorContentId) {
                         updateProgramContent(editorContentId, updatedContent);
                       }
-                      // Keep editor open after save for continued editing
+                      closeReadingEditor();
                       toast.success("內容已儲存");
-                      // Local update already done by updateProgramContent, no need to refresh
                     }}
                     onCancel={closeReadingEditor}
                   />
