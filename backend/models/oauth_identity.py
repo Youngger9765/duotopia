@@ -54,12 +54,8 @@ class OAuthIdentity(Base):
     teacher = relationship("Teacher", back_populates="oauth_identities")
 
     __table_args__ = (
-        UniqueConstraint(
-            "provider", "provider_user_id", name="uq_oauth_provider_user"
-        ),
-        UniqueConstraint(
-            "teacher_id", "provider", name="uq_oauth_teacher_provider"
-        ),
+        UniqueConstraint("provider", "provider_user_id", name="uq_oauth_provider_user"),
+        UniqueConstraint("teacher_id", "provider", name="uq_oauth_teacher_provider"),
         Index("ix_oauth_identity_teacher", "teacher_id"),
         Index("ix_oauth_identity_lookup", "provider", "provider_user_id"),
     )

@@ -85,9 +85,7 @@ class OAuthService:
         return identity
 
     @staticmethod
-    def unlink_account(
-        db: Session, teacher_id: int, provider: str
-    ) -> bool:
+    def unlink_account(db: Session, teacher_id: int, provider: str) -> bool:
         """Unlink an OAuth provider from a teacher.
 
         Returns True if an identity was found and deleted,
@@ -108,18 +106,14 @@ class OAuthService:
         return False
 
     @staticmethod
-    def get_linked_providers(
-        db: Session, teacher_id: int
-    ) -> list[OAuthIdentity]:
+    def get_linked_providers(db: Session, teacher_id: int) -> list[OAuthIdentity]:
         """Get all OAuth identities linked to a teacher.
 
         Returns a list of all connected provider accounts
         for displaying in the teacher's settings page.
         """
         return (
-            db.query(OAuthIdentity)
-            .filter(OAuthIdentity.teacher_id == teacher_id)
-            .all()
+            db.query(OAuthIdentity).filter(OAuthIdentity.teacher_id == teacher_id).all()
         )
 
     @staticmethod
