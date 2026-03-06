@@ -2201,6 +2201,10 @@
       "systemAdmin": "系統管理",
       "profile": "個人資料",
       "orgManagement": "組織管理",
+      "orgStructure": "組織架構",
+      "teachingManagement": "教學管理",
+      "orgMaterials": "機構教材",
+      "sharedResources": "共享資源",
       "language": "語言"
     }
   },
@@ -4398,6 +4402,7 @@
     "title": "資源教材包",
     "subtitle": "瀏覽並複製公開的教材資源到你的教材庫",
     "subtitleOrg": "瀏覽並複製教材資源到組織教材庫",
+    "browseAndCopy": "瀏覽與複製教材",
     "loading": "載入中...",
     "empty": {
       "title": "目前沒有可用的資源教材",

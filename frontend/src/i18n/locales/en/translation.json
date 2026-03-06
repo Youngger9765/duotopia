@@ -2202,6 +2202,10 @@
       "systemAdmin": "System Admin",
       "profile": "Profile",
       "orgManagement": "Organization",
+      "orgStructure": "Organization Structure",
+      "teachingManagement": "Teaching",
+      "orgMaterials": "Org Materials",
+      "sharedResources": "Shared Resources",
       "language": "Language"
     }
   },
@@ -4383,6 +4387,7 @@
     "title": "Resource Materials",
     "subtitle": "Browse and copy public teaching resources to your material library",
     "subtitleOrg": "Browse and copy teaching resources to your organization's material library",
+    "browseAndCopy": "Browse & Copy Materials",
     "loading": "Loading...",
     "empty": {
       "title": "No resource materials available",
