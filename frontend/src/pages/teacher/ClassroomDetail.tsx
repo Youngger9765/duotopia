@@ -3059,8 +3059,9 @@ export default function ClassroomDetail({
         classroomId={id || ""}
         canUseAiGrading={canUseAiGrading}
         onGradeClick={(assignmentId) =>
-          navigate(
+          window.open(
             `/teacher/classroom/${id}/assignment/${assignmentId}/grading`,
+            "_blank",
           )
         }
         onBatchGradeClick={(assignmentId) => {
