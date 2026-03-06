@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useTeacherAuthStore } from "./teacherAuthStore";
 
 export interface StudentUser {
   id: number;
@@ -32,6 +33,8 @@ export const useStudentAuthStore = create<StudentAuthState>()(
       isAuthenticated: false,
 
       login: (token: string, user: StudentUser) => {
+        // Clear teacher auth to prevent token conflicts (#310)
+        useTeacherAuthStore.getState().logout();
         set({
           token,
           user,
