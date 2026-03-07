@@ -112,9 +112,7 @@ export default function Home() {
                   "school_director",
                 ].includes(teacherUser.role || "");
                 navigate(
-                  hasOrgRole
-                    ? "/organization/dashboard"
-                    : "/teacher/dashboard",
+                  hasOrgRole ? "/organization/dashboard" : "/teacher/dashboard",
                 );
               } else {
                 setIsTeacherLoginOpen(true);
