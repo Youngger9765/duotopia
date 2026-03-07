@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,16 +17,26 @@ import { apiClient } from "../lib/api";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { getTeacherDashboardRoute } from "@/utils/authNavigation";
 
 export default function TeacherLogin() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const isAuthenticated = useTeacherAuthStore((state) => state.isAuthenticated);
+  const user = useTeacherAuthStore((state) => state.user);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigate(getTeacherDashboardRoute(user), { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
 
   // 檢查是否為 demo 模式 (通過 URL 參數 ?is_demo=true)
   const searchParams = new URLSearchParams(window.location.search);

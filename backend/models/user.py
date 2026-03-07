@@ -65,6 +65,9 @@ class Teacher(Base):
     card_country = Column(String(2), nullable=True)  # 發卡國家代碼
     card_saved_at = Column(DateTime(timezone=True), nullable=True)  # 卡片儲存時間
 
+    # SSO / OAuth
+    has_password = Column(Boolean, default=True)  # False for OAuth-only accounts
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -112,6 +115,12 @@ class Teacher(Base):
         back_populates="teacher",
         cascade="all, delete-orphan",
         order_by="CreditPackage.expires_at.asc()",
+    )
+    # OAuth identities
+    oauth_identities = relationship(
+        "OAuthIdentity",
+        back_populates="teacher",
+        cascade="all, delete-orphan",
     )
 
     @property
