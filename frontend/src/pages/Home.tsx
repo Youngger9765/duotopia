@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
+import { getTeacherDashboardRoute } from "@/utils/authNavigation";
 import {
   Mic,
   GraduationCap,
@@ -105,15 +106,7 @@ export default function Home() {
             size="sm"
             onClick={() => {
               if (isTeacherAuth && teacherUser) {
-                const hasOrgRole = [
-                  "org_owner",
-                  "org_admin",
-                  "school_admin",
-                  "school_director",
-                ].includes(teacherUser.role || "");
-                navigate(
-                  hasOrgRole ? "/organization/dashboard" : "/teacher/dashboard",
-                );
+                navigate(getTeacherDashboardRoute(teacherUser));
               } else {
                 setIsTeacherLoginOpen(true);
               }

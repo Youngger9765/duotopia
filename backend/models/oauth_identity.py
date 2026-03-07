@@ -45,7 +45,7 @@ class OAuthIdentity(Base):
     token_expires_at = Column(DateTime(timezone=True), nullable=True)
 
     # Full profile for reference
-    raw_profile = Column(JSONB, default={})
+    raw_profile = Column(JSONB, default=dict)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

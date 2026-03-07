@@ -90,7 +90,11 @@ class OAuthService:
 
         Returns True if an identity was found and deleted,
         False if no matching identity existed.
+        Raises ValueError if unlinking would leave a passwordless account
+        with no auth method.
         """
+        from models.user import Teacher
+
         identity = (
             db.query(OAuthIdentity)
             .filter(
@@ -100,6 +104,17 @@ class OAuthService:
             .first()
         )
         if identity:
+            teacher = db.query(Teacher).get(teacher_id)
+            if teacher and not teacher.has_password:
+                linked_count = (
+                    db.query(OAuthIdentity)
+                    .filter(OAuthIdentity.teacher_id == teacher_id)
+                    .count()
+                )
+                if linked_count <= 1:
+                    raise ValueError(
+                        "Cannot unlink last auth method on a passwordless account"
+                    )
             db.delete(identity)
             db.flush()
             return True

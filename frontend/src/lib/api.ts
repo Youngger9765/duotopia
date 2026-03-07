@@ -207,6 +207,10 @@ class ApiClient {
             isRedirectingToLogin = true;
             clearAllAuth();
             window.location.href = "/teacher/login";
+            // Reset flag after a short delay so future 401s can still redirect
+            setTimeout(() => {
+              isRedirectingToLogin = false;
+            }, 3000);
           }
         }
 

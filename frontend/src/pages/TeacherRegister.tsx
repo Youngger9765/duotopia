@@ -18,6 +18,7 @@ import { apiClient } from "../lib/api";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { validatePasswordStrength } from "@/utils/passwordValidation";
+import { getTeacherDashboardRoute } from "@/utils/authNavigation";
 
 export default function TeacherRegister() {
   const { t } = useTranslation();
@@ -30,13 +31,7 @@ export default function TeacherRegister() {
   // Redirect authenticated users to dashboard
   useEffect(() => {
     if (isAuthenticated && user) {
-      const hasOrgRole = [
-        "org_owner",
-        "org_admin",
-        "school_admin",
-        "school_director",
-      ].includes(user.role || "");
-      navigate(hasOrgRole ? "/organization/dashboard" : "/teacher/dashboard", {
+      navigate(getTeacherDashboardRoute(user), {
         replace: true,
       });
     }
