@@ -336,7 +336,9 @@
     "header": {
       "logo": "Duotopia",
       "teacherLogin": "教師登入",
-      "studentLogin": "學生登入"
+      "studentLogin": "學生登入",
+      "teacherDashboard": "教師後台",
+      "studentDashboard": "學生專區"
     },
     "cta2": {
       "title": "準備好重獲老師的自由時光?",

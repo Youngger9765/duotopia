@@ -336,7 +336,9 @@
     "header": {
       "logo": "Duotopia",
       "teacherLogin": "Teacher Login",
-      "studentLogin": "Student Login"
+      "studentLogin": "Student Login",
+      "teacherDashboard": "Dashboard",
+      "studentDashboard": "Student Area"
     },
     "cta2": {
       "title": "Ready to Reclaim Your Teaching Time?",
