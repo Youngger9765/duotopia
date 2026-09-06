@@ -4807,6 +4807,7 @@
   },
   "scenarioDialogue": {
     "dialogTitle": "新增情境對話",
+    "editTitle": "編輯情境對話",
     "badge": "口說練習",
     "tabs": {
       "sourceManual": "直接輸入情境文章",
@@ -4891,7 +4892,7 @@
       "resetToGlobal": "改回沿用整體評分標準"
     },
     "messages": {
-      "frontendOnly": "情境對話目前為畫面設計階段，尚未串接後端儲存",
+      "frontendOnly": "此功能尚未串接後端（語音生成／播放）",
       "scenarioRequired": "請先輸入情境內容，AI 才有素材可以出題"
     },
     "tenseTimes": {
