@@ -209,9 +209,19 @@ async def create_content(
 
     # Issue #1013: 情境對話的整份設定只在該題型存在，其他題型一律 NULL
     scenario_settings = None
+    # 逐題區塊先在這裡全部驗過並正規化好，之後建 ContentItem 時直接取用。
+    #
+    # 一定要在下面的 db.commit() **之前**跑完（PR #1016 review）：Content 是先 commit
+    # 再逐題建立的，單題驗證若留在迴圈裡，一筆壞資料會回 400 卻留下一張 0 題的空內容
+    # 卡 —— 老師以為沒存成功，教材列表卻多一張，重試幾次就累積幾張，只能手動刪。
+    scenario_item_blocks: Dict[int, Dict[str, Any]] = {}
     if content_type == ContentType.SCENARIO_DIALOGUE:
         _validate_scenario_item_count_or_400(len(content_data.items or []))
         scenario_settings = _scenario_settings_or_400(content_data.scenario_settings)
+        for idx, item_data in enumerate(content_data.items or []):
+            block = _scenario_item_block_or_400(item_data)
+            if block is not None:
+                scenario_item_blocks[idx] = block
 
     # 建立 Content（不再使用 items 欄位）
     content = Content(
@@ -287,11 +297,10 @@ async def create_content(
             if "audio_settings" in item_data:
                 metadata["audio_settings"] = item_data["audio_settings"]
 
-            # Issue #1013: 情境對話逐題資料（覆寫／必用字詞／參考答案／評分備註）
-            if content_type == ContentType.SCENARIO_DIALOGUE:
-                scenario_block = _scenario_item_block_or_400(item_data)
-                if scenario_block is not None:
-                    metadata[sd.SCENARIO_ITEM_KEY] = scenario_block
+            # Issue #1013: 情境對話逐題資料（覆寫／必用字詞／參考答案／評分備註）。
+            # 已於建立 Content 前驗證並正規化完畢，這裡只是取用。
+            if idx in scenario_item_blocks:
+                metadata[sd.SCENARIO_ITEM_KEY] = scenario_item_blocks[idx]
 
             # 根據前端傳來的資料決定存儲到 translation 欄位的內容
             # 優先使用語言感知的 vocabulary_translation（前端目前選擇語言的翻譯，

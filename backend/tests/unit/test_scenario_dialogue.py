@@ -500,6 +500,48 @@ class TestScenarioDialogueAPI:
         )
         assert resp.status_code == 400
 
+    def test_invalid_item_override_leaves_no_orphan_content(
+        self, test_client: TestClient, auth_token, db_session
+    ):
+        """逐題代碼不合法要在建立 Content **之前**擋下（PR #1016 review）。
+
+        單題驗證若跑在 Content 已 commit 之後，一筆壞資料會留下一張 0 題的空內容卡：
+        老師看到 400 以為沒存成功，教材列表卻多一張卡，重試幾次就累積幾張，只能手動刪。
+        """
+        from models import Content
+
+        before = db_session.query(Content).count()
+
+        payload = _payload()
+        payload["items"][0]["scenario_dialogue"]["tense_override"] = {
+            "time": "過去",  # 中文標籤 = 前端串錯，不是穩定代碼
+            "aspect": "simple",
+        }
+        resp = test_client.post(
+            "/api/teachers/lessons/1/contents",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json=payload,
+        )
+
+        assert resp.status_code == 400
+        db_session.expire_all()
+        assert (
+            db_session.query(Content).count() == before
+        ), "驗證失敗卻留下了 Content 列 —— 逐題驗證必須跑在 db.commit() 之前"
+
+    def test_invalid_item_voice_override_rejected(
+        self, test_client: TestClient, auth_token
+    ):
+        """語態同樣只認穩定代碼（active / passive）。"""
+        payload = _payload()
+        payload["items"][1]["scenario_dialogue"]["voice_override"] = "被動"
+        resp = test_client.post(
+            "/api/teachers/lessons/1/contents",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json=payload,
+        )
+        assert resp.status_code == 400
+
     def test_other_content_types_untouched(self, test_client: TestClient, auth_token):
         """非情境對話：不寫 scenario_settings，也不因為多了欄位而改變行為。"""
         resp = test_client.post(
