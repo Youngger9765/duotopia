@@ -467,6 +467,13 @@ async def create_assignment(
             level=original_content.level,
             tags=original_content.tags.copy() if original_content.tags else [],
             is_public=False,  # 副本不公開
+            # Issue #1013: 情境對話整份設定要跟著副本走，否則作業副本的
+            # 逐題 tense_override=None（沿用整體）會沒有整體可沿用
+            scenario_settings=(
+                dict(original_content.scenario_settings)
+                if isinstance(original_content.scenario_settings, dict)
+                else None
+            ),
             # 作業副本欄位
             is_assignment_copy=True,
             source_content_id=original_content.id,

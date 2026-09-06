@@ -194,6 +194,12 @@ async def create_instant_practice(
         level=content.level,
         tags=content.tags.copy() if content.tags else [],
         is_public=False,
+        # Issue #1013: 同 crud.py，情境對話整份設定要跟著副本走
+        scenario_settings=(
+            dict(content.scenario_settings)
+            if isinstance(content.scenario_settings, dict)
+            else None
+        ),
         is_assignment_copy=True,
         source_content_id=content.id,
     )

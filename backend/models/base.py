@@ -144,6 +144,11 @@ class PracticeMode(str, enum.Enum):
     WORD_CLOZE_QUIZ = "word_cloze_quiz"  # 單字克漏字 -> 小考
     TUG_OF_WAR = "tug_of_war"  # 拔河對戰（雙人搶答；不經派發 dialog，由即刻練習提供）
 
+    # 情境對話 (SCENARIO_DIALOGUE) - Issue #1013
+    # 學生看情境＋題目後開口作答（錄音），與 reading / word_reading 同屬朗讀作答，
+    # 故 score_category 恆為 speaking（不受 play_audio 影響）。
+    SCENARIO_DIALOGUE = "scenario_dialogue"  # 情境對話 -> 口說分類
+
 
 class ScoreCategory(str, enum.Enum):
     """分數記錄分類 — 由 practice_mode + play_audio 自動推導。

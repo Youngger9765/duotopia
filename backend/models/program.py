@@ -16,6 +16,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -180,6 +181,23 @@ class Content(Base):
     level = Column(String(10), default="A1")  # 等級 (PreA, A1, A2, B1, B2, C1, C2)
     tags = Column(JSON, default=list)  # 標籤列表
     is_public = Column(Boolean, default=False)  # 是否公開（給其他老師使用）
+
+    # ===== 情境對話（SCENARIO_DIALOGUE）整份設定 — Issue #1013 =====
+    # 只有 type=SCENARIO_DIALOGUE 會寫；其他題型恆為 NULL。
+    # 結構（見 utils/scenario_dialogue.py，那裡是唯一的正規化處）：
+    #   {
+    #     "scenario_content": str,      # 情境內容，空字串合法（老師自己出題時）
+    #     "question_level": str,        # 題目難度 CEFR，"" = 不指定
+    #     "global_rubric": str,         # 作答指引，學生看得到
+    #     "global_tense": {"time": str, "aspect": str},   # 整體評分標準（穩定代碼）
+    #     "global_voice": str,          # "active" / "passive" / ""
+    #     "translate_language": str,
+    #     "tts_settings": {"accent": str, "gender": str, "speed": str} | None
+    #   }
+    # 逐題的覆寫值放在 content_items.item_metadata["scenario_dialogue"]，
+    # 其中 tense_override/voice_override 為 None 代表「沿用這裡的 global_*」，
+    # 與「本題明確不指定（空字串）」是兩種行為，序列化時不可壓平。
+    scenario_settings = Column(JSONB, nullable=True)
 
     # 作業副本機制欄位
     is_assignment_copy = Column(

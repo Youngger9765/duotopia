@@ -69,6 +69,12 @@ def _copy_content_with_items(
         else None,
         order_index=content.order_index if hasattr(content, "order_index") else 0,
         is_active=content.is_active,
+        # Issue #1013: 情境對話整份設定（非該題型為 None）
+        scenario_settings=(
+            dict(content.scenario_settings)
+            if isinstance(getattr(content, "scenario_settings", None), dict)
+            else None
+        ),
     )
     db.add(new_content)
     db.flush()

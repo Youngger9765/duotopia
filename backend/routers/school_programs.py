@@ -341,6 +341,12 @@ def deep_copy_program(
                 level=content.level,
                 tags=content.tags,
                 is_public=content.is_public,
+                # Issue #1013: 情境對話整份設定（非該題型為 None）
+                scenario_settings=(
+                    dict(content.scenario_settings)
+                    if isinstance(content.scenario_settings, dict)
+                    else None
+                ),
             )
             db.add(new_content)
             db.flush()
