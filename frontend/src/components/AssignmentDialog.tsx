@@ -66,6 +66,7 @@ import {
   isAssignableContentType,
   isExampleSentencesType,
   isVocabularySetType,
+  usesNativeDisabled,
 } from "@/lib/assignableContentType";
 import { cn } from "@/lib/utils";
 import { practiceModeLabelKey, type PracticeMode } from "@/lib/practiceMode";
@@ -2079,6 +2080,19 @@ export function AssignmentDialog({
                                                         isVocabularySetType(
                                                           content.type,
                                                         )));
+                                                  // Issue #1030: 原生 disabled 會
+                                                  // 吃掉 click，「這個題型還不能派」
+                                                  // 的提示就永遠出不來。灰掉但保持
+                                                  // 可點，由 toggleContent 說明。
+                                                  const notAssignable =
+                                                    !isAssignableContentType(
+                                                      content.type,
+                                                    );
+                                                  const nativeDisabled =
+                                                    usesNativeDisabled({
+                                                      disabled: isDisabled,
+                                                      notAssignable,
+                                                    });
                                                   return (
                                                     <button
                                                       key={content.id}
@@ -2090,7 +2104,7 @@ export function AssignmentDialog({
                                                           content,
                                                         )
                                                       }
-                                                      disabled={isDisabled}
+                                                      disabled={nativeDisabled}
                                                       className={cn(
                                                         "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
                                                         isSelected &&
@@ -2335,6 +2349,17 @@ export function AssignmentDialog({
                                                           isVocabularySetType(
                                                             content.type,
                                                           )));
+                                                    // Issue #1030: 原生 disabled
+                                                    // 會吃掉 click，說明就出不來
+                                                    const notAssignable =
+                                                      !isAssignableContentType(
+                                                        content.type,
+                                                      );
+                                                    const nativeDisabled =
+                                                      usesNativeDisabled({
+                                                        disabled: isDisabled,
+                                                        notAssignable,
+                                                      });
                                                     return (
                                                       <button
                                                         key={content.id}
@@ -2346,7 +2371,9 @@ export function AssignmentDialog({
                                                             content,
                                                           )
                                                         }
-                                                        disabled={isDisabled}
+                                                        disabled={
+                                                          nativeDisabled
+                                                        }
                                                         className={cn(
                                                           "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
                                                           isSelected &&
@@ -2596,6 +2623,19 @@ export function AssignmentDialog({
                                                         isVocabularySetType(
                                                           content.type,
                                                         )));
+                                                  // Issue #1030: 原生 disabled 會
+                                                  // 吃掉 click，「這個題型還不能派」
+                                                  // 的提示就永遠出不來。灰掉但保持
+                                                  // 可點，由 toggleContent 說明。
+                                                  const notAssignable =
+                                                    !isAssignableContentType(
+                                                      content.type,
+                                                    );
+                                                  const nativeDisabled =
+                                                    usesNativeDisabled({
+                                                      disabled: isDisabled,
+                                                      notAssignable,
+                                                    });
                                                   return (
                                                     <button
                                                       key={content.id}
@@ -2607,7 +2647,7 @@ export function AssignmentDialog({
                                                           content,
                                                         )
                                                       }
-                                                      disabled={isDisabled}
+                                                      disabled={nativeDisabled}
                                                       className={cn(
                                                         "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
                                                         isSelected &&

@@ -9,6 +9,7 @@ import {
   isAssignableContentType,
   isExampleSentencesType,
   isVocabularySetType,
+  usesNativeDisabled,
 } from "../assignableContentType";
 
 describe("例句集 / 單字集判定（含 legacy 名稱）", () => {
@@ -50,4 +51,27 @@ describe("可派發白名單", () => {
       expect(isAssignableContentType(type)).toBe(false);
     },
   );
+});
+
+describe("原生 disabled 會吃掉 click（PR #1032 review）", () => {
+  it("「還不能派發」要保持可點，否則說明永遠出不來", () => {
+    expect(usesNativeDisabled({ disabled: true, notAssignable: true })).toBe(
+      false,
+    );
+  });
+
+  it("其他停用原因維持原生 disabled", () => {
+    expect(usesNativeDisabled({ disabled: true, notAssignable: false })).toBe(
+      true,
+    );
+  });
+
+  it("沒有停用時本來就不需要 disabled", () => {
+    expect(usesNativeDisabled({ disabled: false, notAssignable: true })).toBe(
+      false,
+    );
+    expect(usesNativeDisabled({ disabled: false, notAssignable: false })).toBe(
+      false,
+    );
+  });
 });

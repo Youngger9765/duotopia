@@ -44,3 +44,25 @@ export function isVocabularySetType(type?: string | null): boolean {
 export function isAssignableContentType(type?: string | null): boolean {
   return isExampleSentencesType(type) || isVocabularySetType(type);
 }
+
+/**
+ * 這張卡片要不要用「原生 `disabled` 屬性」。
+ *
+ * **原生 disabled 的按鈕不會派發 click 事件** —— 於是 `onClick` 裡那句「為什麼不能選」
+ * 的提示永遠出不來，老師點灰掉的卡片完全沒有回饋（PR #1032 review 抓到；這個 PR 一開始
+ * 就踩了，說明文件還寫著「點下去會提示」）。
+ *
+ * 所以「這個題型還不能派發」這種**需要解釋**的情況要保持可點，由 `toggleContent` 的
+ * 守衛擋住並跳提示；其餘情況（模式與型別不合、單字集達上限）維持原生 disabled。
+ *
+ * > 註：`mixedContentType`（模式與型別不合）那句提示其實也因為同樣原因構不到，
+ * > 但那是本 PR 之前就存在的行為，不在這張單的範圍內，另外回報。
+ */
+export function usesNativeDisabled(options: {
+  /** 卡片在畫面上是否呈現為停用 */
+  disabled: boolean;
+  /** 停用的原因是不是「這個題型還不能派發」 */
+  notAssignable: boolean;
+}): boolean {
+  return options.disabled && !options.notAssignable;
+}
