@@ -110,6 +110,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { apiClient } from "@/lib/api";
+import { getVoiceAndRate } from "@/utils/ttsVoiceResolver";
 import {
   EMPTY_TENSE,
   createScenarioRow as createRow,
@@ -230,62 +232,6 @@ const isBlankRow = (r: ScenarioDialogueRow) =>
   !r.voiceOverride &&
   r.keywords.length === 0 &&
   !r.imageUrl;
-
-/** 前端 stub：實際串接後改為 AI 生成／PDF 辨識回傳的情境文章 */
-const SAMPLE_SCENARIO = `It is Monday morning at school. You and your classmate are talking about the weekend before class starts.
-
-Your classmate went to the park with their family on Saturday. They played basketball and visited their grandmother in the afternoon. On Sunday they stayed home because it rained all day.
-
-Now it is your turn to talk about what you did.`;
-
-/** 前端 stub：實際串接後改為呼叫 AI 產題 API */
-const SAMPLE_QUESTIONS: Array<
-  Pick<
-    ScenarioDialogueRow,
-    "question" | "translation" | "keywords" | "referenceAnswer" | "imagePrompt"
-  >
-> = [
-  {
-    question: "What did you do last weekend?",
-    translation: "你上週末做了什麼？",
-    keywords: ["went", "visited"],
-    referenceAnswer:
-      "I went to the park with my family last Saturday. We played basketball and visited my grandma in the afternoon.",
-    imagePrompt: "a family walking in a park on a sunny weekend",
-  },
-  {
-    question: "Who did you go with, and why?",
-    translation: "你和誰一起去？為什麼？",
-    keywords: ["with", "because"],
-    referenceAnswer:
-      "I went with my little brother because he loves playing outside and my parents were busy that day.",
-    imagePrompt: "two children walking together outdoors",
-  },
-  {
-    question: "How did you get there?",
-    translation: "你們怎麼過去的？",
-    keywords: ["by bus", "on foot"],
-    referenceAnswer:
-      "We took the bus to the park and then walked there on foot. It took about twenty minutes.",
-    imagePrompt: "a yellow school bus on a street",
-  },
-  {
-    question: "What was the most fun part?",
-    translation: "最好玩的部分是什麼？",
-    keywords: [],
-    referenceAnswer:
-      "The most fun part was the basketball game. It was exciting and everyone was really happy.",
-    imagePrompt: "kids laughing and playing at a playground",
-  },
-  {
-    question: "Would you go there again? Why?",
-    translation: "你還會再去嗎？為什麼？",
-    keywords: ["would", "because"],
-    referenceAnswer:
-      "Yes, I would go there again because the park is quiet and I can play with my friends there.",
-    imagePrompt: "",
-  },
-];
 
 /** 時間／動貌／語態三個下拉 —— 整份設定與單題共用同一組 UI */
 function TenseSelects({
@@ -494,8 +440,12 @@ interface RowProps {
   onPickImage: (file: File) => void;
   onRemoveImage: () => void;
   onGenerateImage: () => void;
-  /** 尚未串接後端的動作（語音生成／播放）按下去的提示 */
-  onNotWired: () => void;
+  /** 產生這一題的題目語音（TTS） */
+  onGenerateAudio: () => void;
+  /** 播放已產生的題目語音 */
+  onPlayAudio: () => void;
+  /** 這一題的語音正在產生中 */
+  audioLoading: boolean;
 }
 
 function SortableRow({
@@ -515,7 +465,9 @@ function SortableRow({
   onPickImage,
   onRemoveImage,
   onGenerateImage,
-  onNotWired,
+  onGenerateAudio,
+  onPlayAudio,
+  audioLoading,
 }: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: row.id });
@@ -657,7 +609,7 @@ function SortableRow({
                 {row.audioUrl && (
                   <button
                     type="button"
-                    onClick={onNotWired}
+                    onClick={onPlayAudio}
                     className="p-1 rounded text-green-600 hover:bg-green-100"
                     title={t("contentEditor.tooltips.play")}
                   >
@@ -666,15 +618,20 @@ function SortableRow({
                 )}
                 <button
                   type="button"
-                  onClick={onNotWired}
-                  className={`p-1 rounded ${
+                  onClick={onGenerateAudio}
+                  disabled={audioLoading || !row.question.trim()}
+                  className={`p-1 rounded disabled:opacity-50 ${
                     row.audioUrl
                       ? "text-blue-600 hover:bg-blue-100"
                       : "text-gray-600 bg-yellow-100 hover:bg-yellow-200"
                   }`}
                   title={t("scenarioDialogue.tooltips.generateAudio")}
                 >
-                  <Mic className="h-4 w-4" />
+                  {audioLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Mic className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -879,8 +836,10 @@ const ScenarioDialoguePanel = forwardRef<
     initialData?.rows?.length ? initialData.rows : [createRow()],
   );
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
-  /** 逐題 AI 生圖是一題一題觸發的，所以要記住是哪一題在跑 */
-  const [imageLoadingId, setImageLoadingId] = useState<string | null>(null);
+  /** 逐題 TTS 同理（#1021） */
+  const [audioLoadingId, setAudioLoadingId] = useState<string | null>(null);
+  /** 目前正在播的題目語音；換一題要先停掉舊的，不然會疊音 */
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // 情境內容的三種產生方式共用的輸入
   /** 訓練目標：AI 生成情境文章時的 prompt */
@@ -1042,8 +1001,31 @@ const ScenarioDialoguePanel = forwardRef<
     });
   };
 
+  /**
+   * 更新一列。
+   *
+   * 題目本文一變，既有的題目語音就對不上了 —— 它是那句話的 TTS 產物，不是附屬素材。
+   * 留著的話播放鍵還在（`SortableRow` 只看 `audioUrl` 有沒有值），老師按下去聽到的
+   * 是舊句子，而且這個 `audio_url` 會跟著存進 content item 一路播給學生聽（#1023
+   * review）。所以在這裡集中清掉，任何改到題目的路徑都涵蓋得到。
+   *
+   * **圖片刻意不清**：圖是老師自己上傳的（AI 生圖尚未開放，見 #1024），不是從題目
+   * 文字機械產生的。為了改一個錯字就把他挑的圖刪掉，比偶爾對不上更糟。
+   */
   const patchRow = (id: string, patch: Partial<ScenarioDialogueRow>) =>
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.id !== id) return r;
+        const next = { ...r, ...patch };
+        if (
+          patch.question !== undefined &&
+          patch.question.trim() !== r.question.trim()
+        ) {
+          next.audioUrl = null;
+        }
+        return next;
+      }),
+    );
 
   const addRow = () =>
     setRows((prev) =>
@@ -1056,7 +1038,14 @@ const ScenarioDialoguePanel = forwardRef<
    * `advance` 為 true 時產完直接翻到題目清單 —— 這是 Step 1 主要出口，
    * 老師按下去就該看到題目，不必再自己找下一步在哪。
    */
-  const handleGenerate = (advance = false) => {
+  /**
+   * AI 產題（Issue #1021 起改為真的呼叫後端）。
+   *
+   * 老師填的整份設定都會送過去（題目難度、整體時態語態、作答指引、翻譯語言）——
+   * 這正是這張單的起因：舊版是 setTimeout + 寫死的示範題，那些欄位一個都沒被讀取。
+   * 清單上已有的題目也一併送出，讓「再產一批」不會給重複的。
+   */
+  const handleGenerate = async (advance = false) => {
     // 情境內容是 AI 出題的素材，沒有素材就沒東西可出。
     // 這條只擋產題，不擋儲存 —— 老師自己在 Step 2 打題目時不需要情境內容。
     if (!scenarioContent.trim()) {
@@ -1064,63 +1053,168 @@ const ScenarioDialoguePanel = forwardRef<
       scenarioRef.current?.focus();
       return;
     }
+
+    const kept = rows.filter((r) => !isBlankRow(r));
+    const room = MAX_ITEMS - kept.length;
+    if (room <= 0) {
+      toast.error(t("scenarioDialogue.hints.maxReached", { max: MAX_ITEMS }));
+      return;
+    }
+
     setIsGenerating(true);
-    setTimeout(() => {
+    try {
+      const { questions } = await apiClient.generateScenarioQuestions({
+        scenario_content: scenarioContent,
+        count: Math.min(generateCount, room),
+        question_level: questionLevel,
+        // 送穩定代碼，不是畫面上的中文標籤
+        global_tense: globalTense,
+        global_voice: globalVoice,
+        global_rubric: globalRubric,
+        translate_language: toStoredTranslateLanguage(
+          translateLang,
+          customLang,
+        ),
+        existing_questions: kept.map((r) => r.question.trim()).filter(Boolean),
+      });
+
+      // 一定要用 functional form 重新取一次最新的 rows：AI 呼叫要等好幾秒，這段期間
+      // 老師還是可以改題目、刪題、加題、拖曳排序（那些控制項沒有被 isGenerating 擋）。
+      // 用上面 await 之前算好的 kept 直接覆蓋，會把他等待期間做的事整個吃掉
+      // （PR #1023 review）。
       setRows((prev) => {
-        // 尚未動過的空白卡直接被產出的題目取代，避免最前面卡著一張空的
-        const kept = prev.filter((r) => !isBlankRow(r));
-        const room = MAX_ITEMS - kept.length;
-        // 避開已經出現過的題目，與 regenerateRow 同一套規則 —— 否則按第二次
-        // 「再產一批題目」會原封不動再貼一次同樣的示範題
+        const latestKept = prev.filter((r) => !isBlankRow(r));
+        // 空間也要用最新的算 —— 等待期間可能又加了題目
+        const latestRoom = Math.max(0, MAX_ITEMS - latestKept.length);
         const used = new Set(
-          kept.map((r) => r.question.trim()).filter(Boolean),
+          latestKept.map((r) => r.question.trim()).filter(Boolean),
         );
-        const fresh = SAMPLE_QUESTIONS.filter((q) => !used.has(q.question));
+        // 後端已經避開送出去的既有題目，但老師等待期間新打的那些它不知道
+        const fresh = questions.filter((q) => !used.has(q.question.trim()));
         return [
-          ...kept,
-          ...fresh
-            .slice(0, Math.max(0, Math.min(generateCount, room)))
-            .map((q) => createRow(q)),
+          ...latestKept,
+          ...fresh.slice(0, latestRoom).map((q) =>
+            createRow({
+              question: q.question,
+              translation: q.translation,
+              keywords: q.keywords,
+              referenceAnswer: q.reference_answer,
+              imagePrompt: q.image_prompt,
+            }),
+          ),
         ];
       });
-      setIsGenerating(false);
       if (advance) setStep(2);
-    }, 600);
+    } catch (error) {
+      console.error("Failed to generate scenario questions:", error);
+      toast.error(t("scenarioDialogue.messages.generateFailed"));
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   /**
-   * 單題重新生成。stub 也要真的換掉題目 —— tooltip 寫的是「會避開已出現過的
-   * 題目」，如果只轉個 spinner 就結束，之後接真 API 的人會以為這裡本來就沒事做。
-   * 換上一則還沒被用到的示範題，把「避開重複」這件事實際做出來。
+   * 單題重新生成（Issue #1021 起改為真的呼叫後端）。
+   *
+   * 只要 1 題 —— #864 的「一份 3~10 題」是存檔時的規則，不是單次生成的規則，所以
+   * 後端的產題端點下限是 1。清單上其他題目一併送出當作「不要重複這些」。
    */
-  const regenerateRow = (id: string) => {
+  const regenerateRow = async (id: string) => {
+    if (!scenarioContent.trim()) {
+      toast.error(t("scenarioDialogue.messages.scenarioRequired"));
+      return;
+    }
     setRegeneratingId(id);
-    setTimeout(() => {
-      setRows((prev) => {
-        const used = new Set(
-          prev.map((r) => r.question.trim()).filter(Boolean),
-        );
-        const fresh = SAMPLE_QUESTIONS.find((q) => !used.has(q.question));
-        // 示範題用光了就維持原樣，總比換成重複的好
-        if (!fresh) return prev;
-        return prev.map((r) =>
-          r.id === id ? { ...r, ...fresh, revision: r.revision + 1 } : r,
-        );
+    try {
+      const { questions } = await apiClient.generateScenarioQuestions({
+        scenario_content: scenarioContent,
+        count: 1,
+        question_level: questionLevel,
+        global_tense: globalTense,
+        global_voice: globalVoice,
+        global_rubric: globalRubric,
+        translate_language: toStoredTranslateLanguage(
+          translateLang,
+          customLang,
+        ),
+        existing_questions: rows.map((r) => r.question.trim()).filter(Boolean),
       });
+      const fresh = questions[0];
+      if (!fresh) {
+        toast.error(t("scenarioDialogue.messages.generateFailed"));
+        return;
+      }
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                question: fresh.question,
+                translation: fresh.translation,
+                keywords: fresh.keywords,
+                referenceAnswer: fresh.reference_answer,
+                imagePrompt: fresh.image_prompt,
+                // 整題換掉，舊語音更不可能對得上（同 patchRow 的理由）
+                audioUrl: null,
+                // 換內容要讓 SortableRow 重新掛載，否則關鍵字草稿會停在舊值
+                revision: r.revision + 1,
+              }
+            : r,
+        ),
+      );
+    } catch (error) {
+      console.error("Failed to regenerate scenario question:", error);
+      toast.error(t("scenarioDialogue.messages.generateFailed"));
+    } finally {
       setRegeneratingId(null);
-    }, 800);
+    }
   };
 
   /**
-   * 產生情境內容（AI 生成 / 從檔案擷取）。前端 stub：串接後把回傳的文章填進
-   * scenarioContent。三種來源共用同一個目的地，所以這裡只有一個處理函式。
+   * 產生情境內容（Issue #1021 起改為真的呼叫後端）。
+   *
+   * 三種來源匯流到同一個目的地（`scenarioContent`），但來源不同、呼叫的端點也不同：
+   * - `ai`：依訓練目標與文章難度生成
+   * - `upload`：從上傳的圖片 / PDF 擷取（一次一個檔，多檔依序擷取後接起來）
+   * - `manual`：老師自己打，不會走到這裡
+   *
+   * 產生出來的東西一律覆蓋文字框 —— 三種來源本來就是「重新產一份」，不是附加。
    */
-  const handleGenerateScenario = () => {
+  const handleGenerateScenario = async () => {
+    const fromUpload = sourceTab === "upload";
+    if (fromUpload && uploadedFiles.length === 0) return;
+    if (!fromUpload && !goal.trim()) {
+      toast.error(t("scenarioDialogue.messages.goalRequired"));
+      return;
+    }
+
     setIsGeneratingScenario(true);
-    setTimeout(() => {
-      setScenarioContent(SAMPLE_SCENARIO);
+    try {
+      if (fromUpload) {
+        // 一次一個檔：後端端點吃單檔，多頁講義依序擷取再接起來
+        const parts: string[] = [];
+        for (const file of uploadedFiles) {
+          const { content } = await apiClient.extractScenarioArticle(file);
+          if (content.trim()) parts.push(content.trim());
+        }
+        if (parts.length === 0) {
+          toast.error(t("scenarioDialogue.messages.generateFailed"));
+          return;
+        }
+        setScenarioContent(parts.join("\n\n"));
+      } else {
+        const { content } = await apiClient.generateScenarioArticle({
+          goal,
+          level: articleLevel,
+        });
+        setScenarioContent(content);
+      }
+    } catch (error) {
+      console.error("Failed to generate scenario content:", error);
+      toast.error(t("scenarioDialogue.messages.generateFailed"));
+    } finally {
       setIsGeneratingScenario(false);
-    }, 700);
+    }
   };
 
   /** 跳過 AI 自己出題：至少留一張空白卡可以打字 */
@@ -1172,9 +1266,16 @@ const ScenarioDialoguePanel = forwardRef<
    * 逐題 AI 生圖。前端 stub：只跑 loading，串接後把回傳的圖片網址填進 imageUrl。
    * 圖片改成單題的事之後，整份不再有「一次生成全部」的勾選。
    */
-  const generateRowImage = (id: string) => {
-    setImageLoadingId(id);
-    setTimeout(() => setImageLoadingId(null), 800);
+  /**
+   * 逐題 AI 生圖 —— Issue #1021 的範圍**不含**這個：後端目前完全沒有圖片生成能力
+   * （不是接線問題，是要從零建一個新能力：模型、儲存、成本、配額）。
+   *
+   * 舊版是「轉 800ms 的 spinner 然後什麼都沒有」，看起來像在生成、其實是假的 ——
+   * 既然其他 AI 功能都接成真的了，這顆更不能繼續假裝。改成明講尚未提供，老師就會
+   * 改用旁邊的手動上傳，而不是一直重按。
+   */
+  const generateRowImage = (_id: string) => {
+    toast.info(t("scenarioDialogue.messages.imageGenerationUnavailable"));
   };
 
   const handleFiles = (files: FileList | null) => {
@@ -1183,11 +1284,53 @@ const ScenarioDialoguePanel = forwardRef<
   };
 
   /**
-   * 語音生成與播放還沒有後端可打。按鈕維持可點並回一句提示，而不是靜靜地
-   * 沒反應 —— 沒反應的按鈕會被當成壞掉，老師會一直重按。
+   * 逐題題目語音（Issue #1021 起改為真的呼叫 TTS）。
+   *
+   * 用面板上的 TTS 設定（口音／性別／語速）算出 voice 與 rate，與單字集、例句集
+   * 走同一支 `getVoiceAndRate`，避免同一份設定在不同面板產出不同聲音。
    */
-  const notWired = () =>
-    toast.info(t("scenarioDialogue.messages.frontendOnly"));
+  const generateRowAudio = async (id: string) => {
+    const row = rows.find((r) => r.id === id);
+    if (!row || !row.question.trim()) return;
+
+    setAudioLoadingId(id);
+    try {
+      const { voice, rate } = getVoiceAndRate(
+        ttsSettings.accent,
+        ttsSettings.gender,
+        ttsSettings.speed,
+      );
+      const result = await apiClient.generateTTS(
+        row.question.trim(),
+        voice,
+        rate,
+        "+0%",
+      );
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === id ? { ...r, audioUrl: result.audio_url } : r,
+        ),
+      );
+    } catch (error) {
+      console.error("Failed to generate question audio:", error);
+      toast.error(t("scenarioDialogue.messages.audioFailed"));
+    } finally {
+      setAudioLoadingId(null);
+    }
+  };
+
+  /** 播放已產生的題目語音。同時只留一個在播，避免老師連點兩題變成疊音 */
+  const playRowAudio = (id: string) => {
+    const row = rows.find((r) => r.id === id);
+    if (!row?.audioUrl) return;
+    audioRef.current?.pause();
+    const audio = new Audio(row.audioUrl);
+    audioRef.current = audio;
+    void audio.play().catch((error) => {
+      console.error("Failed to play question audio:", error);
+      toast.error(t("scenarioDialogue.messages.audioFailed"));
+    });
+  };
 
   /**
    * 兩個步驟都能按儲存，但擋關的條件一樣 —— 缺什麼就把老師帶到那一步，
@@ -1802,7 +1945,7 @@ const ScenarioDialoguePanel = forwardRef<
                       globalVoice={globalVoice}
                       canDelete={rows.length > 1}
                       regenerating={regeneratingId === row.id}
-                      imageLoading={imageLoadingId === row.id}
+                      imageLoading={false}
                       onChange={(patch) => patchRow(row.id, patch)}
                       onDuplicate={() =>
                         setRows((prev) =>
@@ -1820,7 +1963,9 @@ const ScenarioDialoguePanel = forwardRef<
                       onPickImage={(file) => pickRowImage(row.id, file)}
                       onRemoveImage={() => removeRowImage(row.id)}
                       onGenerateImage={() => generateRowImage(row.id)}
-                      onNotWired={notWired}
+                      onGenerateAudio={() => generateRowAudio(row.id)}
+                      onPlayAudio={() => playRowAudio(row.id)}
+                      audioLoading={audioLoadingId === row.id}
                     />
                   ))}
                 </div>
