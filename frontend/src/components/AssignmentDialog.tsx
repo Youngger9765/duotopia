@@ -2128,7 +2128,17 @@ export function AssignmentDialog({
                                                           !isDisabled &&
                                                           "hover:bg-gray-50",
                                                         isDisabled &&
-                                                          "opacity-40 cursor-not-allowed",
+                                                          "opacity-40",
+                                                        // Issue #1030: 「還不能派」
+                                                        // 的卡片是可以點的（點了才
+                                                        // 會說明原因），游標不能寫
+                                                        // 「不可點」自打嘴巴
+                                                        isDisabled &&
+                                                          nativeDisabled &&
+                                                          "cursor-not-allowed",
+                                                        isDisabled &&
+                                                          !nativeDisabled &&
+                                                          "cursor-help",
                                                       )}
                                                     >
                                                       {isSelected ? (
@@ -2397,7 +2407,15 @@ export function AssignmentDialog({
                                                             !isDisabled &&
                                                             "hover:bg-gray-50",
                                                           isDisabled &&
-                                                            "opacity-40 cursor-not-allowed",
+                                                            "opacity-40",
+                                                          // Issue #1030: 可點的卡片
+                                                          // 不能用「不可點」游標
+                                                          isDisabled &&
+                                                            nativeDisabled &&
+                                                            "cursor-not-allowed",
+                                                          isDisabled &&
+                                                            !nativeDisabled &&
+                                                            "cursor-help",
                                                         )}
                                                       >
                                                         {isSelected ? (
@@ -2671,7 +2689,17 @@ export function AssignmentDialog({
                                                           !isDisabled &&
                                                           "hover:bg-gray-50",
                                                         isDisabled &&
-                                                          "opacity-40 cursor-not-allowed",
+                                                          "opacity-40",
+                                                        // Issue #1030: 「還不能派」
+                                                        // 的卡片是可以點的（點了才
+                                                        // 會說明原因），游標不能寫
+                                                        // 「不可點」自打嘴巴
+                                                        isDisabled &&
+                                                          nativeDisabled &&
+                                                          "cursor-not-allowed",
+                                                        isDisabled &&
+                                                          !nativeDisabled &&
+                                                          "cursor-help",
                                                       )}
                                                     >
                                                       {isSelected ? (
