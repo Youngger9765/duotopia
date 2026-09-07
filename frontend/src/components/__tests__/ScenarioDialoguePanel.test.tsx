@@ -912,3 +912,83 @@ describe("ScenarioDialoguePanel AI 串接（#1021）", () => {
     ).toBe("Page one.\n\nPage two.");
   });
 });
+
+/**
+ * Issue #1023 review：題目語音是「那句話」的 TTS 產物，題目一改就對不上。
+ *
+ * 這件事不只是畫面上怪 —— `audioUrl` 會跟著存進 content item，一路播給學生聽。
+ */
+describe("ScenarioDialoguePanel 題目語音與題目本文的一致性", () => {
+  const generateAudioFor = async (index: number) => {
+    const buttons = screen.getAllByTitle(
+      "scenarioDialogue.tooltips.generateAudio",
+    );
+    fireEvent.click(buttons[index]);
+    await act(async () => {
+      await Promise.resolve();
+    });
+  };
+
+  const playButtons = () =>
+    screen.queryAllByTitle("contentEditor.tooltips.play");
+
+  it("產生語音後會出現播放鍵", async () => {
+    renderPanel();
+    fillRequiredForGenerate();
+    await runGenerate(K.generate);
+
+    expect(playButtons().length).toBe(0);
+    await generateAudioFor(0);
+
+    expect(generateTTS).toHaveBeenCalledTimes(1);
+    expect(playButtons().length).toBe(1);
+  });
+
+  it("手動改題目文字會把舊語音清掉（否則播的是舊句子）", async () => {
+    renderPanel();
+    fillRequiredForGenerate();
+    await runGenerate(K.generate);
+    await generateAudioFor(0);
+    expect(playButtons().length).toBe(1);
+
+    const questionBox = screen.getAllByPlaceholderText(
+      K.questionPlaceholder,
+    )[0];
+    fireEvent.change(questionBox, {
+      target: { value: "A totally new question?" },
+    });
+
+    expect(playButtons().length).toBe(0);
+  });
+
+  it("只是重新輸入同一段文字不會誤清語音", async () => {
+    renderPanel();
+    fillRequiredForGenerate();
+    await runGenerate(K.generate);
+    await generateAudioFor(0);
+
+    const questionBox = screen.getAllByPlaceholderText(
+      K.questionPlaceholder,
+    )[0] as HTMLTextAreaElement;
+    fireEvent.change(questionBox, { target: { value: questionBox.value } });
+
+    expect(playButtons().length).toBe(1);
+  });
+
+  it("重新生成整題也會清掉舊語音", async () => {
+    renderPanel();
+    fillRequiredForGenerate();
+    await runGenerate(K.generate);
+    await generateAudioFor(0);
+    expect(playButtons().length).toBe(1);
+
+    fireEvent.click(
+      screen.getAllByTitle("scenarioDialogue.tooltips.regenerateQuestion")[0],
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(playButtons().length).toBe(0);
+  });
+});

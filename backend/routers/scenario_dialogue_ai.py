@@ -30,6 +30,7 @@ from models import Teacher
 from routers.teachers import get_current_teacher
 from services.scenario_dialogue_ai import (
     ScenarioDialogueAIError,
+    ScenarioDialogueAIOutputError,
     get_scenario_dialogue_ai_service,
 )
 
@@ -96,10 +97,12 @@ async def generate_article(
     service = get_scenario_dialogue_ai_service()
     try:
         return await service.generate_article(goal=payload.goal, level=payload.level)
+    except ScenarioDialogueAIOutputError as e:
+        # 呼叫成功但模型沒給出可用的東西 —— 不是老師填錯，回 502「請稍後再試」。
+        # 這個 except 必須排在父類 ScenarioDialogueAIError 前面（PR #1023 review）
+        raise _ai_failed("generate-article", e)
     except ScenarioDialogueAIError as e:
-        # 參數問題（空的訓練目標、不合法的難度）與「模型這次沒產出東西」都會走這裡。
-        # 前者是 400；後者其實是 502 比較貼切，但對老師來說都是「再試一次」，
-        # 訊息本身已經說清楚，不再細分以免端點邏輯變複雜。
+        # 參數問題（空的訓練目標、不合法的難度）→ 400，訊息直接給老師看
         raise _bad_request(e)
     except Exception as e:
         raise _ai_failed("generate-article", e)
@@ -122,6 +125,8 @@ async def generate_questions(
             translate_language=payload.translate_language,
             existing_questions=payload.existing_questions,
         )
+    except ScenarioDialogueAIOutputError as e:
+        raise _ai_failed("generate-questions", e)
     except ScenarioDialogueAIError as e:
         raise _bad_request(e)
     except Exception as e:
@@ -150,6 +155,8 @@ async def extract_article(
         return await service.extract_article(
             file_bytes=file_bytes, mime_type=file.content_type
         )
+    except ScenarioDialogueAIOutputError as e:
+        raise _ai_failed("extract-article", e)
     except ScenarioDialogueAIError as e:
         raise _bad_request(e)
     except Exception as e:

@@ -73,7 +73,17 @@ _ASPECT_WORDS = {
 
 
 class ScenarioDialogueAIError(ValueError):
-    """可預期的錯誤（參數不合法、模型輸出無法使用）。呼叫端轉成 4xx/502。"""
+    """參數不合法（呼叫端該擋而沒擋）。端點轉成 400。"""
+
+
+class ScenarioDialogueAIOutputError(ScenarioDialogueAIError):
+    """呼叫成功但模型沒給出可用的東西（格式壞掉、一題都沒產出）。
+
+    與參數錯誤分開是因為兩者對老師的意思完全不同：參數錯是「你填的東西有問題」，
+    這個是「這次不巧，再按一次」。端點轉成 502，訊息也是「請稍後再試」。
+
+    繼承 ScenarioDialogueAIError，所以既有只攔父類的呼叫端不會漏接（PR #1023 review）。
+    """
 
 
 def describe_tense(tense: Optional[Dict[str, str]]) -> str:
@@ -308,7 +318,7 @@ class ScenarioDialogueAIService:
             if salvaged:
                 logger.warning("scenario_dialogue_ai: JSON 截斷，救回 %d 個物件", len(salvaged))
                 return {"questions": salvaged}
-            raise ScenarioDialogueAIError("AI 回傳的內容不是可用的 JSON")
+            raise ScenarioDialogueAIOutputError("AI 回傳的內容不是可用的 JSON")
 
     @staticmethod
     def _salvage_objects(text: str) -> List[Dict[str, Any]]:
@@ -378,7 +388,7 @@ class ScenarioDialogueAIService:
         else:
             items = raw
         if not isinstance(items, list):
-            raise ScenarioDialogueAIError("AI 回傳格式不正確（找不到題目陣列）")
+            raise ScenarioDialogueAIOutputError("AI 回傳格式不正確（找不到題目陣列）")
 
         seen = {q.strip() for q in (existing_questions or []) if str(q).strip()}
         out: List[Dict[str, Any]] = []
@@ -403,7 +413,7 @@ class ScenarioDialogueAIService:
                 break
 
         if not out:
-            raise ScenarioDialogueAIError("AI 這次沒有產出可用的題目")
+            raise ScenarioDialogueAIOutputError("AI 這次沒有產出可用的題目")
         return out
 
     @classmethod
@@ -412,7 +422,7 @@ class ScenarioDialogueAIService:
         if not content and isinstance(raw, dict):
             content = cls._text(raw.get("content"))
         if not content:
-            raise ScenarioDialogueAIError("AI 這次沒有產出情境內容")
+            raise ScenarioDialogueAIOutputError("AI 這次沒有產出情境內容")
         return content
 
     @staticmethod

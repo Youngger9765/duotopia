@@ -1001,8 +1001,31 @@ const ScenarioDialoguePanel = forwardRef<
     });
   };
 
+  /**
+   * 更新一列。
+   *
+   * 題目本文一變，既有的題目語音就對不上了 —— 它是那句話的 TTS 產物，不是附屬素材。
+   * 留著的話播放鍵還在（`SortableRow` 只看 `audioUrl` 有沒有值），老師按下去聽到的
+   * 是舊句子，而且這個 `audio_url` 會跟著存進 content item 一路播給學生聽（#1023
+   * review）。所以在這裡集中清掉，任何改到題目的路徑都涵蓋得到。
+   *
+   * **圖片刻意不清**：圖是老師自己上傳的（AI 生圖尚未開放，見 #1024），不是從題目
+   * 文字機械產生的。為了改一個錯字就把他挑的圖刪掉，比偶爾對不上更糟。
+   */
   const patchRow = (id: string, patch: Partial<ScenarioDialogueRow>) =>
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.id !== id) return r;
+        const next = { ...r, ...patch };
+        if (
+          patch.question !== undefined &&
+          patch.question.trim() !== r.question.trim()
+        ) {
+          next.audioUrl = null;
+        }
+        return next;
+      }),
+    );
 
   const addRow = () =>
     setRows((prev) =>
@@ -1117,6 +1140,8 @@ const ScenarioDialoguePanel = forwardRef<
                 keywords: fresh.keywords,
                 referenceAnswer: fresh.reference_answer,
                 imagePrompt: fresh.image_prompt,
+                // 整題換掉，舊語音更不可能對得上（同 patchRow 的理由）
+                audioUrl: null,
                 // 換內容要讓 SortableRow 重新掛載，否則關鍵字草稿會停在舊值
                 revision: r.revision + 1,
               }

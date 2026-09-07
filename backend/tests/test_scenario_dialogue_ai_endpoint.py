@@ -294,3 +294,46 @@ def test_normal_sized_payload_still_passes(test_client, auth_headers_teacher, ca
     )
     assert resp.status_code == 200, resp.text
     assert captured["questions"]["translate_language"] == "西班牙文"
+
+
+# ------------------------------------------------- 參數錯 vs 模型沒產出（#1023 review）
+#
+# 兩者對老師的意思完全不同：參數錯是「你填的東西有問題」（400，訊息直接顯示），
+# 模型沒產出是「這次不巧，再按一次」（502，通用訊息）。
+
+
+def test_model_produced_nothing_returns_502_not_400(
+    test_client, auth_headers_teacher, monkeypatch
+):
+    from services import scenario_dialogue_ai as mod
+
+    async def empty(self, **kwargs):
+        raise mod.ScenarioDialogueAIOutputError("AI 這次沒有產出可用的題目")
+
+    monkeypatch.setattr(mod.ScenarioDialogueAIService, "generate_questions", empty)
+
+    resp = test_client.post(
+        QUESTIONS_URL,
+        headers=auth_headers_teacher,
+        json={"scenario_content": "S", "count": 5},
+    )
+    assert resp.status_code == 502
+    assert "請稍後再試" in resp.json()["detail"]
+
+
+def test_bad_params_still_return_400(test_client, auth_headers_teacher, monkeypatch):
+    """參數錯不能被新的 502 分支吃掉 —— 老師需要看到是哪裡填錯。"""
+    from services import scenario_dialogue_ai as mod
+
+    async def bad(self, **kwargs):
+        raise ScenarioDialogueAIError("情境內容不可為空（產題的素材）")
+
+    monkeypatch.setattr(mod.ScenarioDialogueAIService, "generate_questions", bad)
+
+    resp = test_client.post(
+        QUESTIONS_URL,
+        headers=auth_headers_teacher,
+        json={"scenario_content": " ", "count": 5},
+    )
+    assert resp.status_code == 400
+    assert "情境內容" in resp.json()["detail"]
