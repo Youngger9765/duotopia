@@ -22,12 +22,20 @@ from fastapi import (
     UploadFile,
     status,
 )
+from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field, StringConstraints
 
+from database import get_db
 from models import Teacher
 
 # 共用同一份教師鑑權依賴，避免 auth 邏輯分叉（同 magic_paste）
 from routers.teachers import get_current_teacher
+from services import scenario_image_quota as siq
+from services.scenario_dialogue_image import (
+    ScenarioImageBlockedError,
+    ScenarioImageError,
+    get_scenario_dialogue_image_service,
+)
 from services.scenario_dialogue_ai import (
     ScenarioDialogueAIError,
     ScenarioDialogueAIOutputError,
@@ -49,6 +57,7 @@ MAX_LANGUAGE_CHARS = 50
 MAX_LEVEL_CHARS = 10
 MAX_EXISTING_QUESTIONS = 20
 MAX_EXISTING_QUESTION_CHARS = 1000
+MAX_IMAGE_PROMPT_CHARS = 1000
 
 
 class GenerateArticleRequest(BaseModel):
@@ -57,6 +66,12 @@ class GenerateArticleRequest(BaseModel):
     goal: str = Field(max_length=MAX_GOAL_CHARS)
     # 文章難度，空字串 = 不指定（CEFR 代碼，服務層驗證）
     level: str = Field(default="", max_length=MAX_LEVEL_CHARS)
+
+
+class GenerateImageRequest(BaseModel):
+    """逐題生圖。`image_prompt` 已經存在 item_metadata 裡（#1013），前端直接帶回來。"""
+
+    image_prompt: str = Field(max_length=MAX_IMAGE_PROMPT_CHARS)
 
 
 class GenerateQuestionsRequest(BaseModel):
@@ -161,3 +176,69 @@ async def extract_article(
         raise _bad_request(e)
     except Exception as e:
         raise _ai_failed("extract-article", e)
+
+
+@router.get("/image-quota")
+def image_quota(
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """本月生圖剩餘次數（Issue #1024）。前端用來顯示，也用來決定要不要先擋。"""
+    return siq.get_quota_status(db, current_teacher)
+
+
+@router.post("/generate-image")
+async def generate_image(
+    payload: GenerateImageRequest,
+    current_teacher: Teacher = Depends(get_current_teacher),
+    db: Session = Depends(get_db),
+):
+    """依逐題的 image_prompt 生一張圖，存好之後回傳網址。
+
+    順序刻意是「先檢查配額 → 生圖 → 存檔 → 才扣配額」：
+
+    * 配額用完就不要浪費一次 Imagen 呼叫
+    * 被安全過濾擋下（`ScenarioImageBlockedError`）**不扣額度** —— 老師沒拿到圖，
+      扣他一次只會讓他不敢再試（比照 magic_paste 擷取到 0 項不扣額的產品決策）
+    """
+    quota_before = siq.get_quota_status(db, current_teacher)
+    if not quota_before["can_use"]:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail={
+                "error": "SCENARIO_IMAGE_QUOTA_EXCEEDED",
+                "message": "本月 AI 生成圖片次數已用完，可以改用手動上傳圖片。",
+                "quota": quota_before,
+            },
+        )
+
+    service = get_scenario_dialogue_image_service()
+    try:
+        result = await service.generate(payload.image_prompt)
+    except ScenarioImageBlockedError as e:
+        # 被安全過濾擋下：這是「換個描述」而不是「稍後再試」，訊息要能直接給老師看
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
+        )
+    except ScenarioImageError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise _ai_failed("generate-image", e)
+
+    try:
+        from services.image_upload import get_image_upload_service
+
+        image_url = get_image_upload_service().store_image_bytes(
+            result["image_bytes"], "image/png"
+        )
+    except Exception as e:
+        # 圖生出來了卻存不進去 —— 不扣額度，老師重試不該被罰
+        raise _ai_failed("generate-image-store", e)
+
+    charge = siq.consume(db, current_teacher)
+    return {
+        "image_url": image_url,
+        "prompt": result["prompt"],
+        "estimated_cost_usd": result["estimated_cost_usd"],
+        "quota": charge,
+    }

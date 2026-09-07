@@ -27,6 +27,7 @@ const generateScenarioQuestions = vi.fn();
 const generateScenarioArticle = vi.fn();
 const extractScenarioArticle = vi.fn();
 const generateTTS = vi.fn();
+const generateScenarioImage = vi.fn();
 
 const fakeQuestion = (n: number) => ({
   question: `Generated question ${n}?`,
@@ -43,6 +44,7 @@ vi.mock("@/lib/api", () => ({
     generateScenarioArticle: (...a: unknown[]) => generateScenarioArticle(...a),
     extractScenarioArticle: (...a: unknown[]) => extractScenarioArticle(...a),
     generateTTS: (...a: unknown[]) => generateTTS(...a),
+    generateScenarioImage: (...a: unknown[]) => generateScenarioImage(...a),
   },
 }));
 
@@ -132,6 +134,7 @@ beforeEach(() => {
   generateScenarioArticle.mockReset();
   extractScenarioArticle.mockReset();
   generateTTS.mockReset();
+  generateScenarioImage.mockReset();
 
   // 每次呼叫都給「還沒出現過」的題目，讓『再產一批』能像真的一樣長出新題
   let seq = 0;
@@ -1054,6 +1057,81 @@ describe("ScenarioDialoguePanel 產題等待期間的編輯不可被吃掉", () 
     // 刪掉 1 題、AI 補 1 題 → 總數不變；被刪的那題不該復活
     expect(screen.getAllByPlaceholderText(K.questionPlaceholder).length).toBe(
       before,
+    );
+  });
+});
+
+/**
+ * Issue #1024：逐題 AI 生圖接上 Imagen。
+ *
+ * 三種失敗要分開講，因為老師的下一步完全不同（額度用完 → 改手動上傳、被安全過濾
+ * 擋下 → 換描述、其他 → 稍後再試）。
+ */
+describe("ScenarioDialoguePanel AI 生圖（#1024）", () => {
+  const generateImageFor = async (index: number) => {
+    fireEvent.click(
+      screen.getAllByText("scenarioDialogue.buttons.generateImage")[index],
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+  };
+
+  const prepareRows = async () => {
+    renderPanel();
+    fillRequiredForGenerate();
+    await runGenerate(K.generate);
+  };
+
+  it("用該題的 imagePrompt 呼叫生圖，成功後把圖填進該列", async () => {
+    generateScenarioImage.mockResolvedValue({
+      image_url: "https://cdn/generated.png",
+      prompt: "rewritten",
+    });
+    const { container } = render(<ScenarioDialoguePanel />, { wrapper });
+    fillRequiredForGenerate();
+    await runGenerate(K.generate);
+
+    await generateImageFor(0);
+
+    expect(generateScenarioImage).toHaveBeenCalledTimes(1);
+    expect(
+      container.querySelector('img[src="https://cdn/generated.png"]'),
+    ).toBeInTheDocument();
+  });
+
+  it("額度用完（402）會告訴老師改用手動上傳", async () => {
+    generateScenarioImage.mockRejectedValue(
+      new Error('402 {"error":"SCENARIO_IMAGE_QUOTA_EXCEEDED"}'),
+    );
+    await prepareRows();
+
+    await generateImageFor(0);
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "scenarioDialogue.messages.imageQuotaExceeded",
+    );
+  });
+
+  it("被安全過濾擋下（422）會請老師換個描述", async () => {
+    generateScenarioImage.mockRejectedValue(new Error("422 blocked"));
+    await prepareRows();
+
+    await generateImageFor(0);
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "scenarioDialogue.messages.imageBlocked",
+    );
+  });
+
+  it("其他錯誤是「稍後再試」，不會誤導成額度或描述問題", async () => {
+    generateScenarioImage.mockRejectedValue(new Error("500 boom"));
+    await prepareRows();
+
+    await generateImageFor(0);
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      "scenarioDialogue.messages.imageFailed",
     );
   });
 });

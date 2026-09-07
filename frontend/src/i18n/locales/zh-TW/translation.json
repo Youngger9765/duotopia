@@ -4895,7 +4895,10 @@
       "generateFailed": "AI 產生失敗，請稍後再試",
       "goalRequired": "請先填寫訓練目標",
       "audioFailed": "語音產生失敗，請稍後再試",
-      "imageGenerationUnavailable": "AI 生成圖片尚未開放，可以先手動上傳圖片",
+      "imagePromptRequired": "請先填寫題目或產生題目，才有生圖的依據",
+      "imageQuotaExceeded": "本月 AI 生成圖片次數已用完，可以改用手動上傳圖片",
+      "imageBlocked": "這個描述沒辦法生成圖片，請換個描述再試",
+      "imageFailed": "圖片生成失敗，請稍後再試",
       "scenarioRequired": "請先輸入情境內容，AI 才有素材可以出題"
     },
     "tenseTimes": {
