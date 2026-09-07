@@ -26,7 +26,9 @@ import { StudentDialogs } from "@/components/StudentDialogs";
 import { ProgramDialog } from "@/components/ProgramDialog";
 import { LessonDialog } from "@/components/LessonDialog";
 import CreateProgramDialog from "@/components/CreateProgramDialog";
-import ContentTypeDialog from "@/components/ContentTypeDialog";
+import ContentTypeDialog, {
+  type ContentTypeValue,
+} from "@/components/ContentTypeDialog";
 import ScenarioDialogueEditorSheet from "@/components/ScenarioDialogueEditorSheet";
 import { useScenarioDialogueEditor } from "@/hooks/useScenarioDialogueEditor";
 import ReadingAssessmentPanel, {
@@ -1712,29 +1714,22 @@ export default function ClassroomDetail({
   };
 
   const handleContentTypeSelect = async (selection: {
-    type: string;
+    // Issue #1017: 用 ContentTypeDialog 的 union 而不是 string —— 寫成 string 等於
+    // 把型別保護關掉，比對到不存在的值（例如大寫寫法）就不會有編譯錯誤
+    type: ContentTypeValue;
     lessonId: number;
     programName: string;
     lessonName: string;
   }) => {
-    // For reading_assessment and example_sentences, use popup for new content creation
-    // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
-    if (
-      selection.type === "reading_assessment" ||
-      selection.type === "example_sentences" ||
-      selection.type === "EXAMPLE_SENTENCES"
-    ) {
+    // #1017: 這個對話框只送小寫的 example_sentences；
+    // reading_assessment 與大寫寫法都已不可能出現
+    if (selection.type === "example_sentences") {
       setEditorLessonId(selection.lessonId);
       setEditorContentId(null); // null for new content
       setShowReadingEditor(true);
       setShowContentTypeDialog(false);
-    } else if (
-      selection.type === "SENTENCE_MAKING" ||
-      selection.type === "sentence_making" ||
-      selection.type === "vocabulary_set" ||
-      selection.type === "VOCABULARY_SET"
-    ) {
-      // For sentence_making/vocabulary_set, use popup for new content creation
+    } else if (selection.type === "vocabulary_set") {
+      // #1017: sentence_making（舊名）不再由對話框送出
       setVocabularySetLessonId(selection.lessonId);
       setVocabularySetContentId(null); // null for new content
       setShowVocabularySetEditor(true);

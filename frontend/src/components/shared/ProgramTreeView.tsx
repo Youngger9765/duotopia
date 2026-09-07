@@ -190,7 +190,6 @@ export function ProgramTreeView({
     vocabularySetContentId,
     openContentEditor,
     openReadingCreateEditor,
-    openSentenceMakingCreateEditor,
     openVocabularySetCreateEditor,
     closeReadingEditor,
     closeSentenceMakingEditor,
@@ -1078,21 +1077,9 @@ export function ProgramTreeView({
             setShowContentTypeDialog(false);
             setContentLessonInfo(null);
 
-            if (
-              selection.type === "reading_assessment" ||
-              selection.type === "example_sentences" ||
-              selection.type === "EXAMPLE_SENTENCES"
-            ) {
+            if (selection.type === "example_sentences") {
               openReadingCreateEditor(selection.lessonId);
-            } else if (
-              selection.type === "SENTENCE_MAKING" ||
-              selection.type === "sentence_making"
-            ) {
-              openSentenceMakingCreateEditor(selection.lessonId);
-            } else if (
-              selection.type === "vocabulary_set" ||
-              selection.type === "VOCABULARY_SET"
-            ) {
+            } else if (selection.type === "vocabulary_set") {
               openVocabularySetCreateEditor(selection.lessonId);
             } else if (selection.type === "scenario_dialogue") {
               // Issue #1014: 情境對話 — 新增模式

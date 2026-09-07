@@ -62,11 +62,10 @@ export function useContentEditor() {
     setShowReadingEditor(true);
   };
 
-  const openSentenceMakingCreateEditor = (lessonId: number) => {
-    setSentenceMakingLessonId(lessonId);
-    setSentenceMakingContentId(null);
-    setShowSentenceMakingEditor(true);
-  };
+  // Issue #1017: openSentenceMakingCreateEditor 已移除 —— ContentTypeDialog 不再
+  // 提供 sentence_making 這個類型（舊名，現為 vocabulary_set），唯一的呼叫點是死碼。
+  // 編輯既有 sentence_making 內容的路徑（openContentEditor）不受影響：DB 裡還有
+  // SENTENCE_MAKING 這個 legacy 值。
 
   const openVocabularySetCreateEditor = (lessonId: number) => {
     setVocabularySetLessonId(lessonId);
@@ -113,7 +112,6 @@ export function useContentEditor() {
     // Actions
     openContentEditor,
     openReadingCreateEditor,
-    openSentenceMakingCreateEditor,
     openVocabularySetCreateEditor,
     closeReadingEditor,
     closeSentenceMakingEditor,
