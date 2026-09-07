@@ -159,6 +159,30 @@ describe("ContentTypeDialog", () => {
     });
   });
 
+  /**
+   * Issue #1017: 呼叫端曾經到處寫 `selection.type === "EXAMPLE_SENTENCES"` 這種
+   * 大寫比對，但這個對話框從來只送小寫 —— 那些分支永遠不成立。型別已收斂成
+   * ContentTypeValue（大寫寫法現在是編譯錯誤），這裡再從執行期釘一次：送出的值
+   * 一定是小寫、且只在那三個之中。
+   */
+  it("送出的 type 一律是小寫，且只有三種（#1017 死碼防呆）", () => {
+    const allowed = [
+      "example_sentences",
+      "vocabulary_set",
+      "scenario_dialogue",
+    ];
+
+    renderComponent();
+    const cards = enabledCards();
+    expect(cards.length).toBeGreaterThan(0);
+
+    cards.forEach((card) => {
+      const type = typeOf(card);
+      expect(type).toBe(type.toLowerCase());
+      expect(allowed).toContain(type);
+    });
+  });
+
   it("programId 會原樣傳出（Issue #587 program-direct 內容）", () => {
     renderComponent(true, {
       programName: "Basic English",

@@ -1470,25 +1470,17 @@ function TeacherTemplateProgramsInner() {
               !!selection.programId && !selection.lessonId;
 
             // Handle different content types
-            // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
-            if (
-              selection.type === "reading_assessment" ||
-              selection.type === "example_sentences" ||
-              selection.type === "EXAMPLE_SENTENCES"
-            ) {
+            // #1017: 這個對話框只送小寫的 example_sentences；
+            // reading_assessment 與大寫寫法都已不可能出現
+            if (selection.type === "example_sentences") {
               // Open modal for new content
               setEditorLessonId(isProgramDirect ? null : selection.lessonId);
               setEditorProgramId(isProgramDirect ? selection.programId! : null);
               setEditorContentId(null); // null = new content
               setSelectedContent(null); // No existing content
               setShowReadingEditor(true);
-            } else if (
-              selection.type === "SENTENCE_MAKING" ||
-              selection.type === "sentence_making" ||
-              selection.type === "vocabulary_set" ||
-              selection.type === "VOCABULARY_SET"
-            ) {
-              // For sentence_making/vocabulary_set, use popup for new content creation
+            } else if (selection.type === "vocabulary_set") {
+              // #1017: sentence_making（舊名）不再由對話框送出
               setVocabularySetLessonId(
                 isProgramDirect ? null : selection.lessonId,
               );
