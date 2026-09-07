@@ -1,0 +1,46 @@
+/**
+ * 內容型別 → 能不能派發（Issue #1030）。
+ *
+ * 這幾個判定原本寫在 `AssignmentDialog.tsx` 裡（3000 行的元件，沒有測試檔），
+ * 抽出來是為了讓「哪些型別可以派發」這件事**驗得到** —— 這張單的重點正是它先前
+ * 判斷錯了。
+ *
+ * ## 為什麼需要「可派發」這個概念
+ *
+ * `AssignmentDialog` 原本只有「是不是例句集」「是不是單字集」兩個判定，其餘型別沒有
+ * 任何處理，於是：
+ *
+ * * Step 1 的 dataset 是二分法（`=== "example_sentences" ? ... : "vocabulary_set"`），
+ *   情境對話會被**當成單字集**，顯示單字朗讀／拼寫／克漏字一整排錯的模式；
+ * * `isContentSelectable` 在未選模式時一律回 `true`，情境對話在清單裡看起來可以勾。
+ *
+ * 結果是老師可以派出一份「用單字集模式跑的情境對話作業」，學生端再落到不認得的
+ * practice_mode。所以這裡把判定從「是不是這兩種」補上「**其餘一律不可派發**」。
+ *
+ * ## 情境對話什麼時候會變成可派發
+ *
+ * 等 #1031（學生端作答 + 批改頁 + 派發流程）做完。那時是把 `SCENARIO_DIALOGUE`
+ * 從這裡的排除名單移到支援名單，而不是把整個防呆拿掉。
+ */
+
+/** 例句集（含 legacy 名稱 READING_ASSESSMENT） */
+export function isExampleSentencesType(type?: string | null): boolean {
+  const normalized = (type ?? "").toUpperCase();
+  return ["READING_ASSESSMENT", "EXAMPLE_SENTENCES"].includes(normalized);
+}
+
+/** 單字集（含 legacy 名稱 SENTENCE_MAKING） */
+export function isVocabularySetType(type?: string | null): boolean {
+  const normalized = (type ?? "").toUpperCase();
+  return ["SENTENCE_MAKING", "VOCABULARY_SET"].includes(normalized);
+}
+
+/**
+ * 這個型別現在能不能派發作業。
+ *
+ * 白名單而不是黑名單 —— 未來新增題型時，預設是「不能派」而不是「悄悄落到單字集
+ * 分支」。要開放時必須明確加進來，那一步自然會逼人去想學生端與批改頁做了沒有。
+ */
+export function isAssignableContentType(type?: string | null): boolean {
+  return isExampleSentencesType(type) || isVocabularySetType(type);
+}
