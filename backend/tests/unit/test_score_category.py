@@ -1,7 +1,7 @@
 """Unit tests for score_category resolution (Issue #708 PR-1).
 
 Mapping under test (see docs/design/score-category-mapping.md):
-  word_reading / reading                            -> speaking (any audio)
+  word_reading / reading / scenario_dialogue        -> speaking (any audio)
   rearrangement / word_selection(_quiz) + audio off -> reading
   rearrangement / word_selection(_quiz) + audio on  -> listening (general rule)
   anything else + audio off                         -> writing
@@ -22,6 +22,11 @@ class TestSpeakingModes:
     @pytest.mark.parametrize("audio", [False, True])
     def test_reading(self, audio):
         assert resolve_score_category("reading", audio) == "speaking"
+
+    @pytest.mark.parametrize("audio", [False, True])
+    def test_scenario_dialogue(self, audio):
+        """#1013: 學生開口錄音作答；題目音檔只是提示，不該翻成聽力。"""
+        assert resolve_score_category("scenario_dialogue", audio) == "speaking"
 
 
 class TestReadingWhenSilent:

@@ -609,3 +609,129 @@ describe("ScenarioDialoguePanel 單題情境圖片", () => {
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock-1");
   });
 });
+
+/**
+ * Issue #1013：編輯既有內容與交出存檔資料。
+ *
+ * 這一段盯的是「面板與呼叫端之間的交接」——面板只負責把資料交出去，
+ * 打 API、關面板都是呼叫端的事。
+ */
+describe("ScenarioDialoguePanel 編輯模式（#1013）", () => {
+  const initialData = {
+    title: "週末活動",
+    scenarioContent: "你和同學在星期一早上聊天。",
+    questionLevel: "B1",
+    globalRubric: "請用完整句子回答",
+    globalTense: { time: "past", aspect: "simple" },
+    globalVoice: "active",
+    translateLanguage: "chinese",
+    ttsSettings: { accent: "US", gender: "Female", speed: "Normal x1" },
+    rows: [
+      {
+        id: "r1",
+        contentItemId: 11,
+        question: "What did you do last weekend?",
+        translation: "你上週末做了什麼？",
+        tenseOverride: null,
+        voiceOverride: null,
+        keywords: ["park"],
+        referenceAnswer: "I went to the park.",
+        rubricNote: "",
+        imagePrompt: "",
+        imageUrl: null,
+        audioUrl: null,
+        revision: 0,
+      },
+      {
+        id: "r2",
+        contentItemId: 12,
+        question: "And on Sunday?",
+        translation: "那星期天呢？",
+        tenseOverride: { time: "", aspect: "" },
+        voiceOverride: "",
+        keywords: [],
+        referenceAnswer: "",
+        rubricNote: "",
+        imagePrompt: "",
+        imageUrl: null,
+        audioUrl: null,
+        revision: 0,
+      },
+      // 第三題純粹是為了滿足 MIN_ITEMS（3 題），存檔才不會被擋下
+      {
+        id: "r3",
+        contentItemId: 13,
+        question: "Who did you go with?",
+        translation: "你和誰去的？",
+        tenseOverride: null,
+        voiceOverride: null,
+        keywords: [],
+        referenceAnswer: "",
+        rubricNote: "",
+        imagePrompt: "",
+        imageUrl: null,
+        audioUrl: null,
+        revision: 0,
+      },
+    ],
+  };
+
+  it("帶 initialData 時直接落在題目清單，並顯示既有題目", () => {
+    renderPanel({ initialData });
+
+    expect(onQuestionList()).toBe(true);
+    expect(
+      screen.getByDisplayValue("What did you do last weekend?"),
+    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue("And on Sunday?")).toBeInTheDocument();
+  });
+
+  it("回設定頁看得到既有的標題與情境內容", () => {
+    renderPanel({ initialData });
+
+    fireEvent.click(screen.getByText(K.editSettings));
+
+    expect(screen.getByDisplayValue("週末活動")).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue("你和同學在星期一早上聊天。"),
+    ).toBeInTheDocument();
+  });
+
+  it("存檔交出的資料保留 DB id 與 override 的 null／空值差別", async () => {
+    const onSave = vi.fn();
+    const ref = renderPanel({ initialData, onSave });
+
+    await act(async () => {
+      await ref.current?.save();
+    });
+
+    expect(mockToastError).not.toHaveBeenCalled();
+    const data = onSave.mock.calls[0][0];
+    expect(data.title).toBe("週末活動");
+    expect(
+      data.rows.map((r: { contentItemId: number | null }) => r.contentItemId),
+    ).toEqual([11, 12, 13]);
+    // 第一題沿用整體（null）、第二題已脫鉤（空值）—— 兩者不可被壓平
+    expect(data.rows[0].tenseOverride).toBeNull();
+    expect(data.rows[0].voiceOverride).toBeNull();
+    expect(data.rows[1].tenseOverride).toEqual({ time: "", aspect: "" });
+    expect(data.rows[1].voiceOverride).toBe("");
+  });
+
+  it("存檔失敗（onSave 丟例外）時例外往上拋，呼叫端才知道不能關面板", async () => {
+    const onSave = vi.fn().mockRejectedValue(new Error("network"));
+    const ref = renderPanel({ initialData, onSave });
+
+    await expect(ref.current!.save()).rejects.toThrow("network");
+    // 面板不清空，老師填的東西還在
+    expect(
+      screen.getByDisplayValue("What did you do last weekend?"),
+    ).toBeInTheDocument();
+  });
+
+  it("isSaving 時面板回報 busy，儲存鍵不會被連按兩次", () => {
+    const ref = renderPanel({ initialData, isSaving: true });
+
+    expect(ref.current?.isBusy).toBe(true);
+  });
+});

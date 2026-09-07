@@ -4787,6 +4787,7 @@
   },
   "scenarioDialogue": {
     "dialogTitle": "Add Scenario Dialogue",
+    "editTitle": "Edit Scenario Dialogue",
     "badge": "Speaking",
     "tabs": {
       "sourceManual": "Write it yourself",
@@ -4871,7 +4872,7 @@
       "resetToGlobal": "Reset to the shared scoring criteria"
     },
     "messages": {
-      "frontendOnly": "Scenario Dialogue is UI-only for now; saving is not wired to the backend yet",
+      "frontendOnly": "This action is not wired to the backend yet (audio generation / playback)",
       "scenarioRequired": "Add the scenario first — AI needs it to write questions"
     },
     "tenseTimes": {

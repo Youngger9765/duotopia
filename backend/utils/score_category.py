@@ -8,8 +8,11 @@ from typing import Optional
 from models.base import ScoreCategory
 
 
-# practice_mode values that are inherently "speaking" (student reads aloud)
-_SPEAKING_MODES = frozenset({"reading", "word_reading"})
+# practice_mode values that are inherently "speaking" (student opens their mouth).
+# scenario_dialogue (#1013): the student records a spoken answer to each prompt, so
+# it belongs here rather than in the audio-driven general rule — the question audio
+# (play_audio) is only a prompt aid and must not flip it to listening.
+_SPEAKING_MODES = frozenset({"reading", "word_reading", "scenario_dialogue"})
 
 # practice_mode values that go to "reading" only when audio is off.
 # word_selection(_quiz): no audio = student reads the word and picks the
@@ -25,7 +28,7 @@ def resolve_score_category(
     """Return the score_category string for an assignment.
 
     Rules (see docs/design/score-category-mapping.md):
-      1. word_reading / reading                            -> speaking (any audio)
+      1. word_reading / reading / scenario_dialogue         -> speaking (any audio)
       2. rearrangement / word_selection(_quiz) + audio off -> reading
       3. anything else + audio off                         -> writing
       4. anything else + audio on                          -> listening

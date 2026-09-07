@@ -9,6 +9,10 @@ import { appendAudioToFormData } from "@/utils/audioFormatDetection";
 import { saveRedirectTarget } from "../utils/redirectAfterLogin";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import type {
+  ScenarioItemBlock,
+  ScenarioSettingsPayload,
+} from "./scenarioDialogue";
 
 // 🔐 Security: Only enable debug logs in development
 const DEBUG = false; // 暫時關閉以便追蹤其他問題
@@ -1189,9 +1193,15 @@ class ApiClient {
       items: Array<{
         text: string;
         translation?: string;
+        image_url?: string | null;
+        audio_url?: string | null;
+        // Issue #1013: 情境對話逐題資料（覆寫／必用字詞／參考答案／評分備註）
+        scenario_dialogue?: ScenarioItemBlock;
       }>;
       target_wpm?: number;
       target_accuracy?: number;
+      // Issue #1013: 情境對話整份設定（其他題型不送；後端只對該題型讀取）
+      scenario_settings?: ScenarioSettingsPayload;
     },
   ) {
     return this.request(`/api/teachers/lessons/${lessonId}/contents`, {
@@ -1243,7 +1253,7 @@ class ApiClient {
         text: string;
         translation?: string;
         definition?: string;
-        audio_url?: string;
+        audio_url?: string | null;
         // 統一翻譯欄位 (#366)
         vocabulary_translation?: string;
         vocabulary_translation_lang?: string;
@@ -1258,16 +1268,20 @@ class ApiClient {
         example_sentence?: string;
         example_sentence_translation?: string;
         example_sentence_translation_lang?: string;
-        image_url?: string;
+        image_url?: string | null;
         // Issue #631 / #729: accept both legacy string[] and new object shape.
         distractors?: Array<
           string | { text: string; image_url?: string | null }
         >;
+        // Issue #1013: 情境對話逐題資料
+        scenario_dialogue?: ScenarioItemBlock;
       }>;
       target_wpm?: number;
       target_accuracy?: number;
       time_limit_seconds?: number;
       order_index?: number;
+      // Issue #1013: 情境對話整份設定。不帶 = 不動既有值（後端 None 代表沒帶）
+      scenario_settings?: ScenarioSettingsPayload;
     },
   ) {
     return this.request(`/api/teachers/contents/${contentId}`, {

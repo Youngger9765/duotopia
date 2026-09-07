@@ -37,6 +37,7 @@ from utils.permissions import (
     has_lesson_permission,
     has_content_permission,
 )
+from utils import scenario_dialogue as sd
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,8 @@ def _copy_content_with_items(
         else None,
         order_index=content.order_index if hasattr(content, "order_index") else 0,
         is_active=content.is_active,
+        # Issue #1013: 情境對話整份設定（非該題型為 None）
+        scenario_settings=sd.copy_settings(getattr(content, "scenario_settings", None)),
     )
     db.add(new_content)
     db.flush()

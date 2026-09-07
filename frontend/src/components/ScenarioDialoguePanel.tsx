@@ -40,12 +40,15 @@
  * 難度有兩個且互相獨立：**文章難度**決定 AI 生成的情境文章寫多難，**題目難度**
  * 決定出題出多難 —— 簡單文章出難題目是合理的教法，共用一個值反而綁死。
  *
- * 現階段為**前端設計實作**：不呼叫後端，AI 產題／情境生成／PDF 辨識／圖片生成／
- * TTS 皆為本地 stub，save() 通過擋關後只把資料交給呼叫端。
+ * **儲存已串接後端（#1013）**：`save()` 通過擋關後把整份資料交給呼叫端的 `onSave`，
+ * 由呼叫端換成 API payload（`@/lib/scenarioDialogue` 的 `toScenarioSavePayload`）並
+ * 打 API —— 面板本身不認得 lesson / program / content id。存檔失敗時 `onSave` 會丟出
+ * 例外，面板不關也不清空，老師打的東西不會因為一次網路錯誤消失。
  *
- * 呼叫端（TeacherTemplatePrograms）此刻**刻意不關閉面板**，只跳一句「尚未串接後端
- * 儲存」。因為真的關掉等於暗示存好了，而實際上什麼都沒存 —— 老師填的東西會直接
- * 消失。等 API 接上再改成「存成功 → 關閉 + 成功提示」。
+ * 編輯既有內容時，呼叫端把 `fromScenarioContentDetail` 的結果交給 `initialData`，
+ * 面板拿它當初值（不是每次 render 都套用，見 props 說明）。
+ *
+ * 仍是本地 stub 的部分：AI 產題／情境生成／PDF 辨識／圖片生成／TTS。
  */
 import {
   forwardRef,
@@ -107,6 +110,17 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import {
+  EMPTY_TENSE,
+  createScenarioRow as createRow,
+  fromStoredTranslateLanguage,
+  nextRowId,
+  toStoredTranslateLanguage,
+  type ScenarioDialogueInitialState,
+  type ScenarioDialogueRow,
+  type ScenarioSaveInput,
+  type TenseSetting,
+} from "@/lib/scenarioDialogue";
 
 /** 情境對話一次最少 3 題、最多 10 題（#864） */
 export const MIN_ITEMS = 3;
@@ -134,18 +148,16 @@ const TENSE_ASPECTS = [
 ] as const;
 const VOICES = ["active", "passive"] as const;
 
-/** 時態＝時間＋動貌，兩者都選才成立（避免「過去」但沒說哪一種的半套條件） */
-export interface TenseSetting {
-  /** TENSE_TIMES 之一，或空字串代表不指定 */
-  time: string;
-  /** TENSE_ASPECTS 之一，或空字串代表不指定 */
-  aspect: string;
-}
+/**
+ * 資料型別與空白列的建構子放在 `@/lib/scenarioDialogue` —— 呼叫端要用同一份型別把
+ * 面板資料換成 API payload（見該檔的 null 語意說明），型別留在元件裡會讓 lib 反過來
+ * 依賴元件。這裡原樣 re-export，既有的 `from "@/components/ScenarioDialoguePanel"`
+ * 匯入不受影響。
+ */
+export type { TenseSetting, ScenarioDialogueRow } from "@/lib/scenarioDialogue";
 
 /** 只取字面翻譯用；型別放寬成字串以免每個呼叫點都要轉型 i18next 的 TFunction */
 type Translate = (key: string, options?: Record<string, unknown>) => string;
-
-const EMPTY_TENSE: TenseSetting = { time: "", aspect: "" };
 const isTenseSet = (tense: TenseSetting) => !!tense.time && !!tense.aspect;
 
 const voiceLabel = (voice: string, t: Translate) =>
@@ -178,59 +190,6 @@ const TRANSLATION_LANGUAGES: TranslationLanguageOption[] = [
   { value: "other", label: "Other", code: "" },
 ];
 
-export interface ScenarioDialogueRow {
-  id: string;
-  /** 口說題目本文（老師可自行編輯） */
-  question: string;
-  /** 輔助語言翻譯，語言由左側統一設定 */
-  translation: string;
-  /**
-   * 時態覆寫。`null` = 沿用「整份設定」的整體評分標準，會跟著整體變動；
-   * 一旦老師動過就固定成本題自訂，之後改整體不再影響它（可用 ↺ 復原成沿用）。
-   */
-  tenseOverride: TenseSetting | null;
-  /** 語態覆寫。語意同 tenseOverride */
-  voiceOverride: string | null;
-  /** 必用字詞 —— 逐題獨立，不繼承（每題要練的單字本來就不同） */
-  keywords: string[];
-  /**
-   * 參考答案 —— 只給 AI 當評分對照，**學生端完全看不到**。
-   *
-   * 定位是「示範回答」而非唯一正解：口說同一題每個學生的內容本來就不同，
-   * 送 AI 時比對的是**結構與語言特徵**（時態、句型、用字水準、資訊完整度），
-   * 絕不可拿來做逐字比對，否則所有與範例不同的答案都會被誤判。
-   * 依 #864 規格 3-3，學生答案需修正時，它也是「建議的答案」的依據。
-   */
-  referenceAnswer: string;
-  /** 本題額外說明（選填）。與全份共用的作答指引一起給 AI 與學生看 */
-  rubricNote: string;
-  /**
-   * 情境圖片的生成 prompt。
-   *
-   * @deprecated 候選 —— UI 已經不顯示也不讓老師編輯（圖片改成「勾選自動生成」
-   * 或手動上傳二擇一）。欄位暫時保留是因為串接後端後，AI 產題預期會連 prompt
-   * 一起回傳給圖片生成用；等後端定案，若確認前端不需要持有它就整個移除，
-   * 連同 `isBlankRow` 裡的判斷一起清掉。
-   */
-  imagePrompt: string;
-  /** 已生成的情境圖片；null = 尚未生成 */
-  imageUrl: string | null;
-  /** 題目語音；null = 尚未生成 */
-  audioUrl: string | null;
-  /**
-   * 內容被整批換掉的次數（目前只有「重新生成這一題」會加）。
-   *
-   * SortableRow 有兩個從 props 取一次初值的本地狀態：關鍵字草稿與「參考答案」
-   * 展開與否。重新生成沿用同一個 row id，React 不會重新掛載，這兩個本地狀態
-   * 就會停在舊值 —— 關鍵字輸入框顯示舊字，老師只要 focus 再 blur，onBlur 的
-   * commitKeywords 就用舊草稿把新關鍵字蓋回去，而且沒有任何提示。
-   *
-   * 所以 render 時把 key 設成 `id:revision`：id 保持穩定給拖曳排序用，
-   * revision 一變就重新掛載，本地狀態自然跟著重新取一次初值。
-   */
-  revision: number;
-}
-
 export interface ScenarioDialoguePanelHandle {
   save: () => Promise<void>;
   isBusy: boolean;
@@ -239,47 +198,26 @@ export interface ScenarioDialoguePanelHandle {
 export interface ScenarioDialoguePanelProps {
   /** 教材難度預設值（沿用課程 level） */
   programLevel?: string;
-  onSave?: (data: {
-    title: string;
-    rows: ScenarioDialogueRow[];
-    /**
-     * 情境內容。空字串是合法的 —— 老師可以只給標題並自己在題目清單打題目，
-     * 只有要用 AI 產題時才一定要有（見 handleGenerate）。
-     */
-    scenarioContent: string;
-    /** 題目難度（CEFR）。與生成情境文章用的「文章難度」各自獨立 */
-    questionLevel: string;
-    /** 全份共用的作答指引，AI 與學生都看得到 */
-    globalRubric: string;
-    /** 整體評分標準；單題 tenseOverride/voiceOverride 為 null 時沿用 */
-    globalTense: TenseSetting;
-    globalVoice: string;
-    translateLanguage: string;
-    ttsSettings: TTSSettingsState;
-  }) => void | Promise<void>;
+  /**
+   * 編輯模式的既有內容（`fromScenarioContentDetail` 的產物）。
+   *
+   * `undefined` = 新增模式（面板給一張空白卡）；有值時整份 state 以它為初值。
+   * 只在第一次拿到時套用一次 —— 之後老師的每一次編輯都是本地 state，若跟著
+   * prop 反覆重設，呼叫端任何一次 re-render 都會把老師打到一半的東西洗掉。
+   */
+  initialData?: ScenarioDialogueInitialState | null;
+  /** 儲存中（呼叫端正在打 API）。面板據此把儲存與生成類按鈕鎖住 */
+  isSaving?: boolean;
+  /**
+   * 交出整份資料給呼叫端存檔。呼叫端負責換成 API payload（`toScenarioSavePayload`）、
+   * 打 API 與成功後關閉面板 —— 面板本身不認得 lesson / program / content id。
+   *
+   * 丟出例外代表存檔失敗；面板不會關，也不清空 state（老師打的東西不能因為
+   * 一次網路錯誤就消失）。
+   */
+  onSave?: (data: ScenarioSaveInput) => void | Promise<void>;
   onCancel?: () => void;
 }
-
-let rowSeq = 0;
-const nextRowId = () => `sd-${Date.now()}-${rowSeq++}`;
-
-const createRow = (
-  overrides: Partial<ScenarioDialogueRow> = {},
-): ScenarioDialogueRow => ({
-  id: nextRowId(),
-  question: "",
-  translation: "",
-  tenseOverride: null,
-  voiceOverride: null,
-  keywords: [],
-  referenceAnswer: "",
-  rubricNote: "",
-  imagePrompt: "",
-  imageUrl: null,
-  audioUrl: null,
-  revision: 0,
-  ...overrides,
-});
 
 /** 完全沒被動過的空白列 — 產題時可以直接取代掉，不留一張空卡在最前面 */
 const isBlankRow = (r: ScenarioDialogueRow) =>
@@ -917,18 +855,29 @@ function SortableRow({
 const ScenarioDialoguePanel = forwardRef<
   ScenarioDialoguePanelHandle,
   ScenarioDialoguePanelProps
->(({ programLevel, onSave, onCancel }, ref) => {
+>(({ programLevel, initialData, isSaving = false, onSave, onCancel }, ref) => {
   const { t } = useTranslation();
+
+  /**
+   * `initialData` 一律只當**初值**（lazy initializer），不放進 useEffect 反覆套用：
+   * 套用式的寫法只要呼叫端 re-render 就可能把老師打到一半的東西洗掉。要換一份內容
+   * 請由呼叫端用 `key` 重新掛載面板（見 TeacherTemplatePrograms），語意清楚得多。
+   */
 
   /**
    * 兩個步驟共用同一份 state，只是切換顯示 —— 回上一步不會弄丟已產生的題目。
    * 1 = 設定（產題方式 + 整份設定）、2 = 題目清單。
+   *
+   * 編輯既有內容時直接落在題目清單 —— 老師點進來多半是要改題目，停在設定頁
+   * 會讓他以為題目沒被讀進來。
    */
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2>(initialData?.rows?.length ? 2 : 1);
 
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(initialData?.title ?? "");
   // 一開啟就給一張空白卡，老師可以直接打字，不必先產題
-  const [rows, setRows] = useState<ScenarioDialogueRow[]>(() => [createRow()]);
+  const [rows, setRows] = useState<ScenarioDialogueRow[]>(() =>
+    initialData?.rows?.length ? initialData.rows : [createRow()],
+  );
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   /** 逐題 AI 生圖是一題一題觸發的，所以要記住是哪一題在跑 */
   const [imageLoadingId, setImageLoadingId] = useState<string | null>(null);
@@ -941,7 +890,9 @@ const ScenarioDialoguePanel = forwardRef<
   /** 一次要 AI 產幾題。上限跟著 MAX_ITEMS 走 */
   const [generateCount, setGenerateCount] = useState(5);
   /** 題目難度：出題出多難，與「文章難度」各自獨立 —— 簡單文章也可以出難題目 */
-  const [questionLevel, setQuestionLevel] = useState(programLevel || "A1");
+  const [questionLevel, setQuestionLevel] = useState(
+    initialData?.questionLevel || programLevel || "A1",
+  );
   /** 情境內容的產生方式。受控是因為產題按鈕收在 footer，需要知道現在是哪一種 */
   const [sourceTab, setSourceTab] = useState<ScenarioSource>("manual");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -959,21 +910,31 @@ const ScenarioDialoguePanel = forwardRef<
    */
   const { setEditorBusy } = useSidebar();
   useEffect(() => {
-    setEditorBusy(isGenerating || isGeneratingScenario);
+    // #1013: 存檔中也算 busy —— 否則老師在 API 還沒回來時能再按一次儲存，
+    // 新增模式會因此建出兩份內容。
+    setEditorBusy(isGenerating || isGeneratingScenario || isSaving);
     return () => setEditorBusy(false);
-  }, [isGenerating, isGeneratingScenario, setEditorBusy]);
+  }, [isGenerating, isGeneratingScenario, isSaving, setEditorBusy]);
 
   // ===== 整份設定（所有題目共用）=====
   /**
    * 情境內容 —— 三種產生方式（直接輸入／AI 輔助生成／上傳圖片 PDF）共同的產物。
    * 空的時候仍然可以儲存（老師自己在 Step 2 打題目），但不能用 AI 產題。
    */
-  const [scenarioContent, setScenarioContent] = useState("");
+  const [scenarioContent, setScenarioContent] = useState(
+    initialData?.scenarioContent ?? "",
+  );
   /** 全份共用的作答指引 — 同時給 AI 評分與學生作答參考 */
-  const [globalRubric, setGlobalRubric] = useState("");
+  const [globalRubric, setGlobalRubric] = useState(
+    initialData?.globalRubric ?? "",
+  );
   /** 整體評分標準，單題未覆寫時沿用 */
-  const [globalTense, setGlobalTense] = useState<TenseSetting>(EMPTY_TENSE);
-  const [globalVoice, setGlobalVoice] = useState("");
+  const [globalTense, setGlobalTense] = useState<TenseSetting>(
+    initialData?.globalTense ?? EMPTY_TENSE,
+  );
+  const [globalVoice, setGlobalVoice] = useState(
+    initialData?.globalVoice ?? "",
+  );
 
   // 左側 上傳圖片 / PDF
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
@@ -982,15 +943,24 @@ const ScenarioDialoguePanel = forwardRef<
   const scenarioRef = useRef<HTMLTextAreaElement>(null);
 
   // AI 自動翻譯 / AI 生成語音（共用元件）。與例句集一致：預設都不勾，語言也不預選
-  const [autoTranslate, setAutoTranslate] = useState(false);
-  const [translateLang, setTranslateLang] = useState("");
-  const [customLang, setCustomLang] = useState("");
-  const [autoTTS, setAutoTTS] = useState(false);
-  const [ttsSettings, setTTSSettings] = useState<TTSSettingsState>({
-    accent: "Random",
-    gender: "Random",
-    speed: "Normal x1",
-  });
+  // 編輯既有內容時，存過語言／語音設定就代表當初有勾，勾選狀態跟著回來。
+  // 語言存的是單一值，「其他」的自訂名字要拆回旁邊那個欄位（見 lib 的說明）。
+  const initialTranslate = fromStoredTranslateLanguage(
+    initialData?.translateLanguage ?? "",
+  );
+  const [autoTranslate, setAutoTranslate] = useState(
+    !!initialData?.translateLanguage,
+  );
+  const [translateLang, setTranslateLang] = useState(initialTranslate.selected);
+  const [customLang, setCustomLang] = useState(initialTranslate.custom);
+  const [autoTTS, setAutoTTS] = useState(!!initialData?.ttsSettings);
+  const [ttsSettings, setTTSSettings] = useState<TTSSettingsState>(
+    initialData?.ttsSettings ?? {
+      accent: "Random",
+      gender: "Random",
+      speed: "Normal x1",
+    },
+  );
 
   /**
    * 手動上傳的預覽網址是 `blob:`，換掉或移除時必須 revoke，否則老師在編輯階段
@@ -1249,7 +1219,8 @@ const ScenarioDialoguePanel = forwardRef<
       globalRubric,
       globalTense,
       globalVoice,
-      translateLanguage: translateLang,
+      // 選「其他」時送老師打的語言名字，不是字面的 "other"（會整個丟掉）
+      translateLanguage: toStoredTranslateLanguage(translateLang, customLang),
       ttsSettings,
     });
   };
@@ -1257,7 +1228,8 @@ const ScenarioDialoguePanel = forwardRef<
   useImperativeHandle(ref, () => ({
     // 兩種生成都要算 busy —— 只看 isGenerating 的話，老師在情境內容還在
     // 生成時就能按儲存，存進去的是那一刻的舊值。真 API 更慢，更容易中招。
-    isBusy: isGenerating || isGeneratingScenario,
+    // 存檔中同樣要擋，避免重複送出（#1013）。
+    isBusy: isGenerating || isGeneratingScenario || isSaving,
     save: handleSave,
   }));
 

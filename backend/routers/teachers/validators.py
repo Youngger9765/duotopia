@@ -188,6 +188,10 @@ class ContentCreate(BaseModel):
     level: Optional[str] = None  # None = 繼承 Program 的 level
     tags: Optional[List[str]] = []
     is_public: Optional[bool] = False
+    # Issue #1013: 情境對話整份設定（只有 type=SCENARIO_DIALOGUE 會用到）。
+    # 結構與驗證都在 utils/scenario_dialogue.normalize_settings，這裡保持
+    # 寬鬆的 dict 以免 schema 與正規化邏輯兩邊各自漂移。
+    scenario_settings: Optional[Dict[str, Any]] = None
 
 
 class ContentCopy(BaseModel):
@@ -207,6 +211,8 @@ class ContentUpdate(BaseModel):
     level: Optional[str] = None
     tags: Optional[List[str]] = None
     is_public: Optional[bool] = None
+    # Issue #1013: None = 這次請求沒帶設定 → 不動既有值（不是「清空」）
+    scenario_settings: Optional[Dict[str, Any]] = None
 
 
 class TranslateRequest(BaseModel):
