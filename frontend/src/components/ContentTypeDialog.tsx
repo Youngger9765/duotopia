@@ -159,6 +159,7 @@ export default function ContentTypeDialog({
 
       {/* Slide-in Panel */}
       <div
+        data-testid="content-type-panel"
         className={`fixed top-0 right-0 h-screen bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col ${
           isClosing
             ? "animate-out slide-out-to-right duration-300"
