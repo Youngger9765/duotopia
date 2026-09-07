@@ -77,9 +77,19 @@ class GenerateArticleRequest(BaseModel):
 class GenerateImageRequest(BaseModel):
     """逐題生圖。`image_prompt` 已經存在 item_metadata 裡（#1013），前端直接帶回來。"""
 
-    # min_length 讓空白描述在進到配額之前就被擋掉 —— 佔一次額度再退雖然結果正確，
-    # 但白跑兩趟 DB（PR #1027 review round 3）
-    image_prompt: str = Field(min_length=1, max_length=MAX_IMAGE_PROMPT_CHARS)
+    # 空白描述要在進到配額之前就被擋掉 —— 佔一次額度再退雖然結果正確，但白跑兩趟 DB。
+    #
+    # 一定要搭配 strip_whitespace：只寫 min_length=1 擋得掉 "" 卻擋不掉 " "
+    # （長度是 1，照樣通過），空白描述還是會走完「扣額度 → 服務層失敗 → 退款」
+    # ——那正是這條想省掉的事（PR #1027 review round 4）。
+    image_prompt: Annotated[
+        str,
+        StringConstraints(
+            strip_whitespace=True,
+            min_length=1,
+            max_length=MAX_IMAGE_PROMPT_CHARS,
+        ),
+    ]
 
 
 class GenerateQuestionsRequest(BaseModel):
@@ -245,8 +255,6 @@ async def generate_image(
             )
         except ScenarioImageError as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-        except HTTPException:
-            raise
         except Exception as e:
             raise _ai_failed("generate-image", e)
 
