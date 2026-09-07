@@ -66,6 +66,7 @@ import {
   isAssignableContentType,
   isExampleSentencesType,
   isVocabularySetType,
+  reasonNothingSelectable,
   usesNativeDisabled,
 } from "@/lib/assignableContentType";
 import { cn } from "@/lib/utils";
@@ -1134,7 +1135,21 @@ export function AssignmentDialog({
     );
 
     if (selectableContents.length === 0) {
-      // 沒有可選擇的內容（都被類型限制）
+      // Issue #1030: 兩種「全都不能選」的原因要分開講 —— 整課都是還不能派發的題型時
+      // （例如整課只有情境對話），叫老師去換練習模式沒有用，換哪個模式都不會變。
+      if (
+        reasonNothingSelectable(lesson.contents.map((c) => c.type)) ===
+        "not_assignable"
+      ) {
+        toast.warning(
+          t("dialogs.assignmentDialog.errors.contentTypeNotAssignable", {
+            type: getContentTypeLabel(lesson.contents[0].type, t),
+          }),
+        );
+        return;
+      }
+
+      // 課裡有可派發的內容，只是與目前的模式／購物車型別不合 —— 換個模式就可以
       const cartCategory = getCartContentTypeCategory();
       const cartTypeName =
         cartCategory === "example_sentences"

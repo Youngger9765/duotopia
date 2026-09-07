@@ -9,6 +9,7 @@ import {
   isAssignableContentType,
   isExampleSentencesType,
   isVocabularySetType,
+  reasonNothingSelectable,
   usesNativeDisabled,
 } from "../assignableContentType";
 
@@ -73,5 +74,27 @@ describe("原生 disabled 會吃掉 click（PR #1032 review）", () => {
     expect(usesNativeDisabled({ disabled: false, notAssignable: false })).toBe(
       false,
     );
+  });
+});
+
+describe("整課都不能選時，原因要分得出來（PR #1032 review round 2）", () => {
+  it("整課只有情境對話 → 是「還不能派發」，叫老師換模式沒有用", () => {
+    expect(reasonNothingSelectable(["SCENARIO_DIALOGUE"])).toBe(
+      "not_assignable",
+    );
+    expect(
+      reasonNothingSelectable(["SCENARIO_DIALOGUE", "SCENARIO_DIALOGUE"]),
+    ).toBe("not_assignable");
+  });
+
+  it("課裡有可派發的內容 → 是模式／型別不合，換個模式就可以", () => {
+    expect(
+      reasonNothingSelectable(["SCENARIO_DIALOGUE", "EXAMPLE_SENTENCES"]),
+    ).toBe("mode_mismatch");
+    expect(reasonNothingSelectable(["VOCABULARY_SET"])).toBe("mode_mismatch");
+  });
+
+  it("空的一課視為「還不能派發」，不會誤導成換模式", () => {
+    expect(reasonNothingSelectable([])).toBe("not_assignable");
   });
 });

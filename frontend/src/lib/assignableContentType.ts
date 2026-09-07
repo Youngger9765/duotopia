@@ -66,3 +66,28 @@ export function usesNativeDisabled(options: {
 }): boolean {
   return options.disabled && !options.notAssignable;
 }
+
+/** 「整課都不能選」的原因。決定要給老師哪一句提示。 */
+export type NothingSelectableReason = "not_assignable" | "mode_mismatch";
+
+/**
+ * 一課裡所有內容都不能選時，原因是哪一種。
+ *
+ * 兩者對老師的意思完全不同：
+ *
+ * * ``not_assignable`` —— 整課都是還不能派發的題型（例如整課只有情境對話）。
+ *   叫他去換練習模式沒有用，**換哪個模式都不會變**。
+ * * ``mode_mismatch`` —— 課裡有可派發的內容，只是與目前選的模式／購物車型別不合，
+ *   換個模式就可以。
+ *
+ * 「全選」原本一律跳 mode_mismatch，於是整課只有情境對話時老師會被指去換模式，
+ * 換完發現還是不能選（PR #1032 review round 2）。
+ */
+export function reasonNothingSelectable(
+  contentTypes: Array<string | null | undefined>,
+): NothingSelectableReason {
+  const hasAssignable = contentTypes.some((type) =>
+    isAssignableContentType(type),
+  );
+  return hasAssignable ? "mode_mismatch" : "not_assignable";
+}
