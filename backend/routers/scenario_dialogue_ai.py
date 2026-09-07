@@ -29,6 +29,7 @@ from models import Teacher
 # 共用同一份教師鑑權依賴，避免 auth 邏輯分叉（同 magic_paste）
 from routers.teachers import get_current_teacher
 from services.scenario_dialogue_ai import (
+    MAX_TRANSLATE_LANGUAGE_CHARS,
     ScenarioDialogueAIError,
     ScenarioDialogueAIOutputError,
     get_scenario_dialogue_ai_service,
@@ -45,7 +46,9 @@ router = APIRouter(prefix="/api/teachers/scenario-dialogue", tags=["scenario-dia
 MAX_GOAL_CHARS = 1000
 MAX_SCENARIO_CHARS = 8000
 MAX_RUBRIC_CHARS = 2000
-MAX_LANGUAGE_CHARS = 50
+# 語言長度上限與服務層同一個來源 —— 兩邊各定義一次的話，改了一邊另一邊會靜靜地
+# 不一致（服務層截斷、端點卻放行，或反過來）
+MAX_LANGUAGE_CHARS = MAX_TRANSLATE_LANGUAGE_CHARS
 MAX_LEVEL_CHARS = 10
 MAX_EXISTING_QUESTIONS = 20
 MAX_EXISTING_QUESTION_CHARS = 1000
