@@ -226,3 +226,96 @@ def test_quota_consume_stops_at_limit(
     assert third["charged"] is None
     assert third["used"] == 2
     assert siq.get_quota_status(db_session, teacher, year_month="2026-03")["used"] == 2
+
+
+# ------------------------------------------------- 先佔位再生圖（PR #1027 review）
+#
+# 只在打 AI 之前查一次額度是擋不住並發的：同一位老師在上限邊界同時送兩個請求，
+# 兩個都會通過那次檢查。改成「先 consume 佔位 → 打 AI → 失敗才 refund」。
+
+
+def test_quota_is_reserved_before_calling_ai(
+    test_client, auth_headers_teacher, db_session, monkeypatch
+):
+    """額度要在打 AI **之前**就被佔走，不是回應成功之後才扣。
+
+    在 AI 執行的當下去查計數 —— 那一刻就該已經是 1，否則兩個並發請求都會在
+    「還沒扣」的空窗期通過檢查。
+    """
+    from services import scenario_dialogue_image as mod
+    from services import image_upload as upload_mod
+    from models import Teacher
+
+    teacher = db_session.query(Teacher).first()
+    seen = {}
+
+    async def check_quota_midflight(self, raw_prompt):
+        seen["used_during_call"] = siq.get_quota_status(db_session, teacher)["used"]
+        return {
+            "image_bytes": b"PNGDATA",
+            "prompt": "p",
+            "estimated_cost_usd": 0.04,
+        }
+
+    monkeypatch.setattr(
+        mod.ScenarioDialogueImageService, "generate", check_quota_midflight
+    )
+    monkeypatch.setattr(
+        upload_mod.ImageUploadService,
+        "store_image_bytes",
+        lambda self, content, content_type, **kw: "https://cdn/x.png",
+    )
+
+    resp = test_client.post(
+        IMAGE_URL, headers=auth_headers_teacher, json={"image_prompt": "a park"}
+    )
+
+    assert resp.status_code == 200, resp.text
+    assert seen["used_during_call"] == 1, "AI 執行期間額度還沒被佔走 = 並發擋不住"
+
+
+def test_second_request_at_limit_gets_402_even_if_status_check_passed(
+    test_client, auth_headers_teacher, mock_image, monkeypatch
+):
+    """consume 回 charged=None 時一定要回 402，不能照樣回 200 把圖給出去。
+
+    這正是 review 抓到的漏洞：先前的寫法拿到 charged=None 也照樣回 200，
+    月上限等於形同虛設。
+    """
+    monkeypatch.setattr(siq, "FREE_MONTHLY_LIMIT", 1)
+
+    assert (
+        test_client.post(
+            IMAGE_URL, headers=auth_headers_teacher, json={"image_prompt": "a park"}
+        ).status_code
+        == 200
+    )
+
+    second = test_client.post(
+        IMAGE_URL, headers=auth_headers_teacher, json={"image_prompt": "a park"}
+    )
+    assert second.status_code == 402
+    assert "image_url" not in second.json()
+
+
+def test_refund_does_not_go_below_zero(test_client, auth_headers_teacher, db_session):
+    """重複退款（例外路徑重入）只會回到 0，不會變負數。"""
+    from models import Teacher
+
+    teacher = db_session.query(Teacher).first()
+    siq.refund(db_session, teacher, year_month="2026-04")
+    siq.refund(db_session, teacher, year_month="2026-04")
+
+    assert siq.get_quota_status(db_session, teacher, year_month="2026-04")["used"] == 0
+
+
+def test_sdk_shape_change_is_not_reported_as_safety_block():
+    """`_image_bytes` 消失（SDK 改版）不能被講成「你的描述有問題」。"""
+    from services.scenario_dialogue_image import ScenarioDialogueImageService
+
+    class NoBytes:
+        pass  # 沒有 _image_bytes 屬性
+
+    with pytest.raises(ScenarioImageError) as exc:
+        ScenarioDialogueImageService.extract_image_bytes([NoBytes()])
+    assert not isinstance(exc.value, ScenarioImageBlockedError)

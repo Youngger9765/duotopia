@@ -32,6 +32,7 @@ from models import Teacher
 from routers.teachers import get_current_teacher
 from services import scenario_image_quota as siq
 from services.scenario_dialogue_image import (
+    ScenarioDialogueImageService,
     ScenarioImageBlockedError,
     ScenarioImageError,
     get_scenario_dialogue_image_service,
@@ -57,7 +58,9 @@ MAX_LANGUAGE_CHARS = 50
 MAX_LEVEL_CHARS = 10
 MAX_EXISTING_QUESTIONS = 20
 MAX_EXISTING_QUESTION_CHARS = 1000
-MAX_IMAGE_PROMPT_CHARS = 1000
+# 與服務層同一個來源 —— 兩邊各寫一次 1000 的話，改了 Pydantic 上限卻忘了改截斷
+# 上限（或反過來）不會有人發現（PR #1027 review）
+MAX_IMAGE_PROMPT_CHARS = ScenarioDialogueImageService.MAX_PROMPT_CHARS
 
 
 class GenerateArticleRequest(BaseModel):
@@ -195,20 +198,24 @@ async def generate_image(
 ):
     """依逐題的 image_prompt 生一張圖，存好之後回傳網址。
 
-    順序刻意是「先檢查配額 → 生圖 → 存檔 → 才扣配額」：
+    順序是「**先佔位額度** → 生圖 → 存檔 → 失敗才退款」（PR #1027 review）。
 
-    * 配額用完就不要浪費一次 Imagen 呼叫
-    * 被安全過濾擋下（`ScenarioImageBlockedError`）**不扣額度** —— 老師沒拿到圖，
-      扣他一次只會讓他不敢再試（比照 magic_paste 擷取到 0 項不扣額的產品決策）
+    先查一次 `get_quota_status` 再打 AI、最後才 consume 是擋不住並發的：同一位老師在
+    29/30 時同時送兩個請求，兩個都會通過那次檢查，兩張都生出來、兩張都回 200，月上限
+    等於形同虛設。改成先 consume 佔位，額度用完在**打 AI 之前**就回 402，一次呼叫都
+    不會浪費。
+
+    老師沒拿到圖的情況一律退款（被安全過濾擋下、存檔失敗）—— 扣他一次只會讓他不敢
+    再試，比照 magic_paste 擷取到 0 項不扣額的決策。
     """
-    quota_before = siq.get_quota_status(db, current_teacher)
-    if not quota_before["can_use"]:
+    charge = siq.consume(db, current_teacher)
+    if charge["charged"] is None:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail={
                 "error": "SCENARIO_IMAGE_QUOTA_EXCEEDED",
                 "message": "本月 AI 生成圖片次數已用完，可以改用手動上傳圖片。",
-                "quota": quota_before,
+                "quota": charge,
             },
         )
 
@@ -217,12 +224,15 @@ async def generate_image(
         result = await service.generate(payload.image_prompt)
     except ScenarioImageBlockedError as e:
         # 被安全過濾擋下：這是「換個描述」而不是「稍後再試」，訊息要能直接給老師看
+        siq.refund(db, current_teacher)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
         )
     except ScenarioImageError as e:
+        siq.refund(db, current_teacher)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
+        siq.refund(db, current_teacher)
         raise _ai_failed("generate-image", e)
 
     try:
@@ -232,10 +242,10 @@ async def generate_image(
             result["image_bytes"], "image/png"
         )
     except Exception as e:
-        # 圖生出來了卻存不進去 —— 不扣額度，老師重試不該被罰
+        # 圖生出來了卻存不進去 —— 老師一樣沒拿到圖，退款
+        siq.refund(db, current_teacher)
         raise _ai_failed("generate-image-store", e)
 
-    charge = siq.consume(db, current_teacher)
     return {
         "image_url": image_url,
         "prompt": result["prompt"],

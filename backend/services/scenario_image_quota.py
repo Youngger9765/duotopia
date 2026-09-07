@@ -103,10 +103,13 @@ def get_quota_status(
 def consume(
     db: Session, teacher: Teacher, year_month: Optional[str] = None
 ) -> Dict[str, Any]:
-    """扣一次額度。
+    """**先保留**一次額度（在打 AI 之前呼叫）。
 
-    呼叫端要先確認 ``can_use``（見端點）——這裡再檢查一次是為了擋並發，額度用完會回
-    ``{"charged": None, ...}`` 而不是丟例外，讓呼叫端決定回什麼狀態碼。
+    額度用完會回 ``{"charged": None, ...}`` 而不是丟例外，讓呼叫端決定回什麼狀態碼。
+    呼叫端**一定要看這個回傳值** —— 只在打 AI 之前查一次 :func:`get_quota_status` 是
+    擋不住並發的：同一位老師在 29/30 時同時送兩個請求，兩個都會通過那次檢查
+    （PR #1027 review）。所以正確用法是「先 consume 佔位 → 再打 AI → 失敗就
+    :func:`refund`」，而不是「先查 → 打 AI → 再 consume」。
     """
     ym = year_month or current_year_month()
     row = _get_or_create_usage_locked(db, teacher.id, ym)
@@ -127,6 +130,30 @@ def consume(
     db.refresh(row)
     return {
         "charged": "free",
+        "year_month": ym,
+        "limit": FREE_MONTHLY_LIMIT,
+        "used": row.count,
+        "remaining": max(0, FREE_MONTHLY_LIMIT - row.count),
+        "can_use": row.count < FREE_MONTHLY_LIMIT,
+    }
+
+
+def refund(
+    db: Session, teacher: Teacher, year_month: Optional[str] = None
+) -> Dict[str, Any]:
+    """把先前保留的一次額度還回去。
+
+    用在「保留成功但後續失敗」：被安全過濾擋下、圖存不進去。老師沒拿到圖，就不該
+    被算一次（比照 magic_paste 擷取到 0 項不扣額的產品決策）。
+
+    計數不會被扣到負數 —— 就算重複退款（例外處理路徑重入）也只是回到 0。
+    """
+    ym = year_month or current_year_month()
+    row = _get_or_create_usage_locked(db, teacher.id, ym)
+    row.count = max(0, row.count - 1)
+    db.commit()
+    db.refresh(row)
+    return {
         "year_month": ym,
         "limit": FREE_MONTHLY_LIMIT,
         "used": row.count,

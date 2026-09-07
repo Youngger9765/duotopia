@@ -110,12 +110,24 @@ class ScenarioDialogueImageService:
     def extract_image_bytes(images: Any) -> bytes:
         """從 Imagen 回應取出圖片 bytes。
 
-        被安全過濾擋下時 SDK 回的是**空清單**（不是例外），所以空清單一律當成被擋。
+        **被擋** 與 **SDK 變了** 要分開（PR #1027 review）：
+
+        * 被安全過濾擋下時 SDK 回的是**空清單**（不是例外），所以空清單一律當成被擋。
+        * ``_image_bytes`` 是 SDK 的**內部屬性** —— ``GeneratedImage`` 沒有取 bytes 的
+          公開 API（只有寫檔的 ``save()``），所以只能用它。萬一 SDK 改版把它拿掉，
+          屬性會整個消失；那要丟 :class:`ScenarioImageError`（「稍後再試」＋ 進 error
+          log 讓我們發現），**不能**跟被安全過濾擋下混在一起，否則升級套件之後每一次
+          請求都會變成「你的描述有問題」，而真正的原因沒有人看得到。
         """
         if not images:
             raise ScenarioImageBlockedError("AI 沒有產出圖片，可能是描述被安全過濾擋下，請換個描述再試")
+
         first = images[0]
-        data = getattr(first, "_image_bytes", None)
+        if not hasattr(first, "_image_bytes"):
+            # 屬性不存在 = SDK 形狀變了，不是內容問題
+            raise ScenarioImageError("圖片回應格式無法解析（Vertex SDK 可能已變更），請稍後再試")
+
+        data = first._image_bytes
         if not data:
             raise ScenarioImageBlockedError("AI 沒有產出圖片，可能是描述被安全過濾擋下，請換個描述再試")
         return data
