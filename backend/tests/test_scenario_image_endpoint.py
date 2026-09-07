@@ -141,16 +141,40 @@ def test_storage_failure_does_not_charge(
     assert quota["used"] == 0
 
 
-def test_invalid_prompt_returns_400(test_client, auth_headers_teacher, monkeypatch):
+def test_blank_prompt_is_rejected_before_touching_quota(
+    test_client, auth_headers_teacher, mock_image, db_session
+):
+    """純空白描述要在 Pydantic 就擋掉（422），不該走完「扣額度 → 失敗 → 退款」。
+
+    只寫 min_length=1 是不夠的：" " 長度是 1，照樣會通過（PR #1027 review round 4），
+    所以欄位要搭配 strip_whitespace。
+    """
+    from models import Teacher
+
+    teacher = db_session.query(Teacher).first()
+
+    resp = test_client.post(
+        IMAGE_URL, headers=auth_headers_teacher, json={"image_prompt": "   "}
+    )
+    assert resp.status_code == 422
+    # 連 AI 都沒打，更沒有動到額度
+    assert mock_image["generate"] == 0
+    assert siq.get_quota_status(db_session, teacher)["used"] == 0
+
+
+def test_service_level_invalid_prompt_returns_400(
+    test_client, auth_headers_teacher, monkeypatch
+):
+    """通過欄位驗證、但服務層仍判定不合法時回 400（與模型產不出東西的 502 分開）。"""
     from services import scenario_dialogue_image as mod
 
     async def bad(self, raw_prompt):
-        raise ScenarioImageError("生圖描述不可為空")
+        raise ScenarioImageError("生圖描述不合法")
 
     monkeypatch.setattr(mod.ScenarioDialogueImageService, "generate", bad)
 
     resp = test_client.post(
-        IMAGE_URL, headers=auth_headers_teacher, json={"image_prompt": "  "}
+        IMAGE_URL, headers=auth_headers_teacher, json={"image_prompt": "a park"}
     )
     assert resp.status_code == 400
 
