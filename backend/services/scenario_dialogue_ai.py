@@ -122,6 +122,18 @@ def sanitize_free_text(value: Optional[str], max_chars: int) -> str:
     驗證；只有翻譯語言的「其他」是老師自己打的自由文字（#1016），沒有白名單可用。
     換行會被吃掉是因為 prompt 是靠換行分段的 —— 留著換行等於讓這個欄位可以改寫 prompt
     結構。內容本身保留（不是靜靜整段丟掉），只是壓成一行。
+
+    **為什麼 goal 與 global_rubric 不走這支**（PR #1023 review 問到，這裡記下判斷）：
+
+    * 它們**本來就是多行長文** —— 訓練目標可以列點、作答指引可以分條。壓成一行會破壞
+      老師正常的輸入，代價比風險大。
+    * 風險本身也不同：這兩個欄位只影響**老師自己**這一次的產出（產出來還要他過目、
+      可以改、可以重產），既不跨租戶、也不會回寫任何資料。而 `translate_language`
+      被壓平是因為它是**單一短詞**（語言名稱），壓平沒有任何損失。
+    * 成本面已由端點的長度上限擋住（見 routers/scenario_dialogue_ai.py）。
+
+    也就是說：這是有意識的取捨，不是漏掉。若哪天這些欄位會被存進共用的地方、或被
+    別人的請求讀到，就要重新評估。
     """
     text = (value or "").strip()
     if not text:
@@ -456,7 +468,7 @@ class ScenarioDialogueAIService:
         file_part: Any = None,
     ) -> Tuple[Any, Dict[str, int]]:
         from vertexai.generative_models import GenerationConfig, GenerativeModel
-        from services.vertex_ai import get_vertex_ai_service, VertexAIService
+        from services.vertex_ai import get_vertex_ai_service
 
         # 確保 vertexai.init 已呼叫（同 magic_paste）
         get_vertex_ai_service()._ensure_initialized()
