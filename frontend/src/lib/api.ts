@@ -1237,6 +1237,25 @@ class ApiClient {
   }
 
   /**
+   * 逐題 AI 生圖（Issue #1024）。
+   *
+   * `image_prompt` 是產題時 AI 一併回傳、存在 item_metadata 裡的生圖描述，前端只是
+   * 帶回去，不解讀內容。後端會把兒童相關描述改寫成場景（Imagen 對兒童影像有嚴格
+   * 限制），所以送回來的 `prompt` 可能與送出去的不同。
+   */
+  async generateScenarioImage(imagePrompt: string): Promise<{
+    image_url: string;
+    prompt: string;
+    estimated_cost_usd?: number;
+    quota?: { used: number; remaining: number; limit: number };
+  }> {
+    return this.request("/api/teachers/scenario-dialogue/generate-image", {
+      method: "POST",
+      body: JSON.stringify({ image_prompt: imagePrompt }),
+    });
+  }
+
+  /**
    * 從老師上傳的圖片 / PDF 擷取情境文章（一次一個檔）。
    *
    * 走原生 fetch 而不是 this.request：`request()` 固定塞

@@ -838,6 +838,8 @@ const ScenarioDialoguePanel = forwardRef<
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   /** 逐題 TTS 同理（#1021） */
   const [audioLoadingId, setAudioLoadingId] = useState<string | null>(null);
+  /** 逐題 AI 生圖是一題一題觸發的，要記住是哪一題在跑（#1024） */
+  const [imageLoadingId, setImageLoadingId] = useState<string | null>(null);
   /** 目前正在播的題目語音；換一題要先停掉舊的，不然會疊音 */
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -1267,15 +1269,46 @@ const ScenarioDialoguePanel = forwardRef<
    * 圖片改成單題的事之後，整份不再有「一次生成全部」的勾選。
    */
   /**
-   * 逐題 AI 生圖 —— Issue #1021 的範圍**不含**這個：後端目前完全沒有圖片生成能力
-   * （不是接線問題，是要從零建一個新能力：模型、儲存、成本、配額）。
+   * 逐題 AI 生圖（Issue #1024 起改為真的呼叫 Imagen）。
    *
-   * 舊版是「轉 800ms 的 spinner 然後什麼都沒有」，看起來像在生成、其實是假的 ——
-   * 既然其他 AI 功能都接成真的了，這顆更不能繼續假裝。改成明講尚未提供，老師就會
-   * 改用旁邊的手動上傳，而不是一直重按。
+   * 生圖描述用的是產題時 AI 一併回傳、存在該列的 `imagePrompt`；老師沒產過題、
+   * 自己打的題目沒有這個值，就退回題目本文當描述 —— 總比按下去什麼都不做好。
+   *
+   * 三種失敗要分開講，因為老師的下一步完全不同：
+   * - 402 額度用完 → 改用手動上傳
+   * - 422 被安全過濾擋下 → 換個描述（Imagen 對兒童影像有嚴格限制，後端已經先把
+   *   兒童相關描述改寫成場景，仍可能被擋）
+   * - 其他 → 稍後再試
    */
-  const generateRowImage = (_id: string) => {
-    toast.info(t("scenarioDialogue.messages.imageGenerationUnavailable"));
+  const generateRowImage = async (id: string) => {
+    const row = rows.find((r) => r.id === id);
+    if (!row) return;
+
+    const prompt = (row.imagePrompt || row.question).trim();
+    if (!prompt) {
+      toast.error(t("scenarioDialogue.messages.imagePromptRequired"));
+      return;
+    }
+
+    setImageLoadingId(id);
+    try {
+      const { image_url } = await apiClient.generateScenarioImage(prompt);
+      // 換掉舊圖前先釋放 blob（手動上傳的預覽是 blob:），否則會一路累積不釋放
+      releaseIfUnused(row.imageUrl, id);
+      patchRow(id, { imageUrl: image_url });
+    } catch (error) {
+      console.error("Failed to generate question image:", error);
+      const message = String((error as Error)?.message ?? "");
+      if (message.includes("402") || message.includes("QUOTA_EXCEEDED")) {
+        toast.error(t("scenarioDialogue.messages.imageQuotaExceeded"));
+      } else if (message.includes("422")) {
+        toast.error(t("scenarioDialogue.messages.imageBlocked"));
+      } else {
+        toast.error(t("scenarioDialogue.messages.imageFailed"));
+      }
+    } finally {
+      setImageLoadingId(null);
+    }
   };
 
   const handleFiles = (files: FileList | null) => {
@@ -1945,7 +1978,7 @@ const ScenarioDialoguePanel = forwardRef<
                       globalVoice={globalVoice}
                       canDelete={rows.length > 1}
                       regenerating={regeneratingId === row.id}
-                      imageLoading={false}
+                      imageLoading={imageLoadingId === row.id}
                       onChange={(patch) => patchRow(row.id, patch)}
                       onDuplicate={() =>
                         setRows((prev) =>

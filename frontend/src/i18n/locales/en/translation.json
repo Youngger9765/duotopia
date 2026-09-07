@@ -4875,7 +4875,10 @@
       "generateFailed": "AI generation failed, please try again later",
       "goalRequired": "Please enter a teaching goal first",
       "audioFailed": "Audio generation failed, please try again later",
-      "imageGenerationUnavailable": "AI image generation is not available yet — you can upload an image manually",
+      "imagePromptRequired": "Add a question first — there's nothing to base the image on",
+      "imageQuotaExceeded": "You've used all your AI image generations this month — you can upload an image manually",
+      "imageBlocked": "This description can't be turned into an image, please try a different one",
+      "imageFailed": "Image generation failed, please try again later",
       "scenarioRequired": "Add the scenario first — AI needs it to write questions"
     },
     "tenseTimes": {
