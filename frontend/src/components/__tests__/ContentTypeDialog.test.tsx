@@ -319,21 +319,22 @@ describe("ContentTypeDialog", () => {
       });
     });
 
-    const panel = (container: HTMLElement) =>
-      container.querySelector('[class*="fixed top-0 right-0"]') as HTMLElement;
+    // 用 data-testid 而不是比對 class 字串：後者依賴 Tailwind class 的排列順序，
+    // 有人重排或插入一個 class 就會靜靜地選不到（回 null），錯誤訊息也看不出原因
+    const panel = () => screen.getByTestId("content-type-panel");
 
     it("手機上面板佔滿寬度（left: 0），不會被擠成一條", () => {
       setViewport(390);
-      const { container } = renderComponent();
+      renderComponent();
 
-      expect(panel(container).style.left).toBe("0px");
+      expect(panel().style.left).toBe("0px");
     });
 
     it("桌機上仍然讓開側邊欄", () => {
       setViewport(1280);
-      const { container } = renderComponent();
+      renderComponent();
 
-      expect(panel(container).style.left).toBe("256px");
+      expect(panel().style.left).toBe("256px");
     });
   });
 });
