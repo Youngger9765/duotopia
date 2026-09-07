@@ -4872,7 +4872,10 @@
       "resetToGlobal": "Reset to the shared scoring criteria"
     },
     "messages": {
-      "frontendOnly": "This action is not wired to the backend yet (audio generation / playback)",
+      "generateFailed": "AI generation failed, please try again later",
+      "goalRequired": "Please enter a teaching goal first",
+      "audioFailed": "Audio generation failed, please try again later",
+      "imageGenerationUnavailable": "AI image generation is not available yet — you can upload an image manually",
       "scenarioRequired": "Add the scenario first — AI needs it to write questions"
     },
     "tenseTimes": {

@@ -1,0 +1,235 @@
+"""情境對話 AI 端點測試 — Issue #1021。
+
+AI 呼叫全程 mock。這裡驗的是端點該負責的事：鑑權、參數轉交、錯誤碼對應、
+以及**老師填的設定有沒有原封不動送到服務層**（這張單的起因就是它們被丟掉）。
+"""
+
+import io
+
+import pytest
+
+from services.scenario_dialogue_ai import ScenarioDialogueAIError
+
+
+PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 8
+
+ARTICLE_URL = "/api/teachers/scenario-dialogue/generate-article"
+QUESTIONS_URL = "/api/teachers/scenario-dialogue/generate-questions"
+EXTRACT_URL = "/api/teachers/scenario-dialogue/extract-article"
+
+
+def _png():
+    return ("scan.png", io.BytesIO(PNG_BYTES), "image/png")
+
+
+@pytest.fixture
+def captured(monkeypatch):
+    """把服務層換成固定回傳，並記下呼叫參數。"""
+    calls = {}
+
+    async def fake_article(self, goal, level=""):
+        calls["article"] = {"goal": goal, "level": level}
+        return {
+            "content": "It is Monday morning.",
+            "usage": {"input_tokens": 10, "output_tokens": 20},
+            "estimated_cost_usd": 0.0001,
+        }
+
+    async def fake_questions(self, **kwargs):
+        calls["questions"] = kwargs
+        return {
+            "questions": [{"question": "Q1", "translation": "一"}],
+            "usage": {"input_tokens": 10, "output_tokens": 20},
+            "estimated_cost_usd": 0.0002,
+        }
+
+    async def fake_extract(self, file_bytes, mime_type):
+        calls["extract"] = {"size": len(file_bytes), "mime": mime_type}
+        return {
+            "content": "Extracted passage.",
+            "usage": {"input_tokens": 5, "output_tokens": 6},
+            "estimated_cost_usd": 0.00005,
+        }
+
+    from services import scenario_dialogue_ai as mod
+
+    monkeypatch.setattr(mod.ScenarioDialogueAIService, "generate_article", fake_article)
+    monkeypatch.setattr(
+        mod.ScenarioDialogueAIService, "generate_questions", fake_questions
+    )
+    monkeypatch.setattr(mod.ScenarioDialogueAIService, "extract_article", fake_extract)
+    return calls
+
+
+# ---------------------------------------------------------------- 鑑權
+
+
+@pytest.mark.parametrize("url", [ARTICLE_URL, QUESTIONS_URL])
+def test_endpoints_require_auth(test_client, url):
+    resp = test_client.post(url, json={})
+    assert resp.status_code in (401, 403)
+
+
+def test_extract_requires_auth(test_client):
+    resp = test_client.post(EXTRACT_URL, files={"file": _png()})
+    assert resp.status_code in (401, 403)
+
+
+# ---------------------------------------------------------------- 生成文章
+
+
+def test_generate_article_passes_goal_and_level(
+    test_client, auth_headers_teacher, captured
+):
+    """訓練目標必須原樣送到服務層 —— 舊 stub 就是把它丟了。"""
+    resp = test_client.post(
+        ARTICLE_URL,
+        headers=auth_headers_teacher,
+        json={"goal": "這週上課學到的：交通工具與問路", "level": "A2"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert captured["article"] == {
+        "goal": "這週上課學到的：交通工具與問路",
+        "level": "A2",
+    }
+    assert resp.json()["content"] == "It is Monday morning."
+    # 用量與成本要一起回，方便觀測（這一版不擋配額）
+    assert resp.json()["estimated_cost_usd"] == 0.0001
+
+
+def test_generate_article_invalid_params_return_400(
+    test_client, auth_headers_teacher, monkeypatch
+):
+    from services import scenario_dialogue_ai as mod
+
+    async def boom(self, goal, level=""):
+        raise ScenarioDialogueAIError("訓練目標不可為空")
+
+    monkeypatch.setattr(mod.ScenarioDialogueAIService, "generate_article", boom)
+
+    resp = test_client.post(
+        ARTICLE_URL, headers=auth_headers_teacher, json={"goal": "  "}
+    )
+    assert resp.status_code == 400
+    assert "訓練目標" in resp.json()["detail"]
+
+
+def test_generate_article_provider_error_returns_502(
+    test_client, auth_headers_teacher, monkeypatch
+):
+    from services import scenario_dialogue_ai as mod
+
+    async def boom(self, goal, level=""):
+        raise RuntimeError("vertex exploded")
+
+    monkeypatch.setattr(mod.ScenarioDialogueAIService, "generate_article", boom)
+
+    resp = test_client.post(
+        ARTICLE_URL, headers=auth_headers_teacher, json={"goal": "g"}
+    )
+    assert resp.status_code == 502
+    # 不把供應商的錯誤訊息漏給前端
+    assert "vertex" not in resp.text.lower()
+
+
+# ---------------------------------------------------------------- 產題
+
+
+def test_generate_questions_forwards_every_teacher_setting(
+    test_client, auth_headers_teacher, captured
+):
+    """這是 #1021 的核心：面板上填的每一項都要真的送到服務層。"""
+    resp = test_client.post(
+        QUESTIONS_URL,
+        headers=auth_headers_teacher,
+        json={
+            "scenario_content": "It is Monday morning at school.",
+            "count": 5,
+            "question_level": "B1",
+            "global_tense": {"time": "past", "aspect": "simple"},
+            "global_voice": "active",
+            "global_rubric": "請用完整句子回答",
+            "translate_language": "japanese",
+            "existing_questions": ["Old one?"],
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    sent = captured["questions"]
+    assert sent["scenario_content"] == "It is Monday morning at school."
+    assert sent["count"] == 5
+    assert sent["question_level"] == "B1"
+    assert sent["global_tense"] == {"time": "past", "aspect": "simple"}
+    assert sent["global_voice"] == "active"
+    assert sent["global_rubric"] == "請用完整句子回答"
+    assert sent["translate_language"] == "japanese"
+    assert sent["existing_questions"] == ["Old one?"]
+
+
+def test_generate_questions_defaults_are_harmless(
+    test_client, auth_headers_teacher, captured
+):
+    """只帶必要欄位也要能用（老師可以什麼設定都不選）。"""
+    resp = test_client.post(
+        QUESTIONS_URL,
+        headers=auth_headers_teacher,
+        json={"scenario_content": "S", "count": 3},
+    )
+    assert resp.status_code == 200, resp.text
+    sent = captured["questions"]
+    assert sent["global_tense"] is None
+    assert sent["global_voice"] == ""
+    assert sent["existing_questions"] == []
+
+
+def test_generate_questions_invalid_count_returns_400(
+    test_client, auth_headers_teacher, monkeypatch
+):
+    from services import scenario_dialogue_ai as mod
+
+    async def boom(self, **kwargs):
+        raise ScenarioDialogueAIError("題數需介於 3~10，收到 99")
+
+    monkeypatch.setattr(mod.ScenarioDialogueAIService, "generate_questions", boom)
+
+    resp = test_client.post(
+        QUESTIONS_URL,
+        headers=auth_headers_teacher,
+        json={"scenario_content": "S", "count": 99},
+    )
+    assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------- 擷取
+
+
+def test_extract_article_success(test_client, auth_headers_teacher, captured):
+    resp = test_client.post(
+        EXTRACT_URL, headers=auth_headers_teacher, files={"file": _png()}
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["content"] == "Extracted passage."
+    assert captured["extract"]["mime"] == "image/png"
+
+
+def test_extract_article_rejects_oversize(
+    test_client, auth_headers_teacher, monkeypatch
+):
+    """大小要在讀檔階段就擋掉，不能整包讀進記憶體再說。"""
+    from services import scenario_dialogue_ai as mod
+
+    monkeypatch.setattr(mod.ScenarioDialogueAIService, "MAX_FILE_BYTES", 10)
+    big = ("big.png", io.BytesIO(b"x" * 50), "image/png")
+
+    resp = test_client.post(
+        EXTRACT_URL, headers=auth_headers_teacher, files={"file": big}
+    )
+    assert resp.status_code == 400
+    assert "過大" in resp.json()["detail"]
+
+
+def test_extract_article_rejects_bad_type(test_client, auth_headers_teacher):
+    bad = ("notes.csv", io.BytesIO(b"a,b,c"), "text/csv")
+    resp = test_client.post(
+        EXTRACT_URL, headers=auth_headers_teacher, files={"file": bad}
+    )
+    assert resp.status_code == 400

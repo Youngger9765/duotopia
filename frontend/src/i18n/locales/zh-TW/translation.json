@@ -4892,7 +4892,10 @@
       "resetToGlobal": "改回沿用整體評分標準"
     },
     "messages": {
-      "frontendOnly": "此功能尚未串接後端（語音生成／播放）",
+      "generateFailed": "AI 產生失敗，請稍後再試",
+      "goalRequired": "請先填寫訓練目標",
+      "audioFailed": "語音產生失敗，請稍後再試",
+      "imageGenerationUnavailable": "AI 生成圖片尚未開放，可以先手動上傳圖片",
       "scenarioRequired": "請先輸入情境內容，AI 才有素材可以出題"
     },
     "tenseTimes": {

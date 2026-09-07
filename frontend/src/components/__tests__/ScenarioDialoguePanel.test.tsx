@@ -21,6 +21,31 @@ import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext";
 
 const mockToastError = vi.fn();
 
+// #1021: 產題／生成情境文章／擷取／TTS 都真的打 API 了，這裡一律 mock。
+// 預設回傳足夠的題目，讓「產一批」相關的測試維持原本的行為斷言。
+const generateScenarioQuestions = vi.fn();
+const generateScenarioArticle = vi.fn();
+const extractScenarioArticle = vi.fn();
+const generateTTS = vi.fn();
+
+const fakeQuestion = (n: number) => ({
+  question: `Generated question ${n}?`,
+  translation: `翻譯 ${n}`,
+  keywords: [`kw${n}`],
+  reference_answer: `Reference ${n}`,
+  image_prompt: "",
+});
+
+vi.mock("@/lib/api", () => ({
+  apiClient: {
+    generateScenarioQuestions: (...a: unknown[]) =>
+      generateScenarioQuestions(...a),
+    generateScenarioArticle: (...a: unknown[]) => generateScenarioArticle(...a),
+    extractScenarioArticle: (...a: unknown[]) => extractScenarioArticle(...a),
+    generateTTS: (...a: unknown[]) => generateTTS(...a),
+  },
+}));
+
 vi.mock("sonner", () => ({
   toast: {
     error: (...args: unknown[]) => mockToastError(...args),
@@ -50,6 +75,7 @@ const K = {
   addQuestion: "scenarioDialogue.buttons.addQuestion",
   editSettings: "scenarioDialogue.buttons.editSettings",
   generateScenario: "scenarioDialogue.buttons.generateScenario",
+  extractScenario: "scenarioDialogue.buttons.extractScenario",
   uploadImage: "scenarioDialogue.buttons.uploadImage",
   generateImage: "scenarioDialogue.buttons.generateImage",
   tabManual: "scenarioDialogue.tabs.sourceManual",
@@ -57,6 +83,7 @@ const K = {
   tabUpload: "scenarioDialogue.tabs.sourceUpload",
   titlePlaceholder: "scenarioDialogue.placeholders.title",
   scenarioPlaceholder: "scenarioDialogue.placeholders.scenarioContent",
+  goalPlaceholder: "scenarioDialogue.placeholders.goal",
   questionPlaceholder: "scenarioDialogue.placeholders.question",
   rubricPlaceholder: "scenarioDialogue.placeholders.globalRubric",
   noContextYet: "scenarioDialogue.hints.noContextYet",
@@ -91,21 +118,33 @@ const fillRequiredForGenerate = () => {
 const switchTab = (label: string) =>
   fireEvent.mouseDown(screen.getByText(label));
 
-/** 產題是 setTimeout 驅動的 stub，用假時鐘推完 */
+/** 產題／生成情境文章都是 async API 呼叫（#1021），點下去等 promise 跑完即可 */
 const runGenerate = async (label: string) => {
-  vi.useFakeTimers();
-  try {
-    fireEvent.click(screen.getByText(label));
-    await act(async () => {
-      vi.advanceTimersByTime(900);
-    });
-  } finally {
-    vi.useRealTimers();
-  }
+  fireEvent.click(screen.getByText(label));
+  await act(async () => {
+    await Promise.resolve();
+  });
 };
 
 beforeEach(() => {
   mockToastError.mockClear();
+  generateScenarioQuestions.mockReset();
+  generateScenarioArticle.mockReset();
+  extractScenarioArticle.mockReset();
+  generateTTS.mockReset();
+
+  // 每次呼叫都給「還沒出現過」的題目，讓『再產一批』能像真的一樣長出新題
+  let seq = 0;
+  generateScenarioQuestions.mockImplementation(
+    async ({ count }: { count: number }) => ({
+      questions: Array.from({ length: count }, () => fakeQuestion(++seq)),
+    }),
+  );
+  generateScenarioArticle.mockResolvedValue({
+    content: "It is Monday morning at school.",
+  });
+  extractScenarioArticle.mockResolvedValue({ content: "Extracted passage." });
+  generateTTS.mockResolvedValue({ audio_url: "https://cdn/audio.mp3" });
 });
 
 describe("ScenarioDialoguePanel 兩步驟流程", () => {
@@ -195,6 +234,8 @@ describe("ScenarioDialoguePanel 情境內容", () => {
     renderPanel();
 
     switchTab(K.tabAi);
+    // #1021: 訓練目標是生成的依據，沒填會被擋下（後端同樣拒收空目標）
+    type(K.goalPlaceholder, "這週上課學到的：交通工具與問路");
     await runGenerate(K.generateScenario);
 
     const box = screen.getByPlaceholderText(K.scenarioPlaceholder);
@@ -233,17 +274,28 @@ describe("ScenarioDialoguePanel 情境內容", () => {
     const ref = renderPanel();
 
     switchTab(K.tabAi);
-    vi.useFakeTimers();
-    try {
-      fireEvent.click(screen.getByText(K.generateScenario));
-      // 還沒 resolve：這段期間存下去會存到舊的 scenarioContent
-      expect(ref.current?.isBusy).toBe(true);
-      await act(async () => {
-        vi.advanceTimersByTime(900);
-      });
-    } finally {
-      vi.useRealTimers();
-    }
+    type(K.goalPlaceholder, "這週上課學到的：交通工具與問路");
+
+    // #1021: 改成真的 API 呼叫後，用一個自己控制何時 resolve 的 promise 把
+    // 「生成中」這段時間撐開，而不是推假時鐘
+    let finish!: (value: { content: string }) => void;
+    generateScenarioArticle.mockReturnValue(
+      new Promise<{ content: string }>((resolve) => {
+        finish = resolve;
+      }),
+    );
+
+    fireEvent.click(screen.getByText(K.generateScenario));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    // 還沒 resolve：這段期間存下去會存到舊的 scenarioContent
+    expect(ref.current?.isBusy).toBe(true);
+
+    await act(async () => {
+      finish({ content: "It is Monday morning." });
+      await Promise.resolve();
+    });
 
     expect(ref.current?.isBusy).toBe(false);
   });
@@ -302,17 +354,26 @@ describe("ScenarioDialoguePanel busy 狀態", () => {
     expect(busy()).toBe("false");
 
     switchTab(K.tabAi);
-    vi.useFakeTimers();
-    try {
-      fireEvent.click(screen.getByText(K.generateScenario));
-      // 沒同步的話這裡會是 false，儲存鍵就不會 disabled
-      expect(busy()).toBe("true");
-      await act(async () => {
-        vi.advanceTimersByTime(900);
-      });
-    } finally {
-      vi.useRealTimers();
-    }
+    type(K.goalPlaceholder, "這週上課學到的：交通工具與問路");
+
+    let finish!: (value: { content: string }) => void;
+    generateScenarioArticle.mockReturnValue(
+      new Promise<{ content: string }>((resolve) => {
+        finish = resolve;
+      }),
+    );
+
+    fireEvent.click(screen.getByText(K.generateScenario));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    // 沒同步的話這裡會是 false，儲存鍵就不會 disabled
+    expect(busy()).toBe("true");
+
+    await act(async () => {
+      finish({ content: "It is Monday morning." });
+      await Promise.resolve();
+    });
 
     expect(busy()).toBe("false");
   });
@@ -733,5 +794,121 @@ describe("ScenarioDialoguePanel 編輯模式（#1013）", () => {
     const ref = renderPanel({ initialData, isSaving: true });
 
     expect(ref.current?.isBusy).toBe(true);
+  });
+});
+
+/**
+ * Issue #1021：AI 真的接上後端了。
+ *
+ * 這張單的起因是老師填的訓練目標／出題設定完全沒被讀取（前端是寫死的示範題），
+ * 所以這裡盯的就是「填了什麼，有沒有真的送出去」。
+ */
+describe("ScenarioDialoguePanel AI 串接（#1021）", () => {
+  it("生成情境文章會把訓練目標與文章難度送出去", async () => {
+    renderPanel({ programLevel: "B1" });
+
+    switchTab(K.tabAi);
+    type(K.goalPlaceholder, "這週上課學到的：交通工具與問路");
+    await runGenerate(K.generateScenario);
+
+    expect(generateScenarioArticle).toHaveBeenCalledTimes(1);
+    expect(generateScenarioArticle).toHaveBeenCalledWith(
+      expect.objectContaining({ goal: "這週上課學到的：交通工具與問路" }),
+    );
+    expect(
+      (
+        screen.getByPlaceholderText(
+          K.scenarioPlaceholder,
+        ) as HTMLTextAreaElement
+      ).value,
+    ).toBe("It is Monday morning at school.");
+  });
+
+  it("沒填訓練目標就不會送出請求（省下一次白花的呼叫）", async () => {
+    renderPanel();
+
+    switchTab(K.tabAi);
+    await runGenerate(K.generateScenario);
+
+    expect(generateScenarioArticle).not.toHaveBeenCalled();
+    expect(mockToastError).toHaveBeenCalled();
+  });
+
+  it("產題會把情境內容與整份出題設定一起送出", async () => {
+    renderPanel();
+    fillRequiredForGenerate();
+    await runGenerate(K.generate);
+
+    expect(generateScenarioQuestions).toHaveBeenCalledTimes(1);
+    const sent = generateScenarioQuestions.mock.calls[0][0];
+    expect(sent.scenario_content).toContain("你和同學在星期一早上聊天");
+    expect(sent.count).toBeGreaterThan(0);
+    // 時態送的是穩定代碼物件，不是畫面上的中文標籤
+    expect(sent.global_tense).toEqual({ time: "", aspect: "" });
+    expect(sent).toHaveProperty("question_level");
+    expect(sent).toHaveProperty("global_rubric");
+  });
+
+  it("再產一批會帶上既有題目，讓後端避開重複", async () => {
+    renderPanel();
+    fillRequiredForGenerate();
+    await runGenerate(K.generate);
+    await runGenerate(K.generateAnother);
+
+    const second = generateScenarioQuestions.mock.calls[1][0];
+    expect(second.existing_questions.length).toBeGreaterThan(0);
+    expect(second.existing_questions[0]).toContain("Generated question");
+  });
+
+  it("產題失敗會提示，且不會把既有題目清掉", async () => {
+    renderPanel();
+    fillRequiredForGenerate();
+    await runGenerate(K.generate);
+    const before = screen.getAllByPlaceholderText(K.questionPlaceholder).length;
+
+    generateScenarioQuestions.mockRejectedValueOnce(new Error("boom"));
+    await runGenerate(K.generateAnother);
+
+    expect(mockToastError).toHaveBeenCalled();
+    expect(screen.getAllByPlaceholderText(K.questionPlaceholder).length).toBe(
+      before,
+    );
+  });
+
+  it("上傳檔案後走擷取端點，多個檔案會依序擷取再接起來", async () => {
+    const { container } = render(<ScenarioDialoguePanel />, { wrapper });
+
+    switchTab(K.tabUpload);
+    const fileInput = container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    fireEvent.change(fileInput, {
+      target: {
+        files: [
+          new File(["a"], "p1.png", { type: "image/png" }),
+          new File(["b"], "p2.png", { type: "image/png" }),
+        ],
+      },
+    });
+
+    extractScenarioArticle
+      .mockResolvedValueOnce({ content: "Page one." })
+      .mockResolvedValueOnce({ content: "Page two." });
+
+    fireEvent.click(screen.getByText(K.extractScenario));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(extractScenarioArticle).toHaveBeenCalledTimes(2);
+    expect(
+      (
+        screen.getByPlaceholderText(
+          K.scenarioPlaceholder,
+        ) as HTMLTextAreaElement
+      ).value,
+    ).toBe("Page one.\n\nPage two.");
   });
 });
