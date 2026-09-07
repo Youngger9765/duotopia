@@ -992,3 +992,68 @@ describe("ScenarioDialoguePanel 題目語音與題目本文的一致性", () => 
     expect(playButtons().length).toBe(0);
   });
 });
+
+/**
+ * PR #1023 review round 3：AI 呼叫要等好幾秒，那段期間老師還是可以繼續編輯
+ * （題目文字、刪題、加題、拖曳都沒有被擋）。回應落地時若用發送前的快照覆蓋整個
+ * 陣列，他等待期間做的事會無聲消失。
+ */
+describe("ScenarioDialoguePanel 產題等待期間的編輯不可被吃掉", () => {
+  const pendingGeneration = () => {
+    let finish!: (value: { questions: unknown[] }) => void;
+    generateScenarioQuestions.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    return () =>
+      act(async () => {
+        finish({ questions: [fakeQuestion(99)] });
+        await Promise.resolve();
+      });
+  };
+
+  it("等待期間改過的題目文字，回應落地後仍然在", async () => {
+    renderPanel();
+    fillRequiredForGenerate();
+    await runGenerate(K.generate);
+
+    const settle = pendingGeneration();
+    fireEvent.click(screen.getByText(K.generateAnother));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // 還在等 AI 的時候老師改了第一題
+    const box = screen.getAllByPlaceholderText(K.questionPlaceholder)[0];
+    fireEvent.change(box, { target: { value: "老師等待時改的題目？" } });
+
+    await settle();
+
+    const values = screen
+      .getAllByPlaceholderText(K.questionPlaceholder)
+      .map((el) => (el as HTMLTextAreaElement).value);
+    expect(values).toContain("老師等待時改的題目？");
+  });
+
+  it("等待期間刪掉的題目不會被回應救回來", async () => {
+    renderPanel();
+    fillRequiredForGenerate();
+    await runGenerate(K.generate);
+    const before = screen.getAllByPlaceholderText(K.questionPlaceholder).length;
+
+    const settle = pendingGeneration();
+    fireEvent.click(screen.getByText(K.generateAnother));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.click(screen.getAllByTitle("contentEditor.tooltips.delete")[0]);
+    await settle();
+
+    // 刪掉 1 題、AI 補 1 題 → 總數不變；被刪的那題不該復活
+    expect(screen.getAllByPlaceholderText(K.questionPlaceholder).length).toBe(
+      before,
+    );
+  });
+});

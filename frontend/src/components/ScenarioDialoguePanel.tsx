@@ -1078,18 +1078,32 @@ const ScenarioDialoguePanel = forwardRef<
         existing_questions: kept.map((r) => r.question.trim()).filter(Boolean),
       });
 
-      setRows([
-        ...kept,
-        ...questions.map((q) =>
-          createRow({
-            question: q.question,
-            translation: q.translation,
-            keywords: q.keywords,
-            referenceAnswer: q.reference_answer,
-            imagePrompt: q.image_prompt,
-          }),
-        ),
-      ]);
+      // 一定要用 functional form 重新取一次最新的 rows：AI 呼叫要等好幾秒，這段期間
+      // 老師還是可以改題目、刪題、加題、拖曳排序（那些控制項沒有被 isGenerating 擋）。
+      // 用上面 await 之前算好的 kept 直接覆蓋，會把他等待期間做的事整個吃掉
+      // （PR #1023 review）。
+      setRows((prev) => {
+        const latestKept = prev.filter((r) => !isBlankRow(r));
+        // 空間也要用最新的算 —— 等待期間可能又加了題目
+        const latestRoom = Math.max(0, MAX_ITEMS - latestKept.length);
+        const used = new Set(
+          latestKept.map((r) => r.question.trim()).filter(Boolean),
+        );
+        // 後端已經避開送出去的既有題目，但老師等待期間新打的那些它不知道
+        const fresh = questions.filter((q) => !used.has(q.question.trim()));
+        return [
+          ...latestKept,
+          ...fresh.slice(0, latestRoom).map((q) =>
+            createRow({
+              question: q.question,
+              translation: q.translation,
+              keywords: q.keywords,
+              referenceAnswer: q.reference_answer,
+              imagePrompt: q.image_prompt,
+            }),
+          ),
+        ];
+      });
       if (advance) setStep(2);
     } catch (error) {
       console.error("Failed to generate scenario questions:", error);
