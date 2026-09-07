@@ -99,8 +99,12 @@ def build_image_prompt(raw_prompt: Optional[str]) -> str:
     # 改寫後可能出現「a classroom scene ... a classroom scene」這種重複空白
     text = re.sub(r"\s+", " ", text).strip()
 
-    prompt = f"{text}. {_STYLE_HINT}"
-    return prompt[: ScenarioDialogueImageService.MAX_PROMPT_CHARS]
+    # 先把原文截到「扣掉風格提示之後」的長度，再接上去 —— 反過來做的話，原文接近
+    # 上限時風格提示會被切掉半句，送給 Imagen 的等於是一段沒頭沒尾的指令
+    # （PR #1027 review round 2）
+    suffix = f". {_STYLE_HINT}"
+    room = ScenarioDialogueImageService.MAX_PROMPT_CHARS - len(suffix)
+    return f"{text[:max(0, room)]}{suffix}"
 
 
 class ScenarioDialogueImageService:

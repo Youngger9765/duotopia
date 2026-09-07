@@ -219,36 +219,46 @@ async def generate_image(
             },
         )
 
+    # 佔位之後一律用 try/finally 退款，不是在每個 except 分支各退一次
+    # （PR #1027 review round 2）：老師在 Imagen 跑到一半關掉分頁時，Starlette 丟的是
+    # asyncio.CancelledError —— 它是 BaseException 而不是 Exception，`except Exception`
+    # 接不到，那個名額就永遠回不來了。網路不穩或冷啟動慢的時候會慢慢侵蝕老師的額度，
+    # 而且他完全看不出原因。finally 則連 BaseException 都涵蓋得到。
+    delivered = False
     service = get_scenario_dialogue_image_service()
     try:
-        result = await service.generate(payload.image_prompt)
-    except ScenarioImageBlockedError as e:
-        # 被安全過濾擋下：這是「換個描述」而不是「稍後再試」，訊息要能直接給老師看
-        siq.refund(db, current_teacher)
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
-        )
-    except ScenarioImageError as e:
-        siq.refund(db, current_teacher)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        siq.refund(db, current_teacher)
-        raise _ai_failed("generate-image", e)
+        try:
+            result = await service.generate(payload.image_prompt)
+        except ScenarioImageBlockedError as e:
+            # 被安全過濾擋下：這是「換個描述」而不是「稍後再試」，訊息直接給老師看
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
+            )
+        except ScenarioImageError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise _ai_failed("generate-image", e)
 
-    try:
-        from services.image_upload import get_image_upload_service
+        try:
+            from services.image_upload import get_image_upload_service
 
-        image_url = get_image_upload_service().store_image_bytes(
-            result["image_bytes"], "image/png"
-        )
-    except Exception as e:
-        # 圖生出來了卻存不進去 —— 老師一樣沒拿到圖，退款
-        siq.refund(db, current_teacher)
-        raise _ai_failed("generate-image-store", e)
+            image_url = get_image_upload_service().store_image_bytes(
+                result["image_bytes"], "image/png"
+            )
+        except Exception as e:
+            # 圖生出來了卻存不進去 —— 老師一樣沒拿到圖
+            raise _ai_failed("generate-image-store", e)
 
-    return {
-        "image_url": image_url,
-        "prompt": result["prompt"],
-        "estimated_cost_usd": result["estimated_cost_usd"],
-        "quota": charge,
-    }
+        delivered = True
+        return {
+            "image_url": image_url,
+            "prompt": result["prompt"],
+            "estimated_cost_usd": result["estimated_cost_usd"],
+            "quota": charge,
+        }
+    finally:
+        # 沒把圖交到老師手上就退款（被擋、失敗、中途取消都算）
+        if not delivered:
+            siq.refund(db, current_teacher)

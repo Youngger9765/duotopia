@@ -319,3 +319,68 @@ def test_sdk_shape_change_is_not_reported_as_safety_block():
     with pytest.raises(ScenarioImageError) as exc:
         ScenarioDialogueImageService.extract_image_bytes([NoBytes()])
     assert not isinstance(exc.value, ScenarioImageBlockedError)
+
+
+# ------------------------------------------------- 中途取消也要退款（review round 2）
+
+
+def test_cancelled_midflight_refunds_quota(
+    test_client, auth_headers_teacher, db_session, monkeypatch
+):
+    """老師在 Imagen 跑到一半關掉分頁 → 那個名額要還回去。
+
+    `asyncio.CancelledError` 是 **BaseException**，`except Exception` 接不到；
+    退款寫在 finally 才涵蓋得到。網路不穩或冷啟動慢時，這會慢慢侵蝕老師的額度，
+    而且他完全看不出原因。
+    """
+    import asyncio
+
+    from models import Teacher
+    from services import scenario_dialogue_image as mod
+
+    teacher = db_session.query(Teacher).first()
+
+    async def cancelled(self, raw_prompt):
+        raise asyncio.CancelledError()
+
+    monkeypatch.setattr(mod.ScenarioDialogueImageService, "generate", cancelled)
+
+    # TestClient 會把中途取消包成別的例外（RuntimeError: No response returned.），
+    # 實際型別不是重點 —— 這裡在意的是 finally 有沒有跑到、額度有沒有還回去
+    try:
+        test_client.post(
+            IMAGE_URL, headers=auth_headers_teacher, json={"image_prompt": "a park"}
+        )
+    except BaseException:
+        pass
+
+    assert siq.get_quota_status(db_session, teacher)["used"] == 0
+
+
+def test_generate_generic_failure_refunds_quota(
+    test_client, auth_headers_teacher, db_session, monkeypatch
+):
+    """generate 丟一般例外（不是被擋、也不是參數錯）同樣要退款。"""
+    from models import Teacher
+    from services import scenario_dialogue_image as mod
+
+    teacher = db_session.query(Teacher).first()
+
+    async def boom(self, raw_prompt):
+        raise RuntimeError("vertex exploded")
+
+    monkeypatch.setattr(mod.ScenarioDialogueImageService, "generate", boom)
+
+    resp = test_client.post(
+        IMAGE_URL, headers=auth_headers_teacher, json={"image_prompt": "a park"}
+    )
+    assert resp.status_code == 502
+    assert siq.get_quota_status(db_session, teacher)["used"] == 0
+
+
+def test_style_hint_survives_a_very_long_prompt():
+    """原文接近上限時，風格提示不該被切掉半句。"""
+    from services.scenario_dialogue_image import build_image_prompt
+
+    prompt = build_image_prompt("a park " * 500)
+    assert prompt.endswith("no text or letters in the image.")
