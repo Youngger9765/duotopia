@@ -27,6 +27,8 @@ import { ProgramDialog } from "@/components/ProgramDialog";
 import { LessonDialog } from "@/components/LessonDialog";
 import CreateProgramDialog from "@/components/CreateProgramDialog";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
+import ScenarioDialogueEditorSheet from "@/components/ScenarioDialogueEditorSheet";
+import { useScenarioDialogueEditor } from "@/hooks/useScenarioDialogueEditor";
 import ReadingAssessmentPanel, {
   type ReadingAssessmentPanelHandle,
 } from "@/components/ReadingAssessmentPanel";
@@ -135,6 +137,11 @@ export default function ClassroomDetail({
   const location = useLocation();
   const { mode } = useWorkspace();
   const { sidebarWidth, setSidebarDisabled, editorBusy } = useSidebar();
+  // Issue #1014: 情境對話新增／編輯（state 與存檔都在 hook 裡，五個接線點共用）。
+  // 用箭頭包一層：hook 的呼叫位置在 fetchClassroomDetail 宣告之前。
+  const scenarioEditor = useScenarioDialogueEditor({
+    onSaved: () => fetchClassroomDetail(false),
+  });
   const isOrgMode = mode === "organization";
   const [classroom, setClassroom] = useState<ClassroomInfo | null>(null);
   const [templateProgram, setTemplateProgram] = useState<Program | null>(null);
@@ -202,9 +209,16 @@ export default function ClassroomDetail({
 
   // Disable sidebar when editor panels are open
   useEffect(() => {
-    setSidebarDisabled(showReadingEditor || showVocabularySetEditor);
+    setSidebarDisabled(
+      showReadingEditor || showVocabularySetEditor || scenarioEditor.isOpen,
+    );
     return () => setSidebarDisabled(false);
-  }, [showReadingEditor, showVocabularySetEditor, setSidebarDisabled]);
+  }, [
+    showReadingEditor,
+    showVocabularySetEditor,
+    scenarioEditor.isOpen,
+    setSidebarDisabled,
+  ]);
   const [vocabularySetLessonId, setVocabularySetLessonId] = useState<
     number | null
   >(null);
@@ -1129,6 +1143,12 @@ export default function ClassroomDetail({
         lessonName: content.lessonName,
       });
       setIsPanelOpen(true);
+    } else if (contentType === "scenario_dialogue") {
+      // Issue #1014: 編輯既有情境對話（hook 會先讀內容再開面板）。
+      // 必須擋在下面的通用 else 之前 —— 否則會落到不認得這個題型的舊面板。
+      void scenarioEditor.openForEdit(content.id, {
+        lessonId: content.lesson_id || null,
+      });
     } else {
       // For other content types, use the existing panel
       setSelectedContent(content);
@@ -1718,6 +1738,10 @@ export default function ClassroomDetail({
       setVocabularySetLessonId(selection.lessonId);
       setVocabularySetContentId(null); // null for new content
       setShowVocabularySetEditor(true);
+      setShowContentTypeDialog(false);
+    } else if (selection.type === "scenario_dialogue") {
+      // Issue #1014: 情境對話 — 新增模式
+      scenarioEditor.openForCreate({ lessonId: selection.lessonId });
       setShowContentTypeDialog(false);
     } else {
       // For other content types, create directly
@@ -3503,6 +3527,9 @@ export default function ClassroomDetail({
           lessonInfo={contentLessonInfo}
         />
       )}
+
+      {/* Issue #1014: 情境對話 Editor（新增／編輯 - 側滑） */}
+      <ScenarioDialogueEditorSheet editor={scenarioEditor} />
 
       {/* Reading Assessment Editor */}
       {showReadingEditor && editorLessonId && (
