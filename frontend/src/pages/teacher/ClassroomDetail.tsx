@@ -140,9 +140,15 @@ export default function ClassroomDetail({
   const { mode } = useWorkspace();
   const { sidebarWidth, setSidebarDisabled, editorBusy } = useSidebar();
   // Issue #1014: 情境對話新增／編輯（state 與存檔都在 hook 裡，五個接線點共用）。
-  // 用箭頭包一層：hook 的呼叫位置在 fetchClassroomDetail 宣告之前。
+  //
+  // Issue #1020: 存檔後要叫 refreshPrograms()，**不是** fetchClassroomDetail()。
+  // 兩者名字很像但做的事完全不同：fetchClassroomDetail 只抓班級清單再 setClassroom，
+  // 完全不碰 programs / lessons / contents，接錯的話存檔成功、面板也關了，教材列表
+  // 卻要手動重整才看得到新內容。本頁其他題型存檔後叫的也都是 refreshPrograms。
+  //
+  // 用箭頭包一層：hook 的呼叫位置在 refreshPrograms 宣告之前。
   const scenarioEditor = useScenarioDialogueEditor({
-    onSaved: () => fetchClassroomDetail(false),
+    onSaved: () => refreshPrograms(),
   });
   const isOrgMode = mode === "organization";
   const [classroom, setClassroom] = useState<ClassroomInfo | null>(null);
