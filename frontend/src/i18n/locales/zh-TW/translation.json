@@ -1990,7 +1990,8 @@
         "exampleSentenceRequired": "無法建立{{mode}}作業",
         "exampleSentenceRequiredDesc": "以下內容缺少例句或例句翻譯，請補齊後再派發：{{contents}}",
         "missingClozeAnswer": "缺少克漏字答案",
-        "missingClozeAnswerDesc": "以下單字集有單字尚未設定克漏字答案：{{contents}}。請先到單字集編輯內容、點擊單字或框選片語設定答案後再派發。"
+        "missingClozeAnswerDesc": "以下單字集有單字尚未設定克漏字答案：{{contents}}。請先到單字集編輯內容、點擊單字或框選片語設定答案後再派發。",
+        "contentTypeNotAssignable": "{{type}}目前還不能派發作業（學生端作答功能尚未開放）"
       },
       "warnings": {
         "quotaLow": "AI 分析額度不足",
@@ -2013,7 +2014,9 @@
         "speaking_practice": "口說練習",
         "speaking_scenario": "情境對話",
         "listening_cloze": "聽力填空",
-        "speaking_quiz": "口說測驗"
+        "speaking_quiz": "口說測驗",
+        "SCENARIO_DIALOGUE": "情境對話",
+        "scenario_dialogue": "情境對話"
       },
       "actions": {
         "viewPlans": "查看方案"

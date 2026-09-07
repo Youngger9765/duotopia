@@ -1829,7 +1829,8 @@
         "exampleSentenceRequired": "Cannot create {{mode}} assignment",
         "exampleSentenceRequiredDesc": "The following content is missing example sentences or translations: {{contents}}",
         "missingClozeAnswer": "Cloze answer required",
-        "missingClozeAnswerDesc": "These vocabulary sets are missing a cloze answer for some words: {{contents}}. Please open the vocabulary set and set an answer (click a word or select a phrase) before assigning."
+        "missingClozeAnswerDesc": "These vocabulary sets are missing a cloze answer for some words: {{contents}}. Please open the vocabulary set and set an answer (click a word or select a phrase) before assigning.",
+        "contentTypeNotAssignable": "{{type}} can't be assigned yet (student practice isn't available for it)"
       },
       "warnings": {
         "quotaLow": "AI analysis quota insufficient",
@@ -1852,7 +1853,9 @@
         "speaking_practice": "Speaking Practice",
         "speaking_scenario": "Speaking Scenario",
         "listening_cloze": "Listening Cloze",
-        "speaking_quiz": "Speaking Quiz"
+        "speaking_quiz": "Speaking Quiz",
+        "SCENARIO_DIALOGUE": "Scenario Dialogue",
+        "scenario_dialogue": "Scenario Dialogue"
       },
       "actions": {
         "viewPlans": "View Plans"

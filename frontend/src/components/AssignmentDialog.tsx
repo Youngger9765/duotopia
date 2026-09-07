@@ -61,6 +61,14 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { apiClient, ApiError } from "@/lib/api";
 import { toast } from "sonner";
+// Issue #1030: 型別判定抽到 lib 以便單元測試（本檔 3000 行、沒有測試檔）
+import {
+  isAssignableContentType,
+  isExampleSentencesType,
+  isVocabularySetType,
+  reasonNothingSelectable,
+  usesNativeDisabled,
+} from "@/lib/assignableContentType";
 import { cn } from "@/lib/utils";
 import { practiceModeLabelKey, type PracticeMode } from "@/lib/practiceMode";
 import {
@@ -175,16 +183,6 @@ interface ClassroomOption {
 // 處理新舊 ContentType 的相容性：
 // - READING_ASSESSMENT (legacy) → EXAMPLE_SENTENCES (new) - 例句集
 // - SENTENCE_MAKING (legacy) → VOCABULARY_SET (new) - 單字集
-
-const isExampleSentencesType = (type: string): boolean => {
-  const normalizedType = type?.toUpperCase();
-  return ["READING_ASSESSMENT", "EXAMPLE_SENTENCES"].includes(normalizedType);
-};
-
-const isVocabularySetType = (type: string): boolean => {
-  const normalizedType = type?.toUpperCase();
-  return ["SENTENCE_MAKING", "VOCABULARY_SET"].includes(normalizedType);
-};
 
 // Issue #800: cap vocabulary sets per assignment so students don't end up
 // with practice pools that feel endless. Two sets is roomy enough for a
@@ -989,8 +987,13 @@ export function AssignmentDialog({
 
   // 檢查內容是否可選（根據已選練習模式篩選）
   const isContentSelectable = (contentType: string): boolean => {
+    // Issue #1030: 先過「可不可以派發」的白名單。情境對話目前只能建立與編輯，
+    // 學生端作答與批改頁都還沒做（#1031）—— 未選模式時一律回 true 的話，它在
+    // 清單裡看起來完全可以勾，老師會派出一份學生答不了的作業。
+    if (!isAssignableContentType(contentType)) return false;
+
     const mode = formData.practice_mode;
-    if (!mode) return true; // 未選模式，全部可選
+    if (!mode) return true; // 未選模式，可派發的型別都可選
 
     // 例句模式（朗讀 / 重組）：例句集 + 單字集都可選（單字集用 example_sentence 出題）
     if (mode === "reading" || mode === "rearrangement") {
@@ -1031,12 +1034,23 @@ export function AssignmentDialog({
     // 檢查是否已選擇（如果已選擇，可以移除）
     const exists = cartItems.find((item) => item.contentId === contentId);
     if (!exists && !isContentSelectable(content.type)) {
-      // 單字模式下無法選擇例句集
-      toast.warning(
-        t("dialogs.assignmentDialog.errors.mixedContentType", {
-          type: t("dialogs.assignmentDialog.contentTypes.VOCABULARY_SET"),
-        }),
-      );
+      // Issue #1030: 兩種擋下的原因完全不同，訊息不能共用 ——
+      // 「這個題型還不能派」對老師來說是「別等了，先用別的」，
+      // 「模式與型別不合」則是「換個模式就可以」。
+      if (!isAssignableContentType(content.type)) {
+        toast.warning(
+          t("dialogs.assignmentDialog.errors.contentTypeNotAssignable", {
+            type: getContentTypeLabel(content.type, t),
+          }),
+        );
+      } else {
+        // 單字模式下無法選擇例句集
+        toast.warning(
+          t("dialogs.assignmentDialog.errors.mixedContentType", {
+            type: t("dialogs.assignmentDialog.contentTypes.VOCABULARY_SET"),
+          }),
+        );
+      }
       return;
     }
     // Issue #800: block adding a 3rd vocab set even if mode allows it.
@@ -1121,7 +1135,21 @@ export function AssignmentDialog({
     );
 
     if (selectableContents.length === 0) {
-      // 沒有可選擇的內容（都被類型限制）
+      // Issue #1030: 兩種「全都不能選」的原因要分開講 —— 整課都是還不能派發的題型時
+      // （例如整課只有情境對話），叫老師去換練習模式沒有用，換哪個模式都不會變。
+      if (
+        reasonNothingSelectable(lesson.contents.map((c) => c.type)) ===
+        "not_assignable"
+      ) {
+        toast.warning(
+          t("dialogs.assignmentDialog.errors.contentTypeNotAssignable", {
+            type: getContentTypeLabel(lesson.contents[0].type, t),
+          }),
+        );
+        return;
+      }
+
+      // 課裡有可派發的內容，只是與目前的模式／購物車型別不合 —— 換個模式就可以
       const cartCategory = getCartContentTypeCategory();
       const cartTypeName =
         cartCategory === "example_sentences"
@@ -2067,6 +2095,19 @@ export function AssignmentDialog({
                                                         isVocabularySetType(
                                                           content.type,
                                                         )));
+                                                  // Issue #1030: 原生 disabled 會
+                                                  // 吃掉 click，「這個題型還不能派」
+                                                  // 的提示就永遠出不來。灰掉但保持
+                                                  // 可點，由 toggleContent 說明。
+                                                  const notAssignable =
+                                                    !isAssignableContentType(
+                                                      content.type,
+                                                    );
+                                                  const nativeDisabled =
+                                                    usesNativeDisabled({
+                                                      disabled: isDisabled,
+                                                      notAssignable,
+                                                    });
                                                   return (
                                                     <button
                                                       key={content.id}
@@ -2078,7 +2119,7 @@ export function AssignmentDialog({
                                                           content,
                                                         )
                                                       }
-                                                      disabled={isDisabled}
+                                                      disabled={nativeDisabled}
                                                       className={cn(
                                                         "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
                                                         isSelected &&
@@ -2087,7 +2128,17 @@ export function AssignmentDialog({
                                                           !isDisabled &&
                                                           "hover:bg-gray-50",
                                                         isDisabled &&
-                                                          "opacity-40 cursor-not-allowed",
+                                                          "opacity-40",
+                                                        // Issue #1030: 「還不能派」
+                                                        // 的卡片是可以點的（點了才
+                                                        // 會說明原因），游標不能寫
+                                                        // 「不可點」自打嘴巴
+                                                        isDisabled &&
+                                                          nativeDisabled &&
+                                                          "cursor-not-allowed",
+                                                        isDisabled &&
+                                                          !nativeDisabled &&
+                                                          "cursor-help",
                                                       )}
                                                     >
                                                       {isSelected ? (
@@ -2323,6 +2374,17 @@ export function AssignmentDialog({
                                                           isVocabularySetType(
                                                             content.type,
                                                           )));
+                                                    // Issue #1030: 原生 disabled
+                                                    // 會吃掉 click，說明就出不來
+                                                    const notAssignable =
+                                                      !isAssignableContentType(
+                                                        content.type,
+                                                      );
+                                                    const nativeDisabled =
+                                                      usesNativeDisabled({
+                                                        disabled: isDisabled,
+                                                        notAssignable,
+                                                      });
                                                     return (
                                                       <button
                                                         key={content.id}
@@ -2334,7 +2396,9 @@ export function AssignmentDialog({
                                                             content,
                                                           )
                                                         }
-                                                        disabled={isDisabled}
+                                                        disabled={
+                                                          nativeDisabled
+                                                        }
                                                         className={cn(
                                                           "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
                                                           isSelected &&
@@ -2343,7 +2407,15 @@ export function AssignmentDialog({
                                                             !isDisabled &&
                                                             "hover:bg-gray-50",
                                                           isDisabled &&
-                                                            "opacity-40 cursor-not-allowed",
+                                                            "opacity-40",
+                                                          // Issue #1030: 可點的卡片
+                                                          // 不能用「不可點」游標
+                                                          isDisabled &&
+                                                            nativeDisabled &&
+                                                            "cursor-not-allowed",
+                                                          isDisabled &&
+                                                            !nativeDisabled &&
+                                                            "cursor-help",
                                                         )}
                                                       >
                                                         {isSelected ? (
@@ -2584,6 +2656,19 @@ export function AssignmentDialog({
                                                         isVocabularySetType(
                                                           content.type,
                                                         )));
+                                                  // Issue #1030: 原生 disabled 會
+                                                  // 吃掉 click，「這個題型還不能派」
+                                                  // 的提示就永遠出不來。灰掉但保持
+                                                  // 可點，由 toggleContent 說明。
+                                                  const notAssignable =
+                                                    !isAssignableContentType(
+                                                      content.type,
+                                                    );
+                                                  const nativeDisabled =
+                                                    usesNativeDisabled({
+                                                      disabled: isDisabled,
+                                                      notAssignable,
+                                                    });
                                                   return (
                                                     <button
                                                       key={content.id}
@@ -2595,7 +2680,7 @@ export function AssignmentDialog({
                                                           content,
                                                         )
                                                       }
-                                                      disabled={isDisabled}
+                                                      disabled={nativeDisabled}
                                                       className={cn(
                                                         "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
                                                         isSelected &&
@@ -2604,7 +2689,17 @@ export function AssignmentDialog({
                                                           !isDisabled &&
                                                           "hover:bg-gray-50",
                                                         isDisabled &&
-                                                          "opacity-40 cursor-not-allowed",
+                                                          "opacity-40",
+                                                        // Issue #1030: 「還不能派」
+                                                        // 的卡片是可以點的（點了才
+                                                        // 會說明原因），游標不能寫
+                                                        // 「不可點」自打嘴巴
+                                                        isDisabled &&
+                                                          nativeDisabled &&
+                                                          "cursor-not-allowed",
+                                                        isDisabled &&
+                                                          !nativeDisabled &&
+                                                          "cursor-help",
                                                       )}
                                                     >
                                                       {isSelected ? (
@@ -2893,11 +2988,11 @@ export function AssignmentDialog({
           {/* Step 1: Practice Mode Settings */}
           {currentStep === 1 &&
             (() => {
-              const dataset =
-                getCartContentTypeCategory() === "example_sentences"
-                  ? "example_sentences"
-                  : "vocabulary_set";
-              const modeList = listModesForDataset(dataset);
+              // Issue #1030: 不要用「不是例句集就是單字集」的二分法 —— 未知型別會被
+              // 默默當成單字集，然後顯示一整排單字模式（情境對話就是這樣中招的）。
+              // 購物車現在只可能有可派發的型別，null 代表空車，此時不列模式。
+              const dataset = getCartContentTypeCategory();
+              const modeList = dataset ? listModesForDataset(dataset) : [];
               const currentConfig = formData.practice_mode
                 ? getModeConfig(formData.practice_mode)
                 : undefined;
