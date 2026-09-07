@@ -58,6 +58,10 @@ _PRICING_USD_PER_1M = {
     FLASH_MODEL: {"input": 0.30, "output": 2.50},
 }
 
+# 翻譯語言的長度上限。這個欄位**不能**用白名單擋 —— 老師選「其他」時存的是他自己打的
+# 語言名字（#1016），白名單會直接把那個功能弄壞。所以改成「限長 + 壓成單行」。
+MAX_TRANSLATE_LANGUAGE_CHARS = 50
+
 # 動貌代碼 → 英文描述。camelCase 的 perfectProgressive 要拆成兩個字，
 # 直接丟給模型看會讓它以為是專有名詞。
 _ASPECT_WORDS = {
@@ -99,6 +103,22 @@ def describe_voice(voice: Optional[str]) -> str:
     if value not in VOICES:
         raise ScenarioDialogueAIError(f"語態不是合法代碼：{value!r}")
     return f"{value} voice"
+
+
+def sanitize_free_text(value: Optional[str], max_chars: int) -> str:
+    """自由文字進 prompt 前的收斂：壓成單行 + 限長。
+
+    情境對話裡大部分欄位存的都是穩定代碼（時態／語態／CEFR），進 prompt 前會被翻譯或
+    驗證；只有翻譯語言的「其他」是老師自己打的自由文字（#1016），沒有白名單可用。
+    換行會被吃掉是因為 prompt 是靠換行分段的 —— 留著換行等於讓這個欄位可以改寫 prompt
+    結構。內容本身保留（不是靜靜整段丟掉），只是壓成一行。
+    """
+    text = (value or "").strip()
+    if not text:
+        return ""
+    # 換行、tab 等控制字元一律壓成空白
+    text = re.sub(r"\s+", " ", text)
+    return text[:max_chars]
 
 
 class ScenarioDialogueAIService:
@@ -194,7 +214,7 @@ class ScenarioDialogueAIService:
         tense_text = describe_tense(global_tense)
         voice_text = describe_voice(global_voice)
         rubric = (global_rubric or "").strip()
-        language = (translate_language or "").strip()
+        language = sanitize_free_text(translate_language, MAX_TRANSLATE_LANGUAGE_CHARS)
 
         lines = [
             f"Write {count} spoken-response questions about the scenario below.",

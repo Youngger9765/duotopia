@@ -233,3 +233,64 @@ def test_extract_article_rejects_bad_type(test_client, auth_headers_teacher):
         EXTRACT_URL, headers=auth_headers_teacher, files={"file": bad}
     )
     assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------- payload 上限
+#
+# 這一版沒有配額（見 #1025），送進 prompt 的東西越大成本越高，所以先用寬鬆但有界的
+# 上限擋住異常 payload。上限都遠大於面板正常能填出來的量，老師不會撞到。
+
+
+def test_goal_too_long_is_rejected(test_client, auth_headers_teacher, captured):
+    resp = test_client.post(
+        ARTICLE_URL,
+        headers=auth_headers_teacher,
+        json={"goal": "目" * 2000},
+    )
+    assert resp.status_code == 422
+    assert "article" not in captured  # 沒有進到服務層 = 沒有花掉一次 AI 呼叫
+
+
+def test_scenario_content_too_long_is_rejected(
+    test_client, auth_headers_teacher, captured
+):
+    resp = test_client.post(
+        QUESTIONS_URL,
+        headers=auth_headers_teacher,
+        json={"scenario_content": "x" * 20000, "count": 5},
+    )
+    assert resp.status_code == 422
+    assert "questions" not in captured
+
+
+def test_too_many_existing_questions_is_rejected(
+    test_client, auth_headers_teacher, captured
+):
+    resp = test_client.post(
+        QUESTIONS_URL,
+        headers=auth_headers_teacher,
+        json={
+            "scenario_content": "S",
+            "count": 5,
+            "existing_questions": [f"Q{i}" for i in range(100)],
+        },
+    )
+    assert resp.status_code == 422
+    assert "questions" not in captured
+
+
+def test_normal_sized_payload_still_passes(test_client, auth_headers_teacher, captured):
+    """上限是防呆不是限制：面板填得出來的量都要過得去。"""
+    resp = test_client.post(
+        QUESTIONS_URL,
+        headers=auth_headers_teacher,
+        json={
+            "scenario_content": "It is Monday morning. " * 100,  # 約 2200 字
+            "count": 10,
+            "global_rubric": "請用完整句子回答。" * 20,
+            "translate_language": "西班牙文",
+            "existing_questions": [f"Question {i}?" for i in range(10)],
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    assert captured["questions"]["translate_language"] == "西班牙文"

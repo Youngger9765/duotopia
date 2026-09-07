@@ -12,7 +12,7 @@
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Annotated, Dict, List, Optional
 
 from fastapi import (
     APIRouter,
@@ -22,7 +22,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, StringConstraints
 
 from models import Teacher
 
@@ -38,25 +38,41 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/teachers/scenario-dialogue", tags=["scenario-dialogue"])
 
 
+# 各欄位的長度上限。這一版沒有配額（見 #1025），送進 prompt 的東西越大成本越高，
+# 所以先用寬鬆但有界的上限擋住異常 payload —— 數字都遠大於面板正常能填出來的量，
+# 老師不會撞到。
+MAX_GOAL_CHARS = 1000
+MAX_SCENARIO_CHARS = 8000
+MAX_RUBRIC_CHARS = 2000
+MAX_LANGUAGE_CHARS = 50
+MAX_LEVEL_CHARS = 10
+MAX_EXISTING_QUESTIONS = 20
+MAX_EXISTING_QUESTION_CHARS = 1000
+
+
 class GenerateArticleRequest(BaseModel):
     """訓練目標是必填 —— 沒有它就是舊 stub 那種與老師無關的產出。"""
 
-    goal: str
+    goal: str = Field(max_length=MAX_GOAL_CHARS)
     # 文章難度，空字串 = 不指定（CEFR 代碼，服務層驗證）
-    level: str = ""
+    level: str = Field(default="", max_length=MAX_LEVEL_CHARS)
 
 
 class GenerateQuestionsRequest(BaseModel):
-    scenario_content: str
+    scenario_content: str = Field(max_length=MAX_SCENARIO_CHARS)
     count: int
-    question_level: str = ""
+    question_level: str = Field(default="", max_length=MAX_LEVEL_CHARS)
     # 穩定代碼，例如 {"time": "past", "aspect": "simple"}；服務層會翻成英文描述
     global_tense: Optional[Dict[str, str]] = None
-    global_voice: str = ""
-    global_rubric: str = ""
-    translate_language: str = ""
-    # 已經在清單上的題目，避免「再產一批」給出重複的
-    existing_questions: List[str] = []
+    global_voice: str = Field(default="", max_length=MAX_LEVEL_CHARS)
+    global_rubric: str = Field(default="", max_length=MAX_RUBRIC_CHARS)
+    # 「其他」語言存的是老師自己打的名字（#1016），不能用白名單；服務層會再壓成單行
+    translate_language: str = Field(default="", max_length=MAX_LANGUAGE_CHARS)
+    # 已經在清單上的題目，避免「再產一批」給出重複的。
+    # 上限比 MAX_ITEMS（10）寬一點，避免老師剛好卡在邊界時整個請求被擋掉。
+    existing_questions: List[
+        Annotated[str, StringConstraints(max_length=MAX_EXISTING_QUESTION_CHARS)]
+    ] = Field(default_factory=list, max_length=MAX_EXISTING_QUESTIONS)
 
 
 def _bad_request(exc: ScenarioDialogueAIError) -> HTTPException:
