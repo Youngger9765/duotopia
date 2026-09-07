@@ -232,7 +232,11 @@ def resolve_effective_voice(
     """本題實際生效的語態。``voice_override is None`` → 取整體。"""
     override = (item_block or {}).get("voice_override")
     if override is None:
-        return (settings or {}).get("global_voice") or ""
+        # 用 is None 而不是 `or ""`：本模組自己的規則就是「不可用 truthiness 折疊」，
+        # 今天 global_voice 的合法值恰好只有 active / passive / ""，但哪天多一個
+        # falsy 的值，`or` 會把它靜靜地當成沒設定。
+        global_voice = (settings or {}).get("global_voice")
+        return "" if global_voice is None else global_voice
     return override
 
 
@@ -261,6 +265,19 @@ def public_settings_view(settings: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "global_rubric": settings.get("global_rubric", ""),
         "translate_language": settings.get("translate_language", ""),
     }
+
+
+def copy_settings(value: Any) -> Optional[Dict[str, Any]]:
+    """複製整份設定，給「內容副本」路徑使用（作業副本／即刻練習／教材複製）。
+
+    副本一定要帶著整份設定走：逐題的 ``tense_override=None`` 是「沿用整體」，副本沒有
+    整體可沿用的話，同一題在副本裡的生效時態就會跟原本不一樣。
+
+    非 dict（含 ``None``、其他題型）一律回 ``None``。淺拷貝即可 —— 這份 dict 只有一層
+    巢狀（``global_tense`` / ``tts_settings``），而它們在正規化之後就不再被就地修改，
+    每次寫入都是整包換新。
+    """
+    return dict(value) if isinstance(value, dict) else None
 
 
 def validate_item_count(count: int) -> None:

@@ -486,6 +486,33 @@ class TestScenarioDialogueAPI:
         resp = _create(test_client, auth_token, items=items)
         assert resp.status_code == 400
 
+    @pytest.mark.parametrize("count", [2, 11])
+    def test_item_count_enforced_on_update(
+        self, test_client: TestClient, auth_token, count
+    ):
+        """題數上下限在 update 路徑同樣要擋（PR #1016 review 指出的覆蓋缺口）。
+
+        只擋新增的話，老師建好 5 題再刪到剩 1 題就繞過了 #864 的下限。
+        """
+        content_id = _create(test_client, auth_token).json()["id"]
+
+        resp = test_client.put(
+            f"/api/teachers/contents/{content_id}",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "title": "改題數",
+                "items": [{"text": f"Q{i}"} for i in range(count)],
+            },
+        )
+        assert resp.status_code == 400
+
+        # 擋下之後既有題目要原封不動
+        detail = test_client.get(
+            f"/api/teachers/contents/{content_id}",
+            headers={"Authorization": f"Bearer {auth_token}"},
+        ).json()
+        assert len(detail["items"]) == 3
+
     def test_rejects_chinese_tense_label(self, test_client: TestClient, auth_token):
         """介面語言不該影響存進去的值；中文標籤代表前端串錯，直接擋下。"""
         payload = _payload()

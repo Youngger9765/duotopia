@@ -34,6 +34,7 @@ from utils.permissions import check_content_access
 from utils.practice_mode import validate_practice_mode
 from utils.score_category import resolve_score_category
 from .dependencies import get_current_teacher
+from utils import scenario_dialogue as sd
 
 logger = logging.getLogger(__name__)
 
@@ -195,11 +196,7 @@ async def create_instant_practice(
         tags=content.tags.copy() if content.tags else [],
         is_public=False,
         # Issue #1013: 同 crud.py，情境對話整份設定要跟著副本走
-        scenario_settings=(
-            dict(content.scenario_settings)
-            if isinstance(content.scenario_settings, dict)
-            else None
-        ),
+        scenario_settings=sd.copy_settings(content.scenario_settings),
         is_assignment_copy=True,
         source_content_id=content.id,
     )
