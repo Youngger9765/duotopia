@@ -535,10 +535,6 @@ function TeacherTemplateProgramsInner() {
       } else {
         throw new Error("scenario dialogue: no lesson/program/content target");
       }
-
-      toast.success(t("contentEditor.messages.savingSuccess"));
-      closeScenarioDialogueEditor();
-      await fetchTemplatePrograms();
     } catch (error) {
       console.error("Failed to save scenario dialogue content:", error);
       toast.error(t("contentEditor.messages.savingFailed"));
@@ -546,6 +542,14 @@ function TeacherTemplateProgramsInner() {
     } finally {
       setScenarioSaving(false);
     }
+
+    // 存檔已經成功 —— 以下任何失敗都不可以再回報成「存檔失敗」。
+    // fetchTemplatePrograms 目前自己吞掉錯誤（不會 reject），但把它留在上面的
+    // try 裡等於哪天它改成會拋，老師就會在資料其實已經存好、面板也關掉之後，
+    // 看到一句「儲存失敗」而且無從重試（PR #1016 review）。
+    toast.success(t("contentEditor.messages.savingSuccess"));
+    closeScenarioDialogueEditor();
+    await fetchTemplatePrograms();
   };
 
   const handleContentClick = (

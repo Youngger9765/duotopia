@@ -10,6 +10,8 @@ import { describe, it, expect } from "vitest";
 import {
   toScenarioSavePayload,
   fromScenarioContentDetail,
+  toStoredTranslateLanguage,
+  fromStoredTranslateLanguage,
   type ScenarioSaveInput,
 } from "../scenarioDialogue";
 
@@ -384,5 +386,57 @@ describe("存檔 → 回填 round trip", () => {
     ]);
     expect(state.globalTense).toEqual(input.globalTense);
     expect(state.scenarioContent).toBe(input.scenarioContent);
+  });
+});
+
+/**
+ * 「其他」語言（PR #1016 review round 3）
+ *
+ * 老師選「其他」時，真正的語言名字在另一個 state（customLang）裡。只送 "other"
+ * 的話，存進去的是一個沒有意義的字串，重開編輯也還原不出來 —— 而且沒有任何錯誤。
+ */
+describe("翻譯語言的「其他」不可遺失", () => {
+  it("選內建語言時原樣送出", () => {
+    expect(toStoredTranslateLanguage("chinese", "")).toBe("chinese");
+    expect(toStoredTranslateLanguage("japanese", "西班牙文")).toBe("japanese");
+  });
+
+  it("選「其他」時送出老師打的語言名字，而不是字面的 other", () => {
+    expect(toStoredTranslateLanguage("other", "  西班牙文 ")).toBe("西班牙文");
+  });
+
+  it("選了「其他」卻沒打字時退回 other，至少保留這個選擇", () => {
+    expect(toStoredTranslateLanguage("other", "   ")).toBe("other");
+  });
+
+  it("沒選語言時是空字串（＝沒有要翻譯）", () => {
+    expect(toStoredTranslateLanguage("", "")).toBe("");
+  });
+
+  it("回填：內建語言原樣還原，自訂語言還原成 other + 自訂欄位", () => {
+    expect(fromStoredTranslateLanguage("korean")).toEqual({
+      selected: "korean",
+      custom: "",
+    });
+    expect(fromStoredTranslateLanguage("西班牙文")).toEqual({
+      selected: "other",
+      custom: "西班牙文",
+    });
+    expect(fromStoredTranslateLanguage("other")).toEqual({
+      selected: "other",
+      custom: "",
+    });
+    expect(fromStoredTranslateLanguage("")).toEqual({
+      selected: "",
+      custom: "",
+    });
+  });
+
+  it("存檔 → 回填 round trip 拿得回同一個自訂語言", () => {
+    const stored = toStoredTranslateLanguage("other", "西班牙文");
+    expect(fromStoredTranslateLanguage(stored)).toEqual({
+      selected: "other",
+      custom: "西班牙文",
+    });
   });
 });

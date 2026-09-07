@@ -113,7 +113,9 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   EMPTY_TENSE,
   createScenarioRow as createRow,
+  fromStoredTranslateLanguage,
   nextRowId,
+  toStoredTranslateLanguage,
   type ScenarioDialogueInitialState,
   type ScenarioDialogueRow,
   type ScenarioSaveInput,
@@ -941,14 +943,16 @@ const ScenarioDialoguePanel = forwardRef<
   const scenarioRef = useRef<HTMLTextAreaElement>(null);
 
   // AI 自動翻譯 / AI 生成語音（共用元件）。與例句集一致：預設都不勾，語言也不預選
-  // 編輯既有內容時，存過語言／語音設定就代表當初有勾，勾選狀態跟著回來
+  // 編輯既有內容時，存過語言／語音設定就代表當初有勾，勾選狀態跟著回來。
+  // 語言存的是單一值，「其他」的自訂名字要拆回旁邊那個欄位（見 lib 的說明）。
+  const initialTranslate = fromStoredTranslateLanguage(
+    initialData?.translateLanguage ?? "",
+  );
   const [autoTranslate, setAutoTranslate] = useState(
     !!initialData?.translateLanguage,
   );
-  const [translateLang, setTranslateLang] = useState(
-    initialData?.translateLanguage ?? "",
-  );
-  const [customLang, setCustomLang] = useState("");
+  const [translateLang, setTranslateLang] = useState(initialTranslate.selected);
+  const [customLang, setCustomLang] = useState(initialTranslate.custom);
   const [autoTTS, setAutoTTS] = useState(!!initialData?.ttsSettings);
   const [ttsSettings, setTTSSettings] = useState<TTSSettingsState>(
     initialData?.ttsSettings ?? {
@@ -1215,7 +1219,8 @@ const ScenarioDialoguePanel = forwardRef<
       globalRubric,
       globalTense,
       globalVoice,
-      translateLanguage: translateLang,
+      // 選「其他」時送老師打的語言名字，不是字面的 "other"（會整個丟掉）
+      translateLanguage: toStoredTranslateLanguage(translateLang, customLang),
       ttsSettings,
     });
   };

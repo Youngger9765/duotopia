@@ -216,6 +216,46 @@ export const createScenarioRow = (
   ...overrides,
 });
 
+/**
+ * 面板翻譯語言下拉的選項值，與 `ScenarioDialoguePanel` 的 `TRANSLATION_LANGUAGES`
+ * 一一對應（改一邊要改另一邊）。`other` 代表「語言名字在旁邊那個自訂欄位裡」。
+ */
+export const TRANSLATION_LANGUAGE_VALUES = [
+  "chinese",
+  "japanese",
+  "korean",
+  "other",
+] as const;
+
+/**
+ * 面板的（下拉選擇 + 自訂欄位）→ 存進 `scenario_settings.translate_language` 的單一值。
+ *
+ * 選「其他」時存的是老師真的打的語言名字，**不是**字面的 `"other"` —— 存 `"other"`
+ * 等於把語言丟掉：重開編輯還原不出來，送去翻譯的一方也不知道要翻成什麼，而且全程
+ * 沒有任何錯誤訊息（PR #1016 review）。選了「其他」卻沒打字則退回 `"other"`，
+ * 至少把「老師選過其他」這件事留住。
+ */
+export function toStoredTranslateLanguage(
+  selected: string,
+  custom: string,
+): string {
+  if (selected !== "other") return text(selected);
+  return text(custom).trim() || "other";
+}
+
+/** 上面那個的反向：存下來的單一值 → 面板的（下拉選擇 + 自訂欄位）。 */
+export function fromStoredTranslateLanguage(stored: string): {
+  selected: string;
+  custom: string;
+} {
+  const value = text(stored);
+  if (!value) return { selected: "", custom: "" };
+  // 認得的選項值原樣還原；其餘一律視為自訂語言
+  return (TRANSLATION_LANGUAGE_VALUES as readonly string[]).includes(value)
+    ? { selected: value, custom: "" }
+    : { selected: "other", custom: value };
+}
+
 /** 時態正規化。`null`／`undefined` 一律保持 `null`（＝沿用整體），不可填成空物件 */
 const toTensePayload = (tense: TenseSetting | null | undefined) =>
   tense == null ? null : { time: text(tense.time), aspect: text(tense.aspect) };
