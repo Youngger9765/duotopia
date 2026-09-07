@@ -384,3 +384,34 @@ def test_style_hint_survives_a_very_long_prompt():
 
     prompt = build_image_prompt("a park " * 500)
     assert prompt.endswith("no text or letters in the image.")
+
+
+def test_refund_targets_the_month_that_was_charged(
+    test_client, auth_headers_teacher, db_session, monkeypatch
+):
+    """跨 UTC 午夜時，要退回「當初扣的那個月」而不是退到新的月份。
+
+    Imagen 慢起來可能跨過月底：扣在 A 月、退到 B 月的話，A 月永遠少一格、B 月憑空
+    多一格（PR #1027 review round 3）。這裡讓 consume 與 refund 之間「換月」來驗。
+    """
+    from models import Teacher
+    from services import scenario_dialogue_image as mod
+
+    teacher = db_session.query(Teacher).first()
+    months = iter(["2026-01", "2026-02", "2026-02", "2026-02"])
+    monkeypatch.setattr(siq, "current_year_month", lambda: next(months, "2026-02"))
+
+    async def boom(self, raw_prompt):
+        raise RuntimeError("slow call that straddles midnight")
+
+    monkeypatch.setattr(mod.ScenarioDialogueImageService, "generate", boom)
+
+    resp = test_client.post(
+        IMAGE_URL, headers=auth_headers_teacher, json={"image_prompt": "a park"}
+    )
+    assert resp.status_code == 502
+
+    # 扣在 1 月就要退回 1 月
+    assert siq.get_quota_status(db_session, teacher, year_month="2026-01")["used"] == 0
+    # 2 月不該憑空被動到
+    assert siq.get_quota_status(db_session, teacher, year_month="2026-02")["used"] == 0

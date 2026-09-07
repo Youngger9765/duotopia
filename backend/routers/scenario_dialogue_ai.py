@@ -74,7 +74,9 @@ class GenerateArticleRequest(BaseModel):
 class GenerateImageRequest(BaseModel):
     """逐題生圖。`image_prompt` 已經存在 item_metadata 裡（#1013），前端直接帶回來。"""
 
-    image_prompt: str = Field(max_length=MAX_IMAGE_PROMPT_CHARS)
+    # min_length 讓空白描述在進到配額之前就被擋掉 —— 佔一次額度再退雖然結果正確，
+    # 但白跑兩趟 DB（PR #1027 review round 3）
+    image_prompt: str = Field(min_length=1, max_length=MAX_IMAGE_PROMPT_CHARS)
 
 
 class GenerateQuestionsRequest(BaseModel):
@@ -186,7 +188,11 @@ def image_quota(
     current_teacher: Teacher = Depends(get_current_teacher),
     db: Session = Depends(get_db),
 ):
-    """本月生圖剩餘次數（Issue #1024）。前端用來顯示，也用來決定要不要先擋。"""
+    """本月生圖剩餘次數（Issue #1024）。
+
+    **目前前端沒有呼叫它** —— 每次點生圖都是直接送出、額度用完由後端回 402。這支是
+    給 #1025（配額 UI：顯示「本月還剩 N 張」）預留的查詢面，先做好並有測試涵蓋。
+    """
     return siq.get_quota_status(db, current_teacher)
 
 
@@ -259,6 +265,10 @@ async def generate_image(
             "quota": charge,
         }
     finally:
-        # 沒把圖交到老師手上就退款（被擋、失敗、中途取消都算）
+        # 沒把圖交到老師手上就退款（被擋、失敗、中途取消都算）。
+        #
+        # 一定要用 charge["year_month"] 而不是讓 refund 自己重算：Imagen 慢起來可能
+        # 跨過 UTC 午夜，扣在 A 月、退到 B 月的話 A 月永遠少一格、B 月憑空多一格
+        # （PR #1027 review round 3）
         if not delivered:
-            siq.refund(db, current_teacher)
+            siq.refund(db, current_teacher, year_month=charge["year_month"])

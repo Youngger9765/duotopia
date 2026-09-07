@@ -1255,19 +1255,6 @@ class ApiClient {
     });
   }
 
-  /** 本月生圖剩餘次數（Issue #1024） */
-  async getScenarioImageQuota(): Promise<{
-    year_month: string;
-    limit: number;
-    used: number;
-    remaining: number;
-    can_use: boolean;
-  }> {
-    return this.request("/api/teachers/scenario-dialogue/image-quota", {
-      method: "GET",
-    });
-  }
-
   /**
    * 從老師上傳的圖片 / PDF 擷取情境文章（一次一個檔）。
    *
