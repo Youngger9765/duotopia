@@ -248,28 +248,19 @@ describe("ContentTypeDialog", () => {
   });
 
   /**
-   * #944：ContentTypeDialog 被五個頁面共用，但只有「我的教材」接了
-   * ScenarioDialoguePanel。這個開關讓還沒接面板的頁面維持停用，
-   * 避免點下去靜靜地什麼都不發生。
+   * #944 加了 enableScenarioDialogue 當暫時的擋板（只有「我的教材」接了面板，
+   * 其餘頁面維持停用）。#1014 把五個接線點都接上之後開關已移除，情境對話對所有
+   * 頁面一律可選 —— 這裡釘住「不會有人再把它改回預設停用」。
    */
-  describe("情境對話開關（#944 enableScenarioDialogue）", () => {
+  describe("情境對話（#1014 移除 enableScenarioDialogue 開關）", () => {
     const card = () =>
       screen.getByTestId("content-type-card-scenario_dialogue");
 
-    it("預設停用：不可聚焦、點了不會觸發 onSelect", () => {
+    it("不需要任何開關就可以選，並帶出正確的 type", () => {
       renderComponent();
 
-      expect(card()).toHaveAttribute("aria-disabled", "true");
-      expect(card()).toHaveAttribute("tabindex", "-1");
-
-      fireEvent.click(card());
-      expect(mockOnSelect).not.toHaveBeenCalled();
-    });
-
-    it("打開後才可以選，並帶出正確的 type", () => {
-      renderComponent(true, lessonInfo, { enableScenarioDialogue: true });
-
       expect(card()).toHaveAttribute("aria-disabled", "false");
+      expect(card()).not.toHaveAttribute("tabindex", "-1");
 
       fireEvent.click(card());
       expect(mockOnSelect).toHaveBeenCalledWith(

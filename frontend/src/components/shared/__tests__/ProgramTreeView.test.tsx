@@ -1,8 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import {
+  render as rtlRender,
+  screen,
+  waitFor,
+  type RenderOptions,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { ProgramTreeView } from "../ProgramTreeView";
 import { ProgramTreeProgram } from "@/hooks/useProgramTree";
+import { SidebarProvider } from "@/contexts/SidebarContext";
+
+/**
+ * Issue #1014: 一律包 SidebarProvider。
+ *
+ * 樹狀元件開出來的內容編輯器（RefSaveButton 與各面板）都會呼叫 useSidebar()，
+ * 沒有 provider 會直接丟 "useSidebar must be used within a SidebarProvider" ——
+ * 這裡有 5 個測試原本就是紅的。真實的頁面樹現在也一定有這個 provider
+ * （TeacherLayout 本來就有，OrganizationLayout 於 #1014 補上），所以測試包一層
+ * 才是與實際渲染一致的做法。
+ */
+const render = (ui: ReactElement, options?: RenderOptions) =>
+  rtlRender(ui, { wrapper: SidebarProvider, ...options });
 
 // Mock API functions
 const mockCreateProgram = vi.fn();

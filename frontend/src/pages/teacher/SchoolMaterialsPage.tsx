@@ -5,6 +5,8 @@ import { programTreeConfig } from "@/components/shared/programTreeConfig";
 import { ProgramDialog } from "@/components/ProgramDialog";
 import { LessonDialog } from "@/components/LessonDialog";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
+import ScenarioDialogueEditorSheet from "@/components/ScenarioDialogueEditorSheet";
+import { useScenarioDialogueEditor } from "@/hooks/useScenarioDialogueEditor";
 import ReadingAssessmentPanel, {
   type ReadingAssessmentPanelHandle,
 } from "@/components/ReadingAssessmentPanel";
@@ -25,6 +27,11 @@ export default function SchoolMaterialsPage() {
   const { t } = useTranslation();
   const { selectedSchool, selectedOrganization, mode } = useWorkspace();
   const { sidebarWidth, setSidebarDisabled, editorBusy } = useSidebar();
+  // Issue #1014: 情境對話新增／編輯（state 與存檔都在 hook 裡，五個接線點共用）。
+  // 用箭頭包一層：hook 的呼叫位置在 fetchSchoolPrograms 宣告之前。
+  const scenarioEditor = useScenarioDialogueEditor({
+    onSaved: () => fetchSchoolPrograms(),
+  });
   const isOrgMode = mode === "organization";
 
   const readingPanelRef = useRef<ReadingAssessmentPanelHandle>(null);
@@ -68,9 +75,16 @@ export default function SchoolMaterialsPage() {
 
   // Disable sidebar when editor panels are open
   useEffect(() => {
-    setSidebarDisabled(showReadingEditor || showVocabularySetEditor);
+    setSidebarDisabled(
+      showReadingEditor || showVocabularySetEditor || scenarioEditor.isOpen,
+    );
     return () => setSidebarDisabled(false);
-  }, [showReadingEditor, showVocabularySetEditor, setSidebarDisabled]);
+  }, [
+    showReadingEditor,
+    showVocabularySetEditor,
+    scenarioEditor.isOpen,
+    setSidebarDisabled,
+  ]);
   const [vocabularySetLessonId, setVocabularySetLessonId] = useState<
     number | null
   >(null);
@@ -261,6 +275,11 @@ export default function SchoolMaterialsPage() {
       setVocabularySetLessonId(content.lesson_id || null);
       setVocabularySetContentId(content.id);
       setShowVocabularySetEditor(true);
+    } else if (contentType === "scenario_dialogue") {
+      // Issue #1014: 編輯既有情境對話（hook 會先讀內容再開面板）
+      void scenarioEditor.openForEdit(content.id, {
+        lessonId: content.lesson_id || null,
+      });
     }
   };
 
@@ -1014,6 +1033,11 @@ export default function SchoolMaterialsPage() {
                 setVocabularySetLessonId(selection.lessonId);
                 setVocabularySetContentId(null); // null for new content
                 setShowVocabularySetEditor(true);
+              } else if (selection.type === "scenario_dialogue") {
+                // Issue #1014: 情境對話 — 新增模式
+                scenarioEditor.openForCreate({
+                  lessonId: selection.lessonId,
+                });
               } else {
                 toast.info(
                   `${t("teacherTemplatePrograms.messages.featureInDevelopment", { type: selection.type })}`,
@@ -1022,6 +1046,9 @@ export default function SchoolMaterialsPage() {
             }}
           />
         )}
+
+        {/* Issue #1014: 情境對話 Editor（新增／編輯 - 側滑） */}
+        <ScenarioDialogueEditorSheet editor={scenarioEditor} />
 
         {/* Content Download Sheet (vocabulary_set worksheet PDF) */}
         <ContentDownloadSheet

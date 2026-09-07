@@ -10,6 +10,7 @@ import {
   useOrganization,
 } from "@/contexts/OrganizationContext";
 import { OrganizationTree } from "@/components/organization/OrganizationTree";
+import { SidebarProvider } from "@/contexts/SidebarContext";
 import { API_URL } from "@/config/api";
 
 interface OrganizationLayoutProps {
@@ -267,7 +268,17 @@ function OrganizationLayoutContent({ children }: OrganizationLayoutProps) {
 export default function OrganizationLayout(props: OrganizationLayoutProps) {
   return (
     <OrganizationProvider>
-      <OrganizationLayoutContent {...props} />
+      {/*
+       * Issue #1014: 機構頁面底下的內容編輯器（ProgramTreeView 開出來的
+       * ReadingAssessmentPanel / VocabularySetPanel / ScenarioDialoguePanel 與
+       * RefSaveButton）都會呼叫 useSidebar()，沒有 provider 會直接丟
+       * "useSidebar must be used within a SidebarProvider" 讓整頁白畫面
+       * —— 這在本單之前就已經是壞的（ProgramTreeView 有 5 個紅測試釘著）。
+       * 教材頁走的 TeacherLayout 早就有這個 provider，這裡補齊。
+       */}
+      <SidebarProvider>
+        <OrganizationLayoutContent {...props} />
+      </SidebarProvider>
     </OrganizationProvider>
   );
 }

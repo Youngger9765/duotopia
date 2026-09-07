@@ -16,16 +16,8 @@ import ReadingAssessmentPanel, {
 import VocabularySetPanel, {
   type VocabularySetPanelHandle,
 } from "@/components/VocabularySetPanel";
-import ScenarioDialoguePanel, {
-  type ScenarioDialoguePanelHandle,
-} from "@/components/ScenarioDialoguePanel";
-import {
-  fromScenarioContentDetail,
-  toScenarioSavePayload,
-  type ScenarioContentDetail,
-  type ScenarioDialogueInitialState,
-  type ScenarioSaveInput,
-} from "@/lib/scenarioDialogue";
+import ScenarioDialogueEditorSheet from "@/components/ScenarioDialogueEditorSheet";
+import { useScenarioDialogueEditor } from "@/hooks/useScenarioDialogueEditor";
 import ContentCopyDialog from "@/components/ContentCopyDialog";
 import ContentDownloadSheet from "@/components/ContentDownloadSheet";
 import { AssignmentDialog, CartItem } from "@/components/AssignmentDialog";
@@ -211,39 +203,23 @@ function TeacherTemplateProgramsInner() {
   // Sentence Making Editor state
   const [showVocabularySetEditor, setShowVocabularySetEditor] = useState(false);
 
-  // Issue #944 / #1013: 情境對話（口說練習）新增／編輯面板
-  const [showScenarioDialogueEditor, setShowScenarioDialogueEditor] =
-    useState(false);
-  const [scenarioProgramLevel, setScenarioProgramLevel] = useState<
-    string | undefined
-  >(undefined);
-  const scenarioPanelRef = useRef<ScenarioDialoguePanelHandle>(null);
-  // Issue #1013: 存檔要知道存到哪裡 —— lessonId 與 programId 二擇一（#587 的
-  // program-direct 教材沒有 lesson），contentId 有值代表編輯既有內容。
-  const [scenarioLessonId, setScenarioLessonId] = useState<number | null>(null);
-  const [scenarioProgramId, setScenarioProgramId] = useState<number | null>(
-    null,
-  );
-  const [scenarioContentId, setScenarioContentId] = useState<number | null>(
-    null,
-  );
-  /** 編輯模式的既有資料；null = 新增模式 */
-  const [scenarioInitialData, setScenarioInitialData] =
-    useState<ScenarioDialogueInitialState | null>(null);
-  const [scenarioSaving, setScenarioSaving] = useState(false);
+  // Issue #944 / #1013 / #1014: 情境對話（口說練習）新增／編輯面板。
+  // state、開啟、存檔都在 hook 裡，四個接線點共用（見 useScenarioDialogueEditor）。
+  const scenarioEditor = useScenarioDialogueEditor({
+    // 用箭頭包一層：hook 的呼叫位置在 fetchTemplatePrograms 宣告之前
+    onSaved: () => fetchTemplatePrograms(),
+  });
 
   // Disable sidebar when editor panels are open
   useEffect(() => {
     setSidebarDisabled(
-      showReadingEditor ||
-        showVocabularySetEditor ||
-        showScenarioDialogueEditor,
+      showReadingEditor || showVocabularySetEditor || scenarioEditor.isOpen,
     );
     return () => setSidebarDisabled(false);
   }, [
     showReadingEditor,
     showVocabularySetEditor,
-    showScenarioDialogueEditor,
+    scenarioEditor.isOpen,
     setSidebarDisabled,
   ]);
   const [vocabularySetLessonId, setVocabularySetLessonId] = useState<
@@ -465,93 +441,6 @@ function TeacherTemplateProgramsInner() {
     }
   };
 
-  /**
-   * Issue #1013: 關閉情境對話面板並清掉所有相關 state。
-   *
-   * contentId / initialData 一定要一起清 —— 留著的話下次「新增」會沿用上一次的
-   * 內容 id，等於把新內容存進舊教材。
-   */
-  const closeScenarioDialogueEditor = () => {
-    setShowScenarioDialogueEditor(false);
-    setScenarioLessonId(null);
-    setScenarioProgramId(null);
-    setScenarioContentId(null);
-    setScenarioInitialData(null);
-    setScenarioProgramLevel(undefined);
-  };
-
-  /**
-   * Issue #1013: 情境對話存檔。
-   *
-   * 三條路徑：
-   *   1. 編輯既有內容 → PUT /contents/{id}
-   *   2. lesson 底下新增 → POST /lessons/{id}/contents（一次帶齊）
-   *   3. program-direct 新增（#587）→ 該端點只吃 type + title，items 與整份設定
-   *      要再打一次 PUT；第二步失敗就把第一步建出來的空殼刪掉，否則老師重試會
-   *      在教材列表留下一堆 0 題的內容。
-   *
-   * 失敗時**不關面板**也不清 state，並把例外往上拋讓面板知道沒存成功 —— 老師
-   * 剛填的十題不能因為一次網路錯誤就消失。
-   */
-  const handleSaveScenarioDialogue = async (data: ScenarioSaveInput) => {
-    const { scenario_settings, items } = toScenarioSavePayload(data);
-    setScenarioSaving(true);
-    try {
-      if (scenarioContentId) {
-        await apiClient.updateContent(scenarioContentId, {
-          title: data.title,
-          items,
-          scenario_settings,
-        });
-      } else if (scenarioLessonId) {
-        await apiClient.createContent(scenarioLessonId, {
-          type: "SCENARIO_DIALOGUE",
-          title: data.title,
-          items,
-          scenario_settings,
-        });
-      } else if (scenarioProgramId) {
-        const created = (await apiClient.createProgramContent(
-          scenarioProgramId,
-          { type: "SCENARIO_DIALOGUE", title: data.title },
-        )) as { id: number };
-        try {
-          await apiClient.updateContent(created.id, {
-            title: data.title,
-            items,
-            scenario_settings,
-          });
-        } catch (updateError) {
-          try {
-            await apiClient.deleteContent(created.id);
-          } catch (rollbackError) {
-            console.error(
-              "Failed to roll back orphaned scenario content:",
-              rollbackError,
-            );
-          }
-          throw updateError;
-        }
-      } else {
-        throw new Error("scenario dialogue: no lesson/program/content target");
-      }
-    } catch (error) {
-      console.error("Failed to save scenario dialogue content:", error);
-      toast.error(t("contentEditor.messages.savingFailed"));
-      throw error;
-    } finally {
-      setScenarioSaving(false);
-    }
-
-    // 存檔已經成功 —— 以下任何失敗都不可以再回報成「存檔失敗」。
-    // fetchTemplatePrograms 目前自己吞掉錯誤（不會 reject），但把它留在上面的
-    // try 裡等於哪天它改成會拋，老師就會在資料其實已經存好、面板也關掉之後，
-    // 看到一句「儲存失敗」而且無從重試（PR #1016 review）。
-    toast.success(t("contentEditor.messages.savingSuccess"));
-    closeScenarioDialogueEditor();
-    await fetchTemplatePrograms();
-  };
-
   const handleContentClick = (
     content: Content & {
       lessonName?: string;
@@ -587,44 +476,14 @@ function TeacherTemplateProgramsInner() {
       setVocabularySetContentId(content.id);
       setShowVocabularySetEditor(true);
     } else if (contentType === "scenario_dialogue") {
-      // Issue #1013: 編輯既有情境對話 —— 先把內容讀回來再開面板。
-      // 先開面板再讀的話，老師會先看到一張空白卡，資料回來才突然被換掉，
-      // 中間打的字也會不見。
-      void openScenarioDialogueEditor(content, isProgramDirect);
-    }
-  };
-
-  /**
-   * Issue #1013: 讀取既有情境對話內容並開啟面板（編輯模式）。
-   *
-   * 讀取失敗就不開面板 —— 開了也只會是一張空白卡，老師改完存回去等於把原本的
-   * 題目全部洗掉。
-   */
-  const openScenarioDialogueEditor = async (
-    content: Content & {
-      lesson_id?: number | null;
-      program_id?: number | null;
-    },
-    isProgramDirect: boolean,
-  ) => {
-    try {
-      const detail = (await apiClient.getContentDetail(
-        content.id,
-      )) as ScenarioContentDetail;
-
-      setScenarioLessonId(content.lesson_id || null);
-      setScenarioProgramId(isProgramDirect ? content.program_id! : null);
-      setScenarioContentId(content.id);
-      setScenarioInitialData(fromScenarioContentDetail(detail));
-      setScenarioProgramLevel(
-        content.lesson_id
+      // Issue #1013: 編輯既有情境對話（hook 會先讀內容再開面板）
+      void scenarioEditor.openForEdit(content.id, {
+        lessonId: content.lesson_id || null,
+        programId: isProgramDirect ? content.program_id! : null,
+        programLevel: content.lesson_id
           ? getProgramLevelByLessonId(programs, content.lesson_id)
           : programs.find((p) => p.id === content.program_id)?.level,
-      );
-      setShowScenarioDialogueEditor(true);
-    } catch (error) {
-      console.error("Failed to load scenario dialogue content:", error);
-      toast.error(t("teacherTemplatePrograms.messages.loadFailed"));
+      });
     }
   };
 
@@ -1462,66 +1321,8 @@ function TeacherTemplateProgramsInner() {
           </>
         )}
 
-      {/* Issue #944 / #1013: 情境對話 Editor（新增／編輯 - 側滑） */}
-      {showScenarioDialogueEditor && (
-        <div
-          className="editor-panel fixed top-0 right-0 h-screen bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col animate-in slide-in-from-right duration-300"
-          style={{ left: `${sidebarWidth}px` }}
-        >
-          <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold">
-                {/* #1013: 編輯既有內容時標題要說「編輯」，寫「新增」會讓老師
-                    以為自己開錯地方、又建了一份新的 */}
-                {t(
-                  scenarioContentId
-                    ? "scenarioDialogue.editTitle"
-                    : "scenarioDialogue.dialogTitle",
-                )}
-              </h2>
-              <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
-                {t("scenarioDialogue.badge")}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <RefSaveButton panelRef={scenarioPanelRef} />
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled={editorBusy}
-                onClick={() => {
-                  if (editorBusy) return;
-                  if (
-                    !window.confirm(
-                      t("contentEditor.labels.unsavedChangesConfirm"),
-                    )
-                  )
-                    return;
-                  closeScenarioDialogueEditor();
-                }}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-auto p-6 min-h-0 flex flex-col">
-            <ScenarioDialoguePanel
-              /**
-               * Issue #1013: key 綁內容 id —— 面板把 initialData 當初值（lazy
-               * initializer），換一份內容必須重新掛載才會重新取初值；沿用同一個
-               * 實例的話老師會在新內容裡看到上一份的題目。
-               */
-              key={scenarioContentId ?? "new"}
-              ref={scenarioPanelRef}
-              programLevel={scenarioProgramLevel}
-              initialData={scenarioInitialData}
-              isSaving={scenarioSaving}
-              onSave={handleSaveScenarioDialogue}
-              onCancel={closeScenarioDialogueEditor}
-            />
-          </div>
-        </div>
-      )}
+      {/* Issue #944 / #1013 / #1014: 情境對話 Editor（新增／編輯 - 側滑） */}
+      <ScenarioDialogueEditorSheet editor={scenarioEditor} />
 
       {/* Sentence Making Editor (編輯模式 - 側邊欄) */}
       {showVocabularySetEditor &&
@@ -1654,7 +1455,6 @@ function TeacherTemplateProgramsInner() {
 
       {contentLessonInfo && (
         <ContentTypeDialog
-          enableScenarioDialogue
           open={showContentTypeDialog}
           lessonInfo={contentLessonInfo}
           onClose={() => {
@@ -1701,19 +1501,14 @@ function TeacherTemplateProgramsInner() {
               selection.type === "scenario_dialogue" ||
               selection.type === "SCENARIO_DIALOGUE"
             ) {
-              // Issue #1013: 情境對話 — 新增模式（contentId 為 null）
-              setScenarioLessonId(isProgramDirect ? null : selection.lessonId);
-              setScenarioProgramId(
-                isProgramDirect ? selection.programId! : null,
-              );
-              setScenarioContentId(null);
-              setScenarioInitialData(null);
-              setScenarioProgramLevel(
-                isProgramDirect
+              // Issue #1013 / #1014: 情境對話 — 新增模式
+              scenarioEditor.openForCreate({
+                lessonId: isProgramDirect ? null : selection.lessonId,
+                programId: isProgramDirect ? selection.programId! : null,
+                programLevel: isProgramDirect
                   ? programs.find((p) => p.id === selection.programId)?.level
                   : getProgramLevelByLessonId(programs, selection.lessonId),
-              );
-              setShowScenarioDialogueEditor(true);
+              });
             } else {
               toast.info(
                 `${t("teacherTemplatePrograms.messages.featureInDevelopment", { type: selection.type })}`,
