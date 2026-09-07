@@ -292,4 +292,48 @@ describe("ContentTypeDialog", () => {
       );
     });
   });
+
+  /**
+   * 使用者實測回報：手機上點「新增內容」，對話框被擠到右側約 1/3，標題逐字換行。
+   *
+   * 原因是面板用 `left: sidebarWidth` 定位，而 sidebarWidth 在手機上仍回 256 ——
+   * 但側邊欄在 md 以下根本不會渲染（TeacherLayout 的 hidden md:flex）。
+   */
+  describe("手機版寬度（實測回報的跑版）", () => {
+    const ORIGINAL_WIDTH = window.innerWidth;
+
+    const setViewport = (width: number) => {
+      Object.defineProperty(window, "innerWidth", {
+        writable: true,
+        configurable: true,
+        value: width,
+      });
+      window.dispatchEvent(new Event("resize"));
+    };
+
+    afterEach(() => {
+      Object.defineProperty(window, "innerWidth", {
+        writable: true,
+        configurable: true,
+        value: ORIGINAL_WIDTH,
+      });
+    });
+
+    const panel = (container: HTMLElement) =>
+      container.querySelector('[class*="fixed top-0 right-0"]') as HTMLElement;
+
+    it("手機上面板佔滿寬度（left: 0），不會被擠成一條", () => {
+      setViewport(390);
+      const { container } = renderComponent();
+
+      expect(panel(container).style.left).toBe("0px");
+    });
+
+    it("桌機上仍然讓開側邊欄", () => {
+      setViewport(1280);
+      const { container } = renderComponent();
+
+      expect(panel(container).style.left).toBe("256px");
+    });
+  });
 });
