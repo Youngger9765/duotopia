@@ -989,9 +989,13 @@ export function AssignmentDialog({
 
   // 檢查內容是否可選（根據已選練習模式篩選）
   const isContentSelectable = (contentType: string): boolean => {
-    // Issue #1030: 先過「可不可以派發」的白名單。情境對話目前只能建立與編輯，
-    // 學生端作答與批改頁都還沒做（#1031）—— 未選模式時一律回 true 的話，它在
+    // Issue #1030 / #1031: 先過「可不可以派發」的白名單。
+    //
+    // #1030 建立這道白名單，是因為未選模式時一律回 true 會讓還沒接學生端的題型在
     // 清單裡看起來完全可以勾，老師會派出一份學生答不了的作業。
+    //
+    // 情境對話已於 #1031 開放（學生端作答與批改頁都做好了），但**白名單本身保留**
+    // —— 未來新增的題型仍然預設不可派發，要開放必須明確加進 isAssignableContentType。
     if (!isAssignableContentType(contentType)) return false;
 
     const mode = formData.practice_mode;
