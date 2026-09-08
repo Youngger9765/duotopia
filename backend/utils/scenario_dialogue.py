@@ -257,6 +257,28 @@ def public_item_view(
     }
 
 
+def teacher_item_view(
+    item_block: Optional[Dict[str, Any]],
+    settings: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """老師端（批改頁）版本：**含** ``reference_answer``。
+
+    與 :func:`public_item_view` 是一對 —— 兩邊的差別只有「參考答案給不給」，所以放在
+    一起，改一邊時另一邊就在眼前。批改端點原本是手寫這個 dict（#1034 review 指出），
+    那等於在模組外面複製了一份形狀，而本模組的定位就是這些資料「怎麼存、怎麼給」的
+    唯一判定處。
+
+    ``reference_answer`` 是**示範回答不是唯一正解**：口說同一題每個學生講的內容本來
+    就不同，老師要看的是語言特徵（時態、句型、用字水準、資訊完整度）而不是逐字比對
+    （#864 規格 3-3）。批改 Panel 上那行提示就是在講這件事。
+    """
+    block = item_block or {}
+    return {
+        **public_item_view(item_block, settings),
+        "reference_answer": block.get("reference_answer", ""),
+    }
+
+
 def public_settings_view(settings: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     """學生端安全版的整份設定：情境內容與作答指引學生看得到，其餘是出題端的事。"""
     settings = settings or {}

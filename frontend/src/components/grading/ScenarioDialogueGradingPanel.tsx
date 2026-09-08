@@ -39,11 +39,14 @@ interface ScenarioDialogueGradingPanelProps {
   expandedRows: Set<number>;
   activeTab: "students" | "content" | "grading";
   itemFeedbacks: ItemFeedback;
-  onSelectGroup: (idx: number) => void;
   onToggleRow: (globalIndex: number) => void;
   onTogglePassed: (globalIndex: number, passed: boolean) => Promise<void>;
   onItemFeedbackChange: (globalIndex: number, feedback: string) => void;
   onAutoSave: () => Promise<void>;
+  // 為相容 GradingPage 的 panelProps spread 而保留，此 panel 並不使用
+  // （同 SentenceRearrangementPanel 的作法；#1034 review 指出原本是無註解的死 prop）：
+  // 分組切換由左欄與共用元件負責，這個 Panel 只渲染當前組。
+  onSelectGroup?: (idx: number) => void;
 }
 
 /** 時態／語態的穩定代碼 → 顯示字串。空值代表老師沒指定，就不顯示這個 chip。 */

@@ -586,20 +586,10 @@ async def get_student_submission(
                     # 學生講的內容本來就不同，不可拿來逐字比對（見 #864 規格 3-3 與
                     # utils/scenario_dialogue.py 的模組說明）。
                     if practice_mode == "scenario_dialogue":
-                        block = sd.read_item_block(item.item_metadata)
-                        submission["scenario_dialogue"] = {
-                            "keywords": list((block or {}).get("keywords") or []),
-                            "rubric_note": (block or {}).get("rubric_note", ""),
-                            "reference_answer": (block or {}).get(
-                                "reference_answer", ""
-                            ),
-                            "tense": sd.resolve_effective_tense(
-                                block, content.scenario_settings
-                            ),
-                            "voice": sd.resolve_effective_voice(
-                                block, content.scenario_settings
-                            ),
-                        }
+                        submission["scenario_dialogue"] = sd.teacher_item_view(
+                            sd.read_item_block(item.item_metadata),
+                            content.scenario_settings,
+                        )
 
                     # 例句重組專用：補上 max_errors（來自 content_item）
                     if practice_mode == "rearrangement":

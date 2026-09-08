@@ -104,3 +104,30 @@ class TestMissingDataDoesNotBreakStudents:
         view = sd.public_item_view(ITEM_BLOCK, None)
         assert view["tense"] == {"time": "", "aspect": ""}
         assert view["voice"] == ""
+
+
+class TestTeacherViewIsTheStudentViewPlusTheReferenceAnswer:
+    """老師端與學生端只差「參考答案給不給」—— 兩者放在同一個模組才不會各自漂移。"""
+
+    def test_teacher_view_has_the_reference_answer(self):
+        view = sd.teacher_item_view(ITEM_BLOCK, SETTINGS)
+        assert view["reference_answer"] == ITEM_BLOCK["reference_answer"]
+
+    def test_teacher_view_is_a_superset_of_the_student_view(self):
+        student = sd.public_item_view(ITEM_BLOCK, SETTINGS)
+        teacher = sd.teacher_item_view(ITEM_BLOCK, SETTINGS)
+
+        for key, value in student.items():
+            assert teacher[key] == value, f"{key} 兩邊不一致"
+        # 唯一的差別
+        assert set(teacher) - set(student) == {"reference_answer"}
+
+    def test_teacher_view_still_hides_the_image_prompt(self):
+        """生圖 prompt 是內部用的，老師批改也不需要看。"""
+        view = sd.teacher_item_view(ITEM_BLOCK, SETTINGS)
+        assert "image_prompt" not in view
+
+    def test_teacher_view_tolerates_missing_block(self):
+        view = sd.teacher_item_view(None, SETTINGS)
+        assert view["reference_answer"] == ""
+        assert view["keywords"] == []
