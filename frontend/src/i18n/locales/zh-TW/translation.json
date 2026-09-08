@@ -3301,7 +3301,20 @@
       "rubricNote": "本題說明",
       "referenceAnswer": "參考回答",
       "referenceHint": "這是示範回答，不是唯一正解 —— 學生講的內容本來就會不同，請看時態、句型與資訊是否到位",
-      "feedbackPlaceholder": "給這一題的評語（學生看得到）"
+      "feedbackPlaceholder": "給這一題的評語（學生看得到）",
+      "aiGrade": "AI 評分建議",
+      "aiGradeAgain": "重新產生建議",
+      "aiGradeFailed": "AI 評分失敗，請稍後再試",
+      "aiSuggestionTitle": "AI 建議",
+      "aiSuggestionHint": "這是建議 —— 通過與否仍由您決定",
+      "transcript": "逐字稿",
+      "aspects": {
+        "content": "資訊完整度",
+        "grammar": "時態句型",
+        "vocabulary": "用字水準",
+        "keywords": "必用字詞"
+      },
+      "aiGradeQuotaExhausted": "這一題的 AI 次數已用完（每題 3 次）"
     }
   },
   "batchGrading": {

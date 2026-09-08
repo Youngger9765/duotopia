@@ -3,15 +3,15 @@
  *
  * 對應 `practice_mode = "scenario_dialogue"`（學生看情境與題目後開口錄音回答）。
  *
- * ## 與朗讀批改的關鍵差別：沒有 AI 分數
+ * ## 與朗讀批改的關鍵差別：AI 是「建議」，不是分數
  *
  * 朗讀類有 Azure 發音評測的 accuracy / fluency / pronunciation 分數可看，因為題目
  * 本身就是「該唸出來的那句話」。情境對話是**開放式回答** —— 學生講什麼因人而異，
- * 沒有可比對的正解，所以這裡是**純人工批改**：老師聽錄音、對照參考答案與必用字詞，
- * 自己判定通過與否並寫評語。
+ * 沒有可比對的正解，那套硬套上來會把「講得跟範例不同」判成錯。
  *
- * （情境對話的 AI 評分要另做：錄音轉逐字稿 → 依語言特徵評分。既有那套硬套上來會把
- * 「講得跟範例不同」判成錯，見 `utils/scenario_dialogue.py` 的模組說明。）
+ * 所以這裡走另一條路（#1035）：老師按下按鈕才把錄音交給 Gemini，拿回逐字稿與四個
+ * 語言特徵分數（資訊完整度／時態句型／用字水準／必用字詞）。**它只是建議** ——
+ * 通過與否、評語仍然是老師自己按、自己寫，AI 不會替老師定案。
  *
  * ## 參考答案是「示範」不是「正解」
  *
@@ -26,11 +26,20 @@
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CheckCircle, X, ChevronDown, ChevronUp, Mic } from "lucide-react";
+import {
+  CheckCircle,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Mic,
+  Sparkles,
+  Loader2,
+} from "lucide-react";
 import type {
   StudentSubmission,
   ItemFeedback,
   SubmissionItem,
+  ScenarioGradingSuggestion,
 } from "@/pages/teacher/GradingPage";
 
 interface ScenarioDialogueGradingPanelProps {
@@ -43,6 +52,10 @@ interface ScenarioDialogueGradingPanelProps {
   onTogglePassed: (globalIndex: number, passed: boolean) => Promise<void>;
   onItemFeedbackChange: (globalIndex: number, feedback: string) => void;
   onAutoSave: () => Promise<void>;
+  /** 正在跑 AI 建議的 item_progress_id。 */
+  gradingItems: Set<number>;
+  /** 要 AI 建議；force=true 代表老師要重跑（會再燒一次額度）。 */
+  onAiGrade: (itemProgressId: number, force?: boolean) => Promise<void>;
   // 為相容 GradingPage 的 panelProps spread 而保留，此 panel 並不使用
   // （同 SentenceRearrangementPanel 的作法；#1034 review 指出原本是無註解的死 prop）：
   // 分組切換由左欄與共用元件負責，這個 Panel 只渲染當前組。
@@ -65,6 +78,66 @@ function useCodeLabels() {
   };
 }
 
+/** 四個面向的顯示順序 —— 與後端 SCORE_KEYS 一致。 */
+const SCORE_KEYS = ["content", "grammar", "vocabulary", "keywords"] as const;
+
+/**
+ * AI 建議區塊。
+ *
+ * 刻意長得跟老師的評分欄不一樣（灰底、標「AI 建議」、分數是小字），因為它就不是成績。
+ * 沒評到的面向顯示「—」而不是 0 分：0 分是「答得很差」，沒評到是「這次沒有這個面向
+ * 的資訊」，對老師的意思完全不同。
+ */
+function AiSuggestion({
+  suggestion,
+}: {
+  suggestion: ScenarioGradingSuggestion;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="text-xs bg-indigo-50/60 border border-indigo-100 rounded p-2 space-y-2">
+      <p className="font-semibold text-indigo-700 flex items-center gap-1">
+        <Sparkles className="h-3 w-3" />
+        {t("gradingPage.scenarioDialogue.aiSuggestionTitle")}
+      </p>
+
+      {suggestion.transcript && (
+        <p className="text-gray-700">
+          <span className="text-gray-500">
+            {t("gradingPage.scenarioDialogue.transcript")}：
+          </span>
+          {suggestion.transcript}
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-1">
+        {SCORE_KEYS.map((key) => {
+          const value = suggestion.scores?.[key];
+          return (
+            <span
+              key={key}
+              className="px-2 py-0.5 rounded-full bg-white border border-indigo-100 text-indigo-700"
+            >
+              {t(`gradingPage.scenarioDialogue.aspects.${key}`)}{" "}
+              {value == null ? "—" : value}
+            </span>
+          );
+        })}
+      </div>
+
+      {suggestion.feedback && (
+        <p className="text-gray-600">{suggestion.feedback}</p>
+      )}
+
+      {/* 這一行不是裝飾：AI 沒有幫老師定案，上面的通過／不通過還是要老師自己按 */}
+      <p className="text-[11px] text-gray-400">
+        {t("gradingPage.scenarioDialogue.aiSuggestionHint")}
+      </p>
+    </div>
+  );
+}
+
 export function ScenarioDialogueGradingPanel({
   submission,
   selectedGroupIndex,
@@ -75,6 +148,8 @@ export function ScenarioDialogueGradingPanel({
   onTogglePassed,
   onItemFeedbackChange,
   onAutoSave,
+  gradingItems,
+  onAiGrade,
 }: ScenarioDialogueGradingPanelProps) {
   const { t } = useTranslation();
   const labels = useCodeLabels();
@@ -116,6 +191,10 @@ export function ScenarioDialogueGradingPanel({
           const scenario = item.scenario_dialogue;
           const tenseLabel = labels.tense(scenario?.tense);
           const voiceLabel = labels.voice(scenario?.voice);
+          const suggestion = item.scenario_grading;
+          const itemProgressId = item.item_progress_id;
+          const grading =
+            itemProgressId != null && gradingItems.has(itemProgressId);
 
           return (
             <div
@@ -259,6 +338,35 @@ export function ScenarioDialogueGradingPanel({
                       <p className="text-[11px] text-gray-400 mt-1">
                         {t("gradingPage.scenarioDialogue.referenceHint")}
                       </p>
+                    </div>
+                  )}
+
+                  {/* AI 建議：沒有錄音就沒得評，也就不顯示按鈕 —— 一個按了必定
+                      失敗的按鈕只會讓老師以為是系統壞了 */}
+                  {itemProgressId != null && item.audio_url && (
+                    <div className="space-y-2">
+                      {suggestion && <AiSuggestion suggestion={suggestion} />}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        // 已完成批改的作業不再燒 token，與上面的通過／不通過同一條規則
+                        disabled={grading || submission?.status === "GRADED"}
+                        onClick={() =>
+                          void onAiGrade(itemProgressId, Boolean(suggestion))
+                        }
+                      >
+                        {grading ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3 w-3 mr-1" />
+                        )}
+                        {t(
+                          suggestion
+                            ? "gradingPage.scenarioDialogue.aiGradeAgain"
+                            : "gradingPage.scenarioDialogue.aiGrade",
+                        )}
+                      </Button>
                     </div>
                   )}
 

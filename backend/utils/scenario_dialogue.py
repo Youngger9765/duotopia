@@ -279,6 +279,29 @@ def teacher_item_view(
     }
 
 
+def grading_criteria(
+    question: str,
+    item_block: Optional[Dict[str, Any]],
+    settings: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """AI 評分需要的全部依據（#1035）。
+
+    就是 :func:`teacher_item_view` 再補上題目本文與整份設定裡與評分有關的兩項
+    （整體作答指引、題目難度）。放在這裡而不是評分端點裡手組，理由同
+    ``teacher_item_view`` 的說明：資料形狀只能有一處。
+
+    刻意**不含** ``image_prompt`` —— 生圖用的描述不是評分依據，餵進 prompt 只會
+    讓模型拿畫面內容去要求學生。
+    """
+    settings = settings or {}
+    return {
+        **teacher_item_view(item_block, settings),
+        "question": question,
+        "global_rubric": settings.get("global_rubric", ""),
+        "question_level": settings.get("question_level", ""),
+    }
+
+
 def public_settings_view(settings: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     """學生端安全版的整份設定：情境內容與作答指引學生看得到，其餘是出題端的事。"""
     settings = settings or {}

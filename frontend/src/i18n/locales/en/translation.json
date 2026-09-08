@@ -3158,7 +3158,20 @@
       "rubricNote": "Note for this question",
       "referenceAnswer": "Sample answer",
       "referenceHint": "A sample, not the only correct answer — students will naturally say different things. Check tense, sentence structure and whether the key information is there",
-      "feedbackPlaceholder": "Feedback for this question (visible to the student)"
+      "feedbackPlaceholder": "Feedback for this question (visible to the student)",
+      "aiGrade": "Get AI suggestion",
+      "aiGradeAgain": "Run AI again",
+      "aiGradeFailed": "AI grading failed, please try again later",
+      "aiSuggestionTitle": "AI suggestion",
+      "aiSuggestionHint": "A suggestion only — you decide whether this answer passes",
+      "transcript": "Transcript",
+      "aspects": {
+        "content": "Information",
+        "grammar": "Tense & structure",
+        "vocabulary": "Vocabulary",
+        "keywords": "Required words"
+      },
+      "aiGradeQuotaExhausted": "This question has used up its AI attempts (3 per question)"
     }
   },
   "assignmentDetail": {

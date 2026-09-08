@@ -131,3 +131,45 @@ class TestTeacherViewIsTheStudentViewPlusTheReferenceAnswer:
         view = sd.teacher_item_view(None, SETTINGS)
         assert view["reference_answer"] == ""
         assert view["keywords"] == []
+
+
+class TestGradingCriteria:
+    """AI 評分要看的東西 — Issue #1035。
+
+    評分端點不該自己再手組一份 dict：那等於在模組外複製資料形狀，正是 #1034 review
+    抓到的問題。criteria 是老師端的視角（含參考答案）再加上題目本文與整份設定。
+    """
+
+    QUESTION = "What did you do last weekend?"
+
+    def test_carries_everything_the_prompt_needs(self):
+        criteria = sd.grading_criteria(self.QUESTION, ITEM_BLOCK, SETTINGS)
+
+        assert criteria["question"] == self.QUESTION
+        assert criteria["reference_answer"] == ITEM_BLOCK["reference_answer"]
+        assert criteria["keywords"] == ITEM_BLOCK["keywords"]
+        assert criteria["rubric_note"] == ITEM_BLOCK["rubric_note"]
+        assert criteria["tense"] == {"time": "past", "aspect": "simple"}
+        assert criteria["voice"] == "active"
+        assert criteria["global_rubric"] == SETTINGS["global_rubric"]
+        assert criteria["question_level"] == SETTINGS["question_level"]
+
+    def test_never_leaks_the_image_prompt(self):
+        """生圖 prompt 不是評分依據，餵給模型只會干擾。"""
+        assert "image_prompt" not in sd.grading_criteria(
+            self.QUESTION, ITEM_BLOCK, SETTINGS
+        )
+
+    def test_item_override_beats_the_global_setting(self):
+        block = {**ITEM_BLOCK, "voice_override": "passive"}
+        criteria = sd.grading_criteria(self.QUESTION, block, SETTINGS)
+        assert criteria["voice"] == "passive"
+
+    def test_tolerates_missing_block_and_settings(self):
+        """舊資料或非本題型轉過來的內容，評分還是要能組出 prompt。"""
+        criteria = sd.grading_criteria(self.QUESTION, None, None)
+        assert criteria["question"] == self.QUESTION
+        assert criteria["reference_answer"] == ""
+        assert criteria["keywords"] == []
+        assert criteria["global_rubric"] == ""
+        assert criteria["question_level"] == ""

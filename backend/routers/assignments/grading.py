@@ -50,6 +50,8 @@ from .detail import (
     _SPEAKING_SCORE_MODES,
 )
 from services.analysis_quota import (
+    check_can_analyze,
+    increment_analysis_count,
     reset_analysis_count_for_assignment,
     reset_analysis_count_for_assignments,
 )
@@ -95,6 +97,69 @@ def _check_not_archived(
             detail="Cannot modify grades: assignment is deleted",
         )
     return parent
+
+
+def _scenario_suggestion_view(
+    data: Optional[Dict[str, Any]], cached: bool
+) -> Dict[str, Any]:
+    """老師端看到的 AI 建議形狀。
+
+    快取與現跑兩條路徑都走這裡，前端才不會遇到「重整之後欄位少一個」。用量與成本
+    留在 DB 供觀測，不回給前端。
+    """
+    data = data or {}
+    return {
+        "transcript": data.get("transcript", ""),
+        "scores": data.get("scores", {}),
+        "overall": data.get("overall"),
+        "feedback": data.get("feedback", ""),
+        # 建議而已 —— 老師仍要自己按通過／不通過
+        "suggested_pass": data.get("suggested_pass"),
+        "graded_at": data.get("graded_at"),
+        "cached": cached,
+    }
+
+
+def _load_item_progress_for_teacher(
+    assignment_id: int,
+    item_progress_id: int,
+    db: Session,
+    current_teacher: Teacher,
+) -> tuple[StudentItemProgress, StudentAssignment, Optional[Assignment]]:
+    """逐題 AI 端點共用的載入與授權（重新分析、情境對話評分）。
+
+    順序刻意固定：不存在 → 不屬於這份作業 → 不是你的班 → 已封存。兩支端點各自
+    抄一份的話，哪天補了一道檢查就只會補在其中一支上。
+    """
+    item_progress = (
+        db.query(StudentItemProgress)
+        .filter(StudentItemProgress.id == item_progress_id)
+        .first()
+    )
+    if not item_progress:
+        raise HTTPException(status_code=404, detail="Item progress not found")
+
+    student_assignment = (
+        db.query(StudentAssignment)
+        .filter(StudentAssignment.id == item_progress.student_assignment_id)
+        .first()
+    )
+    if not student_assignment or student_assignment.assignment_id != assignment_id:
+        raise HTTPException(status_code=404, detail="Item not found in this assignment")
+
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == student_assignment.classroom_id,
+            Classroom.teacher_id == current_teacher.id,
+        )
+        .first()
+    )
+    if not classroom:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    parent = _check_not_archived(student_assignment, db)
+    return item_progress, student_assignment, parent
 
 
 @router.post("/{assignment_id}/ai-grade", response_model=AIGradingResponse)
@@ -614,6 +679,18 @@ async def get_student_submission(
                     # 加入 item_progress_id 供前端呼叫 reanalyze API
                     if item_progress:
                         submission["item_progress_id"] = item_progress.id
+
+                    # Issue #1035: 情境對話的 AI 評分**建議**（老師按過才有）。
+                    # 帶在 payload 裡，老師重整批改頁就看得到上次的結果，不用再燒一次
+                    # token。用量與成本留在 DB 供觀測，不送到瀏覽器。
+                    if (
+                        practice_mode == "scenario_dialogue"
+                        and item_progress
+                        and item_progress.scenario_grading_data
+                    ):
+                        submission["scenario_grading"] = _scenario_suggestion_view(
+                            item_progress.scenario_grading_data, True
+                        )
 
                     # 從 StudentItemProgress 直接獲取資料
                     if item_progress:
@@ -2030,38 +2107,10 @@ async def reanalyze_item(
     - 該題目必須有 recording_url（音檔存在）
     - 老師必須有權限存取該作業
     """
-    # 1. 查詢 item_progress
-    item_progress = (
-        db.query(StudentItemProgress)
-        .filter(StudentItemProgress.id == item_progress_id)
-        .first()
+    # 1~4. 載入 + 授權 + 封存檢查（與情境對話 AI 評分共用同一份）
+    item_progress, _student_assignment, _parent = _load_item_progress_for_teacher(
+        assignment_id, item_progress_id, db, current_teacher
     )
-    if not item_progress:
-        raise HTTPException(status_code=404, detail="Item progress not found")
-
-    # 2. 驗證該 item 屬於正確的 assignment
-    student_assignment = (
-        db.query(StudentAssignment)
-        .filter(StudentAssignment.id == item_progress.student_assignment_id)
-        .first()
-    )
-    if not student_assignment or student_assignment.assignment_id != assignment_id:
-        raise HTTPException(status_code=404, detail="Item not found in this assignment")
-
-    # 3. 驗證老師有權限（透過 classroom ownership）
-    classroom = (
-        db.query(Classroom)
-        .filter(
-            Classroom.id == student_assignment.classroom_id,
-            Classroom.teacher_id == current_teacher.id,
-        )
-        .first()
-    )
-    if not classroom:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    # 4. 確認作業未封存
-    _check_not_archived(student_assignment, db)
 
     # 5. 確認有錄音檔案
     if not item_progress.recording_url:
@@ -2140,3 +2189,108 @@ async def reanalyze_item(
             "word_details": ai_data.get("word_details", []),
         },
     }
+
+
+@router.post("/{assignment_id}/scenario-ai-grade/{item_progress_id}")
+@trace_function("Scenario AI Grade")
+async def scenario_ai_grade(
+    assignment_id: int,
+    item_progress_id: int,
+    force: bool = False,
+    db: Session = Depends(get_db),
+    current_teacher: Teacher = Depends(get_current_teacher),
+):
+    """情境對話單題 AI 評分建議（Issue #1035）。
+
+    **只產生建議，不定案。** 分數與通過與否仍由老師寫進 teacher_review_score /
+    teacher_passed；這裡只寫 scenario_grading_data 與逐字稿。
+
+    為什麼不能沿用 `/reanalyze-item`：那條路走的是 Azure 發音評測，需要
+    referenceText 並且會把「講得跟範例不同」判成錯字（enableMiscue）。情境對話是
+    開放式回答，同一題每個學生講的內容本來就不同，用那套會全部趴掉。詳見
+    services/scenario_grading_ai.py 的模組說明。
+
+    ``force=false``（預設）時直接回傳已存的建議 —— 老師重整批改頁不該再燒一次 token。
+    """
+    item_progress, _sa, parent = _load_item_progress_for_teacher(
+        assignment_id, item_progress_id, db, current_teacher
+    )
+
+    practice_mode = parent.practice_mode if parent else None
+    if practice_mode != "scenario_dialogue":
+        raise HTTPException(
+            status_code=400,
+            detail="This endpoint only grades scenario dialogue assignments",
+        )
+
+    if not item_progress.recording_url:
+        raise HTTPException(status_code=400, detail="No recording available to grade")
+
+    if not force and item_progress.scenario_grading_data:
+        return _scenario_suggestion_view(item_progress.scenario_grading_data, True)
+
+    # 與學生端重新分析共用同一個每題上限：同一段錄音的 AI 呼叫是同一種資源。
+    check_can_analyze(item_progress)
+
+    content_item = (
+        db.query(ContentItem)
+        .filter(ContentItem.id == item_progress.content_item_id)
+        .first()
+    )
+    if not content_item:
+        raise HTTPException(status_code=404, detail="Content item not found")
+
+    content = db.query(Content).filter(Content.id == content_item.content_id).first()
+    criteria = sd.grading_criteria(
+        content_item.text or "",
+        sd.read_item_block(content_item.item_metadata),
+        content.scenario_settings if content else None,
+    )
+
+    from services.scenario_grading_ai import (
+        ScenarioGradingError,
+        ScenarioGradingInputError,
+        get_scenario_grading_service,
+    )
+
+    try:
+        result = await get_scenario_grading_service().grade(
+            item_progress.recording_url, criteria
+        )
+    except ScenarioGradingInputError as e:
+        # 資料本身有問題（題目空白之類）。這不是暫時性失敗 —— 回 502 會讓老師看到
+        # 「請稍後再試」，但重試一百次也不會變好，該修的是教材。
+        logger.warning(f"Scenario AI grading input invalid for {item_progress_id}: {e}")
+        raise HTTPException(status_code=422, detail=str(e))
+    except ScenarioGradingError as e:
+        # 模型這次不可用（沒轉出逐字稿、輸出壞掉）。額度不扣 —— 老師還沒拿到東西。
+        logger.warning(f"Scenario AI grading unusable for {item_progress_id}: {e}")
+        raise HTTPException(status_code=502, detail=str(e))
+    except Exception as e:
+        logger.error(
+            f"Scenario AI grading failed for {item_progress_id}: {e!r}", exc_info=True
+        )
+        raise HTTPException(
+            status_code=502, detail="AI grading failed, please try again later"
+        )
+
+    stored = {
+        "transcript": result["transcript"],
+        "scores": result["scores"],
+        "overall": result["overall"],
+        "feedback": result["feedback"],
+        "suggested_pass": result["suggested_pass"],
+        "graded_at": datetime.now(timezone.utc).isoformat(),
+        # 觀測用，不回給前端
+        "usage": result.get("usage"),
+        "estimated_cost_usd": result.get("estimated_cost_usd"),
+    }
+
+    increment_analysis_count(item_progress, db)
+    item_progress.scenario_grading_data = stored
+    item_progress.transcription = result["transcript"]
+    # 刻意不碰 accuracy/fluency/pronunciation/completeness_score：那四欄是 Azure
+    # 發音評測的語意，作業層報告直接讀 accuracy_score，混寫會污染兩邊的數字。
+    db.commit()
+
+    return _scenario_suggestion_view(stored, False)
