@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { X, Send, MessageSquare } from "lucide-react";
 import { useSidebar } from "@/contexts/SidebarContext";
-import { SCENARIO_DIALOGUE_ENABLED } from "@/lib/featureFlags";
+import { ENABLE_SCENARIO_DIALOGUE } from "@/config/featureFlags";
 
 /**
  * 這個對話框能送出的內容類型（Issue #1017）。
@@ -106,7 +106,7 @@ export default function ContentTypeDialog({
       // Issue #1039: 功能是完整的，但在人工驗證做完之前先關著 —— PR #1038 把整條
       // 功能線發到 prod 了。關閉時這張卡片反灰、點不動，右上角顯示 Soon 角標。
       // 五個新增路徑都經過這個對話框，所以這裡是唯一的咽喉點。
-      disabled: !SCENARIO_DIALOGUE_ENABLED,
+      disabled: !ENABLE_SCENARIO_DIALOGUE,
     },
   ];
 

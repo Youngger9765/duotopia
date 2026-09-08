@@ -291,8 +291,8 @@ describe("ContentTypeDialog", () => {
     // 拿到兩個不同的 context 實例。
     async function renderWithFlag(enabled: boolean) {
       vi.resetModules();
-      vi.doMock("@/lib/featureFlags", () => ({
-        SCENARIO_DIALOGUE_ENABLED: enabled,
+      vi.doMock("@/config/featureFlags", () => ({
+        ENABLE_SCENARIO_DIALOGUE: enabled,
       }));
       const [{ default: Dialog }, { SidebarProvider: Provider }] =
         await Promise.all([
@@ -312,7 +312,7 @@ describe("ContentTypeDialog", () => {
     }
 
     afterEach(() => {
-      vi.doUnmock("@/lib/featureFlags");
+      vi.doUnmock("@/config/featureFlags");
       vi.resetModules();
     });
 
