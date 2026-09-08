@@ -408,9 +408,15 @@ export const PRACTICE_MODE_REGISTRY: Record<PracticeMode, ModeConfig> = {
     // 學生是開口錄音作答，與 reading / word_reading 同屬口說，不受 play_audio 影響。
     // 唯一判定在後端 utils/score_category.py，這裡只是鏡射（CLAUDE.md 規則 6）。
     scoreCategory: { kind: "static", category: "speaking" },
-    // #1031 先做人工批改：既有的 AI 評分是 Azure 發音評測，要有 reference_text 才能
-    // 比對「唸得多準」；情境對話是開放式回答，沒有正解可比，硬套會把所有與範例不同的
-    // 回答判成低分。AI 評分另案處理。
+    // 這兩個旗標維持 false，不是漏改：
+    //
+    // needsAiGrading 的語意是「需 AI **發音**批改」（Azure 發音評測，學生作答時觸發、
+    // 要有 reference_text 才比得出「唸得多準」）。情境對話是開放式回答，沒有正解可比，
+    // 打開只會把所有與範例不同的回答判成低分。
+    //
+    // #1035 補上的 AI 評分是**另一條路徑**：老師在批改頁按下才跑，音檔直接交給 Gemini
+    // 出逐字稿與語言特徵分數，而且只產生建議、不定案。它不由這個旗標控制，額度也由後端
+    // 每題上限管（services/analysis_quota.py）。
     needsAiGrading: false,
     burnsTokens: false,
     autoGraded: false,

@@ -149,6 +149,12 @@ class StudentItemProgress(Base):
     # Word selection activity fields (單字選擇專用)
     word_selection_data = Column(JSONB)  # 單字選擇累計統計與答題歷史
 
+    # Scenario dialogue AI grading suggestion (情境對話專用, #1035)
+    # 逐字稿 + 四面向分數 + 回饋。刻意不寫進上面的 accuracy/fluency/pronunciation —
+    # 那四欄是 Azure 發音評測語意，作業層報告會直接讀 accuracy_score。
+    # 這裡存的是「建議」，老師的定案仍在 teacher_review_score / teacher_passed。
+    scenario_grading_data = Column(JSONB)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
