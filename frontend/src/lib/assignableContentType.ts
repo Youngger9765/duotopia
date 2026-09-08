@@ -1,7 +1,7 @@
 import {
-  DATASET_LABEL_KEY,
   PRACTICE_MODE_REGISTRY,
   contentTypeToDataset,
+  datasetLabelKeysForMode,
   type PracticeMode,
 } from "./practiceMode";
 
@@ -139,6 +139,6 @@ export function explainNotSelectable(
 
   return {
     kind: "mode_mismatch",
-    allowedDatasetKeys: supported.map((d) => DATASET_LABEL_KEY[d]),
+    allowedDatasetKeys: datasetLabelKeysForMode(mode),
   };
 }
