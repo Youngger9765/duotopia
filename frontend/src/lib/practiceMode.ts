@@ -798,6 +798,22 @@ export const DATASET_LABEL_KEY: Record<PracticeDataset, string> = {
   scenario_dialogue: "dialogs.assignmentDialog.contentTypes.SCENARIO_DIALOGUE",
 };
 
+/**
+ * 這個模式吃得下哪些資料集（回傳 i18n key）。
+ *
+ * 給「模式與型別不合」的提示用（#1033）。那句提示原本寫死「只能選擇單字集」——
+ * 在它還是死碼時看不出問題，一旦讓它真的出得來就會說謊：選了情境對話模式時該說
+ * 情境對話，選了朗讀模式去點情境對話時該說例句集與單字集。
+ *
+ * 名單直接取自 registry 的 supportedDatasets，與畫面上實際擋不擋得住同一個來源 ——
+ * 這正是 #1034 學到的：三個資料集之後，任何二分法的猜測都會在某個組合上講錯。
+ */
+export function datasetLabelKeysForMode(mode: PracticeMode): string[] {
+  return PRACTICE_MODE_REGISTRY[mode].supportedDatasets.map(
+    (dataset) => DATASET_LABEL_KEY[dataset],
+  );
+}
+
 /** 依資料集回傳可派發的模式（chip 列），重現 AssignmentDialog 既有過濾：例句集只給非 word_ 模式。 */
 export function listModesForDataset(dataset: PracticeDataset): PracticeMode[] {
   return ASSIGNABLE_MODE_ORDER.filter((m) =>

@@ -17,6 +17,7 @@ import {
   contentTypeToDataset,
   DEFAULT_MODE_BY_DATASET,
   DATASET_LABEL_KEY,
+  datasetLabelKeysForMode,
   resolveScoreCategoryFE,
   applyModeDefaults,
   isAutoScoredMode,
@@ -385,5 +386,47 @@ describe("資料集查表（PR #1034 review round 3：二分法會選到不支�
     const keys = Object.values(DATASET_LABEL_KEY);
     expect(new Set(keys).size).toBe(keys.length);
     expect(DATASET_LABEL_KEY.scenario_dialogue).toContain("SCENARIO_DIALOGUE");
+  });
+});
+
+describe("模式支援的資料集名稱（Issue #1033）", () => {
+  /**
+   * 「模式與型別不合」的提示原本寫死「目前只能選擇**單字集**」。
+   *
+   * 那句話在 #1033 之前是死碼（原生 disabled 吃掉了 click），一旦讓它真的出得來，
+   * 內容就必須是對的 —— 否則老師會被指去做一件錯的事，比沒有提示更糟。
+   *
+   * 寫死單字集在這兩種情況會說謊：
+   *   - 選了情境對話模式 → 該說「只能選情境對話」
+   *   - 選了朗讀模式去點情境對話 → 該說「只能選例句集、單字集」
+   */
+  it("單字類模式只吃單字集", () => {
+    expect(datasetLabelKeysForMode("word_reading")).toEqual([
+      DATASET_LABEL_KEY.vocabulary_set,
+    ]);
+  });
+
+  it("情境對話模式只吃情境對話 —— 不是單字集", () => {
+    expect(datasetLabelKeysForMode("scenario_dialogue")).toEqual([
+      DATASET_LABEL_KEY.scenario_dialogue,
+    ]);
+  });
+
+  it("例句類模式吃例句集與單字集兩種", () => {
+    expect(datasetLabelKeysForMode("reading")).toEqual([
+      DATASET_LABEL_KEY.example_sentences,
+      DATASET_LABEL_KEY.vocabulary_set,
+    ]);
+    expect(datasetLabelKeysForMode("rearrangement")).toEqual([
+      DATASET_LABEL_KEY.example_sentences,
+      DATASET_LABEL_KEY.vocabulary_set,
+    ]);
+  });
+
+  it("每個模式都給得出至少一個資料集名稱", () => {
+    // 新增模式時忘了填 supportedDatasets 會讓提示變成空字串
+    for (const mode of Object.keys(PRACTICE_MODE_REGISTRY) as PracticeMode[]) {
+      expect(datasetLabelKeysForMode(mode).length).toBeGreaterThan(0);
+    }
   });
 });

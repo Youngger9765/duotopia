@@ -1995,7 +1995,8 @@
         "exampleSentenceRequiredDesc": "以下內容缺少例句或例句翻譯，請補齊後再派發：{{contents}}",
         "missingClozeAnswer": "缺少克漏字答案",
         "missingClozeAnswerDesc": "以下單字集有單字尚未設定克漏字答案：{{contents}}。請先到單字集編輯內容、點擊單字或框選片語設定答案後再派發。",
-        "contentTypeNotAssignable": "{{type}}目前還不能派發作業（學生端作答功能尚未開放）"
+        "contentTypeNotAssignable": "{{type}}目前還不能派發作業（學生端作答功能尚未開放）",
+        "contentTypeNotSelectable": "這個內容與目前選的練習模式不合，請換個模式，或先清除已選擇的內容"
       },
       "warnings": {
         "quotaLow": "AI 分析額度不足",
