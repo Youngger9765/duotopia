@@ -23,12 +23,61 @@ from .validators import ContentCreate, ContentUpdate, ContentCopy
 from .utils import TEST_SUBSCRIPTION_WHITELIST, parse_birthdate
 from models import ContentType
 from utils.cloze import resolve_cloze_answer_on_save
+from utils import scenario_dialogue as sd
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _scenario_settings_or_400(
+    raw: Optional[Dict[str, Any]]
+) -> Optional[Dict[str, Any]]:
+    """正規化情境對話整份設定；資料不合法就回 400 而不是 500。"""
+    try:
+        return sd.normalize_settings(raw)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+def _scenario_item_block_or_400(
+    item_data: Dict[str, Any], existing_metadata: Optional[Dict[str, Any]] = None
+) -> Optional[Dict[str, Any]]:
+    """正規化單題情境對話資料；資料不合法就回 400 而不是 500。"""
+    try:
+        return sd.build_item_metadata_block(item_data, existing_metadata)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+def _validate_scenario_item_count_or_400(count: int) -> None:
+    """一份情境對話 3~10 題（#864）。前端已擋過，但後端不能只信前端。"""
+    try:
+        sd.validate_item_count(count)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+def _scenario_item_payload(item: ContentItem) -> Optional[Dict[str, Any]]:
+    """老師端要回傳的單題情境對話資料（含 reference_answer）。
+
+    這是**老師端**序列化：reference_answer 只有出題／批改的人看得到。
+    要給學生的請改用 utils.scenario_dialogue.public_item_view。
+    """
+    return sd.read_item_block(item.item_metadata)
+
+
+def _example_sentence_translation_lang(item: ContentItem) -> str:
+    """Issue #1004: 例句翻譯語言，舊資料沒存過就 fallback 中文。
+
+    每個回傳 content items 的端點都要帶這個欄位，否則前端重新載入時會把
+    日/韓譯文誤判成中文，切換語言時整欄被清空。
+    """
+    if item.item_metadata:
+        return item.item_metadata.get("example_sentence_translation_lang") or "chinese"
+    return "chinese"
 
 
 @router.get("/lessons/{lesson_id}/contents")
@@ -71,6 +120,10 @@ async def get_lesson_contents(
                 # 例句相關欄位
                 "example_sentence": item.example_sentence,
                 "example_sentence_translation": item.example_sentence_translation,
+                # Issue #1004: 例句翻譯語言（中/日/韓），前端據此決定譯文欄位
+                "example_sentence_translation_lang": (
+                    _example_sentence_translation_lang(item)
+                ),
                 "example_sentence_definition": item.example_sentence_definition,
                 # 例句重組欄位
                 "word_count": item.word_count,
@@ -154,6 +207,22 @@ async def create_content(
             else "A1"
         )
 
+    # Issue #1013: 情境對話的整份設定只在該題型存在，其他題型一律 NULL
+    scenario_settings = None
+    # 逐題區塊先在這裡全部驗過並正規化好，之後建 ContentItem 時直接取用。
+    #
+    # 一定要在下面的 db.commit() **之前**跑完（PR #1016 review）：Content 是先 commit
+    # 再逐題建立的，單題驗證若留在迴圈裡，一筆壞資料會回 400 卻留下一張 0 題的空內容
+    # 卡 —— 老師以為沒存成功，教材列表卻多一張，重試幾次就累積幾張，只能手動刪。
+    scenario_item_blocks: Dict[int, Dict[str, Any]] = {}
+    if content_type == ContentType.SCENARIO_DIALOGUE:
+        _validate_scenario_item_count_or_400(len(content_data.items or []))
+        scenario_settings = _scenario_settings_or_400(content_data.scenario_settings)
+        for idx, item_data in enumerate(content_data.items or []):
+            block = _scenario_item_block_or_400(item_data)
+            if block is not None:
+                scenario_item_blocks[idx] = block
+
     # 建立 Content（不再使用 items 欄位）
     content = Content(
         lesson_id=lesson_id,
@@ -164,6 +233,7 @@ async def create_content(
         order_index=order_index,
         level=content_level,
         tags=content_data.tags or [],
+        scenario_settings=scenario_settings,
     )
     db.add(content)
     db.commit()
@@ -199,6 +269,12 @@ async def create_content(
                     "vocabulary_translation_lang"
                 ]
 
+            # Issue #1004: 例句翻譯語言（中/日/韓），沒存的話重新編輯時會誤判成中文
+            if item_data.get("example_sentence_translation_lang"):
+                metadata["example_sentence_translation_lang"] = item_data[
+                    "example_sentence_translation_lang"
+                ]
+
             # 向後相容：ReadingAssessmentPanel 仍送舊欄位
             if "english_definition" in item_data:
                 metadata["english_definition"] = item_data["english_definition"]
@@ -220,6 +296,11 @@ async def create_content(
             # 儲存 TTS audio settings（accent/gender/speed）供例句 TTS 生成使用
             if "audio_settings" in item_data:
                 metadata["audio_settings"] = item_data["audio_settings"]
+
+            # Issue #1013: 情境對話逐題資料（覆寫／必用字詞／參考答案／評分備註）。
+            # 已於建立 Content 前驗證並正規化完畢，這裡只是取用。
+            if idx in scenario_item_blocks:
+                metadata[sd.SCENARIO_ITEM_KEY] = scenario_item_blocks[idx]
 
             # 根據前端傳來的資料決定存儲到 translation 欄位的內容
             # 優先使用語言感知的 vocabulary_translation（前端目前選擇語言的翻譯，
@@ -299,6 +380,8 @@ async def create_content(
         "order_index": content.order_index,
         "level": content.level if hasattr(content, "level") else "A1",
         "tags": content.tags if hasattr(content, "tags") else [],
+        # Issue #1013: 非情境對話一律 None，前端據此判斷有沒有這塊
+        "scenario_settings": content.scenario_settings,
     }
 
 
@@ -366,6 +449,10 @@ async def get_content_detail(
                 # 單字集相關欄位
                 "example_sentence": item.example_sentence,
                 "example_sentence_translation": item.example_sentence_translation,
+                # Issue #1004: 例句翻譯語言（中/日/韓），前端據此決定譯文欄位
+                "example_sentence_translation_lang": (
+                    _example_sentence_translation_lang(item)
+                ),
                 "example_sentence_audio_url": item.example_sentence_audio_url,
                 "cloze_answer": item.cloze_answer,
                 "image_url": item.image_url,
@@ -382,6 +469,9 @@ async def get_content_detail(
                 "content_id": item.content_id,
                 "order_index": item.order_index,
                 "item_metadata": item.item_metadata or {},
+                # Issue #1013: 情境對話逐題資料。老師端端點，含 reference_answer；
+                # 非情境對話為 None。學生端請改用 scenario_dialogue.public_item_view。
+                "scenario_dialogue": _scenario_item_payload(item),
             }
             for item in content.content_items
         ]
@@ -393,11 +483,16 @@ async def get_content_detail(
         "order_index": content.order_index,
         "level": content.level if hasattr(content, "level") else "A1",
         "tags": content.tags if hasattr(content, "tags") else ["public"],
+        # Issue #1013: 情境對話整份設定；其他題型為 None
+        "scenario_settings": content.scenario_settings,
     }
 
 
 def _build_item_fields(
-    item_data: dict, idx: int, existing_row: Optional[ContentItem] = None
+    item_data: dict,
+    idx: int,
+    existing_row: Optional[ContentItem] = None,
+    content_type: Optional[ContentType] = None,
 ) -> dict:
     """組出 ContentItem 的欄位值（INSERT 與 UPDATE 共用，#861）。
 
@@ -408,6 +503,9 @@ def _build_item_fields(
 
     existing_row 提供時（UPDATE 路徑），cloze_answer 以既有列的值為
     existing_answer，保留老師既有的覆寫值；INSERT 路徑沿用前端帶回的值。
+
+    content_type 用來決定要不要處理情境對話的逐題區塊（#1013）；其他題型完全
+    不受影響（不帶就等於關閉）。
     """
     # Store additional fields in item_metadata
     metadata: Dict[str, Any] = {}
@@ -430,6 +528,21 @@ def _build_item_fields(
         metadata["vocabulary_translation_lang"] = item_data[
             "vocabulary_translation_lang"
         ]
+
+    # Issue #1004: 例句翻譯語言（中/日/韓）。前端靠它決定譯文要落在哪個欄位，
+    # 沒存的話重新編輯時一律變回「中文」，日/韓譯文會被當成中文欄位而清空。
+    # 次要儲存路徑（例如只改音檔）不一定會帶這個 key，UPDATE 時沿用既有值，
+    # 避免 metadata 重建把語言洗掉。
+    # 空字串視同「沒帶」，否則會把既有語言洗成空值（round-2 review 防呆）
+    incoming_sentence_lang = item_data.get("example_sentence_translation_lang")
+    if incoming_sentence_lang:
+        metadata["example_sentence_translation_lang"] = incoming_sentence_lang
+    elif existing_row is not None and existing_row.item_metadata:
+        existing_lang = existing_row.item_metadata.get(
+            "example_sentence_translation_lang"
+        )
+        if existing_lang:
+            metadata["example_sentence_translation_lang"] = existing_lang
 
     # 向後相容：ReadingAssessmentPanel 仍送 english_definition
     # + selectedLanguage，接受並映射到新欄位
@@ -461,6 +574,15 @@ def _build_item_fields(
     # 儲存 TTS audio settings（accent/gender/speed）供例句 TTS 生成使用
     if "audio_settings" in item_data:
         metadata["audio_settings"] = item_data["audio_settings"]
+
+    # Issue #1013: 情境對話逐題資料。payload 沒帶就沿用既有列的值 —— metadata 是
+    # 整包重建的，不沿用等於老師只改個音檔就把參考答案／覆寫洗掉。
+    if content_type == ContentType.SCENARIO_DIALOGUE:
+        scenario_block = _scenario_item_block_or_400(
+            item_data, existing_row.item_metadata if existing_row is not None else None
+        )
+        if scenario_block is not None:
+            metadata[sd.SCENARIO_ITEM_KEY] = scenario_block
 
     # 根據前端傳來的資料決定存儲到 translation 欄位的內容
     # 優先使用語言感知的 vocabulary_translation（前端目前選擇語言的翻譯，
@@ -551,8 +673,18 @@ async def update_content(
 
     audio_manager = get_audio_manager()
 
+    is_scenario = content.type == ContentType.SCENARIO_DIALOGUE
+
+    # Issue #1013: 情境對話的整份設定。None = 這次請求沒帶 → 不動既有值。
+    if is_scenario and update_data.scenario_settings is not None:
+        content.scenario_settings = _scenario_settings_or_400(
+            update_data.scenario_settings
+        )
+
     if update_data.title is not None:
         content.title = update_data.title
+    if is_scenario and update_data.items is not None:
+        _validate_scenario_item_count_or_400(len(update_data.items))
     if update_data.items is not None:
         # 處理 ContentItem 更新
         # 先取得現有的 ContentItem
@@ -630,7 +762,7 @@ async def update_content(
 
         # 3) 第二階段：寫入最終欄位（含最終 order_index）；新題則 INSERT。
         for idx, (item_data, existing_row) in enumerate(matched):
-            fields = _build_item_fields(item_data, idx, existing_row)
+            fields = _build_item_fields(item_data, idx, existing_row, content.type)
             if existing_row is not None:
                 for key, value in fields.items():
                     setattr(existing_row, key, value)
@@ -702,6 +834,10 @@ async def update_content(
                 # 例句相關欄位
                 "example_sentence": item.example_sentence,
                 "example_sentence_translation": item.example_sentence_translation,
+                # Issue #1004: 例句翻譯語言（中/日/韓），前端據此決定譯文欄位
+                "example_sentence_translation_lang": (
+                    _example_sentence_translation_lang(item)
+                ),
                 "example_sentence_definition": item.example_sentence_definition,
                 "word_count": item.word_count,
                 "max_errors": item.max_errors,
@@ -724,6 +860,8 @@ async def update_content(
                 "question_type": item.item_metadata.get("question_type", "text")
                 if item.item_metadata
                 else "text",
+                # Issue #1013: 老師端序列化，含 reference_answer
+                "scenario_dialogue": _scenario_item_payload(item),
             }
             for item in content.content_items
         ]
@@ -734,6 +872,7 @@ async def update_content(
         "order_index": content.order_index,
         "level": content.level if hasattr(content, "level") else "A1",
         "tags": content.tags if hasattr(content, "tags") else [],
+        "scenario_settings": content.scenario_settings,
     }
 
 

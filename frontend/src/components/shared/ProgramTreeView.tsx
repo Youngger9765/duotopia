@@ -10,6 +10,8 @@ import VocabularySetPanel, {
   type VocabularySetPanelHandle,
 } from "@/components/VocabularySetPanel";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
+import ScenarioDialogueEditorSheet from "@/components/ScenarioDialogueEditorSheet";
+import { useScenarioDialogueEditor } from "@/hooks/useScenarioDialogueEditor";
 import {
   ProgramTreeLesson,
   ProgramTreeProgram,
@@ -188,7 +190,6 @@ export function ProgramTreeView({
     vocabularySetContentId,
     openContentEditor,
     openReadingCreateEditor,
-    openSentenceMakingCreateEditor,
     openVocabularySetCreateEditor,
     closeReadingEditor,
     closeSentenceMakingEditor,
@@ -197,6 +198,12 @@ export function ProgramTreeView({
 
   const readingPanelRef = useRef<ReadingAssessmentPanelHandle>(null);
   const vocabPanelRef = useRef<VocabularySetPanelHandle>(null);
+
+  // Issue #1014: 情境對話新增／編輯。useContentEditor 不認得這個題型（它只分派
+  // reading / sentence_making / vocabulary_set），所以獨立一份，與其他教材頁共用。
+  const scenarioEditor = useScenarioDialogueEditor({
+    onSaved: () => onRefresh?.(),
+  });
 
   const [showContentTypeDialog, setShowContentTypeDialog] = useState(false);
   const [contentLessonInfo, setContentLessonInfo] = useState<{
@@ -584,6 +591,15 @@ export function ProgramTreeView({
             contentItem.example_sentence_translation,
         }),
       );
+
+      // Issue #1014: 情境對話走自己的 editor —— openContentEditor 不認得它，
+      // 交給它等於點了沒反應
+      if (content.type?.toLowerCase() === "scenario_dialogue") {
+        void scenarioEditor.openForEdit(content.id, {
+          lessonId: numericParentId as number,
+        });
+        return;
+      }
 
       openContentEditor({
         ...content,
@@ -1061,28 +1077,25 @@ export function ProgramTreeView({
             setShowContentTypeDialog(false);
             setContentLessonInfo(null);
 
-            if (
-              selection.type === "reading_assessment" ||
-              selection.type === "example_sentences" ||
-              selection.type === "EXAMPLE_SENTENCES"
-            ) {
+            if (selection.type === "example_sentences") {
               openReadingCreateEditor(selection.lessonId);
-            } else if (
-              selection.type === "SENTENCE_MAKING" ||
-              selection.type === "sentence_making"
-            ) {
-              openSentenceMakingCreateEditor(selection.lessonId);
-            } else if (
-              selection.type === "vocabulary_set" ||
-              selection.type === "VOCABULARY_SET"
-            ) {
+            } else if (selection.type === "vocabulary_set") {
               openVocabularySetCreateEditor(selection.lessonId);
+            } else if (selection.type === "scenario_dialogue") {
+              // Issue #1014: 情境對話 — 新增模式
+              scenarioEditor.openForCreate({ lessonId: selection.lessonId });
             } else {
               toast.info("此內容類型仍在開發中");
             }
           }}
         />
       )}
+
+      {/*
+       * Issue #1014: 情境對話 Editor。這裡用 modal 而不是側滑 —— 樹狀元件的
+       * 其他編輯器本來就是置中 modal，混用兩種版面會很突兀。
+       */}
+      <ScenarioDialogueEditorSheet editor={scenarioEditor} variant="modal" />
 
       {/* Program Edit Dialog */}
       <Dialog

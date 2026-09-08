@@ -4,8 +4,25 @@ import { useTranslation } from "react-i18next";
 import { X, Send, MessageSquare } from "lucide-react";
 import { useSidebar } from "@/contexts/SidebarContext";
 
+/**
+ * 這個對話框能送出的內容類型（Issue #1017）。
+ *
+ * **只有小寫**，而且只有這三種 —— `contentTypes` 陣列是唯一的來源，`handleSelect`
+ * 原樣把 `contentType.type` 交給 `onSelect`。收斂成 union 而不是 `string`，是為了讓
+ * 呼叫端比對到不存在的值（例如舊的 `"EXAMPLE_SENTENCES"` 大寫寫法）直接變成編譯
+ * 錯誤，而不是留下一段永遠不成立、看起來卻很像有在防守的死碼。
+ *
+ * 注意：這**不是** DB 的 `content.type`（那是大寫的 `ContentType` enum，還有
+ * `READING_ASSESSMENT` / `SENTENCE_MAKING` 兩個 legacy 值）。編輯既有內容與作業相關
+ * 的判斷讀的是 DB 的值，與這裡無關，不要混用。
+ */
+export type ContentTypeValue =
+  | "example_sentences"
+  | "vocabulary_set"
+  | "scenario_dialogue";
+
 interface ContentType {
-  type: string;
+  type: ContentTypeValue;
   name: string;
   description: string;
   icon: string;
@@ -21,7 +38,8 @@ interface ContentTypeDialogProps {
   open: boolean;
   onClose: () => void;
   onSelect: (selection: {
-    type: string;
+    /** 只會是 ContentTypeValue 三者之一（小寫）。見該型別的說明 */
+    type: ContentTypeValue;
     lessonId: number;
     // Issue #587: programId is set (and lessonId is 0) when creating program-direct content
     programId?: number;
@@ -83,7 +101,8 @@ export default function ContentTypeDialog({
       icon: "💬",
       image:
         "https://storage.googleapis.com/duotopia-social-media-videos/website/add3-output.png",
-      disabled: true,
+      isNew: true,
+      disabled: false,
     },
   ];
 
@@ -140,6 +159,7 @@ export default function ContentTypeDialog({
 
       {/* Slide-in Panel */}
       <div
+        data-testid="content-type-panel"
         className={`fixed top-0 right-0 h-screen bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col ${
           isClosing
             ? "animate-out slide-out-to-right duration-300"
@@ -164,6 +184,7 @@ export default function ContentTypeDialog({
           <Button
             variant="ghost"
             size="icon"
+            aria-label={t("common.close")}
             onClick={handleClose}
             disabled={loading}
           >

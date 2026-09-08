@@ -45,6 +45,10 @@
       "listening": "Listening",
       "reading": "Reading",
       "writing": "Writing"
+    },
+    "scenario_dialogue": {
+      "label": "Scenario Dialogue",
+      "desc": "Speak your answer to each question in context; graded by the teacher"
     }
   },
   "common": {
@@ -81,6 +85,11 @@
     "retry": "Retry",
     "lineContact": {
       "ariaLabel": "LINE Customer Service"
+    },
+    "errors": {
+      "networkError": "Cannot reach the server. Please check your connection and try again.",
+      "rateLimited": "Too many attempts. Please wait a minute and try again.",
+      "serverError": "A server error occurred. Please try again later."
     }
   },
   "demo": {
@@ -1824,7 +1833,9 @@
         "exampleSentenceRequired": "Cannot create {{mode}} assignment",
         "exampleSentenceRequiredDesc": "The following content is missing example sentences or translations: {{contents}}",
         "missingClozeAnswer": "Cloze answer required",
-        "missingClozeAnswerDesc": "These vocabulary sets are missing a cloze answer for some words: {{contents}}. Please open the vocabulary set and set an answer (click a word or select a phrase) before assigning."
+        "missingClozeAnswerDesc": "These vocabulary sets are missing a cloze answer for some words: {{contents}}. Please open the vocabulary set and set an answer (click a word or select a phrase) before assigning.",
+        "contentTypeNotAssignable": "{{type}} can't be assigned yet (student practice isn't available for it)",
+        "contentTypeNotSelectable": "This content doesn't match the practice mode you picked. Switch mode, or clear the selected content first."
       },
       "warnings": {
         "quotaLow": "AI analysis quota insufficient",
@@ -1847,7 +1858,9 @@
         "speaking_practice": "Speaking Practice",
         "speaking_scenario": "Speaking Scenario",
         "listening_cloze": "Listening Cloze",
-        "speaking_quiz": "Speaking Quiz"
+        "speaking_quiz": "Speaking Quiz",
+        "SCENARIO_DIALOGUE": "Scenario Dialogue",
+        "scenario_dialogue": "Scenario Dialogue"
       },
       "actions": {
         "viewPlans": "View Plans"
@@ -1948,7 +1961,9 @@
         "playAudioWordDesc": "Listen to audio and select translation",
         "playAudioFillDesc": "Listen to audio and type the word",
         "showExampleSentenceDesc": "Show example sentence during practice",
-        "showAnswerLockedByAudio": "Audio mode must reveal the answer"
+        "showAnswerLockedByAudio": "Audio mode must reveal the answer",
+        "scenario_dialogue": "Scenario Dialogue",
+        "scenario_dialogueDesc": "Answer aloud in a real-life context"
       }
     },
     "classroomAssignDialog": {
@@ -3060,7 +3075,9 @@
       "needsRevision": "Needs Revision",
       "hasRecording": "Has Recording",
       "questionNumber": "Question",
-      "gradingAssignment": "Grading Assignment:"
+      "gradingAssignment": "Grading Assignment:",
+      "pass": "Pass",
+      "fail": "Fail"
     },
     "messages": {
       "loadError": "Failed to load student assignment",
@@ -3099,7 +3116,8 @@
       "audioUploadFailedDetail": "Analysis results available, but recording file was not uploaded",
       "reanalyzing": "Analyzing...",
       "reanalyzeSuccess": "Re-analysis completed",
-      "reanalyzeFailed": "Re-analysis failed, please try again later"
+      "reanalyzeFailed": "Re-analysis failed, please try again later",
+      "noItems": "No questions in this content"
     },
     "status": {
       "notStarted": "Not Started",
@@ -3134,6 +3152,27 @@
         "timeout": "Timed out",
         "forceRetry": "Forced retry"
       }
+    },
+    "scenarioDialogue": {
+      "noRecording": "No answer yet (no recording)",
+      "toggleDetail": "Reference answer & grading notes",
+      "rubricNote": "Note for this question",
+      "referenceAnswer": "Sample answer",
+      "referenceHint": "A sample, not the only correct answer — students will naturally say different things. Check tense, sentence structure and whether the key information is there",
+      "feedbackPlaceholder": "Feedback for this question (visible to the student)",
+      "aiGrade": "Get AI suggestion",
+      "aiGradeAgain": "Run AI again",
+      "aiGradeFailed": "AI grading failed, please try again later",
+      "aiSuggestionTitle": "AI suggestion",
+      "aiSuggestionHint": "A suggestion only — you decide whether this answer passes",
+      "transcript": "Transcript",
+      "aspects": {
+        "content": "Information",
+        "grammar": "Tense & structure",
+        "vocabulary": "Vocabulary",
+        "keywords": "Required words"
+      },
+      "aiGradeQuotaExhausted": "This question has used up its AI attempts (3 per question)"
     }
   },
   "assignmentDetail": {
@@ -4486,6 +4525,9 @@
       "maxDuration": "Recording cannot exceed {{duration}} seconds",
       "uploadSuccess": "File Uploaded Successfully",
       "validationFailed": "File Validation Failed"
+    },
+    "scenarioDialogue": {
+      "useTheseWords": "Try to use:"
     }
   },
   "readingAssessment": {
@@ -4779,6 +4821,124 @@
       "gender": "Gender",
       "speed": "Speed"
     }
+  },
+  "scenarioDialogue": {
+    "dialogTitle": "Add Scenario Dialogue",
+    "editTitle": "Edit Scenario Dialogue",
+    "badge": "Speaking",
+    "tabs": {
+      "sourceManual": "Write it yourself",
+      "sourceAi": "Generate with AI",
+      "sourceUpload": "Upload image / PDF"
+    },
+    "labels": {
+      "title": "Title",
+      "goal": "Learning Goal",
+      "uploadTitle": "Click or drop files here",
+      "rubric": "Scoring Criteria (AI feedback basis)",
+      "notSpecified": "Not specified",
+      "rubricNote": "Extra note for this question",
+      "referenceAnswer": "Reference Answer",
+      "advanced": "Reference Answer & Notes",
+      "globalTense": "Default Scoring Criteria",
+      "inherited": "Inherited",
+      "overridden": "Customized",
+      "globalRubric": "Answering Guidelines (visible to students)",
+      "generateCount": "Questions per run",
+      "reference": "Settings reference",
+      "scenarioContent": "Scenario",
+      "articleLevel": "Text difficulty",
+      "questionLevel": "Question difficulty",
+      "scenarioText": "Scenario text",
+      "sectionGenerate": "Question settings"
+    },
+    "rubricPresets": {
+      "tenseTime": "Time",
+      "tenseAspect": "Aspect",
+      "voice": "Voice",
+      "keywords": "Required words"
+    },
+    "placeholders": {
+      "title": "e.g. Grade 6 · Weekend Life Speaking Practice",
+      "goal": "For example: students describe what they did last weekend in the past tense, naming a place and a person they went with.",
+      "question": "Enter a speaking question",
+      "keywords": "Comma separated, e.g. went, visited",
+      "referenceAnswer": "Write an ideal answer, e.g. I went to the park with my family last Saturday.",
+      "rubricNote": "Extra guidance for this question, e.g. state the time first, then what you did.",
+      "globalRubric": "e.g. Answer in complete sentences and add a reason at the end. Try to speak at least 3 sentences.",
+      "scenarioContent": "Describe the scenario, or produce one above and edit it. For example: It is Monday morning at school. You and your classmate are talking about the weekend."
+    },
+    "buttons": {
+      "generating": "Generating…",
+      "addQuestion": "Add Question",
+      "skipGeneration": "Skip — I'll write my own",
+      "generateAndContinue": "Generate and continue",
+      "editSettings": "Edit settings",
+      "backToSettings": "Back to settings",
+      "viewQuestions": "View questions",
+      "generateAnother": "Generate more questions",
+      "uploadImage": "Upload image",
+      "replaceImage": "Replace",
+      "removeImage": "Remove",
+      "generateScenario": "Generate scenario",
+      "extractScenario": "Extract from files",
+      "generateImage": "Generate"
+    },
+    "hints": {
+      "rateLimit": "Up to 5 regenerations per minute",
+      "uploadFormats": "Supports JPG, PNG, PDF",
+      "itemRange": "min {{min}}, max {{max}} questions",
+      "maxReached": "Reached the {{max}}-question limit",
+      "referenceAnswer": "Used by the AI to compare language features (tense, structure, vocabulary). Never shown to students; also the basis for suggested answers.",
+      "visibleToStudents": "This text is sent to the AI grader and is also shown to students",
+      "globalTense": "Applied to all questions by default. Customizing a question detaches it, so later changes here won't affect it.",
+      "step1Foot": "Generate once you're set, or skip ahead and write your own",
+      "untitled": "Untitled",
+      "referenceNote": "Check the questions against the scenario and instructions",
+      "noRubricYet": "No instructions yet",
+      "scenarioRequiredForAi": "Required to generate questions with AI",
+      "sourceManual": "Type it in the Scenario text box below",
+      "optional": "Optional",
+      "noContextYet": "No scenario yet",
+      "scenarioText": "Edit here after producing it any of the three ways",
+      "sectionGenerate": "Used when AI writes the questions; each one stays editable afterwards"
+    },
+    "tooltips": {
+      "regenerateQuestion": "Regenerate this question (avoids previous ones)",
+      "generateAudio": "Generate audio",
+      "resetToGlobal": "Reset to the shared scoring criteria"
+    },
+    "messages": {
+      "generateFailed": "AI generation failed, please try again later",
+      "goalRequired": "Please enter a teaching goal first",
+      "audioFailed": "Audio generation failed, please try again later",
+      "imagePromptRequired": "Add a question first — there's nothing to base the image on",
+      "imageQuotaExceeded": "You've used all your AI image generations this month — you can upload an image manually",
+      "imageBlocked": "This description can't be turned into an image, please try a different one",
+      "imageFailed": "Image generation failed, please try again later",
+      "scenarioRequired": "Add the scenario first — AI needs it to write questions"
+    },
+    "tenseTimes": {
+      "present": "Present",
+      "past": "Past",
+      "future": "Future"
+    },
+    "tenseAspects": {
+      "simple": "Simple",
+      "progressive": "Progressive",
+      "perfect": "Perfect",
+      "perfectProgressive": "Perfect progressive"
+    },
+    "voices": {
+      "active": "Active",
+      "passive": "Passive"
+    },
+    "chips": {
+      "tense": "Tense: {{value}}",
+      "voice": "Voice: {{value}}",
+      "keywords": "Must use: {{value}}"
+    },
+    "tenseCombo": "{{time}} {{aspect}}"
   },
   "vocabularySet": {
     "dialogTitle": "Add Vocabulary Set",

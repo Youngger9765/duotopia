@@ -49,10 +49,20 @@ export type PracticeMode =
   | "word_spelling_quiz"
   | "word_cloze"
   | "word_cloze_quiz"
-  | "tug_of_war";
+  | "tug_of_war"
+  | "scenario_dialogue";
 
-/** 可派發的資料集維度（#864 口說集會新增第三種 "speaking"，屆時擴此 union 即可）。 */
-export type PracticeDataset = "example_sentences" | "vocabulary_set";
+/**
+ * 可派發的資料集維度。
+ *
+ * `scenario_dialogue` 是 #1031 加的第三種（#864 當初預告的「口說集」）—— 它的題目是
+ * 開放式口說問題，與例句／單字兩種資料集的出題方式都不同，所以自成一類而不是硬塞進
+ * 既有兩種。
+ */
+export type PracticeDataset =
+  | "example_sentences"
+  | "vocabulary_set"
+  | "scenario_dialogue";
 
 /**
  * 成績類別「規則」——鏡射後端 `resolve_score_category`，存規則不存定值，
@@ -381,6 +391,42 @@ export const PRACTICE_MODE_REGISTRY: Record<PracticeMode, ModeConfig> = {
     chipDescKey: `${PM}.readingDesc`,
     chipSelectedClass: "border-orange-500 bg-orange-50 text-orange-700",
     iconColorClass: "text-orange-600",
+  },
+  scenario_dialogue: {
+    labelKey: "practiceMode.scenario_dialogue.label",
+    descKey: "practiceMode.scenario_dialogue.desc",
+    badgeClass:
+      "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+    icon: Mic,
+    crayonBg:
+      "crayon-texture bg-gradient-to-b from-purple-100 to-purple-200 text-purple-600",
+    isQuiz: false,
+    isMemoryBased: false,
+    baseMode: "scenario_dialogue",
+    // 只吃情境對話自己的資料集 —— 題目是開放式口說問題，例句／單字集沒有這種資料
+    supportedDatasets: ["scenario_dialogue"],
+    // 學生是開口錄音作答，與 reading / word_reading 同屬口說，不受 play_audio 影響。
+    // 唯一判定在後端 utils/score_category.py，這裡只是鏡射（CLAUDE.md 規則 6）。
+    scoreCategory: { kind: "static", category: "speaking" },
+    // 這兩個旗標維持 false，不是漏改：
+    //
+    // needsAiGrading 的語意是「需 AI **發音**批改」（Azure 發音評測，學生作答時觸發、
+    // 要有 reference_text 才比得出「唸得多準」）。情境對話是開放式回答，沒有正解可比，
+    // 打開只會把所有與範例不同的回答判成低分。
+    //
+    // #1035 補上的 AI 評分是**另一條路徑**：老師在批改頁按下才跑，音檔直接交給 Gemini
+    // 出逐字稿與語言特徵分數，而且只產生建議、不定案。它不由這個旗標控制，額度也由後端
+    // 每題上限管（services/analysis_quota.py）。
+    needsAiGrading: false,
+    burnsTokens: false,
+    autoGraded: false,
+    gradable: true,
+    settings: [SELECT_TIME_READING, TOGGLE_SHOW_TRANSLATION],
+    defaults: { time_limit_per_question: 30 },
+    chipTitleKey: `${PM}.scenario_dialogue`,
+    chipDescKey: `${PM}.scenario_dialogueDesc`,
+    chipSelectedClass: "border-purple-500 bg-purple-50 text-purple-700",
+    iconColorClass: "text-purple-600",
   },
   rearrangement: {
     labelKey: "practiceMode.rearrangement.label",
@@ -723,7 +769,50 @@ const ASSIGNABLE_MODE_ORDER: PracticeMode[] = [
   "word_spelling_quiz",
   "word_cloze",
   "word_cloze_quiz",
+  "scenario_dialogue",
 ];
+
+/**
+ * 每個資料集的預設練習模式（老師還沒選模式時用）。
+ *
+ * 寫成 `Record<PracticeDataset, ...>` 是刻意的：新增資料集時 TypeScript 會強制在這裡
+ * 補上一筆。原本 AssignmentDialog 是用「是不是單字集」的二分法決定預設模式，加入
+ * 情境對話之後就會落到 else 分支選到 `rearrangement` —— 一個它根本不支援的模式
+ * （PR #1034 review round 3）。
+ */
+export const DEFAULT_MODE_BY_DATASET: Record<PracticeDataset, PracticeMode> = {
+  example_sentences: "rearrangement",
+  vocabulary_set: "word_reading",
+  scenario_dialogue: "scenario_dialogue",
+};
+
+/**
+ * 每個資料集在提示訊息裡的顯示名稱 key。
+ *
+ * 同上，窮舉以免新增資料集時訊息說錯 —— 例如購物車裡是情境對話，卻提示「只能選擇
+ * 單字集」。
+ */
+export const DATASET_LABEL_KEY: Record<PracticeDataset, string> = {
+  example_sentences: "dialogs.assignmentDialog.contentTypes.EXAMPLE_SENTENCES",
+  vocabulary_set: "dialogs.assignmentDialog.contentTypes.VOCABULARY_SET",
+  scenario_dialogue: "dialogs.assignmentDialog.contentTypes.SCENARIO_DIALOGUE",
+};
+
+/**
+ * 這個模式吃得下哪些資料集（回傳 i18n key）。
+ *
+ * 給「模式與型別不合」的提示用（#1033）。那句提示原本寫死「只能選擇單字集」——
+ * 在它還是死碼時看不出問題，一旦讓它真的出得來就會說謊：選了情境對話模式時該說
+ * 情境對話，選了朗讀模式去點情境對話時該說例句集與單字集。
+ *
+ * 名單直接取自 registry 的 supportedDatasets，與畫面上實際擋不擋得住同一個來源 ——
+ * 這正是 #1034 學到的：三個資料集之後，任何二分法的猜測都會在某個組合上講錯。
+ */
+export function datasetLabelKeysForMode(mode: PracticeMode): string[] {
+  return PRACTICE_MODE_REGISTRY[mode].supportedDatasets.map(
+    (dataset) => DATASET_LABEL_KEY[dataset],
+  );
+}
 
 /** 依資料集回傳可派發的模式（chip 列），重現 AssignmentDialog 既有過濾：例句集只給非 word_ 模式。 */
 export function listModesForDataset(dataset: PracticeDataset): PracticeMode[] {
@@ -741,6 +830,8 @@ export function contentTypeToDataset(
     return "example_sentences";
   if (["SENTENCE_MAKING", "VOCABULARY_SET"].includes(t))
     return "vocabulary_set";
+  // Issue #1031: 情境對話自成一類，不再落到 null（#1030 之前是落到單字集）
+  if (t === "SCENARIO_DIALOGUE") return "scenario_dialogue";
   return null;
 }
 

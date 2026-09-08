@@ -9,6 +9,10 @@ import { appendAudioToFormData } from "@/utils/audioFormatDetection";
 import { saveRedirectTarget } from "../utils/redirectAfterLogin";
 import { useStudentAuthStore } from "@/stores/studentAuthStore";
 import { useTeacherAuthStore } from "@/stores/teacherAuthStore";
+import type {
+  ScenarioItemBlock,
+  ScenarioSettingsPayload,
+} from "./scenarioDialogue";
 
 // 🔐 Security: Only enable debug logs in development
 const DEBUG = false; // 暫時關閉以便追蹤其他問題
@@ -1181,6 +1185,108 @@ class ApiClient {
     });
   }
 
+  // ===== Issue #1021: 情境對話 AI =====
+  // 三個端點都不寫 DB —— 產出來的東西先回前端給老師改，按儲存才走 createContent。
+
+  /** 依訓練目標與文章難度生成情境文章 */
+  async generateScenarioArticle(data: {
+    goal: string;
+    level?: string;
+  }): Promise<{
+    content: string;
+    usage?: { input_tokens: number; output_tokens: number };
+    estimated_cost_usd?: number;
+  }> {
+    return this.request("/api/teachers/scenario-dialogue/generate-article", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * 依情境文章與出題設定產題。
+   *
+   * `global_tense` / `global_voice` 送的是穩定代碼（past / simple / active），
+   * 後端會翻成給模型看的英文描述 —— 不要在這裡先轉成顯示用的中文。
+   */
+  async generateScenarioQuestions(data: {
+    scenario_content: string;
+    count: number;
+    question_level?: string;
+    global_tense?: { time: string; aspect: string } | null;
+    global_voice?: string;
+    global_rubric?: string;
+    translate_language?: string;
+    /** 清單上已有的題目，避免再產一批時給重複的 */
+    existing_questions?: string[];
+  }): Promise<{
+    questions: Array<{
+      question: string;
+      translation: string;
+      keywords: string[];
+      reference_answer: string;
+      image_prompt: string;
+    }>;
+    usage?: { input_tokens: number; output_tokens: number };
+    estimated_cost_usd?: number;
+  }> {
+    return this.request("/api/teachers/scenario-dialogue/generate-questions", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * 逐題 AI 生圖（Issue #1024）。
+   *
+   * `image_prompt` 是產題時 AI 一併回傳、存在 item_metadata 裡的生圖描述，前端只是
+   * 帶回去，不解讀內容。後端會把兒童相關描述改寫成場景（Imagen 對兒童影像有嚴格
+   * 限制），所以送回來的 `prompt` 可能與送出去的不同。
+   */
+  async generateScenarioImage(imagePrompt: string): Promise<{
+    image_url: string;
+    prompt: string;
+    estimated_cost_usd?: number;
+    quota?: { used: number; remaining: number; limit: number };
+  }> {
+    return this.request("/api/teachers/scenario-dialogue/generate-image", {
+      method: "POST",
+      body: JSON.stringify({ image_prompt: imagePrompt }),
+    });
+  }
+
+  /**
+   * 從老師上傳的圖片 / PDF 擷取情境文章（一次一個檔）。
+   *
+   * 走原生 fetch 而不是 this.request：`request()` 固定塞
+   * `Content-Type: application/json`，套在 FormData 上會蓋掉 multipart 的 boundary，
+   * 後端就解不出檔案。專案裡其他上傳（uploadImage / uploadAudio）也是這樣繞過。
+   */
+  async extractScenarioArticle(file: File): Promise<{
+    content: string;
+    usage?: { input_tokens: number; output_tokens: number };
+    estimated_cost_usd?: number;
+  }> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const currentToken = this.getToken();
+    const headers: HeadersInit = {};
+    if (currentToken) {
+      headers["Authorization"] = `Bearer ${currentToken}`;
+    }
+
+    const response = await fetch(
+      `${this.baseUrl}/api/teachers/scenario-dialogue/extract-article`,
+      { method: "POST", headers, body: formData },
+    );
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(detail || `HTTP ${response.status}`);
+    }
+    return response.json();
+  }
+
   async createContent(
     lessonId: number,
     data: {
@@ -1189,9 +1295,15 @@ class ApiClient {
       items: Array<{
         text: string;
         translation?: string;
+        image_url?: string | null;
+        audio_url?: string | null;
+        // Issue #1013: 情境對話逐題資料（覆寫／必用字詞／參考答案／評分備註）
+        scenario_dialogue?: ScenarioItemBlock;
       }>;
       target_wpm?: number;
       target_accuracy?: number;
+      // Issue #1013: 情境對話整份設定（其他題型不送；後端只對該題型讀取）
+      scenario_settings?: ScenarioSettingsPayload;
     },
   ) {
     return this.request(`/api/teachers/lessons/${lessonId}/contents`, {
@@ -1243,7 +1355,7 @@ class ApiClient {
         text: string;
         translation?: string;
         definition?: string;
-        audio_url?: string;
+        audio_url?: string | null;
         // 統一翻譯欄位 (#366)
         vocabulary_translation?: string;
         vocabulary_translation_lang?: string;
@@ -1258,16 +1370,20 @@ class ApiClient {
         example_sentence?: string;
         example_sentence_translation?: string;
         example_sentence_translation_lang?: string;
-        image_url?: string;
+        image_url?: string | null;
         // Issue #631 / #729: accept both legacy string[] and new object shape.
         distractors?: Array<
           string | { text: string; image_url?: string | null }
         >;
+        // Issue #1013: 情境對話逐題資料
+        scenario_dialogue?: ScenarioItemBlock;
       }>;
       target_wpm?: number;
       target_accuracy?: number;
       time_limit_seconds?: number;
       order_index?: number;
+      // Issue #1013: 情境對話整份設定。不帶 = 不動既有值（後端 None 代表沒帶）
+      scenario_settings?: ScenarioSettingsPayload;
     },
   ) {
     return this.request(`/api/teachers/contents/${contentId}`, {

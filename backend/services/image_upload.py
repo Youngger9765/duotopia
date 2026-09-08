@@ -91,6 +91,71 @@ class ImageUploadService:
 
         return self.storage_client
 
+    def store_image_bytes(
+        self,
+        content: bytes,
+        content_type: str,
+        content_id: Optional[int] = None,
+        item_index: Optional[int] = None,
+    ) -> str:
+        """把圖片 bytes 存進 GCS（或本機）並回傳公開網址。
+
+        從 `upload_image` 抽出來的（Issue #1024）：AI 生成的圖拿到的是 bytes 而不是
+        `UploadFile`，抽出來才能共用同一條儲存路徑 —— 檔名規則、GCS bucket 佈局、
+        本機開發模式、刪除時的網址解析（`delete_image`）全都一致，不必再維護第二套。
+
+        驗證（類型 / 大小）留在呼叫端：上傳走的是使用者檔案要嚴格把關，AI 產出的
+        bytes 則已經是我們自己要求的格式。
+        """
+        # Generate unique filename
+        file_id = str(uuid.uuid4())
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        # Determine extension based on content type
+        ext_map = {
+            "image/jpeg": "jpg",
+            "image/jpg": "jpg",
+            "image/png": "png",
+            "image/gif": "gif",
+            "image/webp": "webp",
+        }
+        extension = ext_map.get(content_type, "jpg")
+
+        # Build filename with optional content_id and item_index for tracking
+        if content_id is not None and item_index is not None:
+            filename = f"content_{content_id}_item_{item_index}_{timestamp}_{file_id}.{extension}"
+        else:
+            filename = f"{timestamp}_{file_id}.{extension}"
+
+        if self.use_gcs:
+            blob_name = f"images/{self.environment}/{filename}"
+            client = self._get_storage_client()
+            if not client:
+                raise HTTPException(
+                    status_code=500,
+                    detail="GCS client initialization failed",
+                )
+
+            bucket = client.bucket(self.bucket_name)
+            blob = bucket.blob(blob_name)
+            blob.upload_from_string(content, content_type=content_type)
+            blob.make_public()
+
+            image_url = blob.public_url
+            logger.info("Image uploaded to GCS: %s", image_url)
+        else:
+            # Local storage (development)
+            local_path = os.path.join(self.local_image_dir, filename)
+            with open(local_path, "wb") as f:
+                f.write(content)
+
+            # Return local URL - always use full URL for cross-origin compatibility
+            backend_url = self.backend_url or "http://localhost:8080"
+            image_url = f"{backend_url}/static/images/{filename}"
+            logger.info("Image saved locally: %s", image_url)
+
+        return image_url
+
     async def upload_image(
         self,
         file: UploadFile,
@@ -136,59 +201,12 @@ class ImageUploadService:
                     detail=f"File too large. Maximum size: {self.max_file_size / 1024 / 1024}MB",
                 )
 
-            # Generate unique filename
-            file_id = str(uuid.uuid4())
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-            # Determine extension based on content type
-            ext_map = {
-                "image/jpeg": "jpg",
-                "image/jpg": "jpg",
-                "image/png": "png",
-                "image/gif": "gif",
-                "image/webp": "webp",
-            }
-            extension = ext_map.get(base_content_type, "jpg")
-
-            # Build filename with optional content_id and item_index for tracking
-            if content_id is not None and item_index is not None:
-                filename = f"content_{content_id}_item_{item_index}_{timestamp}_{file_id}.{extension}"
-            else:
-                filename = f"{timestamp}_{file_id}.{extension}"
-
-            if self.use_gcs:
-                # Upload to GCS
-                blob_name = f"images/{self.environment}/{filename}"
-                client = self._get_storage_client()
-                if not client:
-                    raise HTTPException(
-                        status_code=500,
-                        detail="GCS client initialization failed",
-                    )
-
-                bucket = client.bucket(self.bucket_name)
-                blob = bucket.blob(blob_name)
-
-                # Upload with content type
-                blob.upload_from_string(content, content_type=base_content_type)
-
-                # Make public
-                blob.make_public()
-
-                image_url = blob.public_url
-                logger.info("Image uploaded to GCS: %s", image_url)
-            else:
-                # Local storage (development)
-                local_path = os.path.join(self.local_image_dir, filename)
-                with open(local_path, "wb") as f:
-                    f.write(content)
-
-                # Return local URL - always use full URL for cross-origin compatibility
-                backend_url = self.backend_url or "http://localhost:8080"
-                image_url = f"{backend_url}/static/images/{filename}"
-                logger.info("Image saved locally: %s", image_url)
-
-            return image_url
+            return self.store_image_bytes(
+                content,
+                base_content_type,
+                content_id=content_id,
+                item_index=item_index,
+            )
 
         except HTTPException:
             raise

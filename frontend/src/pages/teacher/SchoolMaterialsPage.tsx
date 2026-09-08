@@ -5,6 +5,8 @@ import { programTreeConfig } from "@/components/shared/programTreeConfig";
 import { ProgramDialog } from "@/components/ProgramDialog";
 import { LessonDialog } from "@/components/LessonDialog";
 import ContentTypeDialog from "@/components/ContentTypeDialog";
+import ScenarioDialogueEditorSheet from "@/components/ScenarioDialogueEditorSheet";
+import { useScenarioDialogueEditor } from "@/hooks/useScenarioDialogueEditor";
 import ReadingAssessmentPanel, {
   type ReadingAssessmentPanelHandle,
 } from "@/components/ReadingAssessmentPanel";
@@ -25,6 +27,11 @@ export default function SchoolMaterialsPage() {
   const { t } = useTranslation();
   const { selectedSchool, selectedOrganization, mode } = useWorkspace();
   const { sidebarWidth, setSidebarDisabled, editorBusy } = useSidebar();
+  // Issue #1014: 情境對話新增／編輯（state 與存檔都在 hook 裡，五個接線點共用）。
+  // 用箭頭包一層：hook 的呼叫位置在 fetchSchoolPrograms 宣告之前。
+  const scenarioEditor = useScenarioDialogueEditor({
+    onSaved: () => fetchSchoolPrograms(),
+  });
   const isOrgMode = mode === "organization";
 
   const readingPanelRef = useRef<ReadingAssessmentPanelHandle>(null);
@@ -68,9 +75,16 @@ export default function SchoolMaterialsPage() {
 
   // Disable sidebar when editor panels are open
   useEffect(() => {
-    setSidebarDisabled(showReadingEditor || showVocabularySetEditor);
+    setSidebarDisabled(
+      showReadingEditor || showVocabularySetEditor || scenarioEditor.isOpen,
+    );
     return () => setSidebarDisabled(false);
-  }, [showReadingEditor, showVocabularySetEditor, setSidebarDisabled]);
+  }, [
+    showReadingEditor,
+    showVocabularySetEditor,
+    scenarioEditor.isOpen,
+    setSidebarDisabled,
+  ]);
   const [vocabularySetLessonId, setVocabularySetLessonId] = useState<
     number | null
   >(null);
@@ -261,6 +275,11 @@ export default function SchoolMaterialsPage() {
       setVocabularySetLessonId(content.lesson_id || null);
       setVocabularySetContentId(content.id);
       setShowVocabularySetEditor(true);
+    } else if (contentType === "scenario_dialogue") {
+      // Issue #1014: 編輯既有情境對話（hook 會先讀內容再開面板）
+      void scenarioEditor.openForEdit(content.id, {
+        lessonId: content.lesson_id || null,
+      });
     }
   };
 
@@ -993,27 +1012,24 @@ export default function SchoolMaterialsPage() {
               setContentLessonInfo(null);
 
               // Handle different content types
-              // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
-              if (
-                selection.type === "reading_assessment" ||
-                selection.type === "example_sentences" ||
-                selection.type === "EXAMPLE_SENTENCES"
-              ) {
+              // #1017: 這個對話框只送小寫的 example_sentences；
+              // reading_assessment 與大寫寫法都已不可能出現
+              if (selection.type === "example_sentences") {
                 // Open modal for new content
                 setEditorLessonId(selection.lessonId);
                 setEditorContentId(null); // null = new content
                 setSelectedContent(null); // No existing content
                 setShowReadingEditor(true);
-              } else if (
-                selection.type === "SENTENCE_MAKING" ||
-                selection.type === "sentence_making" ||
-                selection.type === "vocabulary_set" ||
-                selection.type === "VOCABULARY_SET"
-              ) {
-                // For sentence_making/vocabulary_set, use popup for new content creation
+              } else if (selection.type === "vocabulary_set") {
+                // #1017: sentence_making（舊名）不再由對話框送出
                 setVocabularySetLessonId(selection.lessonId);
                 setVocabularySetContentId(null); // null for new content
                 setShowVocabularySetEditor(true);
+              } else if (selection.type === "scenario_dialogue") {
+                // Issue #1014: 情境對話 — 新增模式
+                scenarioEditor.openForCreate({
+                  lessonId: selection.lessonId,
+                });
               } else {
                 toast.info(
                   `${t("teacherTemplatePrograms.messages.featureInDevelopment", { type: selection.type })}`,
@@ -1022,6 +1038,9 @@ export default function SchoolMaterialsPage() {
             }}
           />
         )}
+
+        {/* Issue #1014: 情境對話 Editor（新增／編輯 - 側滑） */}
+        <ScenarioDialogueEditorSheet editor={scenarioEditor} />
 
         {/* Content Download Sheet (vocabulary_set worksheet PDF) */}
         <ContentDownloadSheet

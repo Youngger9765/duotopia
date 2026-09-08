@@ -107,6 +107,15 @@ export interface Activity {
     // Server-authoritative AI analysis count for this item; used by the
     // recording-attempts hook to seed its initial state cross-device.
     ai_analysis_count?: number;
+    // Issue #1031: 情境對話逐題的作答提示。
+    // **沒有 reference_answer** —— 後端的 public_item_view 會濾掉它（那是給老師與
+    // AI 評分的語言特徵對照，學生看到就變成照著唸了）。
+    scenario_dialogue?: {
+      keywords: string[];
+      rubric_note: string;
+      tense: { time: string; aspect: string };
+      voice: string;
+    };
     ai_assessment?: {
       accuracy_score?: number;
       fluency_score?: number;
@@ -125,6 +134,14 @@ export interface Activity {
     };
     [key: string]: unknown;
   }>;
+  // Issue #1031: 情境對話的學生可見設定（情境內容 + 作答指引）。
+  // 出題端的東西（題目難度、整體時態語態、TTS）不會出現在這裡 —— 後端的
+  // public_settings_view 只給這幾個欄位。
+  scenario_settings?: {
+    scenario_content: string;
+    global_rubric: string;
+    translate_language: string;
+  };
   item_count?: number;
   answers?: string[];
   blanks?: string[];
@@ -2106,125 +2123,178 @@ export default function StudentActivityPageContent({
           : activity.ai_scores;
 
       return (
-        <GroupedQuestionsTemplate
-          items={activity.items}
-          currentQuestionIndex={currentSubQuestionIndex}
-          showTranslation={showTranslation}
-          isRecording={isRecording}
-          recordingTime={recordingTime}
-          onStartRecording={startRecording}
-          onStopRecording={stopRecording}
-          onUpdateItemRecording={(index, url) =>
-            handleUpdateItemRecording(activity.id, index, url)
-          }
-          onFileUpload={handleFileUpload}
-          formatTime={formatTime}
-          timeLimit={timeLimitPerQuestion}
-          progressIds={
-            // 🔧 Issue #118 Fix: Always use activity.items as base, merge in updated progressIds
-            // Previous bug: answer?.progressIds || ... would use incomplete array [101] after first upload
-            // causing items 1-4 to have undefined progressId
-            activity.items?.map(
-              (item, index) =>
-                answer?.progressIds?.[index] ?? item.progress_id ?? 0,
-            ) || []
-          }
-          initialAssessmentResults={assessmentResults}
-          readOnly={isReadOnly}
-          assignmentId={assignmentId.toString()}
-          isPreviewMode={isPreviewMode}
-          isDemoMode={isDemoMode}
-          authToken={authToken}
-          itemAnalysisState={itemAnalysisStates.get(
-            getItemKey(activity.id, currentSubQuestionIndex),
-          )}
-          onUploadSuccess={(index, gcsUrl, progressId) => {
-            setActivities((prevActivities) => {
-              const newActivities = [...prevActivities];
-              const activityIndex = newActivities.findIndex(
-                (a) => a.id === activity.id,
-              );
-              if (activityIndex !== -1 && newActivities[activityIndex].items) {
-                const newItems = [...newActivities[activityIndex].items!];
-                if (newItems[index]) {
-                  newItems[index] = {
-                    ...newItems[index],
-                    recording_url: gcsUrl,
-                  };
-                }
-                newActivities[activityIndex] = {
-                  ...newActivities[activityIndex],
-                  items: newItems,
-                };
-              }
-              return newActivities;
-            });
+        <>
+          {/*
+            Issue #1031: 情境對話的情境內容置頂常駐。
+            題目都是從情境來的（「你上週末做了什麼？」要看得到那段情境才答得出來），
+            所以不是讀完一次就收起來，而是作答每一題時都看得到。
+          */}
+          {practiceMode === "scenario_dialogue" &&
+            activity.scenario_settings?.scenario_content && (
+              <div className="mb-4 rounded-xl border border-purple-200 bg-purple-50/60 p-4">
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
+                  {activity.scenario_settings.scenario_content}
+                </p>
+                {activity.scenario_settings.global_rubric && (
+                  <p className="mt-3 border-t border-purple-200 pt-2 text-xs text-purple-800">
+                    {activity.scenario_settings.global_rubric}
+                  </p>
+                )}
+              </div>
+            )}
 
-            setAnswers((prev) => {
-              const newAnswers = new Map(prev);
-              const answer = newAnswers.get(activity.id);
-              if (answer) {
-                if (!answer.progressIds) answer.progressIds = [];
-                while (answer.progressIds.length <= index) {
-                  answer.progressIds.push(0);
-                }
-                answer.progressIds[index] = progressId;
-                answer.status = "completed";
-              }
-              newAnswers.set(activity.id, answer!);
-              return newAnswers;
-            });
-          }}
-          onAssessmentComplete={(index, assessmentResult) => {
-            // Issue #689: 分析成功 → 替該題計入 +1（mirror 後端 attempts 欄位）
-            if (assessmentResult && recordingGateActive) {
-              const itemIdForCount = activity.items?.[index]?.id;
-              if (itemIdForCount !== undefined) {
-                if (index === currentSubQuestionIndex) {
-                  // current item: 透過 hook 讓 UI 立刻反映
-                  recordingGate.recordAttempt();
-                  // Reconcile localStorage with the server-authoritative
-                  // count when the response carries it. The hook handles
-                  // undefined as a no-op and caps overflow itself.
-                  recordingGate.syncServerCount(
-                    assessmentResult.ai_analysis_count,
-                  );
-                } else {
-                  incrementRecordingAttemptForItem(
-                    assignmentId,
-                    itemIdForCount as number | string,
-                  );
-                }
-              }
+          {/* 本題的必用字詞 —— 逐題獨立，答題時要看得到 */}
+          {practiceMode === "scenario_dialogue" &&
+            (activity.items?.[currentSubQuestionIndex]?.scenario_dialogue
+              ?.keywords?.length ?? 0) > 0 && (
+              <div className="mb-3 flex flex-wrap items-center gap-1">
+                <span className="text-xs text-gray-500">
+                  {t("studentActivity.scenarioDialogue.useTheseWords")}
+                </span>
+                {activity.items?.[
+                  currentSubQuestionIndex
+                ]?.scenario_dialogue?.keywords.map((word) => (
+                  <span
+                    key={word}
+                    className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800"
+                  >
+                    {word}
+                  </span>
+                ))}
+              </div>
+            )}
+
+          <GroupedQuestionsTemplate
+            items={activity.items}
+            currentQuestionIndex={currentSubQuestionIndex}
+            showTranslation={showTranslation}
+            isRecording={isRecording}
+            recordingTime={recordingTime}
+            onStartRecording={startRecording}
+            onStopRecording={stopRecording}
+            onUpdateItemRecording={(index, url) =>
+              handleUpdateItemRecording(activity.id, index, url)
             }
-            setActivities((prevActivities) => {
-              const newActivities = [...prevActivities];
-              const activityIndex = newActivities.findIndex(
-                (a) => a.id === activity.id,
-              );
-              // 修正：無論 assessmentResult 是新結果或 null（清除），都要更新 ai_assessment
-              // Issue #82: 刪除錄音時需要同步清除前端的分析結果
-              if (activityIndex !== -1 && newActivities[activityIndex].items) {
-                const newItems = [...newActivities[activityIndex].items!];
-                if (newItems[index]) {
-                  newItems[index] = {
-                    ...newItems[index],
-                    ai_assessment: assessmentResult ?? undefined, // 可以是新結果或 undefined（清除）
+            onFileUpload={handleFileUpload}
+            formatTime={formatTime}
+            timeLimit={timeLimitPerQuestion}
+            progressIds={
+              // 🔧 Issue #118 Fix: Always use activity.items as base, merge in updated progressIds
+              // Previous bug: answer?.progressIds || ... would use incomplete array [101] after first upload
+              // causing items 1-4 to have undefined progressId
+              activity.items?.map(
+                (item, index) =>
+                  answer?.progressIds?.[index] ?? item.progress_id ?? 0,
+              ) || []
+            }
+            initialAssessmentResults={assessmentResults}
+            readOnly={isReadOnly}
+            assignmentId={assignmentId.toString()}
+            isPreviewMode={isPreviewMode}
+            isDemoMode={isDemoMode}
+            authToken={authToken}
+            itemAnalysisState={itemAnalysisStates.get(
+              getItemKey(activity.id, currentSubQuestionIndex),
+            )}
+            onUploadSuccess={(index, gcsUrl, progressId) => {
+              setActivities((prevActivities) => {
+                const newActivities = [...prevActivities];
+                const activityIndex = newActivities.findIndex(
+                  (a) => a.id === activity.id,
+                );
+                if (
+                  activityIndex !== -1 &&
+                  newActivities[activityIndex].items
+                ) {
+                  const newItems = [...newActivities[activityIndex].items!];
+                  if (newItems[index]) {
+                    newItems[index] = {
+                      ...newItems[index],
+                      recording_url: gcsUrl,
+                    };
+                  }
+                  newActivities[activityIndex] = {
+                    ...newActivities[activityIndex],
+                    items: newItems,
                   };
                 }
-                newActivities[activityIndex] = {
-                  ...newActivities[activityIndex],
-                  items: newItems,
-                };
+                return newActivities;
+              });
+
+              setAnswers((prev) => {
+                const newAnswers = new Map(prev);
+                const answer = newAnswers.get(activity.id);
+                if (answer) {
+                  if (!answer.progressIds) answer.progressIds = [];
+                  while (answer.progressIds.length <= index) {
+                    answer.progressIds.push(0);
+                  }
+                  answer.progressIds[index] = progressId;
+                  answer.status = "completed";
+                }
+                newAnswers.set(activity.id, answer!);
+                return newAnswers;
+              });
+            }}
+            onAssessmentComplete={(index, assessmentResult) => {
+              // Issue #689: 分析成功 → 替該題計入 +1（mirror 後端 attempts 欄位）
+              if (assessmentResult && recordingGateActive) {
+                const itemIdForCount = activity.items?.[index]?.id;
+                if (itemIdForCount !== undefined) {
+                  if (index === currentSubQuestionIndex) {
+                    // current item: 透過 hook 讓 UI 立刻反映
+                    recordingGate.recordAttempt();
+                    // Reconcile localStorage with the server-authoritative
+                    // count when the response carries it. The hook handles
+                    // undefined as a no-op and caps overflow itself.
+                    recordingGate.syncServerCount(
+                      assessmentResult.ai_analysis_count,
+                    );
+                  } else {
+                    incrementRecordingAttemptForItem(
+                      assignmentId,
+                      itemIdForCount as number | string,
+                    );
+                  }
+                }
               }
-              return newActivities;
-            });
-          }}
-          onAnalyzingStateChange={setIsAnalyzing} // 🔒 接收分析狀態變化
-          canUseAiAnalysis={canUseAiAnalysis}
-          recordingDisabled={recordingDisabledForCurrent}
-          attemptsHint={recordingAttemptsHint}
-        />
+              setActivities((prevActivities) => {
+                const newActivities = [...prevActivities];
+                const activityIndex = newActivities.findIndex(
+                  (a) => a.id === activity.id,
+                );
+                // 修正：無論 assessmentResult 是新結果或 null（清除），都要更新 ai_assessment
+                // Issue #82: 刪除錄音時需要同步清除前端的分析結果
+                if (
+                  activityIndex !== -1 &&
+                  newActivities[activityIndex].items
+                ) {
+                  const newItems = [...newActivities[activityIndex].items!];
+                  if (newItems[index]) {
+                    newItems[index] = {
+                      ...newItems[index],
+                      ai_assessment: assessmentResult ?? undefined, // 可以是新結果或 undefined（清除）
+                    };
+                  }
+                  newActivities[activityIndex] = {
+                    ...newActivities[activityIndex],
+                    items: newItems,
+                  };
+                }
+                return newActivities;
+              });
+            }}
+            onAnalyzingStateChange={setIsAnalyzing} // 🔒 接收分析狀態變化
+            canUseAiAnalysis={
+              // Issue #1031: 情境對話沒有 AI 分析。既有那套是 Azure 發音評測，要有
+              // reference_text 才能評「唸得多準」；開放式回答沒有正解可比，硬跑會把
+              // 「講得跟範例不同」判成錯。改由老師在批改頁人工評分。
+              practiceMode === "scenario_dialogue" ? false : canUseAiAnalysis
+            }
+            recordingDisabled={recordingDisabledForCurrent}
+            attemptsHint={recordingAttemptsHint}
+          />
+        </>
       );
     }
 

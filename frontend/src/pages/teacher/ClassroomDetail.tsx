@@ -26,7 +26,11 @@ import { StudentDialogs } from "@/components/StudentDialogs";
 import { ProgramDialog } from "@/components/ProgramDialog";
 import { LessonDialog } from "@/components/LessonDialog";
 import CreateProgramDialog from "@/components/CreateProgramDialog";
-import ContentTypeDialog from "@/components/ContentTypeDialog";
+import ContentTypeDialog, {
+  type ContentTypeValue,
+} from "@/components/ContentTypeDialog";
+import ScenarioDialogueEditorSheet from "@/components/ScenarioDialogueEditorSheet";
+import { useScenarioDialogueEditor } from "@/hooks/useScenarioDialogueEditor";
 import ReadingAssessmentPanel, {
   type ReadingAssessmentPanelHandle,
 } from "@/components/ReadingAssessmentPanel";
@@ -135,6 +139,17 @@ export default function ClassroomDetail({
   const location = useLocation();
   const { mode } = useWorkspace();
   const { sidebarWidth, setSidebarDisabled, editorBusy } = useSidebar();
+  // Issue #1014: 情境對話新增／編輯（state 與存檔都在 hook 裡，五個接線點共用）。
+  //
+  // Issue #1020: 存檔後要叫 refreshPrograms()，**不是** fetchClassroomDetail()。
+  // 兩者名字很像但做的事完全不同：fetchClassroomDetail 只抓班級清單再 setClassroom，
+  // 完全不碰 programs / lessons / contents，接錯的話存檔成功、面板也關了，教材列表
+  // 卻要手動重整才看得到新內容。本頁其他題型存檔後叫的也都是 refreshPrograms。
+  //
+  // 用箭頭包一層：hook 的呼叫位置在 refreshPrograms 宣告之前。
+  const scenarioEditor = useScenarioDialogueEditor({
+    onSaved: () => refreshPrograms(),
+  });
   const isOrgMode = mode === "organization";
   const [classroom, setClassroom] = useState<ClassroomInfo | null>(null);
   const [templateProgram, setTemplateProgram] = useState<Program | null>(null);
@@ -202,9 +217,16 @@ export default function ClassroomDetail({
 
   // Disable sidebar when editor panels are open
   useEffect(() => {
-    setSidebarDisabled(showReadingEditor || showVocabularySetEditor);
+    setSidebarDisabled(
+      showReadingEditor || showVocabularySetEditor || scenarioEditor.isOpen,
+    );
     return () => setSidebarDisabled(false);
-  }, [showReadingEditor, showVocabularySetEditor, setSidebarDisabled]);
+  }, [
+    showReadingEditor,
+    showVocabularySetEditor,
+    scenarioEditor.isOpen,
+    setSidebarDisabled,
+  ]);
   const [vocabularySetLessonId, setVocabularySetLessonId] = useState<
     number | null
   >(null);
@@ -1129,6 +1151,12 @@ export default function ClassroomDetail({
         lessonName: content.lessonName,
       });
       setIsPanelOpen(true);
+    } else if (contentType === "scenario_dialogue") {
+      // Issue #1014: 編輯既有情境對話（hook 會先讀內容再開面板）。
+      // 必須擋在下面的通用 else 之前 —— 否則會落到不認得這個題型的舊面板。
+      void scenarioEditor.openForEdit(content.id, {
+        lessonId: content.lesson_id || null,
+      });
     } else {
       // For other content types, use the existing panel
       setSelectedContent(content);
@@ -1692,32 +1720,29 @@ export default function ClassroomDetail({
   };
 
   const handleContentTypeSelect = async (selection: {
-    type: string;
+    // Issue #1017: 用 ContentTypeDialog 的 union 而不是 string —— 寫成 string 等於
+    // 把型別保護關掉，比對到不存在的值（例如大寫寫法）就不會有編譯錯誤
+    type: ContentTypeValue;
     lessonId: number;
     programName: string;
     lessonName: string;
   }) => {
-    // For reading_assessment and example_sentences, use popup for new content creation
-    // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
-    if (
-      selection.type === "reading_assessment" ||
-      selection.type === "example_sentences" ||
-      selection.type === "EXAMPLE_SENTENCES"
-    ) {
+    // #1017: 這個對話框只送小寫的 example_sentences；
+    // reading_assessment 與大寫寫法都已不可能出現
+    if (selection.type === "example_sentences") {
       setEditorLessonId(selection.lessonId);
       setEditorContentId(null); // null for new content
       setShowReadingEditor(true);
       setShowContentTypeDialog(false);
-    } else if (
-      selection.type === "SENTENCE_MAKING" ||
-      selection.type === "sentence_making" ||
-      selection.type === "vocabulary_set" ||
-      selection.type === "VOCABULARY_SET"
-    ) {
-      // For sentence_making/vocabulary_set, use popup for new content creation
+    } else if (selection.type === "vocabulary_set") {
+      // #1017: sentence_making（舊名）不再由對話框送出
       setVocabularySetLessonId(selection.lessonId);
       setVocabularySetContentId(null); // null for new content
       setShowVocabularySetEditor(true);
+      setShowContentTypeDialog(false);
+    } else if (selection.type === "scenario_dialogue") {
+      // Issue #1014: 情境對話 — 新增模式
+      scenarioEditor.openForCreate({ lessonId: selection.lessonId });
       setShowContentTypeDialog(false);
     } else {
       // For other content types, create directly
@@ -3503,6 +3528,9 @@ export default function ClassroomDetail({
           lessonInfo={contentLessonInfo}
         />
       )}
+
+      {/* Issue #1014: 情境對話 Editor（新增／編輯 - 側滑） */}
+      <ScenarioDialogueEditorSheet editor={scenarioEditor} />
 
       {/* Reading Assessment Editor */}
       {showReadingEditor && editorLessonId && (

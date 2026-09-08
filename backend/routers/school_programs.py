@@ -36,6 +36,7 @@ from models import (
 from schemas import LessonCreate
 from auth import verify_token
 from services.casbin_service import get_casbin_service
+from utils import scenario_dialogue as sd
 
 logger = logging.getLogger(__name__)
 
@@ -341,6 +342,8 @@ def deep_copy_program(
                 level=content.level,
                 tags=content.tags,
                 is_public=content.is_public,
+                # Issue #1013: 情境對話整份設定（非該題型為 None）
+                scenario_settings=sd.copy_settings(content.scenario_settings),
             )
             db.add(new_content)
             db.flush()

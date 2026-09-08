@@ -16,6 +16,8 @@ import ReadingAssessmentPanel, {
 import VocabularySetPanel, {
   type VocabularySetPanelHandle,
 } from "@/components/VocabularySetPanel";
+import ScenarioDialogueEditorSheet from "@/components/ScenarioDialogueEditorSheet";
+import { useScenarioDialogueEditor } from "@/hooks/useScenarioDialogueEditor";
 import ContentCopyDialog from "@/components/ContentCopyDialog";
 import ContentDownloadSheet from "@/components/ContentDownloadSheet";
 import { AssignmentDialog, CartItem } from "@/components/AssignmentDialog";
@@ -201,11 +203,25 @@ function TeacherTemplateProgramsInner() {
   // Sentence Making Editor state
   const [showVocabularySetEditor, setShowVocabularySetEditor] = useState(false);
 
+  // Issue #944 / #1013 / #1014: 情境對話（口說練習）新增／編輯面板。
+  // state、開啟、存檔都在 hook 裡，四個接線點共用（見 useScenarioDialogueEditor）。
+  const scenarioEditor = useScenarioDialogueEditor({
+    // 用箭頭包一層：hook 的呼叫位置在 fetchTemplatePrograms 宣告之前
+    onSaved: () => fetchTemplatePrograms(),
+  });
+
   // Disable sidebar when editor panels are open
   useEffect(() => {
-    setSidebarDisabled(showReadingEditor || showVocabularySetEditor);
+    setSidebarDisabled(
+      showReadingEditor || showVocabularySetEditor || scenarioEditor.isOpen,
+    );
     return () => setSidebarDisabled(false);
-  }, [showReadingEditor, showVocabularySetEditor, setSidebarDisabled]);
+  }, [
+    showReadingEditor,
+    showVocabularySetEditor,
+    scenarioEditor.isOpen,
+    setSidebarDisabled,
+  ]);
   const [vocabularySetLessonId, setVocabularySetLessonId] = useState<
     number | null
   >(null);
@@ -459,6 +475,15 @@ function TeacherTemplateProgramsInner() {
       setVocabularySetProgramId(isProgramDirect ? content.program_id! : null);
       setVocabularySetContentId(content.id);
       setShowVocabularySetEditor(true);
+    } else if (contentType === "scenario_dialogue") {
+      // Issue #1013: 編輯既有情境對話（hook 會先讀內容再開面板）
+      void scenarioEditor.openForEdit(content.id, {
+        lessonId: content.lesson_id || null,
+        programId: isProgramDirect ? content.program_id! : null,
+        programLevel: content.lesson_id
+          ? getProgramLevelByLessonId(programs, content.lesson_id)
+          : programs.find((p) => p.id === content.program_id)?.level,
+      });
     }
   };
 
@@ -1296,6 +1321,9 @@ function TeacherTemplateProgramsInner() {
           </>
         )}
 
+      {/* Issue #944 / #1013 / #1014: 情境對話 Editor（新增／編輯 - 側滑） */}
+      <ScenarioDialogueEditorSheet editor={scenarioEditor} />
+
       {/* Sentence Making Editor (編輯模式 - 側邊欄) */}
       {showVocabularySetEditor &&
         (vocabularySetLessonId || vocabularySetProgramId) &&
@@ -1442,25 +1470,17 @@ function TeacherTemplateProgramsInner() {
               !!selection.programId && !selection.lessonId;
 
             // Handle different content types
-            // EXAMPLE_SENTENCES uses the same ReadingAssessmentPanel as READING_ASSESSMENT
-            if (
-              selection.type === "reading_assessment" ||
-              selection.type === "example_sentences" ||
-              selection.type === "EXAMPLE_SENTENCES"
-            ) {
+            // #1017: 這個對話框只送小寫的 example_sentences；
+            // reading_assessment 與大寫寫法都已不可能出現
+            if (selection.type === "example_sentences") {
               // Open modal for new content
               setEditorLessonId(isProgramDirect ? null : selection.lessonId);
               setEditorProgramId(isProgramDirect ? selection.programId! : null);
               setEditorContentId(null); // null = new content
               setSelectedContent(null); // No existing content
               setShowReadingEditor(true);
-            } else if (
-              selection.type === "SENTENCE_MAKING" ||
-              selection.type === "sentence_making" ||
-              selection.type === "vocabulary_set" ||
-              selection.type === "VOCABULARY_SET"
-            ) {
-              // For sentence_making/vocabulary_set, use popup for new content creation
+            } else if (selection.type === "vocabulary_set") {
+              // #1017: sentence_making（舊名）不再由對話框送出
               setVocabularySetLessonId(
                 isProgramDirect ? null : selection.lessonId,
               );
@@ -1469,6 +1489,18 @@ function TeacherTemplateProgramsInner() {
               );
               setVocabularySetContentId(null); // null for new content
               setShowVocabularySetEditor(true);
+            } else if (
+              selection.type === "scenario_dialogue" ||
+              selection.type === "SCENARIO_DIALOGUE"
+            ) {
+              // Issue #1013 / #1014: 情境對話 — 新增模式
+              scenarioEditor.openForCreate({
+                lessonId: isProgramDirect ? null : selection.lessonId,
+                programId: isProgramDirect ? selection.programId! : null,
+                programLevel: isProgramDirect
+                  ? programs.find((p) => p.id === selection.programId)?.level
+                  : getProgramLevelByLessonId(programs, selection.lessonId),
+              });
             } else {
               toast.info(
                 `${t("teacherTemplatePrograms.messages.featureInDevelopment", { type: selection.type })}`,

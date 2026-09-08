@@ -6,6 +6,10 @@
  *    - busy 狀態透過 SidebarContext.editorBusy 訂閱，確保 reactive 更新
  *    - 避免讀取 panelRef.current?.isBusy 產生的 stale-ref 問題 (#651)
  * 2. 防止重複連續點擊（saving 中 disabled）
+ * 3. save() 失敗時吞掉例外只記 log（#1013）
+ *    - 面板／呼叫端已經負責顯示錯誤（toast），這裡再拋會變成 unhandled rejection
+ *      —— onClick 的 promise 沒有人接。吞掉的同時一定要把按鈕解鎖，否則老師沒有
+ *      第二次機會重試。
  */
 import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -33,6 +37,9 @@ export function RefSaveButton({ panelRef }: RefSaveButtonProps) {
     setIsSaving(true);
     try {
       await panel.save();
+    } catch (error) {
+      // 錯誤訊息由面板／呼叫端負責顯示；這裡只確保不變成 unhandled rejection
+      console.error("Panel save failed:", error);
     } finally {
       setIsSaving(false);
     }

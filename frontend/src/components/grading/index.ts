@@ -11,6 +11,7 @@
  * ─── 作業類型專屬 Panel（Per-practice-mode — 新類型加新檔案） ───
  * - ReadingAssessmentPanel: practice_mode = "reading" | "word_reading"
  * - SentenceRearrangementPanel: practice_mode = "rearrangement"
+ * - ScenarioDialogueGradingPanel: practice_mode = "scenario_dialogue"（純人工批改）
  * - （未來新增：XxxAssessmentPanel 依 practice_mode 新增）
  *
  * 分流點在 src/pages/teacher/GradingPage.tsx 中間欄的 conditional render。
@@ -21,3 +22,4 @@ export { StudentListPanel } from "./StudentListPanel";
 export { OverallFeedbackPanel } from "./OverallFeedbackPanel";
 export { ReadingAssessmentPanel } from "./ReadingAssessmentPanel";
 export { SentenceRearrangementPanel } from "./SentenceRearrangementPanel";
+export { ScenarioDialogueGradingPanel } from "./ScenarioDialogueGradingPanel";

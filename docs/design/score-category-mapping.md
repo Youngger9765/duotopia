@@ -23,10 +23,15 @@
 |---|--------------|---------------------|----------|------|
 | 1 | `word_reading`（單字朗讀） | 任意 | `speaking` | 口說 |
 | 2 | `reading`（例句朗讀） | 任意 | `speaking` | 口說 |
+| 2b | `scenario_dialogue`（情境對話） | 任意 | `speaking` | 口說 |
 | 3 | `rearrangement`（例句重組）/ `word_selection`(`_quiz`)（單字選擇） | `false` | `reading` | 閱讀 |
 | 4 | 其他 practice_mode | `false` | `writing` | 寫作 |
 | 5 | 其他 practice_mode | `true` | `listening` | 聽力 |
 
+> Issue #1013：`scenario_dialogue`（情境對話）加入朗讀類。學生看情境＋題目後**開口錄音作答**，
+> 題目音檔（`play_audio`）只是提示素材，不該把它翻成聽力，因此比照 `reading` / `word_reading`
+> 恆為 `speaking`。無回填需求 —— 這是新模式，沒有既有資料。
+>
 > Issue #828：小考變體（`word_selection_quiz` / `word_spelling_quiz` / `word_cloze_quiz`）與其艾賓浩斯版本共用同一個分類規則。
 >
 > Issue #878（兩項；皆**未做回填**——既有作業保留當初存的值，僅新建／更新的作業套新規則，接受新舊並存）：
@@ -35,7 +40,7 @@
 
 ### 規則邏輯（白話）
 
-1. **朗讀類**（單字朗讀／例句朗讀）→ 一律 **口說**，因為作答行為本身就是開口。
+1. **朗讀類**（單字朗讀／例句朗讀／情境對話）→ 一律 **口說**，因為作答行為本身就是開口。
 2. **理解／選擇型**（`rearrangement` 例句重組／`word_selection`(`_quiz`) 單字選擇）無音檔 → **閱讀**（看文字理解、用選擇/排列作答，不產出文字）；有音檔 → 落到通則，視為 **聽力**。
 3. **通則**：
    - 沒有音檔 → **寫作**（靠**打字產出文字**作答，如 `word_spelling` 拼寫、`word_cloze` 克漏字填空）
@@ -49,6 +54,7 @@
 |---------------|-------------------|------------------|
 | `word_reading` | speaking | speaking |
 | `reading` | speaking | speaking |
+| `scenario_dialogue` | speaking | speaking |
 | `word_cloze` | writing | listening |
 | `word_cloze_quiz` | writing | listening |
 | `rearrangement` | reading | listening |

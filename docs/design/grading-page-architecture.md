@@ -23,6 +23,10 @@
 │             │    for practice_mode =          │                       │
 │             │    rearrangement                │                       │
 │             │                                 │                       │
+│             │  ↳ ScenarioDialogueGradingPanel │                       │
+│             │    for practice_mode =          │                       │
+│             │    scenario_dialogue            │                       │
+│             │                                 │                       │
 │             │  ↳ （未來新作業類型在此增加）    │                       │
 │             │                                 │                       │
 └─────────────┴─────────────────────────────────┴───────────────────────┘
@@ -57,6 +61,14 @@ return <ReadingAssessmentPanel {...panelProps} ... />;
 | `OverallFeedbackPanel` | ❌ 不可知 | 右欄逐題燈號 / 分數 / 總評 / 完成/退回 |
 | `ReadingAssessmentPanel` | ✅ 專屬 | reading / word_reading（錄音 + AI 語音評分） |
 | `SentenceRearrangementPanel` | ✅ 專屬 | rearrangement（選字歷程 + 錯誤數 + expected_score） |
+| `ScenarioDialogueGradingPanel` | ✅ 專屬 | scenario_dialogue（錄音 + 參考答案 + AI 語言特徵**建議**） |
+
+> **情境對話的 AI 與朗讀類不是同一套**（#1035）。朗讀走 Azure 發音評測（`/reanalyze-item`，
+> 評「唸得多準」，需要 reference_text）；情境對話是開放式回答，沒有可比對的正解，走
+> `/scenario-ai-grade`（Gemini 直接讀音檔 → 逐字稿 + 四個語言特徵分數）。後者**只產生
+> 建議**，不寫 `teacher_review_score` / `teacher_passed` —— 老師仍是最終判定者。
+> 兩邊的分數也分開存（`scenario_grading_data` vs `accuracy_score` 等欄），避免作業層
+> 報告讀到語意不同的數字。
 
 ## 新增作業類型 Checklist
 

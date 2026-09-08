@@ -19,7 +19,7 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { apiClient } from "@/lib/api";
+import { apiClient, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { Assignment } from "@/types";
 import type { PracticeMode } from "@/lib/practiceMode";
@@ -39,6 +39,12 @@ const ReadingAssessmentPanel = lazy(() =>
 const SentenceRearrangementPanel = lazy(() =>
   import("@/components/grading/SentenceRearrangementPanel").then((m) => ({
     default: m.SentenceRearrangementPanel,
+  })),
+);
+// Issue #1031: 情境對話批改 Panel（依 ADR 每個 practice_mode 各自 lazy 切 chunk）
+const ScenarioDialogueGradingPanel = lazy(() =>
+  import("@/components/grading/ScenarioDialogueGradingPanel").then((m) => ({
+    default: m.ScenarioDialogueGradingPanel,
   })),
 );
 const QuizGradingPanel = lazy(() =>
@@ -88,6 +94,23 @@ export interface RearrangementData {
   timeout?: boolean;
 }
 
+export interface ScenarioGradingSuggestion {
+  transcript: string;
+  /** 四個面向各 0-100；評不出來的面向是 null（留白），不是 0 分。 */
+  scores: {
+    content?: number | null;
+    grammar?: number | null;
+    vocabulary?: number | null;
+    keywords?: number | null;
+  };
+  overall?: number | null;
+  feedback: string;
+  suggested_pass?: boolean | null;
+  graded_at?: string;
+  /** true = 這份是先前存下來的結果，這次沒有再呼叫模型。 */
+  cached: boolean;
+}
+
 export interface SubmissionItem {
   question_text: string;
   question_translation?: string;
@@ -127,6 +150,19 @@ export interface SubmissionItem {
   max_errors?: number | null;
   item_status?: string;
   completed_at?: string | null;
+  // Issue #1031: 情境對話逐題欄位（只有 practice_mode = scenario_dialogue 時有值）。
+  // reference_answer 是老師端限定 —— 學生端的 public_item_view 會濾掉它。
+  scenario_dialogue?: {
+    keywords: string[];
+    rubric_note: string;
+    reference_answer: string;
+    tense: { time: string; aspect: string };
+    voice: string;
+  };
+  // Issue #1035: 情境對話的 AI 評分**建議**（老師按過才有值）。
+  // 刻意與 ai_scores 分開：那組是 Azure 發音評測的語意（唸得多準），這組評的是開放式
+  // 回答的語言特徵。分數是建議，通過與否仍由 passed 決定 —— 老師才是最終判定者。
+  scenario_grading?: ScenarioGradingSuggestion;
   // Issue #830: 小考逐題欄位
   question_number?: number;
   correct_answer?: string;
@@ -242,6 +278,11 @@ export default function GradingPage() {
     "students" | "content" | "grading"
   >("content");
 
+  // 正在跑情境對話 AI 建議的題目（#1035）。與 reanalyzingItems 分開：兩者打的是不同
+  // 端點、不同模型，同一頁不會兩者並存，但混用會讓 loading 狀態互相蓋掉。
+  const [scenarioGradingItems, setScenarioGradingItems] = useState<Set<number>>(
+    new Set(),
+  );
   const [reanalyzingItems, setReanalyzingItems] = useState<Set<number>>(
     new Set(),
   );
@@ -548,6 +589,34 @@ export default function GradingPage() {
     }
   };
 
+  /**
+   * 把一題的新資料併回 submission。
+   *
+   * 逐題資料同時存在兩個地方：扁平的 `submissions` 與分組的 `content_groups`。
+   * 只更新其中一邊，畫面會依當下是否分組而時好時壞，所以兩邊一定要一起改。
+   * 用函式式 setState —— 逐題 AI 呼叫是非同步的，await 之前抓的快照可能已經過期。
+   */
+  const patchSubmissionItem = (
+    itemProgressId: number,
+    patch: Partial<SubmissionItem>,
+  ) => {
+    const apply = (item: SubmissionItem) =>
+      item.item_progress_id === itemProgressId ? { ...item, ...patch } : item;
+
+    setSubmission((prev) =>
+      prev
+        ? {
+            ...prev,
+            submissions: prev.submissions.map(apply),
+            content_groups: prev.content_groups?.map((group) => ({
+              ...group,
+              submissions: group.submissions.map(apply),
+            })),
+          }
+        : prev,
+    );
+  };
+
   const handleReanalyzeItem = async (itemProgressId: number) => {
     if (!assignmentId) return;
 
@@ -558,30 +627,8 @@ export default function GradingPage() {
         `/api/teachers/assignments/${assignmentId}/reanalyze-item/${itemProgressId}`,
       )) as { success: boolean; ai_scores: SubmissionItem["ai_scores"] };
 
-      if (response.success && submission) {
-        const updatedSubmissions = submission.submissions.map(
-          (item: SubmissionItem) =>
-            item.item_progress_id === itemProgressId
-              ? { ...item, ai_scores: response.ai_scores }
-              : item,
-        );
-        const updatedGroups = submission.content_groups?.map(
-          (
-            group: NonNullable<StudentSubmission["content_groups"]>[number],
-          ) => ({
-            ...group,
-            submissions: group.submissions.map((item: SubmissionItem) =>
-              item.item_progress_id === itemProgressId
-                ? { ...item, ai_scores: response.ai_scores }
-                : item,
-            ),
-          }),
-        );
-        setSubmission({
-          ...submission,
-          submissions: updatedSubmissions,
-          content_groups: updatedGroups,
-        });
+      if (response.success) {
+        patchSubmissionItem(itemProgressId, { ai_scores: response.ai_scores });
         toast.success(t("gradingPage.messages.reanalyzeSuccess"));
       } else {
         toast.error(t("gradingPage.messages.reanalyzeFailed"));
@@ -590,6 +637,57 @@ export default function GradingPage() {
       toast.error(t("gradingPage.messages.reanalyzeFailed"));
     } finally {
       setReanalyzingItems((prev) => {
+        const next = new Set(prev);
+        next.delete(itemProgressId);
+        return next;
+      });
+    }
+  };
+
+  /**
+   * 情境對話單題 AI 評分建議（Issue #1035）。
+   *
+   * **只填建議，不動成績。** 回來的分數放進 scenario_grading 給老師看，
+   * passed / feedback 一個字都不碰 —— 老師仍是最終判定者。
+   */
+  const handleScenarioAiGrade = async (
+    itemProgressId: number,
+    force = false,
+  ) => {
+    if (!assignmentId) return;
+
+    setScenarioGradingItems((prev) => new Set(prev).add(itemProgressId));
+
+    try {
+      const suggestion = (await apiClient.post(
+        `/api/teachers/assignments/${assignmentId}` +
+          `/scenario-ai-grade/${itemProgressId}${force ? "?force=true" : ""}`,
+      )) as ScenarioGradingSuggestion;
+
+      patchSubmissionItem(itemProgressId, { scenario_grading: suggestion });
+    } catch (error) {
+      // 依狀態碼分開提示，而不是直接把後端訊息丟出來 —— 那些訊息是英文的（額度那條
+      // 與學生端共用），而且老師需要知道的是「再試一次」還是「不用再按了」。
+      const status = error instanceof ApiError ? error.status : 0;
+      if (status === 422) {
+        // 422 = 這題的教材資料本身有問題（例如題目空白）。「請稍後再試」在這裡是錯的
+        // 建議 —— 重試一百次也不會變好，要回教材補內容。後端訊息已是中文，直接顯示。
+        toast.error(
+          error instanceof ApiError && error.message
+            ? error.message
+            : t("gradingPage.scenarioDialogue.aiGradeFailed"),
+        );
+        return;
+      }
+      toast.error(
+        t(
+          status === 429
+            ? "gradingPage.scenarioDialogue.aiGradeQuotaExhausted"
+            : "gradingPage.scenarioDialogue.aiGradeFailed",
+        ),
+      );
+    } finally {
+      setScenarioGradingItems((prev) => {
         const next = new Set(prev);
         next.delete(itemProgressId);
         return next;
@@ -937,6 +1035,18 @@ export default function GradingPage() {
 
     if (submission.practice_mode === "rearrangement") {
       return <SentenceRearrangementPanel {...panelProps} />;
+    }
+
+    // 情境對話是開放式口說，不走 Azure 發音評測（#1031），
+    // 改用 #1035 的 Gemini 語言特徵評分 —— 而且只給建議，老師仍要自己判定
+    if (submission.practice_mode === "scenario_dialogue") {
+      return (
+        <ScenarioDialogueGradingPanel
+          {...panelProps}
+          gradingItems={scenarioGradingItems}
+          onAiGrade={handleScenarioAiGrade}
+        />
+      );
     }
 
     // Issue #830: 小考自動判分 — 逐題對錯 + 答對率，不走 ReadingAssessmentPanel

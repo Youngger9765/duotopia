@@ -52,10 +52,12 @@ from routers import (
     demo,
 )
 from routers import blog
+from routers import release_announcements
 from routers import organization_programs
 from routers import school_programs
 from routers import resource_materials
 from routers import magic_paste  # 教材內容魔術貼上（issue #891）
+from routers import scenario_dialogue_ai  # 情境對話 AI 生成（issue #1021）
 from routers.auth_one_campus import router as auth_one_campus_router
 from routers.auth_google import router as auth_google_router  # Google OAuth（#740）
 from routers.organization_points import router as organization_points_router
@@ -91,7 +93,9 @@ elif environment == "production":
     # 生產環境只允許生產域名
     allowed_origins = [
         "https://duotopia.co",  # 主要自定義域名
+        "https://www.duotopia.co",  # 主要自定義域名（www）
         "https://duotopia.net",  # 備用自定義域名
+        "https://www.duotopia.net",  # 備用自定義域名（www）
         # Production Cloud Run (短網址)
         "https://duotopia-production-frontend-b2ovkkgl6a-de.a.run.app",
         # Production Cloud Run (完整網址)
@@ -294,6 +298,7 @@ app.include_router(unassign.router)
 app.include_router(files.router)  # 檔案服務路由
 app.include_router(programs.router)  # 課程管理路由
 app.include_router(magic_paste.router)  # 教材內容魔術貼上（issue #891）
+app.include_router(scenario_dialogue_ai.router)  # 情境對話 AI（issue #1021）
 app.include_router(resource_materials.router)  # 資源教材包路由
 app.include_router(speech_assessment.router)  # 語音評估路由
 app.include_router(azure_speech_token.router)  # Azure Speech Token 路由
@@ -309,6 +314,10 @@ app.include_router(
     institution_invoices.router
 )  # Admin 機構應收帳款路由（Admin only, issue #838 Phase D）
 app.include_router(blog.router)  # Blog 管理路由（Admin only）
+app.include_router(release_announcements.router)  # 更新公告管理路由（Admin only，issue #804）
+app.include_router(
+    release_announcements.internal_router
+)  # 更新公告 CI webhook（X-Release-Secret）
 app.include_router(cron.router)  # Cron Job 路由
 app.include_router(debug.router)  # Debug 路由
 
