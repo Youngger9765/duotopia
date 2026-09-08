@@ -3217,7 +3217,9 @@
       "needsRevision": "需訂正",
       "hasRecording": "有錄音",
       "questionNumber": "題目",
-      "gradingAssignment": "批改作業:"
+      "gradingAssignment": "批改作業:",
+      "pass": "通過",
+      "fail": "不通過"
     },
     "messages": {
       "loadError": "無法載入學生作業",
@@ -3256,7 +3258,8 @@
       "audioUploadFailedDetail": "有分析結果，但錄音檔案未成功上傳",
       "reanalyzing": "分析中...",
       "reanalyzeSuccess": "重新分析完成",
-      "reanalyzeFailed": "重新分析失敗，請稍後再試"
+      "reanalyzeFailed": "重新分析失敗，請稍後再試",
+      "noItems": "這份內容沒有題目"
     },
     "status": {
       "notStarted": "未開始",
@@ -3291,6 +3294,14 @@
         "timeout": "超時",
         "forceRetry": "強制重來"
       }
+    },
+    "scenarioDialogue": {
+      "noRecording": "尚未作答（沒有錄音）",
+      "toggleDetail": "參考答案與評分備註",
+      "rubricNote": "本題說明",
+      "referenceAnswer": "參考回答",
+      "referenceHint": "這是示範回答，不是唯一正解 —— 學生講的內容本來就會不同，請看時態、句型與資訊是否到位",
+      "feedbackPlaceholder": "給這一題的評語（學生看得到）"
     }
   },
   "batchGrading": {

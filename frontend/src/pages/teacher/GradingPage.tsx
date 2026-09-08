@@ -41,6 +41,12 @@ const SentenceRearrangementPanel = lazy(() =>
     default: m.SentenceRearrangementPanel,
   })),
 );
+// Issue #1031: 情境對話批改 Panel（依 ADR 每個 practice_mode 各自 lazy 切 chunk）
+const ScenarioDialogueGradingPanel = lazy(() =>
+  import("@/components/grading/ScenarioDialogueGradingPanel").then((m) => ({
+    default: m.ScenarioDialogueGradingPanel,
+  })),
+);
 const QuizGradingPanel = lazy(() =>
   import("@/components/grading/QuizGradingPanel").then((m) => ({
     default: m.QuizGradingPanel,
@@ -127,6 +133,15 @@ export interface SubmissionItem {
   max_errors?: number | null;
   item_status?: string;
   completed_at?: string | null;
+  // Issue #1031: 情境對話逐題欄位（只有 practice_mode = scenario_dialogue 時有值）。
+  // reference_answer 是老師端限定 —— 學生端的 public_item_view 會濾掉它。
+  scenario_dialogue?: {
+    keywords: string[];
+    rubric_note: string;
+    reference_answer: string;
+    tense: { time: string; aspect: string };
+    voice: string;
+  };
   // Issue #830: 小考逐題欄位
   question_number?: number;
   correct_answer?: string;
@@ -937,6 +952,11 @@ export default function GradingPage() {
 
     if (submission.practice_mode === "rearrangement") {
       return <SentenceRearrangementPanel {...panelProps} />;
+    }
+
+    // Issue #1031: 情境對話是開放式口說，沒有 AI 分數可看，走純人工批改的 Panel
+    if (submission.practice_mode === "scenario_dialogue") {
+      return <ScenarioDialogueGradingPanel {...panelProps} />;
     }
 
     // Issue #830: 小考自動判分 — 逐題對錯 + 答對率，不走 ReadingAssessmentPanel
