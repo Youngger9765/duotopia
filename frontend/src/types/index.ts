@@ -3,6 +3,8 @@
  */
 
 // ============ Base User Types ============
+import type { PracticeMode } from "@/lib/practiceMode";
+
 export interface User {
   id: number;
   email: string;
@@ -167,18 +169,12 @@ export interface Assignment {
   };
   // Score property for graded assignments
   score?: number;
-  // 練習模式
-  practice_mode?:
-    | "reading"
-    | "rearrangement"
-    | "word_reading"
-    | "word_selection"
-    | "word_selection_quiz"
-    | "word_spelling"
-    | "word_spelling_quiz"
-    | "word_cloze"
-    | "word_cloze_quiz"
-    | "tug_of_war";
+  // 練習模式。
+  //
+  // Issue #1031: 改為引用 `@/lib/practiceMode` 的 PracticeMode，不再抄一份 union ——
+  // 這裡原本漏了新加的 scenario_dialogue，是 tsc 在別的檔案報錯才被發現的。同一組
+  // 字串抄在兩個地方，遲早會漂移。
+  practice_mode?: PracticeMode;
   // Issue #835: Live quiz mode（老師主控開始/收卷，全班同步）
   is_live_quiz?: boolean;
   quiz_opened_at?: string | null;

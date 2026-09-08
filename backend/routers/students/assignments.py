@@ -27,6 +27,7 @@ from models import (
     PracticeAnswer,
 )
 from services.preview_service import get_sentence_fields, _VOCABULARY_CONTENT_TYPES
+from utils import scenario_dialogue as sd
 from services.quota_service import QuotaService
 from utils.cloze import extract_cloze_for_item, collapse_to_single_blank
 from utils.rearrangement_history import archive_current_attempt
@@ -604,10 +605,31 @@ async def get_assignment_activities(
                                     # 如果 JSON 解析失敗，設為 None
                                     item_data["ai_assessment"] = None
 
+                        # Issue #1031: 情境對話的逐題附加資料（必用字詞、本題說明、
+                        # 生效的時態語態）。
+                        #
+                        # **一定要走 public_item_view**：它會濾掉 reference_answer
+                        # （只給 AI 與老師的語言特徵對照）與 image_prompt（內部生圖
+                        # 用），並把 tense/voice 的「沿用整體」解析成生效值 —— 學生端
+                        # 不需要也不該自己做繼承推導。
+                        if content.type == ContentType.SCENARIO_DIALOGUE:
+                            item_data["scenario_dialogue"] = sd.public_item_view(
+                                sd.read_item_block(ci.item_metadata),
+                                content.scenario_settings,
+                            )
+
                         items_with_ids.append(item_data)
 
                     activity_data["items"] = items_with_ids
                     activity_data["item_count"] = len(items_with_ids)
+
+                    # Issue #1031: 整份設定的學生可見部分（情境內容、作答指引、
+                    # 翻譯語言）。題目難度、整體時態語態、TTS 設定是出題端的事，
+                    # public_settings_view 不會給。
+                    if content.type == ContentType.SCENARIO_DIALOGUE:
+                        activity_data["scenario_settings"] = sd.public_settings_view(
+                            content.scenario_settings
+                        )
                 else:
                     # 沒有 ContentItem 記錄的情況 - 返回空陣列
                     logger.warning("Content %s has no ContentItem records", content.id)

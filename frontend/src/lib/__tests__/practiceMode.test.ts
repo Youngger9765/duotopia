@@ -14,11 +14,15 @@ import {
   PRACTICE_MODE_REGISTRY,
   getModeConfig,
   listModesForDataset,
+  contentTypeToDataset,
+  DEFAULT_MODE_BY_DATASET,
+  DATASET_LABEL_KEY,
   resolveScoreCategoryFE,
   applyModeDefaults,
   isAutoScoredMode,
   isGradableMode,
   type PracticeMode,
+  type PracticeDataset,
 } from "../practiceMode";
 import {
   getScoreCategory,
@@ -63,6 +67,7 @@ describe("practiceModeLabelKey", () => {
     const cases: Record<PracticeMode, string> = {
       reading: "practiceMode.reading.label",
       rearrangement: "practiceMode.rearrangement.label",
+      scenario_dialogue: "practiceMode.scenario_dialogue.label",
       word_reading: "practiceMode.word_reading.label",
       word_selection: "practiceMode.word_selection.label",
       word_selection_quiz: "practiceMode.word_selection_quiz.label",
@@ -140,10 +145,11 @@ const ALL_MODES: PracticeMode[] = [
   "word_cloze",
   "word_cloze_quiz",
   "tug_of_war",
+  "scenario_dialogue",
 ];
 
 describe("PRACTICE_MODE_REGISTRY", () => {
-  it("涵蓋全部 10 個 PracticeMode，無遺漏", () => {
+  it("涵蓋全部 PracticeMode，無遺漏", () => {
     expect(Object.keys(PRACTICE_MODE_REGISTRY).sort()).toEqual(
       [...ALL_MODES].sort(),
     );
@@ -273,6 +279,8 @@ const SCORE_TABLE: Record<
 > = {
   reading: { silent: "speaking", audio: "speaking" },
   word_reading: { silent: "speaking", audio: "speaking" },
+  // #1013：情境對話＝開口錄音作答，題目音檔只是提示素材，不該翻成聽力
+  scenario_dialogue: { silent: "speaking", audio: "speaking" },
   // #878：克漏字＝打字填空 → 套通則（無音檔 writing、有音檔 listening）
   word_cloze: { silent: "writing", audio: "listening" },
   word_cloze_quiz: { silent: "writing", audio: "listening" },
@@ -326,5 +334,56 @@ describe("resolveScoreCategoryFE === getScoreCategory（兩實作不漂移）", 
         );
       });
     });
+  });
+});
+
+describe("情境對話的資料集與模式對應（#1031）", () => {
+  it("SCENARIO_DIALOGUE 對應到自己的資料集，不再落到 null 或單字集", () => {
+    expect(contentTypeToDataset("SCENARIO_DIALOGUE")).toBe("scenario_dialogue");
+    expect(contentTypeToDataset("scenario_dialogue")).toBe("scenario_dialogue");
+  });
+
+  it("情境對話資料集只給情境對話模式 —— 不會混進朗讀或單字模式", () => {
+    expect(listModesForDataset("scenario_dialogue")).toEqual([
+      "scenario_dialogue",
+    ]);
+  });
+
+  it("情境對話模式不會出現在例句集／單字集的模式清單裡", () => {
+    for (const dataset of ["example_sentences", "vocabulary_set"] as const) {
+      expect(listModesForDataset(dataset)).not.toContain("scenario_dialogue");
+    }
+  });
+
+  it("計分類別恆為口說，不受 play_audio 影響（鏡射後端）", () => {
+    expect(getScoreCategory("scenario_dialogue", false)).toBe("speaking");
+    expect(getScoreCategory("scenario_dialogue", true)).toBe("speaking");
+  });
+});
+
+describe("資料集查表（PR #1034 review round 3：二分法會選到不支援的模式）", () => {
+  it("每個資料集的預設模式都必須是該資料集支援的模式", () => {
+    const datasets: PracticeDataset[] = [
+      "example_sentences",
+      "vocabulary_set",
+      "scenario_dialogue",
+    ];
+    datasets.forEach((dataset) => {
+      const mode = DEFAULT_MODE_BY_DATASET[dataset];
+      expect(
+        PRACTICE_MODE_REGISTRY[mode].supportedDatasets,
+        `${dataset} 的預設模式 ${mode} 不支援該資料集`,
+      ).toContain(dataset);
+    });
+  });
+
+  it("情境對話的預設模式就是情境對話（不是 rearrangement）", () => {
+    expect(DEFAULT_MODE_BY_DATASET.scenario_dialogue).toBe("scenario_dialogue");
+  });
+
+  it("每個資料集都有自己的顯示名稱 key，不會互相張冠李戴", () => {
+    const keys = Object.values(DATASET_LABEL_KEY);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(DATASET_LABEL_KEY.scenario_dialogue).toContain("SCENARIO_DIALOGUE");
   });
 });

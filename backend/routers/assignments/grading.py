@@ -54,6 +54,7 @@ from services.analysis_quota import (
     reset_analysis_count_for_assignments,
 )
 from services.preview_service import get_sentence_fields
+from utils import scenario_dialogue as sd
 from .utils import (
     process_audio_with_whisper,
     calculate_text_similarity,
@@ -574,6 +575,21 @@ async def get_student_submission(
                         "feedback": "",
                         "passed": None,
                     }
+
+                    # Issue #1031: 情境對話專用 —— 老師批改時要看得到參考答案。
+                    #
+                    # 這是**老師端**序列化，與學生端（public_item_view）刻意不同：
+                    # reference_answer 是給老師與 AI 當語言特徵對照用的，學生端絕對
+                    # 看不到。這裡也一併帶上必用字詞與本題說明，讓老師不必回教材頁對照。
+                    #
+                    # 注意 reference_answer 是「示範回答」不是唯一正解：口說同一題每個
+                    # 學生講的內容本來就不同，不可拿來逐字比對（見 #864 規格 3-3 與
+                    # utils/scenario_dialogue.py 的模組說明）。
+                    if practice_mode == "scenario_dialogue":
+                        submission["scenario_dialogue"] = sd.teacher_item_view(
+                            sd.read_item_block(item.item_metadata),
+                            content.scenario_settings,
+                        )
 
                     # 例句重組專用：補上 max_errors（來自 content_item）
                     if practice_mode == "rearrangement":

@@ -17,10 +17,10 @@
  * 結果是老師可以派出一份「用單字集模式跑的情境對話作業」，學生端再落到不認得的
  * practice_mode。所以這裡把判定從「是不是這兩種」補上「**其餘一律不可派發**」。
  *
- * ## 情境對話什麼時候會變成可派發
+ * ## 情境對話（#1031 起可派發）
  *
- * 等 #1031（學生端作答 + 批改頁 + 派發流程）做完。那時是把 `SCENARIO_DIALOGUE`
- * 從這裡的排除名單移到支援名單，而不是把整個防呆拿掉。
+ * #1030 先把它擋下（當時學生端作答與批改頁都還沒做），#1031 做完後移到支援名單。
+ * **防呆本身保留** —— 未來新增的題型仍然預設不可派發，要開放必須明確加進來。
  */
 
 /** 例句集（含 legacy 名稱 READING_ASSESSMENT） */
@@ -41,8 +41,20 @@ export function isVocabularySetType(type?: string | null): boolean {
  * 白名單而不是黑名單 —— 未來新增題型時，預設是「不能派」而不是「悄悄落到單字集
  * 分支」。要開放時必須明確加進來，那一步自然會逼人去想學生端與批改頁做了沒有。
  */
+/** 情境對話（#1031 起可派發） */
+export function isScenarioDialogueType(type?: string | null): boolean {
+  return (type ?? "").toUpperCase() === "SCENARIO_DIALOGUE";
+}
+
 export function isAssignableContentType(type?: string | null): boolean {
-  return isExampleSentencesType(type) || isVocabularySetType(type);
+  return (
+    isExampleSentencesType(type) ||
+    isVocabularySetType(type) ||
+    // Issue #1031: 學生端作答與批改頁都做好了，從 #1030 的擋板移到支援名單。
+    // 白名單的意義就在這裡 —— 開放一個題型是「明確加進來」的動作，而不是
+    // 悄悄從某個 fallback 漏過去。
+    isScenarioDialogueType(type)
+  );
 }
 
 /**

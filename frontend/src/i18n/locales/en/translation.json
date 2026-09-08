@@ -45,6 +45,10 @@
       "listening": "Listening",
       "reading": "Reading",
       "writing": "Writing"
+    },
+    "scenario_dialogue": {
+      "label": "Scenario Dialogue",
+      "desc": "Speak your answer to each question in context; graded by the teacher"
     }
   },
   "common": {
@@ -1956,7 +1960,9 @@
         "playAudioWordDesc": "Listen to audio and select translation",
         "playAudioFillDesc": "Listen to audio and type the word",
         "showExampleSentenceDesc": "Show example sentence during practice",
-        "showAnswerLockedByAudio": "Audio mode must reveal the answer"
+        "showAnswerLockedByAudio": "Audio mode must reveal the answer",
+        "scenario_dialogue": "Scenario Dialogue",
+        "scenario_dialogueDesc": "Answer aloud in a real-life context"
       }
     },
     "classroomAssignDialog": {
@@ -3068,7 +3074,9 @@
       "needsRevision": "Needs Revision",
       "hasRecording": "Has Recording",
       "questionNumber": "Question",
-      "gradingAssignment": "Grading Assignment:"
+      "gradingAssignment": "Grading Assignment:",
+      "pass": "Pass",
+      "fail": "Fail"
     },
     "messages": {
       "loadError": "Failed to load student assignment",
@@ -3107,7 +3115,8 @@
       "audioUploadFailedDetail": "Analysis results available, but recording file was not uploaded",
       "reanalyzing": "Analyzing...",
       "reanalyzeSuccess": "Re-analysis completed",
-      "reanalyzeFailed": "Re-analysis failed, please try again later"
+      "reanalyzeFailed": "Re-analysis failed, please try again later",
+      "noItems": "No questions in this content"
     },
     "status": {
       "notStarted": "Not Started",
@@ -3142,6 +3151,14 @@
         "timeout": "Timed out",
         "forceRetry": "Forced retry"
       }
+    },
+    "scenarioDialogue": {
+      "noRecording": "No answer yet (no recording)",
+      "toggleDetail": "Reference answer & grading notes",
+      "rubricNote": "Note for this question",
+      "referenceAnswer": "Sample answer",
+      "referenceHint": "A sample, not the only correct answer — students will naturally say different things. Check tense, sentence structure and whether the key information is there",
+      "feedbackPlaceholder": "Feedback for this question (visible to the student)"
     }
   },
   "assignmentDetail": {
@@ -4494,6 +4511,9 @@
       "maxDuration": "Recording cannot exceed {{duration}} seconds",
       "uploadSuccess": "File Uploaded Successfully",
       "validationFailed": "File Validation Failed"
+    },
+    "scenarioDialogue": {
+      "useTheseWords": "Try to use:"
     }
   },
   "readingAssessment": {
