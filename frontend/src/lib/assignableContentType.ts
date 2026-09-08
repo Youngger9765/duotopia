@@ -1,4 +1,4 @@
-import { SCENARIO_DIALOGUE_ENABLED } from "./featureFlags";
+import { ENABLE_SCENARIO_DIALOGUE } from "@/config/featureFlags";
 import {
   PRACTICE_MODE_REGISTRY,
   contentTypeToDataset,
@@ -65,7 +65,8 @@ export function isAssignableContentType(type?: string | null): boolean {
     // Issue #1039: 再加一道開關。功能是完整的，但在人工驗證做完之前先關著
     // （PR #1038 把它連同整條線發到 prod 了）。關閉時等於回到 #1030 的狀態，
     // 連「還不能派發」的提示文案都是現成的。
-    (SCENARIO_DIALOGUE_ENABLED && isScenarioDialogueType(type))
+    // prod 關、staging/develop 開 —— 值由 deploy-frontend.yml 依分支決定。
+    (ENABLE_SCENARIO_DIALOGUE && isScenarioDialogueType(type))
   );
 }
 

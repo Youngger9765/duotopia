@@ -35,3 +35,31 @@ export const ENABLE_GROUP_BUY =
   (
     import.meta.env.VITE_ENABLE_GROUP_BUY as string | undefined
   )?.toLowerCase() !== "false";
+
+/**
+ * Issue #1039 — 情境對話（#1013～#1035 整條功能線）的前端入口。
+ *
+ * 與 `ENABLE_GROUP_BUY` 同一個機制、同一個理由：PR #1038 把這條功能線發到 main 並
+ * 成功部署，但人工驗證還沒做完。用 build-time 開關把 prod 的入口關掉，就不必 revert
+ * 整條發版線（revert 一個 merge commit 之後，那些 commit 日後不會自己回來），
+ * 而 staging / develop 仍然開著，驗證才做得下去。
+ *
+ * ## 與 ENABLE_GROUP_BUY 相反：未設定時視為**關閉**
+ *
+ * 那一個是「不是字串 false 就當開啟」；這一個是「必須是字串 true 才開啟」。
+ * 差別是刻意的 —— 這個開關要防的正是「未驗證的功能出現在 production」，所以漏設、
+ * 拼錯、新環境忘了帶，都應該落到**隱藏**這一邊。本機開發請照 `.env.example` 設成 true。
+ *
+ * 關閉時：
+ * * `ContentTypeDialog` 的情境對話卡片反灰、點不動，右上角 Soon 角標
+ * * `isAssignableContentType()` 排除情境對話 —— 回到 #1030 的狀態，提示文案現成
+ *
+ * **既有內容的編輯與批改不擋**，後端也不擋：功能在 prod 上活過約一小時，若那期間
+ * 有老師建了教材，要讓它還讀得到、改得動，不要變成孤兒資料。
+ *
+ * prod 要打開時改 `deploy-frontend.yml` 的 feature flag 區塊即可。
+ */
+export const ENABLE_SCENARIO_DIALOGUE =
+  (
+    import.meta.env.VITE_ENABLE_SCENARIO_DIALOGUE as string | undefined
+  )?.toLowerCase() === "true";

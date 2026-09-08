@@ -43,6 +43,10 @@ ENV VITE_META_PIXEL_ID=$VITE_META_PIXEL_ID
 # feature; other envs default to "true". See frontend/config/featureFlags.ts.
 ARG VITE_ENABLE_GROUP_BUY=true
 ENV VITE_ENABLE_GROUP_BUY=$VITE_ENABLE_GROUP_BUY
+# Issue #1039 — 情境對話入口。預設 false：漏帶 build-arg 時要落到「隱藏」，
+# 不能落到「未驗證的功能出現在畫面上」。
+ARG VITE_ENABLE_SCENARIO_DIALOGUE=false
+ENV VITE_ENABLE_SCENARIO_DIALOGUE=$VITE_ENABLE_SCENARIO_DIALOGUE
 
 # Supabase Realtime（Live Quiz 收卷推播 #835）；缺值時前端自動退回 polling
 ARG VITE_SUPABASE_URL

@@ -48,6 +48,10 @@ ENV VITE_META_PIXEL_ID=$VITE_META_PIXEL_ID
 # Issue #768 group-buy entry-point gate (see Dockerfile.staging).
 ARG VITE_ENABLE_GROUP_BUY=true
 ENV VITE_ENABLE_GROUP_BUY=$VITE_ENABLE_GROUP_BUY
+# Issue #1039 — 情境對話入口。預設 false：漏帶 build-arg 時要落到「隱藏」，
+# 不能落到「未驗證的功能出現在畫面上」。
+ARG VITE_ENABLE_SCENARIO_DIALOGUE=false
+ENV VITE_ENABLE_SCENARIO_DIALOGUE=$VITE_ENABLE_SCENARIO_DIALOGUE
 
 # 建置
 RUN npm run build

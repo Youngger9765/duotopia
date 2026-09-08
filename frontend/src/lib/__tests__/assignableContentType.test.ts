@@ -14,7 +14,7 @@ import { describe, it, expect, vi } from "vitest";
  * 開關本身造成什麼差別（關閉時不可派發、提示改成「還不能派發」），由
  * `featureFlags.scenarioDialogue.test.ts` 兩種狀態都測，包含預設值必須是關閉。
  */
-vi.mock("../featureFlags", () => ({ SCENARIO_DIALOGUE_ENABLED: true }));
+vi.mock("@/config/featureFlags", () => ({ ENABLE_SCENARIO_DIALOGUE: true }));
 import {
   explainNotSelectable,
   isAssignableContentType,
