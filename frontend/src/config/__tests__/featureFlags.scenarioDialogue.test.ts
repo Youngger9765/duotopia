@@ -25,7 +25,7 @@ async function loadWith(enabled: boolean) {
 async function loadFlagWithEnv(value: string | undefined) {
   vi.resetModules();
   vi.doUnmock("@/config/featureFlags");
-  vi.stubEnv("VITE_ENABLE_SCENARIO_DIALOGUE", value as string);
+  vi.stubEnv("VITE_ENABLE_SCENARIO_DIALOGUE", value);
   const mod = await import("@/config/featureFlags");
   return mod.ENABLE_SCENARIO_DIALOGUE;
 }
