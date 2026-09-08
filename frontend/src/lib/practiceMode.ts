@@ -766,6 +766,32 @@ const ASSIGNABLE_MODE_ORDER: PracticeMode[] = [
   "scenario_dialogue",
 ];
 
+/**
+ * 每個資料集的預設練習模式（老師還沒選模式時用）。
+ *
+ * 寫成 `Record<PracticeDataset, ...>` 是刻意的：新增資料集時 TypeScript 會強制在這裡
+ * 補上一筆。原本 AssignmentDialog 是用「是不是單字集」的二分法決定預設模式，加入
+ * 情境對話之後就會落到 else 分支選到 `rearrangement` —— 一個它根本不支援的模式
+ * （PR #1034 review round 3）。
+ */
+export const DEFAULT_MODE_BY_DATASET: Record<PracticeDataset, PracticeMode> = {
+  example_sentences: "rearrangement",
+  vocabulary_set: "word_reading",
+  scenario_dialogue: "scenario_dialogue",
+};
+
+/**
+ * 每個資料集在提示訊息裡的顯示名稱 key。
+ *
+ * 同上，窮舉以免新增資料集時訊息說錯 —— 例如購物車裡是情境對話，卻提示「只能選擇
+ * 單字集」。
+ */
+export const DATASET_LABEL_KEY: Record<PracticeDataset, string> = {
+  example_sentences: "dialogs.assignmentDialog.contentTypes.EXAMPLE_SENTENCES",
+  vocabulary_set: "dialogs.assignmentDialog.contentTypes.VOCABULARY_SET",
+  scenario_dialogue: "dialogs.assignmentDialog.contentTypes.SCENARIO_DIALOGUE",
+};
+
 /** 依資料集回傳可派發的模式（chip 列），重現 AssignmentDialog 既有過濾：例句集只給非 word_ 模式。 */
 export function listModesForDataset(dataset: PracticeDataset): PracticeMode[] {
   return ASSIGNABLE_MODE_ORDER.filter((m) =>

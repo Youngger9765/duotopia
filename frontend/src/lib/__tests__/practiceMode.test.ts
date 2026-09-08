@@ -15,11 +15,14 @@ import {
   getModeConfig,
   listModesForDataset,
   contentTypeToDataset,
+  DEFAULT_MODE_BY_DATASET,
+  DATASET_LABEL_KEY,
   resolveScoreCategoryFE,
   applyModeDefaults,
   isAutoScoredMode,
   isGradableMode,
   type PracticeMode,
+  type PracticeDataset,
 } from "../practiceMode";
 import {
   getScoreCategory,
@@ -355,5 +358,32 @@ describe("情境對話的資料集與模式對應（#1031）", () => {
   it("計分類別恆為口說，不受 play_audio 影響（鏡射後端）", () => {
     expect(getScoreCategory("scenario_dialogue", false)).toBe("speaking");
     expect(getScoreCategory("scenario_dialogue", true)).toBe("speaking");
+  });
+});
+
+describe("資料集查表（PR #1034 review round 3：二分法會選到不支援的模式）", () => {
+  it("每個資料集的預設模式都必須是該資料集支援的模式", () => {
+    const datasets: PracticeDataset[] = [
+      "example_sentences",
+      "vocabulary_set",
+      "scenario_dialogue",
+    ];
+    datasets.forEach((dataset) => {
+      const mode = DEFAULT_MODE_BY_DATASET[dataset];
+      expect(
+        PRACTICE_MODE_REGISTRY[mode].supportedDatasets,
+        `${dataset} 的預設模式 ${mode} 不支援該資料集`,
+      ).toContain(dataset);
+    });
+  });
+
+  it("情境對話的預設模式就是情境對話（不是 rearrangement）", () => {
+    expect(DEFAULT_MODE_BY_DATASET.scenario_dialogue).toBe("scenario_dialogue");
+  });
+
+  it("每個資料集都有自己的顯示名稱 key，不會互相張冠李戴", () => {
+    const keys = Object.values(DATASET_LABEL_KEY);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(DATASET_LABEL_KEY.scenario_dialogue).toContain("SCENARIO_DIALOGUE");
   });
 });

@@ -76,6 +76,8 @@ import {
   listModesForDataset,
   applyModeDefaults,
   getModeConfig,
+  DEFAULT_MODE_BY_DATASET,
+  DATASET_LABEL_KEY,
   type PracticeMode,
   type PracticeDataset,
 } from "@/lib/practiceMode";
@@ -1166,11 +1168,12 @@ export function AssignmentDialog({
       }
 
       // 課裡有可派發的內容，只是與目前的模式／購物車型別不合 —— 換個模式就可以
+      // Issue #1031: 同樣不用二分法 —— 購物車裡是情境對話時，原本會提示「只能選擇
+      // 單字集」，講的是完全不相干的題型
       const cartCategory = getCartContentTypeCategory();
-      const cartTypeName =
-        cartCategory === "example_sentences"
-          ? t("dialogs.assignmentDialog.contentTypes.EXAMPLE_SENTENCES")
-          : t("dialogs.assignmentDialog.contentTypes.VOCABULARY_SET");
+      const cartTypeName = cartCategory
+        ? t(DATASET_LABEL_KEY[cartCategory])
+        : "";
       toast.warning(
         t("dialogs.assignmentDialog.errors.mixedContentType", {
           type: cartTypeName,
@@ -1613,20 +1616,18 @@ export function AssignmentDialog({
   const handleNextStep = () => {
     // 從 step 1 移動到 step 2 時，根據內容類型設定預設練習模式（僅在尚未選擇時）
     if (currentStep === 1 && !formData.practice_mode) {
+      // Issue #1031: 依資料集查表取預設模式，不再用「是不是單字集」的二分法 ——
+      // 加入情境對話之後，二分法會讓它落到 else 選到 rearrangement，那是它根本不
+      // 支援的模式（PR #1034 review round 3）。時間等預設值一併由 registry 帶出，
+      // 不在這裡硬寫秒數。
       const contentCategory = getCartContentTypeCategory();
-      if (contentCategory === "vocabulary_set") {
-        // 單字集預設為單字朗讀模式，不限時
+      if (contentCategory) {
         setFormData((prev) => ({
           ...prev,
-          practice_mode: "word_reading",
-          time_limit_per_question: 10, // 單字朗讀固定 10 秒
-        }));
-      } else {
-        // 例句集預設為例句重組模式（word_* 模式不適用於例句集）
-        setFormData((prev) => ({
-          ...prev,
-          practice_mode: "rearrangement",
-          time_limit_per_question: 30,
+          // 與下方 chip 切換模式同一種寫法（SettingPatch 的值型別較寬，需收斂）
+          ...(applyModeDefaults(
+            DEFAULT_MODE_BY_DATASET[contentCategory],
+          ) as Partial<typeof prev>),
         }));
       }
     }
