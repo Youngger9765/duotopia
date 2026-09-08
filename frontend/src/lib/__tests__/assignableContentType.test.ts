@@ -8,6 +8,7 @@ import { describe, it, expect } from "vitest";
 import {
   explainNotSelectable,
   isAssignableContentType,
+  notSelectableMessage,
   isExampleSentencesType,
   isScenarioDialogueType,
   isVocabularySetType,
@@ -182,5 +183,66 @@ describe("點了灰掉的卡片要給哪一句提示（Issue #1033）", () => {
         }
       }
     });
+  });
+});
+
+describe("提示訊息的選擇（PR #1037 review R2）", () => {
+  const NOT_ASSIGNABLE =
+    "dialogs.assignmentDialog.errors.contentTypeNotAssignable";
+  const MIXED = "dialogs.assignmentDialog.errors.mixedContentType";
+  const FALLBACK = "dialogs.assignmentDialog.errors.contentTypeNotSelectable";
+
+  it("題型還不能派 → 用專屬訊息，不需要填資料集名單", () => {
+    expect(notSelectableMessage({ kind: "not_assignable" })).toEqual({
+      key: NOT_ASSIGNABLE,
+      datasetKeys: [],
+    });
+  });
+
+  it("模式不合 → 用可填名單的訊息", () => {
+    expect(
+      notSelectableMessage({
+        kind: "mode_mismatch",
+        allowedDatasetKeys: [DATASET_LABEL_KEY.vocabulary_set],
+      }),
+    ).toEqual({
+      key: MIXED,
+      datasetKeys: [DATASET_LABEL_KEY.vocabulary_set],
+    });
+  });
+
+  /**
+   * 這兩條守的是 review R2 指出的「新的休眠失效模式」。
+   *
+   * 判定閘門（AssignmentDialog.isContentSelectable）與訊息來源（registry）是兩套。
+   * 今天完全一致，但日後有人改了 registry 卻沒改閘門，就會出現「閘門說不能選、
+   * explainNotSelectable 說可以選」，名單是空的。
+   *
+   * 提示原本寫死字串時不可能空，是這個 PR 讓它變得可能 —— 所以要有一句**不需要
+   * 填空**的通用訊息接住，而不是吐出「目前只能選擇，請先清除…」這種殘句。
+   */
+  it("名單是空的 → 換成不需要填空的通用訊息", () => {
+    expect(
+      notSelectableMessage({ kind: "mode_mismatch", allowedDatasetKeys: [] }),
+    ).toEqual({ key: FALLBACK, datasetKeys: [] });
+  });
+
+  it("閘門與 registry 漂移（explanation 是 null）→ 同樣走通用訊息", () => {
+    expect(notSelectableMessage(null)).toEqual({
+      key: FALLBACK,
+      datasetKeys: [],
+    });
+  });
+
+  it("回傳的 key 永遠有值 —— 不會讓呼叫端 toast 出一句空字串", () => {
+    const cases: Array<Parameters<typeof notSelectableMessage>[0]> = [
+      null,
+      { kind: "not_assignable" },
+      { kind: "mode_mismatch", allowedDatasetKeys: [] },
+      { kind: "mode_mismatch", allowedDatasetKeys: ["x"] },
+    ];
+    for (const c of cases) {
+      expect(notSelectableMessage(c).key).toBeTruthy();
+    }
   });
 });

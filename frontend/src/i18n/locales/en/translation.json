@@ -90,8 +90,7 @@
       "networkError": "Cannot reach the server. Please check your connection and try again.",
       "rateLimited": "Too many attempts. Please wait a minute and try again.",
       "serverError": "A server error occurred. Please try again later."
-    },
-    "listSeparator": ", "
+    }
   },
   "demo": {
     "banner": "Demo Mode - Progress will not be saved",
@@ -1835,7 +1834,8 @@
         "exampleSentenceRequiredDesc": "The following content is missing example sentences or translations: {{contents}}",
         "missingClozeAnswer": "Cloze answer required",
         "missingClozeAnswerDesc": "These vocabulary sets are missing a cloze answer for some words: {{contents}}. Please open the vocabulary set and set an answer (click a word or select a phrase) before assigning.",
-        "contentTypeNotAssignable": "{{type}} can't be assigned yet (student practice isn't available for it)"
+        "contentTypeNotAssignable": "{{type}} can't be assigned yet (student practice isn't available for it)",
+        "contentTypeNotSelectable": "This content doesn't match the practice mode you picked. Switch mode, or clear the selected content first."
       },
       "warnings": {
         "quotaLow": "AI analysis quota insufficient",

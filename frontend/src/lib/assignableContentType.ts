@@ -142,3 +142,39 @@ export function explainNotSelectable(
     allowedDatasetKeys: datasetLabelKeysForMode(mode),
   };
 }
+
+const ERROR_KEYS = {
+  notAssignable: "dialogs.assignmentDialog.errors.contentTypeNotAssignable",
+  mixed: "dialogs.assignmentDialog.errors.mixedContentType",
+  fallback: "dialogs.assignmentDialog.errors.contentTypeNotSelectable",
+} as const;
+
+/**
+ * 點了灰掉的卡片時要用哪一句提示（PR #1037 review R2）。
+ *
+ * 為什麼需要 `fallback` 這一條：**判定閘門與訊息來源是兩套**。
+ * `AssignmentDialog.isContentSelectable()` 是手寫的模式分支，這裡的
+ * `explainNotSelectable()` 查的是 registry。今天兩者對所有可派發的模式完全一致
+ * （已窮舉比對），但日後有人改了 registry 卻沒改閘門，就會出現「閘門說不能選、
+ * 這裡說可以選」，名單於是是空的。
+ *
+ * 提示還寫死字串時不可能空 —— 是 #1033 讓它變得可能。與其吐出「目前只能選擇，
+ * 請先清除…」這種殘句，不如換一句**不需要填空**的通用說明。
+ */
+export function notSelectableMessage(
+  explanation: NotSelectableExplanation | null,
+): { key: string; datasetKeys: string[] } {
+  if (explanation?.kind === "not_assignable") {
+    return { key: ERROR_KEYS.notAssignable, datasetKeys: [] };
+  }
+  if (
+    explanation?.kind === "mode_mismatch" &&
+    explanation.allowedDatasetKeys.length > 0
+  ) {
+    return {
+      key: ERROR_KEYS.mixed,
+      datasetKeys: explanation.allowedDatasetKeys,
+    };
+  }
+  return { key: ERROR_KEYS.fallback, datasetKeys: [] };
+}

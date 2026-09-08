@@ -64,6 +64,7 @@ import { toast } from "sonner";
 // Issue #1030: 型別判定抽到 lib 以便單元測試（本檔 3000 行、沒有測試檔）
 import {
   explainNotSelectable,
+  notSelectableMessage,
   isAssignableContentType,
   isExampleSentencesType,
   isScenarioDialogueType,
@@ -387,7 +388,7 @@ export function AssignmentDialog({
   schoolId: propSchoolId,
   preSelectedContents,
 }: AssignmentDialogProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // useWorkspaceSafe 在 WorkspaceProvider 外（如機構管理模組）不會 throw，而是回傳 null
   const workspace = useWorkspaceSafe();
 
@@ -1053,36 +1054,31 @@ export function AssignmentDialog({
     // 檢查是否已選擇（如果已選擇，可以移除）
     const exists = cartItems.find((item) => item.contentId === contentId);
     if (!exists && !isContentSelectable(content.type)) {
-      // Issue #1030: 兩種擋下的原因完全不同，訊息不能共用 ——
-      // 「這個題型還不能派」對老師來說是「別等了，先用別的」，
-      // 「模式與型別不合」則是「換個模式就可以」。
+      // Issue #1030 / #1033: 幾種擋下的原因對老師的意思完全不同，訊息不能共用 ——
+      // 「這個題型還不能派」是「別等了，先用別的」，「模式與型別不合」是「換個模式
+      // 就可以」。哪一句由 notSelectableMessage 決定（有測試守著，含名單為空時的
+      // 通用退路）。
       //
-      // Issue #1033: 訊息內容改由 explainNotSelectable 決定（它有測試守著「現在能選
-      // 什麼」講得對不對）。**判定閘門仍然是 isContentSelectable** —— 兩者只在
+      // **判定閘門仍然是 isContentSelectable** —— 它與 explainNotSelectable 只在
       // tug_of_war 上不同，而那個模式不經本對話框派發（見 practiceMode.ts 註解）。
       // 在這張單裡順手改主流程的可選性規則，範圍不對等。
-      const explanation = explainNotSelectable(
-        content.type,
-        formData.practice_mode,
+      const { key, datasetKeys } = notSelectableMessage(
+        explainNotSelectable(content.type, formData.practice_mode),
       );
-      if (explanation?.kind === "not_assignable") {
-        toast.warning(
-          t("dialogs.assignmentDialog.errors.contentTypeNotAssignable", {
-            type: getContentTypeLabel(content.type, t),
-          }),
-        );
-      } else {
-        // 這句原本寫死「只能選擇單字集」。在它還是死碼時看不出問題，一旦真的出得來
-        // 就會說謊 —— 選了情境對話模式時該說情境對話，選了朗讀模式去點情境對話時
-        // 該說例句集與單字集。指錯方向比沒有提示更糟。
-        toast.warning(
-          t("dialogs.assignmentDialog.errors.mixedContentType", {
-            type: (explanation?.allowedDatasetKeys ?? [])
-              .map((key) => t(key))
-              .join(t("common.listSeparator")),
-          }),
-        );
-      }
+      toast.warning(
+        t(key, {
+          // 「還不能派」那句填的是內容型別，其餘填「現在能選什麼」的名單。
+          // 用 Intl.ListFormat 而不是自己接分隔符：兩項以上時英文要有 "or"，
+          // 各語系的接法也不同（review R2）。disjunction 而非 conjunction ——
+          // 老師是「擇一」，不是兩種都要。
+          type: datasetKeys.length
+            ? new Intl.ListFormat(i18n.language, {
+                style: "long",
+                type: "disjunction",
+              }).format(datasetKeys.map((datasetKey) => t(datasetKey)))
+            : getContentTypeLabel(content.type, t),
+        }),
+      );
       return;
     }
     // Issue #800: block adding a 3rd vocab set even if mode allows it.
