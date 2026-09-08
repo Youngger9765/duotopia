@@ -4511,6 +4511,9 @@
       "maxDuration": "Recording cannot exceed {{duration}} seconds",
       "uploadSuccess": "File Uploaded Successfully",
       "validationFailed": "File Validation Failed"
+    },
+    "scenarioDialogue": {
+      "useTheseWords": "Try to use:"
     }
   },
   "readingAssessment": {

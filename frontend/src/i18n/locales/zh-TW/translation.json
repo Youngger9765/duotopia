@@ -4524,6 +4524,9 @@
       "maxDuration": "錄音不能超過 {{duration}} 秒",
       "uploadSuccess": "檔案上傳成功",
       "validationFailed": "檔案驗證失敗"
+    },
+    "scenarioDialogue": {
+      "useTheseWords": "試著用上："
     }
   },
   "readingAssessment": {
