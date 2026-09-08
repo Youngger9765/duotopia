@@ -49,10 +49,20 @@ export type PracticeMode =
   | "word_spelling_quiz"
   | "word_cloze"
   | "word_cloze_quiz"
-  | "tug_of_war";
+  | "tug_of_war"
+  | "scenario_dialogue";
 
-/** 可派發的資料集維度（#864 口說集會新增第三種 "speaking"，屆時擴此 union 即可）。 */
-export type PracticeDataset = "example_sentences" | "vocabulary_set";
+/**
+ * 可派發的資料集維度。
+ *
+ * `scenario_dialogue` 是 #1031 加的第三種（#864 當初預告的「口說集」）—— 它的題目是
+ * 開放式口說問題，與例句／單字兩種資料集的出題方式都不同，所以自成一類而不是硬塞進
+ * 既有兩種。
+ */
+export type PracticeDataset =
+  | "example_sentences"
+  | "vocabulary_set"
+  | "scenario_dialogue";
 
 /**
  * 成績類別「規則」——鏡射後端 `resolve_score_category`，存規則不存定值，
@@ -381,6 +391,36 @@ export const PRACTICE_MODE_REGISTRY: Record<PracticeMode, ModeConfig> = {
     chipDescKey: `${PM}.readingDesc`,
     chipSelectedClass: "border-orange-500 bg-orange-50 text-orange-700",
     iconColorClass: "text-orange-600",
+  },
+  scenario_dialogue: {
+    labelKey: "practiceMode.scenario_dialogue.label",
+    descKey: "practiceMode.scenario_dialogue.desc",
+    badgeClass:
+      "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+    icon: Mic,
+    crayonBg:
+      "crayon-texture bg-gradient-to-b from-purple-100 to-purple-200 text-purple-600",
+    isQuiz: false,
+    isMemoryBased: false,
+    baseMode: "scenario_dialogue",
+    // 只吃情境對話自己的資料集 —— 題目是開放式口說問題，例句／單字集沒有這種資料
+    supportedDatasets: ["scenario_dialogue"],
+    // 學生是開口錄音作答，與 reading / word_reading 同屬口說，不受 play_audio 影響。
+    // 唯一判定在後端 utils/score_category.py，這裡只是鏡射（CLAUDE.md 規則 6）。
+    scoreCategory: { kind: "static", category: "speaking" },
+    // #1031 先做人工批改：既有的 AI 評分是 Azure 發音評測，要有 reference_text 才能
+    // 比對「唸得多準」；情境對話是開放式回答，沒有正解可比，硬套會把所有與範例不同的
+    // 回答判成低分。AI 評分另案處理。
+    needsAiGrading: false,
+    burnsTokens: false,
+    autoGraded: false,
+    gradable: true,
+    settings: [SELECT_TIME_READING, TOGGLE_SHOW_TRANSLATION],
+    defaults: { time_limit_per_question: 30 },
+    chipTitleKey: `${PM}.scenario_dialogue`,
+    chipDescKey: `${PM}.scenario_dialogueDesc`,
+    chipSelectedClass: "border-purple-500 bg-purple-50 text-purple-700",
+    iconColorClass: "text-purple-600",
   },
   rearrangement: {
     labelKey: "practiceMode.rearrangement.label",
@@ -723,6 +763,7 @@ const ASSIGNABLE_MODE_ORDER: PracticeMode[] = [
   "word_spelling_quiz",
   "word_cloze",
   "word_cloze_quiz",
+  "scenario_dialogue",
 ];
 
 /** 依資料集回傳可派發的模式（chip 列），重現 AssignmentDialog 既有過濾：例句集只給非 word_ 模式。 */
@@ -741,6 +782,8 @@ export function contentTypeToDataset(
     return "example_sentences";
   if (["SENTENCE_MAKING", "VOCABULARY_SET"].includes(t))
     return "vocabulary_set";
+  // Issue #1031: 情境對話自成一類，不再落到 null（#1030 之前是落到單字集）
+  if (t === "SCENARIO_DIALOGUE") return "scenario_dialogue";
   return null;
 }
 

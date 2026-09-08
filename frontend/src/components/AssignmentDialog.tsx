@@ -65,16 +65,19 @@ import { toast } from "sonner";
 import {
   isAssignableContentType,
   isExampleSentencesType,
+  isScenarioDialogueType,
   isVocabularySetType,
   reasonNothingSelectable,
   usesNativeDisabled,
 } from "@/lib/assignableContentType";
 import { cn } from "@/lib/utils";
-import { practiceModeLabelKey, type PracticeMode } from "@/lib/practiceMode";
 import {
+  practiceModeLabelKey,
   listModesForDataset,
   applyModeDefaults,
   getModeConfig,
+  type PracticeMode,
+  type PracticeDataset,
 } from "@/lib/practiceMode";
 import { PracticeModeSettingsPanel } from "./assignment/PracticeModeSettingsPanel";
 import { useTranslation } from "react-i18next";
@@ -974,14 +977,13 @@ export function AssignmentDialog({
   };
 
   // 取得目前購物車中的內容類型（正規化後）
-  const getCartContentTypeCategory = ():
-    | "example_sentences"
-    | "vocabulary_set"
-    | null => {
+  const getCartContentTypeCategory = (): PracticeDataset | null => {
     if (cartItems.length === 0) return null;
     const firstItemType = cartItems[0].contentType;
     if (isExampleSentencesType(firstItemType)) return "example_sentences";
     if (isVocabularySetType(firstItemType)) return "vocabulary_set";
+    // Issue #1031: 情境對話自成一個資料集，模式清單只會有情境對話
+    if (isScenarioDialogueType(firstItemType)) return "scenario_dialogue";
     return null;
   };
 
@@ -994,6 +996,16 @@ export function AssignmentDialog({
 
     const mode = formData.practice_mode;
     if (!mode) return true; // 未選模式，可派發的型別都可選
+
+    // Issue #1031: 情境對話與其他題型不能混在同一份作業 —— 它的資料集、作答方式、
+    // 批改 Panel 都是獨立的。兩個方向都要擋：選了情境對話模式只能挑情境對話，
+    // 選了其他模式就挑不到情境對話。
+    if (mode === "scenario_dialogue") {
+      return isScenarioDialogueType(contentType);
+    }
+    if (isScenarioDialogueType(contentType)) {
+      return false;
+    }
 
     // 例句模式（朗讀 / 重組）：例句集 + 單字集都可選（單字集用 example_sentence 出題）
     if (mode === "reading" || mode === "rearrangement") {

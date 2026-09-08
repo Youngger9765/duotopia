@@ -45,6 +45,10 @@
       "listening": "Listening",
       "reading": "Reading",
       "writing": "Writing"
+    },
+    "scenario_dialogue": {
+      "label": "Scenario Dialogue",
+      "desc": "Speak your answer to each question in context; graded by the teacher"
     }
   },
   "common": {
@@ -1956,7 +1960,9 @@
         "playAudioWordDesc": "Listen to audio and select translation",
         "playAudioFillDesc": "Listen to audio and type the word",
         "showExampleSentenceDesc": "Show example sentence during practice",
-        "showAnswerLockedByAudio": "Audio mode must reveal the answer"
+        "showAnswerLockedByAudio": "Audio mode must reveal the answer",
+        "scenario_dialogue": "Scenario Dialogue",
+        "scenario_dialogueDesc": "Answer aloud in a real-life context"
       }
     },
     "classroomAssignDialog": {

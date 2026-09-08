@@ -8,6 +8,7 @@ import { describe, it, expect } from "vitest";
 import {
   isAssignableContentType,
   isExampleSentencesType,
+  isScenarioDialogueType,
   isVocabularySetType,
   reasonNothingSelectable,
   usesNativeDisabled,
@@ -41,13 +42,13 @@ describe("可派發白名單", () => {
     expect(isAssignableContentType(type)).toBe(true);
   });
 
-  it("情境對話不可派發 —— 學生端作答與批改頁都還沒做（#1031）", () => {
-    expect(isAssignableContentType("SCENARIO_DIALOGUE")).toBe(false);
-    expect(isAssignableContentType("scenario_dialogue")).toBe(false);
+  it("情境對話可以派發（#1031 起：學生端作答與批改頁都做好了）", () => {
+    expect(isAssignableContentType("SCENARIO_DIALOGUE")).toBe(true);
+    expect(isAssignableContentType("scenario_dialogue")).toBe(true);
   });
 
   it.each(["MULTIPLE_CHOICE", "SOMETHING_NEW", "", null, undefined])(
-    "未知型別 %s 預設不可派發（白名單，不是黑名單）",
+    "未知型別 %s 預設不可派發（白名單仍在，開放題型必須明確加進來）",
     (type) => {
       expect(isAssignableContentType(type)).toBe(false);
     },
@@ -78,23 +79,36 @@ describe("原生 disabled 會吃掉 click（PR #1032 review）", () => {
 });
 
 describe("整課都不能選時，原因要分得出來（PR #1032 review round 2）", () => {
-  it("整課只有情境對話 → 是「還不能派發」，叫老師換模式沒有用", () => {
-    expect(reasonNothingSelectable(["SCENARIO_DIALOGUE"])).toBe(
+  // 用仍不可派發的型別當例子（情境對話已於 #1031 開放）——
+  // 這裡驗的是規則，不是某個特定題型
+  it("整課都是還不能派發的題型 → 叫老師換模式沒有用", () => {
+    expect(reasonNothingSelectable(["MULTIPLE_CHOICE"])).toBe("not_assignable");
+    expect(reasonNothingSelectable(["MULTIPLE_CHOICE", "SOMETHING_NEW"])).toBe(
       "not_assignable",
     );
-    expect(
-      reasonNothingSelectable(["SCENARIO_DIALOGUE", "SCENARIO_DIALOGUE"]),
-    ).toBe("not_assignable");
   });
 
   it("課裡有可派發的內容 → 是模式／型別不合，換個模式就可以", () => {
     expect(
-      reasonNothingSelectable(["SCENARIO_DIALOGUE", "EXAMPLE_SENTENCES"]),
+      reasonNothingSelectable(["MULTIPLE_CHOICE", "EXAMPLE_SENTENCES"]),
     ).toBe("mode_mismatch");
     expect(reasonNothingSelectable(["VOCABULARY_SET"])).toBe("mode_mismatch");
+    // #1031 起情境對話也算可派發
+    expect(reasonNothingSelectable(["SCENARIO_DIALOGUE"])).toBe(
+      "mode_mismatch",
+    );
   });
 
   it("空的一課視為「還不能派發」，不會誤導成換模式", () => {
     expect(reasonNothingSelectable([])).toBe("not_assignable");
+  });
+});
+
+describe("情境對話自成一個資料集（#1031）", () => {
+  it("只認 SCENARIO_DIALOGUE（大小寫皆可）", () => {
+    expect(isScenarioDialogueType("SCENARIO_DIALOGUE")).toBe(true);
+    expect(isScenarioDialogueType("scenario_dialogue")).toBe(true);
+    expect(isScenarioDialogueType("VOCABULARY_SET")).toBe(false);
+    expect(isScenarioDialogueType(null)).toBe(false);
   });
 });

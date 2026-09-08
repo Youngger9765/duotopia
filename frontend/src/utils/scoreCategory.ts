@@ -17,7 +17,14 @@ export function getScoreCategory(
   const mode = (practiceMode ?? "").trim().toLowerCase();
   const audioOn = Boolean(playAudio);
 
-  if (mode === "reading" || mode === "word_reading") return "speaking";
+  // #1013 / #1031: 情境對話與朗讀同屬「開口作答」，題目音檔只是提示素材，
+  // 不該因為 play_audio 就翻成聽力。唯一判定在後端 utils/score_category.py。
+  if (
+    mode === "reading" ||
+    mode === "word_reading" ||
+    mode === "scenario_dialogue"
+  )
+    return "speaking";
   if (
     (mode === "rearrangement" ||
       mode === "word_selection" ||

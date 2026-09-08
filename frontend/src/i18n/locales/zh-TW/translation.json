@@ -45,6 +45,10 @@
       "listening": "聽力",
       "reading": "閱讀",
       "writing": "寫作"
+    },
+    "scenario_dialogue": {
+      "label": "情境對話",
+      "desc": "看情境與題目後開口回答，老師批改"
     }
   },
   "common": {
@@ -2098,7 +2102,9 @@
         "playAudioWordDesc": "聽音檔選翻譯",
         "playAudioFillDesc": "聽音檔拼/填單字",
         "showExampleSentenceDesc": "練習時顯示例句",
-        "showAnswerLockedByAudio": "播放音檔模式必須顯示答案"
+        "showAnswerLockedByAudio": "播放音檔模式必須顯示答案",
+        "scenario_dialogue": "情境對話",
+        "scenario_dialogueDesc": "依情境開口回答，練習真實對話"
       }
     },
     "classroomAssignDialog": {
