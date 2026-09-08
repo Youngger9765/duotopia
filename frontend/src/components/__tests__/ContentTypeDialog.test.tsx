@@ -272,21 +272,89 @@ describe("ContentTypeDialog", () => {
   });
 
   /**
-   * #944 加了 enableScenarioDialogue 當暫時的擋板（只有「我的教材」接了面板，
-   * 其餘頁面維持停用）。#1014 把五個接線點都接上之後開關已移除，情境對話對所有
-   * 頁面一律可選 —— 這裡釘住「不會有人再把它改回預設停用」。
+   * 情境對話的功能開關（Issue #1039）。
+   *
+   * 這裡原本釘的是「不需要任何開關就可以選」（#1014 移除 enableScenarioDialogue
+   * 之後的狀態）。#1039 重新加了一道開關，但理由與 #944 那個完全不同 ——
+   * 不是「功能沒做完」，而是「**還沒被人驗過就已經在 prod 上**」（PR #1038 把整條
+   * 功能線發到 main 並成功部署）。
+   *
+   * 所以改成釘「卡片跟著開關走」，而不是釘某一個固定狀態：關閉時反灰、點不動、
+   * 不會誤送出建立請求；打開時完全回到 #1014 交付的樣子。兩邊都測，否則
+   * 「打開之後其實壞了」會等到下一次發版才爆出來。
    */
-  describe("情境對話（#1014 移除 enableScenarioDialogue 開關）", () => {
-    const card = () =>
-      screen.getByTestId("content-type-card-scenario_dialogue");
+  describe("情境對話的功能開關（#1039）", () => {
+    const testId = "content-type-card-scenario_dialogue";
 
-    it("不需要任何開關就可以選，並帶出正確的 type", () => {
-      renderComponent();
+    // 開關是模組層級常數，要換掉它必須重置模組圖再動態載入。
+    // SidebarProvider 一起動態載入 —— 不然 Provider 與元件裡的 useSidebar 會
+    // 拿到兩個不同的 context 實例。
+    async function renderWithFlag(enabled: boolean) {
+      vi.resetModules();
+      vi.doMock("@/lib/featureFlags", () => ({
+        SCENARIO_DIALOGUE_ENABLED: enabled,
+      }));
+      const [{ default: Dialog }, { SidebarProvider: Provider }] =
+        await Promise.all([
+          import("../ContentTypeDialog"),
+          import("@/contexts/SidebarContext"),
+        ]);
+      render(
+        <Provider>
+          <Dialog
+            open
+            onClose={mockOnClose}
+            onSelect={mockOnSelect}
+            lessonInfo={lessonInfo}
+          />
+        </Provider>,
+      );
+    }
 
-      expect(card()).toHaveAttribute("aria-disabled", "false");
-      expect(card()).not.toHaveAttribute("tabindex", "-1");
+    afterEach(() => {
+      vi.doUnmock("@/lib/featureFlags");
+      vi.resetModules();
+    });
 
-      fireEvent.click(card());
+    it("開關關閉：卡片反灰、拿不到焦點", async () => {
+      await renderWithFlag(false);
+      const card = screen.getByTestId(testId);
+      expect(card).toHaveAttribute("aria-disabled", "true");
+      expect(card).toHaveAttribute("tabindex", "-1");
+    });
+
+    it("開關關閉：點下去不會送出建立請求", async () => {
+      await renderWithFlag(false);
+      fireEvent.click(screen.getByTestId(testId));
+      // 這是整張單的重點 —— 入口必須真的擋住，不能只是看起來灰灰的
+      expect(mockOnSelect).not.toHaveBeenCalled();
+    });
+
+    it("開關關閉：卡片還在，只是標成即將推出（不是整個藏起來）", async () => {
+      await renderWithFlag(false);
+      expect(screen.getByTestId(testId)).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId(testId)).getByText("Soon"),
+      ).toBeInTheDocument();
+    });
+
+    it("開關關閉：例句集與單字集完全不受影響", async () => {
+      await renderWithFlag(false);
+      for (const type of ["example_sentences", "vocabulary_set"]) {
+        expect(screen.getByTestId(`content-type-card-${type}`)).toHaveAttribute(
+          "aria-disabled",
+          "false",
+        );
+      }
+    });
+
+    it("開關打開：可選，並帶出正確的 type", async () => {
+      await renderWithFlag(true);
+      const card = screen.getByTestId(testId);
+      expect(card).toHaveAttribute("aria-disabled", "false");
+      expect(card).not.toHaveAttribute("tabindex", "-1");
+
+      fireEvent.click(card);
       expect(mockOnSelect).toHaveBeenCalledWith(
         expect.objectContaining({ type: "scenario_dialogue" }),
       );

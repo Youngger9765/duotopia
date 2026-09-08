@@ -4,7 +4,17 @@
  * 這張單的起因是「情境對話尚未開放派發，卻在派發流程裡點得下去，而且會被當成
  * 單字集」。所以測試盯的是白名單本身：認得的兩種可派，**其餘一律不可派**。
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+/**
+ * 這個檔案驗的是「模式與型別相不相容」的規則，而那些規則的前提是**該型別可以派發**。
+ * 所以這裡把情境對話的功能開關固定成開啟（Issue #1039）—— 否則規則測試會跟著開關的
+ * 當下狀態一起紅，而那不是這個檔案要守的東西。
+ *
+ * 開關本身造成什麼差別（關閉時不可派發、提示改成「還不能派發」），由
+ * `featureFlags.scenarioDialogue.test.ts` 兩種狀態都測，包含預設值必須是關閉。
+ */
+vi.mock("../featureFlags", () => ({ SCENARIO_DIALOGUE_ENABLED: true }));
 import {
   explainNotSelectable,
   isAssignableContentType,
