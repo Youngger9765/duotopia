@@ -23,6 +23,7 @@ import pytest
 from services.scenario_grading_ai import (  # noqa: E402
     ScenarioGradingError,
     ScenarioGradingService,
+    mime_type_for_recording,
     to_gcs_uri,
 )
 
@@ -197,3 +198,176 @@ class TestCost:
 
     def test_missing_usage_is_zero(self):
         assert ScenarioGradingService.estimate_cost({}) == 0.0
+
+
+class TestRecordingMimeType:
+    """送給 Gemini 的格式必須是**錄音的真實格式**（PR #1036 review）。
+
+    原本寫死 audio/webm。但 macOS Safari 只錄得出 audio/mp4，而且
+    frontend/src/utils/audioRecordingStrategy.ts 對認不出來的裝置也是預設 audio/mp4 ——
+    這不是邊角案例。
+
+    最糟的情況不是失敗而是**半成功**：Gemini 勉強解出一段破碎的逐字稿，通過
+    normalize_result 的非空檢查，於是老師看到一個看起來很正常、其實是格式錯誤造成的
+    低分建議。所以格式要從錄音檔本身推導，不能讓呼叫端自己記得傳。
+    """
+
+    @pytest.mark.parametrize(
+        "url,expected",
+        [
+            ("https://storage.googleapis.com/b/recordings/a.webm", "audio/webm"),
+            ("https://storage.googleapis.com/b/recordings/a.m4a", "audio/mp4"),
+            ("https://storage.googleapis.com/b/recordings/a.mp4", "video/mp4"),
+            ("https://storage.googleapis.com/b/recordings/a.ogg", "audio/ogg"),
+            ("https://storage.googleapis.com/b/recordings/a.opus", "audio/ogg"),
+            ("https://storage.googleapis.com/b/recordings/a.mp3", "audio/mpeg"),
+            ("https://storage.googleapis.com/b/recordings/a.wav", "audio/wav"),
+        ],
+    )
+    def test_mime_type_comes_from_the_recording_extension(self, url, expected):
+        assert mime_type_for_recording(url) == expected
+
+    def test_uppercase_extension_still_resolves(self):
+        assert (
+            mime_type_for_recording("https://storage.googleapis.com/b/r/A.M4A")
+            == "audio/mp4"
+        )
+
+    def test_query_string_does_not_break_detection(self):
+        assert (
+            mime_type_for_recording(
+                "https://storage.googleapis.com/b/r/a.m4a?generation=17"
+            )
+            == "audio/mp4"
+        )
+
+    @pytest.mark.parametrize("url", ["", None, "https://x.com/nofile", "a"])
+    def test_unknown_falls_back_to_webm(self, url):
+        """上傳端對認不得的 content_type 也是落成 .webm，兩邊保持一致。"""
+        assert mime_type_for_recording(url) == "audio/webm"
+
+    def test_every_uploadable_format_can_be_graded(self):
+        """上傳端支援的每一種格式都要評得動 —— 兩張表不可以各自漂移。
+
+        新增一種錄音格式時，只改 audio_upload 而忘了這裡，會讓那個格式的學生拿到
+        用錯格式跑出來的分數。這條測試就是那道閘門。
+        """
+        from services.audio_upload import RECORDING_CONTENT_TYPE_TO_EXT
+        from services.scenario_grading_ai import EXTENSION_TO_MIME
+
+        for content_type, ext in RECORDING_CONTENT_TYPE_TO_EXT.items():
+            assert ext in EXTENSION_TO_MIME, (
+                f"audio_upload 會產生 .{ext}（{content_type}），"
+                f"但 EXTENSION_TO_MIME 沒有這個副檔名"
+            )
+
+
+def _install_fake_vertex(monkeypatch):
+    """把 vertexai.generative_models 換成假模組，回傳 (fake, captured)。
+
+    刻意用 ``monkeypatch.setitem(sys.modules, ...)`` 而不是
+    ``patch("vertexai.generative_models.Part")``：後者會觸發真正的 import，而 CI／本機
+    不見得裝得起 google.cloud.aiplatform（裝不起來時錯誤還會被誤認成程式壞了）。
+    直接塞假模組則完全不碰真的 SDK。
+
+    ``captured`` 會記下送進 Part 的 uri／data 與 mime_type，讓測試驗「送出去的是什麼」。
+    """
+    import sys
+    import types
+    from unittest.mock import AsyncMock, MagicMock
+
+    captured = {}
+
+    part = MagicMock()
+    part.from_uri.side_effect = lambda uri, mime_type: captured.update(
+        uri=uri, mime_type=mime_type
+    )
+    part.from_data.side_effect = lambda data, mime_type: captured.update(
+        data=data, mime_type=mime_type
+    )
+
+    response = MagicMock()
+    response.text = (
+        '{"transcript": "I went to the park.", '
+        '"scores": {"content": 80, "grammar": 70, '
+        '"vocabulary": 75, "keywords": 100}, '
+        '"overall": 78, "feedback": "ok", "suggested_pass": true}'
+    )
+    response.usage_metadata.prompt_token_count = 4000
+    response.usage_metadata.candidates_token_count = 300
+
+    model = MagicMock()
+    model.generate_content_async = AsyncMock(return_value=response)
+
+    fake = types.ModuleType("vertexai.generative_models")
+    fake.Part = part
+    fake.GenerativeModel = MagicMock(return_value=model)
+    fake.GenerationConfig = MagicMock()
+
+    monkeypatch.setitem(sys.modules, "vertexai.generative_models", fake)
+    monkeypatch.setattr("services.vertex_ai.get_vertex_ai_service", lambda: MagicMock())
+    return fake, captured
+
+
+class TestAudioPartCarriesTheRealFormat:
+    """推導出來的格式要真的送到 Gemini —— 只在函式裡算對沒有用。"""
+
+    def test_gcs_recording_is_referenced_by_uri_with_its_own_mime_type(
+        self, monkeypatch
+    ):
+        _, captured = _install_fake_vertex(monkeypatch)
+        ScenarioGradingService._audio_part(
+            "https://storage.googleapis.com/b/recordings/a.m4a", "audio/mp4"
+        )
+        assert captured == {
+            "uri": "gs://b/recordings/a.m4a",
+            "mime_type": "audio/mp4",
+        }
+
+    def test_non_gcs_recording_is_downloaded_with_its_own_mime_type(self, monkeypatch):
+        """本機開發的錄音沒有 gs:// 可用，只能抓下來 —— 格式一樣不能弄錯。"""
+        from unittest.mock import MagicMock, patch
+
+        _, captured = _install_fake_vertex(monkeypatch)
+        response = MagicMock()
+        response.content = b"fake-audio"
+
+        with patch("requests.get", return_value=response):
+            ScenarioGradingService._audio_part(
+                "http://localhost:8080/static/recordings/a.m4a", "audio/mp4"
+            )
+        assert captured == {"data": b"fake-audio", "mime_type": "audio/mp4"}
+
+
+class TestGradeWiring:
+    """grade() 整條路走過一次（Vertex 全 mock）。
+
+    為什麼需要這條：mime_type_for_recording 自己算得對、_audio_part 自己收得對，
+    都不代表 grade() 有把前者接到後者。第一版的 bug 就長在這個接縫上 —— 兩端都對，
+    中間寫死 audio/webm。
+    """
+
+    @pytest.mark.asyncio
+    async def test_mp4_recording_is_sent_to_gemini_as_mp4(self, monkeypatch):
+        _, captured = _install_fake_vertex(monkeypatch)
+
+        result = await ScenarioGradingService().grade(
+            "https://storage.googleapis.com/b/recordings/a.m4a",
+            {"question": "What did you do last weekend?"},
+        )
+
+        # Safari 錄的 m4a 不能被標成 webm 送出去
+        assert captured["mime_type"] == "audio/mp4"
+        assert captured["uri"] == "gs://b/recordings/a.m4a"
+        assert result["transcript"] == "I went to the park."
+        assert result["estimated_cost_usd"] > 0
+
+    @pytest.mark.asyncio
+    async def test_webm_recording_still_works(self, monkeypatch):
+        _, captured = _install_fake_vertex(monkeypatch)
+
+        await ScenarioGradingService().grade(
+            "https://storage.googleapis.com/b/recordings/a.webm",
+            {"question": "Q?"},
+        )
+        assert captured["mime_type"] == "audio/webm"

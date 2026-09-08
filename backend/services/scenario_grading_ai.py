@@ -90,6 +90,45 @@ def to_gcs_uri(url: Optional[str]) -> Optional[str]:
     return f"gs://{path}"
 
 
+# 存檔副檔名 → 送給 Gemini 的格式。
+#
+# 為什麼不能寫死 audio/webm（PR #1036 review 抓到）：macOS Safari 只錄得出 audio/mp4，
+# 而且前端對認不出來的裝置也是預設 audio/mp4（audioRecordingStrategy.ts），這不是邊角
+# 案例。最糟的情況不是失敗而是**半成功** —— Gemini 勉強解出一段破碎的逐字稿，通過了
+# normalize_result 的非空檢查，老師就看到一個看起來很正常、其實是格式錯誤造成的低分。
+#
+# 副檔名是上傳時依真實 content_type 決定的（RECORDING_CONTENT_TYPE_TO_EXT），所以反推
+# 得回來，不必多打一次 GCS 讀 blob metadata。
+EXTENSION_TO_MIME = {
+    "webm": "audio/webm",
+    "m4a": "audio/mp4",
+    "mp4": "video/mp4",
+    "ogg": "audio/ogg",
+    # opus 存在 ogg 容器裡
+    "opus": "audio/ogg",
+    "mp3": "audio/mpeg",
+    "wav": "audio/wav",
+}
+
+# 認不得的副檔名落回 webm —— 上傳端對認不得的 content_type 也是落成 .webm，兩邊一致。
+_DEFAULT_MIME = "audio/webm"
+
+
+def mime_type_for_recording(url: Optional[str]) -> str:
+    """從錄音網址推出真實格式。
+
+    刻意做成從網址推導、而不是讓呼叫端傳參數：呼叫端「記得傳對」是會忘的，忘了就是
+    靜靜地送錯格式。
+    """
+    if not url:
+        return _DEFAULT_MIME
+    path = urlparse(url).path
+    _, dot, ext = path.rpartition(".")
+    if not dot or "/" in ext:
+        return _DEFAULT_MIME
+    return EXTENSION_TO_MIME.get(ext.lower(), _DEFAULT_MIME)
+
+
 def _describe_tense(tense: Optional[Dict[str, str]]) -> str:
     """時態穩定代碼 → 英文描述。時間與動貌都要有才算指定（同前端 isTenseSet）。"""
     if not isinstance(tense, dict):
@@ -301,9 +340,12 @@ class ScenarioGradingService:
         self,
         recording_url: str,
         criteria: Dict[str, Any],
-        mime_type: str = "audio/webm",
     ) -> Dict[str, Any]:
-        """評一題。呼叫端負責取出 criteria 與寫回結果。"""
+        """評一題。呼叫端負責取出 criteria 與寫回結果。
+
+        音檔格式由網址自己推導（見 :func:`mime_type_for_recording`），不開放呼叫端傳
+        —— 那是個會忘的參數，忘了就是靜靜地把 mp4 標成 webm 送出去。
+        """
         if not recording_url:
             raise ScenarioGradingError("這一題沒有錄音，無法評分")
 
@@ -322,7 +364,10 @@ class ScenarioGradingService:
             response_mime_type="application/json",
         )
         response = await model.generate_content_async(
-            [self._audio_part(recording_url, mime_type), prompt],
+            [
+                self._audio_part(recording_url, mime_type_for_recording(recording_url)),
+                prompt,
+            ],
             generation_config=config,
         )
 

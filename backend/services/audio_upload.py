@@ -12,6 +12,23 @@ from fastapi import UploadFile, HTTPException
 from google.cloud import storage
 
 
+# 錄音 content_type → 存檔副檔名。
+#
+# 提到模組層級是因為它不只決定檔名：情境對話的 AI 評分要靠副檔名反推錄音的真實格式，
+# 才能告訴 Gemini 這是什麼檔（見 services/scenario_grading_ai.py 的 EXTENSION_TO_MIME，
+# 那邊有一條測試守著兩張表不會漂移）。
+RECORDING_CONTENT_TYPE_TO_EXT = {
+    "audio/webm": "webm",
+    "video/webm": "webm",
+    "audio/mp4": "m4a",
+    "video/mp4": "mp4",  # Safari 可能使用 video/mp4
+    "audio/ogg": "ogg",
+    "audio/opus": "opus",
+    "audio/mpeg": "mp3",
+    "audio/wav": "wav",
+}
+
+
 class AudioUploadService:
     def __init__(self):
         # GCS 設定
@@ -189,17 +206,7 @@ class AudioUploadService:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
             # 根據 content type 決定擴展名
-            ext_map = {
-                "audio/webm": "webm",
-                "video/webm": "webm",
-                "audio/mp4": "m4a",
-                "video/mp4": "mp4",  # Safari 可能使用 video/mp4
-                "audio/ogg": "ogg",
-                "audio/opus": "opus",
-                "audio/mpeg": "mp3",
-                "audio/wav": "wav",
-            }
-            extension = ext_map.get(file.content_type, "webm")
+            extension = RECORDING_CONTENT_TYPE_TO_EXT.get(file.content_type, "webm")
 
             # 如果有 content_id 和 item_index，加入檔名中
             if content_id and item_index is not None:
