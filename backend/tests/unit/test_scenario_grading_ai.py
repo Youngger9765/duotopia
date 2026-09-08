@@ -20,7 +20,7 @@ import pytest
 # .ScenarioGradingService.grade") 會 patch 到那個舊 class，而端點在 request 時
 # 重新 import 拿到的是新 class —— 於是那次呼叫會真的打 Vertex。這個坑只會讓「同時跑
 # 這個檔和端點測試時的第一個測試」壞掉，非常難查。
-from services.scenario_grading_ai import (  # noqa: E402
+from services.scenario_grading_ai import (
     ScenarioGradingError,
     ScenarioGradingService,
     mime_type_for_recording,
