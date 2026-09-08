@@ -1,3 +1,4 @@
+import { SCENARIO_DIALOGUE_ENABLED } from "./featureFlags";
 import {
   PRACTICE_MODE_REGISTRY,
   contentTypeToDataset,
@@ -60,7 +61,11 @@ export function isAssignableContentType(type?: string | null): boolean {
     // Issue #1031: 學生端作答與批改頁都做好了，從 #1030 的擋板移到支援名單。
     // 白名單的意義就在這裡 —— 開放一個題型是「明確加進來」的動作，而不是
     // 悄悄從某個 fallback 漏過去。
-    isScenarioDialogueType(type)
+    //
+    // Issue #1039: 再加一道開關。功能是完整的，但在人工驗證做完之前先關著
+    // （PR #1038 把它連同整條線發到 prod 了）。關閉時等於回到 #1030 的狀態，
+    // 連「還不能派發」的提示文案都是現成的。
+    (SCENARIO_DIALOGUE_ENABLED && isScenarioDialogueType(type))
   );
 }
 
