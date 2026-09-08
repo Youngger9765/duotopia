@@ -379,3 +379,43 @@ class TestSuggestionReachesTheGradingPage:
         suggestion = resp.json()["submissions"][0]["scenario_grading"]
         assert "usage" not in suggestion
         assert "estimated_cost_usd" not in suggestion
+
+
+class TestErrorKindsAreDistinguished:
+    """「模型失敗」與「資料有問題」不能都回 502（PR #1036 review R2）。
+
+    502 在前端顯示成「請稍後再試」。題目本身沒內容的話，重試一百次也不會變好 ——
+    那是教材要修，老師需要知道差別。
+    """
+
+    def test_model_failure_is_502(self, test_client: TestClient, graded):
+        from services.scenario_grading_ai import ScenarioGradingError
+
+        with patch(
+            "services.scenario_grading_ai.ScenarioGradingService.grade",
+            new=AsyncMock(side_effect=ScenarioGradingError("沒有辨識出任何內容")),
+        ):
+            resp = test_client.post(_url(graded), headers=graded["headers"])
+        assert resp.status_code == 502
+
+    def test_empty_question_is_422_not_502(
+        self, test_client: TestClient, db_session: Session, graded
+    ):
+        """題目空白 = 教材資料不完整，不是暫時性的 AI 失敗。"""
+        from models import ContentItem
+
+        item = (
+            db_session.query(ContentItem)
+            .filter(ContentItem.id == graded["progress"].content_item_id)
+            .first()
+        )
+        item.text = "   "
+        db_session.commit()
+
+        # 這裡刻意不 mock grade() —— 要驗的正是真的 build_prompt 擋下空題目
+        resp = test_client.post(_url(graded), headers=graded["headers"])
+        assert resp.status_code == 422, resp.text
+
+        # 資料問題不該扣掉老師的 AI 額度
+        db_session.refresh(graded["progress"])
+        assert (graded["progress"].ai_analysis_count or 0) == 0

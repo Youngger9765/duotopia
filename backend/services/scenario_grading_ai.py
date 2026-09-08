@@ -70,7 +70,16 @@ _ASPECT_WORDS = {
 
 
 class ScenarioGradingError(ValueError):
-    """可預期的錯誤（參數不足、模型輸出不可用）。呼叫端轉成 4xx/502。"""
+    """模型這次評不出來（逐字稿空白、輸出壞掉）。呼叫端轉成 502 —— 重試可能有用。"""
+
+
+class ScenarioGradingInputError(ScenarioGradingError):
+    """要評的資料本身有問題（例如題目是空的）。
+
+    與 :class:`ScenarioGradingError` 分開，是因為對老師的意思完全不同：模型失敗時
+    「稍後再試」是對的建議，但題目本身沒內容的話，重試一百次也不會變好 —— 那是教材
+    要修。繼承自它，讓既有的 ``except ScenarioGradingError`` 仍能一併接住。
+    """
 
 
 def to_gcs_uri(url: Optional[str]) -> Optional[str]:
@@ -158,7 +167,7 @@ class ScenarioGradingService:
         """
         question = (criteria.get("question") or "").strip()
         if not question:
-            raise ScenarioGradingError("題目不可為空")
+            raise ScenarioGradingInputError("這一題沒有題目內容，請先回教材補上")
 
         reference = (criteria.get("reference_answer") or "").strip()
         keywords: List[str] = [
@@ -318,11 +327,15 @@ class ScenarioGradingService:
         }
 
     @classmethod
-    def _audio_part(cls, recording_url: str, mime_type: str) -> Any:
+    async def _audio_part(cls, recording_url: str, mime_type: str) -> Any:
         """把錄音變成 Gemini 的 Part。
 
         GCS 上的檔案用 ``from_uri`` 直接引用（不必下載，省頻寬也省記憶體）；本機開發
         把錄音存在自己的 static 目錄，只能抓下來用 ``from_data``。
+
+        下載走 ``asyncio.to_thread``：requests 是同步的，直接在 async 路徑上呼叫會把
+        整個 event loop 卡住最長 30 秒（timeout），同一個 process 上其他請求全部跟著
+        停。production 走 GCS 那條不下載，但本機開發與未來的非 GCS 來源會踩到。
         """
         from vertexai.generative_models import Part
 
@@ -330,9 +343,11 @@ class ScenarioGradingService:
         if gcs_uri:
             return Part.from_uri(gcs_uri, mime_type=mime_type)
 
+        import asyncio
+
         import requests
 
-        response = requests.get(recording_url, timeout=30)
+        response = await asyncio.to_thread(requests.get, recording_url, timeout=30)
         response.raise_for_status()
         return Part.from_data(data=response.content, mime_type=mime_type)
 
@@ -347,7 +362,7 @@ class ScenarioGradingService:
         —— 那是個會忘的參數，忘了就是靜靜地把 mp4 標成 webm 送出去。
         """
         if not recording_url:
-            raise ScenarioGradingError("這一題沒有錄音，無法評分")
+            raise ScenarioGradingInputError("這一題沒有錄音，無法評分")
 
         prompt = self.build_prompt(criteria)
 
@@ -365,7 +380,9 @@ class ScenarioGradingService:
         )
         response = await model.generate_content_async(
             [
-                self._audio_part(recording_url, mime_type_for_recording(recording_url)),
+                await self._audio_part(
+                    recording_url, mime_type_for_recording(recording_url)
+                ),
                 prompt,
             ],
             generation_config=config,

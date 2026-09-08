@@ -2249,6 +2249,7 @@ async def scenario_ai_grade(
 
     from services.scenario_grading_ai import (
         ScenarioGradingError,
+        ScenarioGradingInputError,
         get_scenario_grading_service,
     )
 
@@ -2256,6 +2257,11 @@ async def scenario_ai_grade(
         result = await get_scenario_grading_service().grade(
             item_progress.recording_url, criteria
         )
+    except ScenarioGradingInputError as e:
+        # 資料本身有問題（題目空白之類）。這不是暫時性失敗 —— 回 502 會讓老師看到
+        # 「請稍後再試」，但重試一百次也不會變好，該修的是教材。
+        logger.warning(f"Scenario AI grading input invalid for {item_progress_id}: {e}")
+        raise HTTPException(status_code=422, detail=str(e))
     except ScenarioGradingError as e:
         # 模型這次不可用（沒轉出逐字稿、輸出壞掉）。額度不扣 —— 老師還沒拿到東西。
         logger.warning(f"Scenario AI grading unusable for {item_progress_id}: {e}")

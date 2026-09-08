@@ -669,6 +669,16 @@ export default function GradingPage() {
       // 依狀態碼分開提示，而不是直接把後端訊息丟出來 —— 那些訊息是英文的（額度那條
       // 與學生端共用），而且老師需要知道的是「再試一次」還是「不用再按了」。
       const status = error instanceof ApiError ? error.status : 0;
+      if (status === 422) {
+        // 422 = 這題的教材資料本身有問題（例如題目空白）。「請稍後再試」在這裡是錯的
+        // 建議 —— 重試一百次也不會變好，要回教材補內容。後端訊息已是中文，直接顯示。
+        toast.error(
+          error instanceof ApiError && error.message
+            ? error.message
+            : t("gradingPage.scenarioDialogue.aiGradeFailed"),
+        );
+        return;
+      }
       toast.error(
         t(
           status === 429

@@ -312,11 +312,12 @@ def _install_fake_vertex(monkeypatch):
 class TestAudioPartCarriesTheRealFormat:
     """推導出來的格式要真的送到 Gemini —— 只在函式裡算對沒有用。"""
 
-    def test_gcs_recording_is_referenced_by_uri_with_its_own_mime_type(
+    @pytest.mark.asyncio
+    async def test_gcs_recording_is_referenced_by_uri_with_its_own_mime_type(
         self, monkeypatch
     ):
         _, captured = _install_fake_vertex(monkeypatch)
-        ScenarioGradingService._audio_part(
+        await ScenarioGradingService._audio_part(
             "https://storage.googleapis.com/b/recordings/a.m4a", "audio/mp4"
         )
         assert captured == {
@@ -324,7 +325,10 @@ class TestAudioPartCarriesTheRealFormat:
             "mime_type": "audio/mp4",
         }
 
-    def test_non_gcs_recording_is_downloaded_with_its_own_mime_type(self, monkeypatch):
+    @pytest.mark.asyncio
+    async def test_non_gcs_recording_is_downloaded_with_its_own_mime_type(
+        self, monkeypatch
+    ):
         """本機開發的錄音沒有 gs:// 可用，只能抓下來 —— 格式一樣不能弄錯。"""
         from unittest.mock import MagicMock, patch
 
@@ -333,7 +337,7 @@ class TestAudioPartCarriesTheRealFormat:
         response.content = b"fake-audio"
 
         with patch("requests.get", return_value=response):
-            ScenarioGradingService._audio_part(
+            await ScenarioGradingService._audio_part(
                 "http://localhost:8080/static/recordings/a.m4a", "audio/mp4"
             )
         assert captured == {"data": b"fake-audio", "mime_type": "audio/mp4"}
@@ -371,3 +375,46 @@ class TestGradeWiring:
             {"question": "Q?"},
         )
         assert captured["mime_type"] == "audio/webm"
+
+
+class TestDownloadDoesNotBlockTheEventLoop:
+    """本機下載那條路不可以卡住 event loop（PR #1036 review R2）。
+
+    `grade()` 是 async，但下載用的 requests 是同步的。直接呼叫會把整個 event loop
+    卡住最長 30 秒（timeout），同一個 process 上其他請求全部跟著停。
+    production 走 GCS 的 from_uri 不受影響，但本機開發與未來的非 GCS 來源會踩到。
+    """
+
+    @pytest.mark.asyncio
+    async def test_other_tasks_still_run_while_the_recording_downloads(
+        self, monkeypatch
+    ):
+        import asyncio
+        import time
+        from unittest.mock import MagicMock
+
+        _install_fake_vertex(monkeypatch)
+        order = []
+
+        def slow_get(url, timeout):
+            time.sleep(0.3)
+            response = MagicMock()
+            response.content = b"audio"
+            return response
+
+        monkeypatch.setattr("requests.get", slow_get)
+
+        async def download():
+            await ScenarioGradingService._audio_part(
+                "http://localhost:8080/static/recordings/a.webm", "audio/webm"
+            )
+            order.append("download")
+
+        async def other_request():
+            await asyncio.sleep(0.05)
+            order.append("other")
+
+        await asyncio.gather(download(), other_request())
+
+        # 卡住 event loop 的話，other_request 連跑都跑不起來，順序會反過來
+        assert order == ["other", "download"]
