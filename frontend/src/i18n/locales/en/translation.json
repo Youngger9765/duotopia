@@ -90,7 +90,8 @@
       "networkError": "Cannot reach the server. Please check your connection and try again.",
       "rateLimited": "Too many attempts. Please wait a minute and try again.",
       "serverError": "A server error occurred. Please try again later."
-    }
+    },
+    "listSeparator": ", "
   },
   "demo": {
     "banner": "Demo Mode - Progress will not be saved",

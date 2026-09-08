@@ -1,3 +1,10 @@
+import {
+  DATASET_LABEL_KEY,
+  PRACTICE_MODE_REGISTRY,
+  contentTypeToDataset,
+  type PracticeMode,
+} from "./practiceMode";
+
 /**
  * 內容型別 → 能不能派發（Issue #1030）。
  *
@@ -58,26 +65,20 @@ export function isAssignableContentType(type?: string | null): boolean {
 }
 
 /**
- * 這張卡片要不要用「原生 `disabled` 屬性」。
+ * ## 停用的卡片為什麼不用原生 `disabled`
  *
- * **原生 disabled 的按鈕不會派發 click 事件** —— 於是 `onClick` 裡那句「為什麼不能選」
- * 的提示永遠出不來，老師點灰掉的卡片完全沒有回饋（PR #1032 review 抓到；這個 PR 一開始
- * 就踩了，說明文件還寫著「點下去會提示」）。
+ * 這裡曾經有一個 `usesNativeDisabled()`，用來區分「哪些停用原因要保持可點」。
+ * #1033 把它移除了 —— 答案是**全部都要**，一個只會回同一個答案的函式只是多一層。
  *
- * 所以「這個題型還不能派發」這種**需要解釋**的情況要保持可點，由 `toggleContent` 的
- * 守衛擋住並跳提示；其餘情況（模式與型別不合、單字集達上限）維持原生 disabled。
+ * 原因：**原生 `disabled` 的按鈕不會派發 click 事件**。卡片灰掉的每一種原因
+ * （題型還不能派、模式與型別不合、單字集達上限），`AssignmentDialog.toggleContent()`
+ * 裡都寫了一句對應的提示要告訴老師。只要用了原生 disabled，那句提示就是死碼，
+ * 老師點下去完全沒有回饋。
  *
- * > 註：`mixedContentType`（模式與型別不合）那句提示其實也因為同樣原因構不到，
- * > 但那是本 PR 之前就存在的行為，不在這張單的範圍內，另外回報。
+ * #1030 只把「題型還不能派」那一種挑出來修，另外兩種留在原生 disabled 上（#1033）。
+ * 現在規則統一了：**停用一律是視覺與語意上的（`aria-disabled`），事件照常派發**，
+ * 由守衛負責擋下並說明。實作見 `components/assignment/ContentSelectCard.tsx`。
  */
-export function usesNativeDisabled(options: {
-  /** 卡片在畫面上是否呈現為停用 */
-  disabled: boolean;
-  /** 停用的原因是不是「這個題型還不能派發」 */
-  notAssignable: boolean;
-}): boolean {
-  return options.disabled && !options.notAssignable;
-}
 
 /** 「整課都不能選」的原因。決定要給老師哪一句提示。 */
 export type NothingSelectableReason = "not_assignable" | "mode_mismatch";
@@ -102,4 +103,42 @@ export function reasonNothingSelectable(
     isAssignableContentType(type),
   );
   return hasAssignable ? "mode_mismatch" : "not_assignable";
+}
+
+/** 點了灰掉的卡片時，要告訴老師哪一件事。`null` = 這張其實選得到。 */
+export type NotSelectableExplanation =
+  | { kind: "not_assignable" }
+  | { kind: "mode_mismatch"; allowedDatasetKeys: string[] };
+
+/**
+ * 這個型別在目前的練習模式下為什麼不能選（Issue #1033）。
+ *
+ * 抽出來的理由與這個檔案本身一樣：**要驗得到**。
+ * `AssignmentDialog.toggleContent()` 裡那句「目前只能選擇 X」原本寫死 X = 單字集。
+ * 在它還是死碼時（原生 disabled 吃掉 click）沒人發現，一旦讓它真的出得來，寫死就會
+ * 說謊 —— 選了情境對話模式時該說情境對話，選了朗讀模式去點情境對話時該說例句集與
+ * 單字集。**指錯方向比沒有提示更糟**，所以這個判定必須有測試。
+ *
+ * 「這個模式吃得下哪些資料集」直接查 registry 的 `supportedDatasets`，不自己列模式
+ * 清單 —— 三個資料集之後，任何二分法的猜測都會在某個組合上講錯（#1034 的教訓）。
+ */
+export function explainNotSelectable(
+  contentType: string | null | undefined,
+  mode: PracticeMode | "",
+): NotSelectableExplanation | null {
+  if (!isAssignableContentType(contentType)) {
+    // 換哪個模式都不會變 —— 叫老師去換模式是錯的建議
+    return { kind: "not_assignable" };
+  }
+  // 還沒選模式時，可派發的型別本來就都選得到
+  if (!mode) return null;
+
+  const dataset = contentTypeToDataset(contentType);
+  const supported = PRACTICE_MODE_REGISTRY[mode].supportedDatasets;
+  if (dataset && supported.includes(dataset)) return null;
+
+  return {
+    kind: "mode_mismatch",
+    allowedDatasetKeys: supported.map((d) => DATASET_LABEL_KEY[d]),
+  };
 }

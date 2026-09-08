@@ -63,12 +63,12 @@ import { apiClient, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 // Issue #1030: 型別判定抽到 lib 以便單元測試（本檔 3000 行、沒有測試檔）
 import {
+  explainNotSelectable,
   isAssignableContentType,
   isExampleSentencesType,
   isScenarioDialogueType,
   isVocabularySetType,
   reasonNothingSelectable,
-  usesNativeDisabled,
 } from "@/lib/assignableContentType";
 import { cn } from "@/lib/utils";
 import {
@@ -82,6 +82,7 @@ import {
   type PracticeDataset,
 } from "@/lib/practiceMode";
 import { PracticeModeSettingsPanel } from "./assignment/PracticeModeSettingsPanel";
+import { ContentSelectCard } from "./assignment/ContentSelectCard";
 import { useTranslation } from "react-i18next";
 import { useWorkspaceSafe } from "@/contexts/WorkspaceContext";
 import { getScoreCategory, type ScoreCategory } from "@/utils/scoreCategory";
@@ -1055,17 +1056,30 @@ export function AssignmentDialog({
       // Issue #1030: 兩種擋下的原因完全不同，訊息不能共用 ——
       // 「這個題型還不能派」對老師來說是「別等了，先用別的」，
       // 「模式與型別不合」則是「換個模式就可以」。
-      if (!isAssignableContentType(content.type)) {
+      //
+      // Issue #1033: 訊息內容改由 explainNotSelectable 決定（它有測試守著「現在能選
+      // 什麼」講得對不對）。**判定閘門仍然是 isContentSelectable** —— 兩者只在
+      // tug_of_war 上不同，而那個模式不經本對話框派發（見 practiceMode.ts 註解）。
+      // 在這張單裡順手改主流程的可選性規則，範圍不對等。
+      const explanation = explainNotSelectable(
+        content.type,
+        formData.practice_mode,
+      );
+      if (explanation?.kind === "not_assignable") {
         toast.warning(
           t("dialogs.assignmentDialog.errors.contentTypeNotAssignable", {
             type: getContentTypeLabel(content.type, t),
           }),
         );
       } else {
-        // 單字模式下無法選擇例句集
+        // 這句原本寫死「只能選擇單字集」。在它還是死碼時看不出問題，一旦真的出得來
+        // 就會說謊 —— 選了情境對話模式時該說情境對話，選了朗讀模式去點情境對話時
+        // 該說例句集與單字集。指錯方向比沒有提示更糟。
         toast.warning(
           t("dialogs.assignmentDialog.errors.mixedContentType", {
-            type: t("dialogs.assignmentDialog.contentTypes.VOCABULARY_SET"),
+            type: (explanation?.allowedDatasetKeys ?? [])
+              .map((key) => t(key))
+              .join(t("common.listSeparator")),
           }),
         );
       }
@@ -2112,23 +2126,27 @@ export function AssignmentDialog({
                                                         isVocabularySetType(
                                                           content.type,
                                                         )));
-                                                  // Issue #1030: 原生 disabled 會
-                                                  // 吃掉 click，「這個題型還不能派」
-                                                  // 的提示就永遠出不來。灰掉但保持
-                                                  // 可點，由 toggleContent 說明。
-                                                  const notAssignable =
-                                                    !isAssignableContentType(
-                                                      content.type,
-                                                    );
-                                                  const nativeDisabled =
-                                                    usesNativeDisabled({
-                                                      disabled: isDisabled,
-                                                      notAssignable,
-                                                    });
+                                                  // Issue #1033: 停用的呈現與
+                                                  // 「灰掉仍可點」都收在
+                                                  // ContentSelectCard 裡。原本這段
+                                                  // 在三個 Tab 各一份，#1030 修
+                                                  // 原生 disabled 時只能三處各改
+                                                  // 一次，於是漏掉了另外兩種停用
+                                                  // 原因 —— 就是這張單。
                                                   return (
-                                                    <button
+                                                    <ContentSelectCard
                                                       key={content.id}
-                                                      onClick={() =>
+                                                      content={content}
+                                                      typeLabel={getContentTypeLabel(
+                                                        content.type,
+                                                        t,
+                                                      )}
+                                                      itemsLabel={t(
+                                                        "dialogs.assignmentDialog.selectContent.items",
+                                                      )}
+                                                      selected={isSelected}
+                                                      disabled={isDisabled}
+                                                      onSelect={() =>
                                                         toggleContent(
                                                           content.id,
                                                           program.name,
@@ -2136,60 +2154,7 @@ export function AssignmentDialog({
                                                           content,
                                                         )
                                                       }
-                                                      disabled={nativeDisabled}
-                                                      className={cn(
-                                                        "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
-                                                        isSelected &&
-                                                          "bg-blue-50 hover:bg-blue-100",
-                                                        !isSelected &&
-                                                          !isDisabled &&
-                                                          "hover:bg-gray-50",
-                                                        isDisabled &&
-                                                          "opacity-40",
-                                                        // Issue #1030: 「還不能派」
-                                                        // 的卡片是可以點的（點了才
-                                                        // 會說明原因），游標不能寫
-                                                        // 「不可點」自打嘴巴
-                                                        isDisabled &&
-                                                          nativeDisabled &&
-                                                          "cursor-not-allowed",
-                                                        isDisabled &&
-                                                          !nativeDisabled &&
-                                                          "cursor-help",
-                                                      )}
-                                                    >
-                                                      {isSelected ? (
-                                                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                                                      ) : (
-                                                        <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                                      )}
-                                                      <div className="flex-1">
-                                                        <div className="text-sm font-medium">
-                                                          {content.title}
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                          <Badge
-                                                            variant="outline"
-                                                            className="px-1 py-0"
-                                                          >
-                                                            {getContentTypeLabel(
-                                                              content.type,
-                                                              t,
-                                                            )}
-                                                          </Badge>
-                                                          {content.items_count && (
-                                                            <span>
-                                                              {
-                                                                content.items_count
-                                                              }{" "}
-                                                              {t(
-                                                                "dialogs.assignmentDialog.selectContent.items",
-                                                              )}
-                                                            </span>
-                                                          )}
-                                                        </div>
-                                                      </div>
-                                                    </button>
+                                                    />
                                                   );
                                                 },
                                               )}
@@ -2391,21 +2356,27 @@ export function AssignmentDialog({
                                                           isVocabularySetType(
                                                             content.type,
                                                           )));
-                                                    // Issue #1030: 原生 disabled
-                                                    // 會吃掉 click，說明就出不來
-                                                    const notAssignable =
-                                                      !isAssignableContentType(
-                                                        content.type,
-                                                      );
-                                                    const nativeDisabled =
-                                                      usesNativeDisabled({
-                                                        disabled: isDisabled,
-                                                        notAssignable,
-                                                      });
+                                                    // Issue #1033: 停用的呈現與
+                                                    // 「灰掉仍可點」都收在
+                                                    // ContentSelectCard 裡。原本這段
+                                                    // 在三個 Tab 各一份，#1030 修
+                                                    // 原生 disabled 時只能三處各改
+                                                    // 一次，於是漏掉了另外兩種停用
+                                                    // 原因 —— 就是這張單。
                                                     return (
-                                                      <button
+                                                      <ContentSelectCard
                                                         key={content.id}
-                                                        onClick={() =>
+                                                        content={content}
+                                                        typeLabel={getContentTypeLabel(
+                                                          content.type,
+                                                          t,
+                                                        )}
+                                                        itemsLabel={t(
+                                                          "dialogs.assignmentDialog.selectContent.items",
+                                                        )}
+                                                        selected={isSelected}
+                                                        disabled={isDisabled}
+                                                        onSelect={() =>
                                                           toggleContent(
                                                             content.id,
                                                             program.name,
@@ -2413,60 +2384,7 @@ export function AssignmentDialog({
                                                             content,
                                                           )
                                                         }
-                                                        disabled={
-                                                          nativeDisabled
-                                                        }
-                                                        className={cn(
-                                                          "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
-                                                          isSelected &&
-                                                            "bg-blue-50 hover:bg-blue-100",
-                                                          !isSelected &&
-                                                            !isDisabled &&
-                                                            "hover:bg-gray-50",
-                                                          isDisabled &&
-                                                            "opacity-40",
-                                                          // Issue #1030: 可點的卡片
-                                                          // 不能用「不可點」游標
-                                                          isDisabled &&
-                                                            nativeDisabled &&
-                                                            "cursor-not-allowed",
-                                                          isDisabled &&
-                                                            !nativeDisabled &&
-                                                            "cursor-help",
-                                                        )}
-                                                      >
-                                                        {isSelected ? (
-                                                          <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                                                        ) : (
-                                                          <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                                        )}
-                                                        <div className="flex-1">
-                                                          <div className="text-sm font-medium">
-                                                            {content.title}
-                                                          </div>
-                                                          <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                            <Badge
-                                                              variant="outline"
-                                                              className="px-1 py-0"
-                                                            >
-                                                              {getContentTypeLabel(
-                                                                content.type,
-                                                                t,
-                                                              )}
-                                                            </Badge>
-                                                            {content.items_count && (
-                                                              <span>
-                                                                {
-                                                                  content.items_count
-                                                                }{" "}
-                                                                {t(
-                                                                  "dialogs.assignmentDialog.selectContent.items",
-                                                                )}
-                                                              </span>
-                                                            )}
-                                                          </div>
-                                                        </div>
-                                                      </button>
+                                                      />
                                                     );
                                                   },
                                                 )}
@@ -2673,23 +2591,27 @@ export function AssignmentDialog({
                                                         isVocabularySetType(
                                                           content.type,
                                                         )));
-                                                  // Issue #1030: 原生 disabled 會
-                                                  // 吃掉 click，「這個題型還不能派」
-                                                  // 的提示就永遠出不來。灰掉但保持
-                                                  // 可點，由 toggleContent 說明。
-                                                  const notAssignable =
-                                                    !isAssignableContentType(
-                                                      content.type,
-                                                    );
-                                                  const nativeDisabled =
-                                                    usesNativeDisabled({
-                                                      disabled: isDisabled,
-                                                      notAssignable,
-                                                    });
+                                                  // Issue #1033: 停用的呈現與
+                                                  // 「灰掉仍可點」都收在
+                                                  // ContentSelectCard 裡。原本這段
+                                                  // 在三個 Tab 各一份，#1030 修
+                                                  // 原生 disabled 時只能三處各改
+                                                  // 一次，於是漏掉了另外兩種停用
+                                                  // 原因 —— 就是這張單。
                                                   return (
-                                                    <button
+                                                    <ContentSelectCard
                                                       key={content.id}
-                                                      onClick={() =>
+                                                      content={content}
+                                                      typeLabel={getContentTypeLabel(
+                                                        content.type,
+                                                        t,
+                                                      )}
+                                                      itemsLabel={t(
+                                                        "dialogs.assignmentDialog.selectContent.items",
+                                                      )}
+                                                      selected={isSelected}
+                                                      disabled={isDisabled}
+                                                      onSelect={() =>
                                                         toggleContent(
                                                           content.id,
                                                           program.name,
@@ -2697,60 +2619,7 @@ export function AssignmentDialog({
                                                           content,
                                                         )
                                                       }
-                                                      disabled={nativeDisabled}
-                                                      className={cn(
-                                                        "w-full p-2 flex items-center gap-2 rounded transition-colors text-left",
-                                                        isSelected &&
-                                                          "bg-blue-50 hover:bg-blue-100",
-                                                        !isSelected &&
-                                                          !isDisabled &&
-                                                          "hover:bg-gray-50",
-                                                        isDisabled &&
-                                                          "opacity-40",
-                                                        // Issue #1030: 「還不能派」
-                                                        // 的卡片是可以點的（點了才
-                                                        // 會說明原因），游標不能寫
-                                                        // 「不可點」自打嘴巴
-                                                        isDisabled &&
-                                                          nativeDisabled &&
-                                                          "cursor-not-allowed",
-                                                        isDisabled &&
-                                                          !nativeDisabled &&
-                                                          "cursor-help",
-                                                      )}
-                                                    >
-                                                      {isSelected ? (
-                                                        <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                                                      ) : (
-                                                        <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                                      )}
-                                                      <div className="flex-1">
-                                                        <div className="text-sm font-medium">
-                                                          {content.title}
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                          <Badge
-                                                            variant="outline"
-                                                            className="px-1 py-0"
-                                                          >
-                                                            {getContentTypeLabel(
-                                                              content.type,
-                                                              t,
-                                                            )}
-                                                          </Badge>
-                                                          {content.items_count && (
-                                                            <span>
-                                                              {
-                                                                content.items_count
-                                                              }{" "}
-                                                              {t(
-                                                                "dialogs.assignmentDialog.selectContent.items",
-                                                              )}
-                                                            </span>
-                                                          )}
-                                                        </div>
-                                                      </div>
-                                                    </button>
+                                                    />
                                                   );
                                                 },
                                               )}
