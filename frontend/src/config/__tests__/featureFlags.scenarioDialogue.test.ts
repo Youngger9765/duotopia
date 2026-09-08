@@ -15,15 +15,25 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 async function loadWith(enabled: boolean) {
   vi.resetModules();
-  vi.doMock("../featureFlags", () => ({
-    SCENARIO_DIALOGUE_ENABLED: enabled,
+  vi.doMock("@/config/featureFlags", () => ({
+    ENABLE_SCENARIO_DIALOGUE: enabled,
   }));
-  return await import("../assignableContentType");
+  return await import("@/lib/assignableContentType");
+}
+
+/** 讓 `import.meta.env.VITE_ENABLE_SCENARIO_DIALOGUE` 變成指定值再載入真的模組。 */
+async function loadFlagWithEnv(value: string | undefined) {
+  vi.resetModules();
+  vi.doUnmock("@/config/featureFlags");
+  vi.stubEnv("VITE_ENABLE_SCENARIO_DIALOGUE", value);
+  const mod = await import("@/config/featureFlags");
+  return mod.ENABLE_SCENARIO_DIALOGUE;
 }
 
 beforeEach(() => {
   vi.resetModules();
-  vi.doUnmock("../featureFlags");
+  vi.unstubAllEnvs();
+  vi.doUnmock("@/config/featureFlags");
 });
 
 describe("開關關閉時，情境對話不可派發", () => {
@@ -78,16 +88,34 @@ describe("開關打開時，行為回到 #1031 交付的樣子", () => {
   });
 });
 
-describe("開關本身", () => {
-  it("預設是關閉的 —— 打開必須是一個明確的、走發版流程的動作", async () => {
-    vi.resetModules();
-    vi.doUnmock("../featureFlags");
-    const { SCENARIO_DIALOGUE_ENABLED } = await import("../featureFlags");
-    expect(SCENARIO_DIALOGUE_ENABLED).toBe(false);
+describe("開關本身：由環境變數決定，未設定＝關閉", () => {
+  /**
+   * 與 ENABLE_GROUP_BUY 相反（那個是「不是 false 就當開啟」）。
+   *
+   * 這個開關要防的正是「未驗證的功能出現在 production」，所以漏設、拼錯、新環境忘了
+   * 帶，都必須落到**隱藏**這一邊。這幾條就是在釘這個方向不能被改掉。
+   */
+  it("未設定 → 關閉", async () => {
+    expect(await loadFlagWithEnv(undefined)).toBe(false);
   });
 
-  it("型別是 boolean 而不是字面值 false —— 兩個分支都要編得過", async () => {
-    const flags = await import("../featureFlags");
-    expect(typeof flags.SCENARIO_DIALOGUE_ENABLED).toBe("boolean");
+  it("空字串 → 關閉", async () => {
+    expect(await loadFlagWithEnv("")).toBe(false);
+  });
+
+  it('值拼錯（"ture"）→ 關閉，不會誤開', async () => {
+    expect(await loadFlagWithEnv("ture")).toBe(false);
+  });
+
+  it('"false" → 關閉（prod 走的就是這條）', async () => {
+    expect(await loadFlagWithEnv("false")).toBe(false);
+  });
+
+  it('"true" → 開啟（staging / develop 走的是這條）', async () => {
+    expect(await loadFlagWithEnv("true")).toBe(true);
+  });
+
+  it('大小寫不敏感："TRUE" 也算開啟', async () => {
+    expect(await loadFlagWithEnv("TRUE")).toBe(true);
   });
 });

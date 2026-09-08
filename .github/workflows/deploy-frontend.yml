@@ -196,6 +196,15 @@ jobs:
           echo "ENABLE_GROUP_BUY=true" >> $GITHUB_OUTPUT
         fi
 
+        # Issue #1039 — 情境對話（#1013～#1035）。同樣的理由：PR #1038 把整條
+        # 功能線發到 main 並成功部署，但人工驗證還沒做完。prod 先關著，
+        # staging / develop 保持開啟才驗得下去。驗完把下面 main 那行改成 true。
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          echo "ENABLE_SCENARIO_DIALOGUE=false" >> $GITHUB_OUTPUT
+        else
+          echo "ENABLE_SCENARIO_DIALOGUE=true" >> $GITHUB_OUTPUT
+        fi
+
     - name: Resolve Supabase Realtime values per environment
       id: supabase
       run: |
@@ -221,6 +230,7 @@ jobs:
         echo "VITE_API_URL=${{ steps.backend_url.outputs.BACKEND_URL }}" > .env
         echo "VITE_ENVIRONMENT=${{ steps.env_vars.outputs.ENV_NAME }}" >> .env
         echo "VITE_ENABLE_GROUP_BUY=${{ steps.feature_flags.outputs.ENABLE_GROUP_BUY }}" >> .env
+        echo "VITE_ENABLE_SCENARIO_DIALOGUE=${{ steps.feature_flags.outputs.ENABLE_SCENARIO_DIALOGUE }}" >> .env
         echo "Created .env with:"
         cat .env
 
@@ -257,6 +267,7 @@ jobs:
           --build-arg VITE_API_URL=${{ steps.backend_url.outputs.BACKEND_URL }} \
           --build-arg VITE_ENVIRONMENT=${{ steps.env_vars.outputs.ENV_NAME }} \
           --build-arg VITE_ENABLE_GROUP_BUY=${{ steps.feature_flags.outputs.ENABLE_GROUP_BUY }} \
+          --build-arg VITE_ENABLE_SCENARIO_DIALOGUE=${{ steps.feature_flags.outputs.ENABLE_SCENARIO_DIALOGUE }} \
           --build-arg VITE_TAPPAY_SERVER_TYPE=$TAPPAY_SERVER_TYPE \
           --build-arg VITE_TAPPAY_PRODUCTION_APP_ID=$TAPPAY_PRODUCTION_APP_ID \
           --build-arg VITE_TAPPAY_PRODUCTION_APP_KEY=$TAPPAY_PRODUCTION_APP_KEY \
